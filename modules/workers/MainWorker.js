@@ -160,7 +160,7 @@ function shootSect(c1, c2) {
 				
 				console.info('pixelBuffer:', pixelBuffer.toString(), uneval(pixelBuffer));
 				
-				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(w*h).ptr);
+				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(w*h).ptr).contents;
 				console.info('casted:', casted.toString());
 				
 				// cut out old stuff from here
