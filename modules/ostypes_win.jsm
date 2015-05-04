@@ -105,10 +105,10 @@ var winTypes = function() {
 	
 	// SIMPLE STRUCTS // based on any of the types above
     this.RECT = ctypes.StructType('_RECT', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/dd162897%28v=vs.85%29.aspx
-        {top: this.LONG},
-        {left: this.LONG},
-        {bottom: this.LONG},
-        {right: this.LONG}
+        { left: this.LONG },
+        { top: this.LONG },
+        { right: this.LONG },
+        { bottom: this.LONG }
     ]);
 	
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first

@@ -97,8 +97,8 @@ function extendCore() {
 function takeShot(aDOMWin) {
 	console.log('taking shot');
 	
-	var c1 = {x:0, y:10}; //topLeft coords
-	var c2 = {x:10, y:20}; // bottomRight coords
+	var c1 = {x:0, y:0}; //topLeft coords
+	var c2 = {x:1280, y:1024}; // bottomRight coords
 	
 	console.time('shootSect');
 	var promise_shootSect = MainWorker.post('shootSect', [c1, c2]);
