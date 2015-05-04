@@ -125,12 +125,14 @@ function shootSect(c1, c2) {
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
 				bmi.bmiHeader.biWidth = nWidth; //w;
-				bmi.bmiHeader.biHeight = nHeight; //-1 * h; // top-down
+				bmi.bmiHeader.biHeight = -1 * nHeight; //-1 * h; // top-down
 				bmi.bmiHeader.biPlanes = 1;
 				bmi.bmiHeader.biBitCount = nBPP; //32;
 				bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
-
+				//bmi.bmiHeader.biSizeImage = nHeight * nWidth * (nBPP / 8);
+				
 				var pixelBuffer = ostypes.TYPE.COLORREF.ptr();
+				//var cPixBuf = ctypes.cast(pixelBuffer.address(), ctypes.voidptr_t);
 				var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0);
 				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 				if (ctypes.winLastError != 0) {
@@ -143,9 +145,10 @@ function shootSect(c1, c2) {
 				}
 				
 				console.info('pixelBuffer:', pixelBuffer.toString(), uneval(pixelBuffer));
+				//console.info('cPixBuf:', cPixBuf.toString(), uneval(cPixBuf));
 				
-				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(w*h).ptr);
-				console.info('casted:', casted.toString());
+				//var casted = ctypes.cast(cPixBuf, ostypes.TYPE.COLORREF.array(w*h*4).ptr).contents;
+				//console.info('casted:', casted.toString());
 				
 				// cut out old stuff from here
 

@@ -310,7 +310,7 @@ var winInit = function() {
 				self.TYPE.HDC,				// hdc
 				self.TYPE.BITMAPINFO.ptr,	// *pbmi
 				self.TYPE.UINT,				// iUsage
-				self.TYPE.VOID.ptr,			// **ppvBits
+				self.TYPE.COLORREF.ptr.ptr,	// **ppvBits
 				self.TYPE.HANDLE,			// hSection
 				self.TYPE.DWORD				// dwOffset
 			);
