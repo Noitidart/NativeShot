@@ -145,7 +145,7 @@ function shootSect(c1, c2) {
 				
 				console.info('bmi:', bmi.toString());
 				
-				var pixelBuffer = ostypes.TYPE.COLORREF.ptr();
+				var pixelBuffer = ostypes.TYPE.BYTE.ptr();
 				//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
 				// CreateDIBSection stuff
 				
@@ -185,7 +185,7 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(nWidth * nHeight).ptr).contents;
+				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(nWidth * nHeight * 4).ptr).contents;
 				//console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				
@@ -201,8 +201,8 @@ function shootSect(c1, c2) {
 				for (var nRow=0; nRow<h; ++nRow) {
 					for (var nCol=0; nCol<w; ++nCol) {
 						var nIndex = nRow * w + nCol;
-						var rez_colorref = casted[nIndex];
-						var input = parseInt(cutils.jscGetDeepest(rez_colorref));
+						var rez_byte = casted[nIndex];
+						var input = parseInt(cutils.jscGetDeepest(rez_byte));
 						
 						buf32[nIndex] = input;
 						//break;
@@ -215,14 +215,15 @@ function shootSect(c1, c2) {
 				// uint32 way
 				*/
 				
+				/*
 				// normal way
 				console.time('normal way');
 				var normalArr = [];							
 				for (var nRow=0; nRow<h; ++nRow) {
 					for (var nCol=0; nCol<w; ++nCol) {
 						var nIndex = nRow * w + nCol;
-						var rez_colorref = parseInt(casted[nIndex].toString());						
-						var input = rez_colorref;
+						var rez_byte = parseInt(casted[nIndex].toString());						
+						var input = rez_byte;
 						
 						var b =  input       & 0xff;
 						var g = (input >> 8) & 0xff;
@@ -240,7 +241,8 @@ function shootSect(c1, c2) {
 					//break;
 				}
 				//console.info('normalArr:', normalArr.toString());
-				imagedata.data.set(normalArr);
+				*/
+				imagedata.data.set(casted);
 				console.timeEnd('normal way');
 				// normal way
 				
@@ -253,8 +255,8 @@ function shootSect(c1, c2) {
 				
 				for (var nRow=0; nRow<h; ++nRow) {
 					for (var nCol=0; nCol<w; ++nCol) {
-						var rez_colorref = ostypes.API('GetPixel')(hdcC, nCol, nRow);
-						var input = parseInt(cutils.jscGetDeepest(rez_colorref));
+						var rez_byte = ostypes.API('GetPixel')(hdcC, nCol, nRow);
+						var input = parseInt(cutils.jscGetDeepest(rez_byte));
 						
 						buf32[nRow * w + nCol] = input | (255 << 24); //alpha of 255 otherwise it is 0
 						//break;
