@@ -100,6 +100,7 @@ var winTypes = function() {
 	this.PIDLIST_ABSOLUTE = ctypes.voidptr_t;
 	this.WIN32_FIND_DATA = ctypes.voidptr_t;
 	this.WINOLEAPI = ctypes.voidptr_t; // i guessed on this one
+	this.DEVMODE = ctypes.voidptr_t;
 	
 	// STRUCTURES
 	
@@ -111,9 +112,37 @@ var winTypes = function() {
         { bottom: this.LONG }
     ]);
 	
+  this.BITMAPINFOHEADER = ctypes.StructType("BITMAPINFOHEADER", [
+    { "biSize": this.DWORD },
+    { "biWidth": this.LONG },
+    { "biHeight": this.LONG },
+    { "biPlanes": this.WORD },
+    { "biBitCount": this.WORD },
+    { "biCompression": this.DWORD },
+    { "biSizeImage": this.DWORD },
+    { "biXPelsPerMeter": this.LONG },
+    { "biYPelsPerMeter": this.LONG },
+    { "biClrUsed": this.DWORD },
+    { "biClrImportant": this.DWORD }
+  ]);
+  this.RGBQUAD = ctypes.StructType("RGBQUAD", [
+    { "rgbBlue": this.BYTE },
+    { "rgbGreen": this.BYTE },
+    { "rgbRed": this.BYTE },
+    { "rgbReserved": this.BYTE }
+  ]);
+	
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first
     this.PRECT = this.RECT.ptr;
     this.LPRECT = this.RECT.ptr;
+	this.PBITMAPINFOHEADER = this.BITMAPINFOHEADER.ptr;
+  this.BITMAPINFO = ctypes.StructType("BITMAPINFO", [
+    { "bmiHeader": this.BITMAPINFOHEADER },
+    { "bmiColors": this.RGBQUAD.array(1) }
+  ]);
+	
+	// FURTHER ADV STRUCTS
+	this.PBITMAPINFO = this.BITMAPINFO.ptr;
 	
 	// FUNCTION TYPES
 	
@@ -131,7 +160,12 @@ var winInit = function() {
 
 	// CONSTANTS
 	this.CONST = {
-		SRCCOPY: self.TYPE.DWORD('0x00CC0020')
+		BI_RGB: 0,
+		BITSPIXEL: 12,
+		DIB_RGB_COLORS: 0,
+		HORZRES: 8,
+		SRCCOPY: self.TYPE.DWORD('0x00CC0020'),
+		VERTRES: 10
 	};
 	
 	var _lib = {}; // cache for lib
@@ -243,6 +277,44 @@ var winInit = function() {
 				self.TYPE.HDC // hdc
 			);
 		},
+		CreateDC: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd183490%28v=vs.85%29.aspx
+			 * HDC CreateDC(
+			 *  __in_  LPCTSTR lpszDriver,
+			 *  __in_  LPCTSTR lpszDevice,
+			 *  __in_  LPCTSTR lpszOutput,
+			 *  __in_  const DEVMODE *lpInitData
+			 * );
+			 */
+			return lib('gdi32').declare(ifdef_UNICODE ? 'CreateDCW' : 'CreateDCA', self.TYPE.ABI,
+				self.TYPE.HDC, //return
+				self.TYPE.LPCTSTR, // lpszDriver
+				self.TYPE.LPCTSTR, // lpszDevice
+				self.TYPE.LPCTSTR, // lpszOutput
+				self.TYPE.DEVMODE // *lpInitData
+			);
+		},
+		CreateDIBSection: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd183494%28v=vs.85%29.aspx
+			 * HBITMAP CreateDIBSection(
+			 *   __in_   HDC        hdc,
+			 *   __in_   const BITMAPINFO *pbmi,
+			 *   __in_   UINT       iUsage,
+			 *   __out_  VOID       **ppvBits,
+			 *   __in_   HANDLE     hSection,
+			 *   __in_   DWORD      dwOffset
+			 * );
+			 */
+			return lib('gdi32').declare('CreateCompatibleDC', self.TYPE.ABI,
+				self.TYPE.HBITMAP,			//return
+				self.TYPE.HDC,				// hdc
+				self.TYPE.BITMAPINFO.ptr,	// *pbmi
+				self.TYPE.UINT,				// iUsage
+				self.TYPE.VOID.ptr,			// **ppvBits
+				self.TYPE.HANDLE,			// hSection
+				self.TYPE.DWORD				// dwOffset
+			);
+		},
 		DeleteDC: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183489%28v=vs.85%29.aspx
 			 * BOOL DeleteDC(
@@ -274,8 +346,8 @@ var winInit = function() {
 			 * );
 			 */
 			return lib('user32').declare('GetDC', self.TYPE.ABI,
-				self.TYPE.HDC, //return
-				self.TYPE.HWND // hWnd
+				self.TYPE.HDC,	//return
+				self.TYPE.HWND	// hWnd
 			);
 		},
 		GetDesktopWindow: function() {
@@ -283,7 +355,20 @@ var winInit = function() {
 			 * HWND WINAPI GetDesktopWindow(void);
 			 */
 			return lib('user32').declare('GetDesktopWindow', self.TYPE.ABI,
-				self.TYPE.HWND //return
+				self.TYPE.HWND	//return
+			);
+		},
+		GetDeviceCaps: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd144877%28v=vs.85%29.aspx
+			 * int GetDeviceCaps(
+			 *   __in_  HDC hdc,
+			 *   __in_  int nIndex
+			 * );
+			 */
+			return lib('gdi32').declare('GetDeviceCaps', self.TYPE.ABI,
+				self.TYPE.INT,	//return
+				self.TYPE.HDC,	// hdc
+				self.TYPE.INT	// nIndex
 			);
 		},
 		GetPixel: function() {
