@@ -26,9 +26,8 @@ const core = {
 };
 
 var PromiseWorker;
-//var MainWorker = {};
 var bootstrap = this;
-
+const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
 
 // Lazy Imports
@@ -98,25 +97,32 @@ function extendCore() {
 function takeShot(aDOMWin) {
 	console.log('taking shot');
 	
-	var topLeft = {x:10, y:10};
-	var botRight = {x:200, y:200};
+	var c1 = {x:0, y:10}; //topLeft coords
+	var c2 = {x:10, y:20}; // bottomRight coords
 	
-	var promise_shootSect = MainWorker.post('shootSect', [topLeft, botRight]);
+	console.time('shootSect');
+	var promise_shootSect = MainWorker.post('shootSect', [c1, c2]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);
 			// start - do stuff here - promise_shootSect
-			// aVal is `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
-			var win = aDOMWin//.gBrowser.contentWindow;
+			// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
+			console.timeEnd('shootSect');
+			
+			var win = aDOMWin;
 			var doc = win.document;
 			
-			var can = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+			var can = doc.createElementNS(NS_HTML, 'canvas');
 			can.width = aVal.width;
 			can.height = aVal.height;
 			var ctx = can.getContext('2d');
+			
 			ctx.putImageData(aVal, 0, 0);
 			
 			doc.documentElement.appendChild(can);
+			
+			console.error('done appended');
+			
 			// end - do stuff here - promise_shootSect
 		},
 		function(aReason) {

@@ -128,9 +128,9 @@ function shootSect(c1, c2) {
 	}
 
 	console.info('rect:', rect.toString(), uneval(rect));
-	rect.bottom = ostypes.TYPE.LONG(10);
-	rect.right = ostypes.TYPE.LONG(10);
-	console.info('rect modded:', rect.toString(), uneval(rect));
+	// rect.bottom = ostypes.TYPE.LONG(c2.y);
+	// rect.right = ostypes.TYPE.LONG(c2.x);
+	// console.info('rect modded:', rect.toString(), uneval(rect));
 
 	var hbmC = ostypes.API('CreateCompatibleBitmap')(hdcScreen, rect.right, rect.bottom);
 	console.info('hbmC:', hbmC.toString(), uneval(hbmC), cutils.jscGetDeepest(hbmC));
@@ -167,7 +167,9 @@ function shootSect(c1, c2) {
 				});
 			}
 
-			var rez_BB = ostypes.API('BitBlt')(hdcC, 0, 0, rect.right, rect.bottom, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
+			var w = c2.x - c1.x;
+			var h = c2.y - c1.y;
+			var rez_BB = ostypes.API('BitBlt')(hdcC, 0, 0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
 			console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
 			if (!rez_BB) {
 				console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
@@ -178,8 +180,6 @@ function shootSect(c1, c2) {
 				});
 			} else {				
 				// start - trying to get imagedata
-				var w = parseInt(cutils.jscGetDeepest(rect.right));
-				var h = parseInt(cutils.jscGetDeepest(rect.bottom));
 				var imagedata = new ImageData(w, h);
 				console.error('imagedata.data:', imagedata.data.toString());
 				console.error('imagedata.data:', imagedata.data.set.toString());
