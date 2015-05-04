@@ -23,6 +23,7 @@
 		<em:name>NativeShot</em:name>
 		<em:description>Uses the operating systems native methods to bring screenshot functionality to not just within Firefox, but outside of it as well.</em:description>
 		<em:creator>Noitidart</em:creator>
+		<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 		<!-- start localizing - For each entry in default data MUST have equivalent in each localized block -->
 		<em:localized>
 			<Description>
@@ -30,6 +31,7 @@
 				<em:name>NativeShot</em:name>
 				<em:description>Uses the operating systems native methods to bring screenshot functionality to not just within Firefox, but outside of it as well.</em:description>
 				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 			</Description>
 		</em:localized>
 		<em:localized>
@@ -38,6 +40,7 @@
 				<em:name>NativeShot</em:name>
 				<em:description>Uses the operating systems native methods to bring screenshot functionality to not just within Firefox, but outside of it as well.</em:description>
 				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 			</Description>
 		</em:localized>
 	  </Description>

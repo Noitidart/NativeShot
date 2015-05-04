@@ -1,5 +1,6 @@
 // Imports
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
+Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Promise.jsm');
@@ -14,7 +15,9 @@ const core = {
 		path: {
 			name: 'nativeshot',
 			content: 'chrome://nativeshot/content/',
-			locale: 'chrome://nativeshot/locale/'
+			locale: 'chrome://nativeshot/locale/',
+			resources: 'chrome://nativeshot/content/resources/',
+			images: 'chrome://nativeshot/content/resources/images/'
 		}
 	},
 	os: {
@@ -24,6 +27,8 @@ const core = {
 
 var PromiseWorker;
 var MainWorker;
+
+const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
 
 // Lazy Imports
 const myServices = {};
@@ -88,6 +93,79 @@ function extendCore() {
 	console.log('done adding to core, it is now:', core);
 }
 
+// START - Addon Functionalities
+function takeShot() {
+	console.log('taking shot');
+}
+
+// END - Addon Functionalities
+
+/*start - windowlistener*/
+var windowListener = {
+	//DO NOT EDIT HERE
+	onOpenWindow: function (aXULWindow) {
+		// Wait for the window to finish loading
+		var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal || Ci.nsIDOMWindow);
+		aDOMWindow.addEventListener('load', function () {
+			aDOMWindow.removeEventListener('load', arguments.callee, false);
+			windowListener.loadIntoWindow(aDOMWindow);
+		}, false);
+	},
+	onCloseWindow: function (aXULWindow) {},
+	onWindowTitleChange: function (aXULWindow, aNewTitle) {},
+	register: function () {
+		
+		// Load into any existing windows
+		let DOMWindows = Services.wm.getEnumerator(null);
+		while (DOMWindows.hasMoreElements()) {
+			let aDOMWindow = DOMWindows.getNext();
+			if (aDOMWindow.document.readyState == 'complete') { //on startup `aDOMWindow.document.readyState` is `uninitialized`
+				windowListener.loadIntoWindow(aDOMWindow);
+			} else {
+				aDOMWindow.addEventListener('load', function () {
+					aDOMWindow.removeEventListener('load', arguments.callee, false);
+					windowListener.loadIntoWindow(aDOMWindow);
+				}, false);
+			}
+		}
+		// Listen to new windows
+		Services.wm.addListener(windowListener);
+	},
+	unregister: function () {
+		// Unload from any existing windows
+		let DOMWindows = Services.wm.getEnumerator(null);
+		while (DOMWindows.hasMoreElements()) {
+			let aDOMWindow = DOMWindows.getNext();
+			windowListener.unloadFromWindow(aDOMWindow);
+		}
+		/*
+		for (var u in unloaders) {
+			unloaders[u]();
+		}
+		*/
+		//Stop listening so future added windows dont get this attached
+		Services.wm.removeListener(windowListener);
+	},
+	//END - DO NOT EDIT HERE
+	loadIntoWindow: function (aDOMWindow) {
+		if (!aDOMWindow) { return }
+		
+		if (aDOMWindow.gBrowser) {
+			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
+			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
+		}
+	},
+	unloadFromWindow: function (aDOMWindow) {
+		if (!aDOMWindow) { return }
+		
+		if (aDOMWindow.gBrowser) {
+			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
+			domWinUtils.removeSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
+		}
+	}
+};
+/*end - windowlistener*/
+
 function install() {}
 function uninstall() {}
 
@@ -120,11 +198,34 @@ function startup(aData, aReason) {
 			console.error('Caught - promise_getMainWorker - ', rejObj);
 		}
 	);
+	
+	CustomizableUI.createWidget({
+		id: 'cui_nativeshot',
+		defaultArea: CustomizableUI.AREA_NAVBAR,
+		label: myServices.sb.GetStringFromName('cui_nativeshot_lbl'),
+		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
+		onCommand: function(aEvent) {
+			//var aDOMWin = aEvent.target.ownerDocument.defaultView;
+			takeShot();
+		}
+	});
+	
+	//windowlistener more
+	windowListener.register();
+	//end windowlistener more
+	
 	Services.prompt.alert(null, myServices.sb.GetStringFromName('startup_prompt_title'), myServices.sb.GetStringFromName('startup_prompt_message'));
 }
- 
+
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
+	
+	CustomizableUI.destroyWidget('cui_nativeshot');
+	
+	//windowlistener more
+	windowListener.unregister();
+	//end windowlistener more
+	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
 }
 

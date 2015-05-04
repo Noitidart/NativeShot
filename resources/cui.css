@@ -1,0 +1,14 @@
+@-moz-document url("chrome://browser/content/browser.xul") {
+	#cui_nativeshot {
+		list-style-image: url('chrome://nativeshot/content/resources/images/icon16.png');
+		filter: grayscale(1);
+		transition: filter 200ms;
+	}
+	#cui_nativeshot:hover {
+		filter: grayscale(0);
+	}
+	#cui_nativeshot[cui-areatype="menu-panel"],
+	toolbarpaletteitem[place="palette"] > #cui_nativeshot {
+		list-style-image: url('chrome://nativeshot/content/resources/images/icon32.png');
+	}
+}
