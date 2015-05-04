@@ -185,7 +185,7 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(w * h * 4).ptr).contents;
+				//var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(w * h * 4).ptr).contents;
 				////console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				//logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				
@@ -193,14 +193,14 @@ function shootSect(c1, c2) {
 				var imagedata = new ImageData(w, h);
 				
 				/*
-				// straight feed way
+				// straight feed way 800ms
 				console.time('straight feed');
 				imagedata.data.set(casted); // its BRG so color is jacked up
 				console.timeEnd('straight feed');
 				//*/
 				
-				///*
-				// normal way
+				/*
+				// normal way 1300ms
 				console.time('normal way');
 				var normalArr = [];
 				for (var nIndex=0; nIndex<casted.length; nIndex=nIndex+4) {
@@ -209,15 +209,15 @@ function shootSect(c1, c2) {
 					var g = casted[nIndex + 1];
 					var b = casted[nIndex];
 					var a = 255;
-					// imagedata.data[nIndex] = r;
-					// imagedata.data[nIndex+1] = g;
-					// imagedata.data[nIndex+2] = b;
-					// imagedata.data[nIndex+3] = a;
+					imagedata.data[nIndex] = r;
+					imagedata.data[nIndex+1] = g;
+					imagedata.data[nIndex+2] = b;
+					imagedata.data[nIndex+3] = a;
 					
-					normalArr.push(r);
-					normalArr.push(g);
-					normalArr.push(b);
-					normalArr.push(a);
+					// normalArr.push(r);
+					// normalArr.push(g);
+					// normalArr.push(b);
+					// normalArr.push(a);
 					
 					////console.log(nRow, nCol, [r, g, b]);
 					
@@ -228,6 +228,14 @@ function shootSect(c1, c2) {
 				console.timeEnd('normal way');
 				// normal way
 				//*/
+				
+				///*
+				// memcpy way 4ms
+				console.time('memcpy way');
+				ostypes.API('memcpy')(imagedata.data, pixelBuffer, w*h*4);
+				console.timeEnd('memcpy way');
+				//*/
+				
 				return imagedata;
 				
 			break;

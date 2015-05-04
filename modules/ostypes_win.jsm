@@ -23,6 +23,10 @@ var winTypes = function() {
 	  this.ABI = ctypes.winapi_abi;
 	}
 	
+	// C TYPES
+	this.size_t = ctypes.size_t;
+	this.void = ctypes.void_t;
+	
 	// SIMPLE TYPES // based on ctypes.BLAH // as per WinNT.h etc
 	this.BOOL = ctypes.bool;
 	this.BYTE = ctypes.unsigned_char;
@@ -384,6 +388,21 @@ var winInit = function() {
 				self.TYPE.HDC, // hWnd
 				self.TYPE.INT, // nXPos
 				self.TYPE.INT // nYPos
+			);
+		},
+		memcpy: function() {
+			/* https://msdn.microsoft.com/en-us/library/dswaw1wk.aspx
+			 * void *memcpy(
+			 *    void *dest,
+			 *    const void *src,
+			 *    size_t count 
+			 * );
+			 */
+			return lib('msvcrt').declare('memcpy', self.TYPE.ABI,
+				self.TYPE.void,		// return
+				self.TYPE.void.ptr,	// *dest
+				self.TYPE.void.ptr,	// *src
+				self.TYPE.size_t	// count
 			);
 		},
 		ReleaseDC: function() {
