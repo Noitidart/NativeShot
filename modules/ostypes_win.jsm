@@ -305,7 +305,7 @@ var winInit = function() {
 			 *   __in_   DWORD      dwOffset
 			 * );
 			 */
-			return lib('gdi32').declare('CreateCompatibleDC', self.TYPE.ABI,
+			return lib('gdi32').declare('CreateDIBSection', self.TYPE.ABI,
 				self.TYPE.HBITMAP,			//return
 				self.TYPE.HDC,				// hdc
 				self.TYPE.BITMAPINFO.ptr,	// *pbmi
