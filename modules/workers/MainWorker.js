@@ -189,10 +189,17 @@ function shootSect(c1, c2) {
 							console.error('imagedata.data:', imagedata.data.toString());
 							console.error('imagedata.data:', imagedata.data.set.toString());
 							var normalArr = [];
+							
+							var buf = new ArrayBuffer(w * h * 4);
+							var buf8 = new Uint8ClampedArray(buf);
+							var buf32 = new Uint32Array(buf);
+							
 							for (var nRow=0; nRow<h; ++nRow) {
 								for (var nCol=0; nCol<w; ++nCol) {
 									var rez_colorref = ostypes.API('GetPixel')(hdcC, nCol, nRow);
 									var input = parseInt(cutils.jscGetDeepest(rez_colorref));
+									
+									/*
 									var r =  input       & 0xff;
 									var g = (input >> 8) & 0xff;
 									var b = (input >>16) & 0xff;
@@ -202,14 +209,16 @@ function shootSect(c1, c2) {
 									normalArr.push(g);
 									normalArr.push(b);
 									normalArr.push(a);
-									console.log(nRow, nCol, [r, g, b]);
+									//console.log(nRow, nCol, [r, g, b]);
+									*/
+									buf32[nRow * w + nCol] = input | (255 << 24) /*alpha of 255 otherwise it is 0*/;
 									//break;
 								}
 								//break;
 							}
 							// end - trying to get imagedata
 							console.info('normalArr:', normalArr.toString());
-							imagedata.data.set(normalArr);
+							imagedata.data.set(buf8);
 							console.error('set done');
 							var rez_SO = ostypes.API('SelectObject')(hdcC, hbmOld);
 							console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
