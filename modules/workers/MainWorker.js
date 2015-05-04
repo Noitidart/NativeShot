@@ -118,10 +118,22 @@ function shootSect(c1, c2) {
 				
 				console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
 				
-				// start new stuff
-				var w = c2.x - c1.x;
-				var h = c2.y - c1.y;
-						
+				// force fullscreen
+				c1 = {x:0, y:0};
+				c2 = {x:nWidth, y:nHeight};
+				
+				var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
+				console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
+				if (ctypes.winLastError != 0) {
+					console.error('Failed hdcMemoryDC, winLastError:', ctypes.winLastError);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed hdcMemoryDC, winLastError: "' + ctypes.winLastError + '" and hdcMemoryDC: "' + hdcMemoryDC.toString(),
+						winLastError: ctypes.winLastError
+					});
+				}
+
+				// CreateDIBSection stuff				
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
 				bmi.bmiHeader.biWidth = nWidth; //w;
@@ -133,8 +145,11 @@ function shootSect(c1, c2) {
 				
 				console.info('bmi:', bmi.toString());
 				
-				var pixelBuffer = ostypes.TYPE.COLORREF.ptr();				
-				var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0);
+				var pixelBuffer = ostypes.TYPE.COLORREF.ptr();
+				//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+				// CreateDIBSection stuff
+				
+				var hbmp = ostypes.API('CreateDIBSection')(hdcMemoryDC, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
 				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 				if (ctypes.winLastError != 0) {
 					console.error('Failed hbmp, winLastError:', ctypes.winLastError);
@@ -145,12 +160,32 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				console.info('pixelBuffer:', pixelBuffer.toString(), pixelBuffer.address().toString());
-				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(nWidth * nHeight).ptr).contents;
-				console.info('casted:', casted.toString());
-				
-				// cut out old stuff from here
+				var rez_SO = ostypes.API('SelectObject')(hdcMemoryDC, hbmp);
+				console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
+				if (ctypes.winLastError != 0) {
+					console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
+						winLastError: ctypes.winLastError
+					});
+				}
 
+				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0,0, c2.x-c1.x, c2.y-c2.y, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
+				console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
+				if (ctypes.winLastError != 0) {
+					console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
+						winLastError: ctypes.winLastError
+					});
+				}
+				
+				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(nWidth * nHeight).ptr).contents;
+				console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
+				logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
+				
 				return imagedata;
 				
 			break;
@@ -162,3 +197,12 @@ function shootSect(c1, c2) {
 	}
 }
 // End - Addon Functionality
+
+var txtEn = new TextEncoder()
+var pth = OS.Path.join(OS.Constants.Path.desktopDir, 'logit.txt');
+
+function logit(txt) {
+	var valOpen = OS.File.open(pth, {write: true, append: true});
+	var valWrite = valOpen.write(txtEn.encode(txt + '\n'));
+	valOpen.close();
+}
