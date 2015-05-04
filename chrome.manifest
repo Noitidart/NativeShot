@@ -1,0 +1,3 @@
+content nativeshot ./
+locale nativeshot en-US locale/en-US/
+locale nativeshot en-GB locale/en-GB/
