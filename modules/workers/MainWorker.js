@@ -171,7 +171,10 @@ function shootSect(c1, c2) {
 					});
 				}
 
-				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0,0, c2.x-c1.x, c2.y-c2.y, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
+				var w = c2.x - c1.x;
+				var h = c2.y - c1.y;
+				
+				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0,0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
 				console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
 				if (ctypes.winLastError != 0) {
 					console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
@@ -183,8 +186,86 @@ function shootSect(c1, c2) {
 				}
 				
 				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.COLORREF.array(nWidth * nHeight).ptr).contents;
-				console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
+				//console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
+				
+				
+				var imagedata = new ImageData(w, h);
+				/*
+				// uint32 way
+				console.time('uint32 way');
+				var buf = new ArrayBuffer(w * h * 4);
+				var buf8 = new Uint8ClampedArray(buf);
+				var buf32 = new Uint32Array(buf);
+				
+				for (var nRow=0; nRow<h; ++nRow) {
+					for (var nCol=0; nCol<w; ++nCol) {
+						var nIndex = nRow * w + nCol;
+						var rez_colorref = casted[nIndex];
+						var input = parseInt(cutils.jscGetDeepest(rez_colorref));
+						
+						buf32[nIndex] = input;
+						//break;
+					}
+					//break;
+				}
+				//console.info('normalArr:', normalArr.toString());
+				imagedata.data.set(buf8);
+				console.timeEnd('uint32 way');
+				// uint32 way
+				*/
+				
+				// normal way
+				console.time('normal way');
+				var normalArr = [];							
+				for (var nRow=0; nRow<h; ++nRow) {
+					for (var nCol=0; nCol<w; ++nCol) {
+						var nIndex = nRow * w + nCol;
+						var rez_colorref = parseInt(casted[nIndex].toString());						
+						var input = rez_colorref;
+						
+						var b =  input       & 0xff;
+						var g = (input >> 8) & 0xff;
+						var r = (input >>16) & 0xff;
+						var a = 255;
+
+						normalArr.push(r);
+						normalArr.push(g);
+						normalArr.push(b);
+						normalArr.push(a);
+						//console.log(nRow, nCol, [r, g, b]);
+						
+						//break;
+					}
+					//break;
+				}
+				//console.info('normalArr:', normalArr.toString());
+				imagedata.data.set(normalArr);
+				console.timeEnd('normal way');
+				// normal way
+				
+				/*
+				// uint32 way
+				console.time('uint32 way');
+				var buf = new ArrayBuffer(w * h * 4);
+				var buf8 = new Uint8ClampedArray(buf);
+				var buf32 = new Uint32Array(buf);
+				
+				for (var nRow=0; nRow<h; ++nRow) {
+					for (var nCol=0; nCol<w; ++nCol) {
+						var rez_colorref = ostypes.API('GetPixel')(hdcC, nCol, nRow);
+						var input = parseInt(cutils.jscGetDeepest(rez_colorref));
+						
+						buf32[nRow * w + nCol] = input | (255 << 24); //alpha of 255 otherwise it is 0
+						//break;
+					}
+					//break;
+				}
+				//console.info('normalArr:', normalArr.toString());
+				imagedata.data.set(buf8);
+				console.timeEnd('uint32 way');
+				// uint32 way
+				*/
 				
 				return imagedata;
 				
