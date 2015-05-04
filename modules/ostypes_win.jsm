@@ -104,49 +104,22 @@ var winTypes = function() {
 	// STRUCTURES
 	
 	// SIMPLE STRUCTS // based on any of the types above
-	this.FILE_NOTIFY_INFORMATION = ctypes.StructType('FILE_NOTIFY_INFORMATION', [
-		{ NextEntryOffset: this.DWORD },
-		{ Action: this.DWORD },
-		{ FileNameLength: this.DWORD },
-		{ FileName: ctypes.ArrayType(this.WCHAR, 1) }, // not null terminated
-	]);
-	this.GUID = ctypes.StructType('GUID', [
-	  { 'Data1': this.ULONG },
-	  { 'Data2': this.USHORT },
-	  { 'Data3': this.USHORT },
-	  { 'Data4': this.BYTE.array(8) }
-	]);
-	this.OVERLAPPED = ctypes.StructType('_OVERLAPPED', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/ms684342%28v=vs.85%29.aspx
-		{ Internal: this.ULONG_PTR },
-		{ InternalHigh: this.ULONG_PTR },
-		{ Pointer: this.PVOID }, //  union { struct { DWORD Offset; DWORD OffsetHigh; }; PVOID Pointer; };
-		{ hEvent: this.HANDLE },
-	]);
-	this.PROPVARIANT = ctypes.StructType('PROPVARIANT', [ // http://msdn.microsoft.com/en-us/library/windows/desktop/bb773381%28v=vs.85%29.aspx
-		{ 'vt': this.VARTYPE }, // constants for this are available at MSDN: http://msdn.microsoft.com/en-us/library/windows/desktop/aa380072%28v=vs.85%29.aspx
-		{ 'wReserved1': this.WORD },
-		{ 'wReserved2': this.WORD },
-		{ 'wReserved3': this.WORD },
-		{ 'pwszVal': this.LPWSTR } // union, i just use pwszVal so I picked that one // for InitPropVariantFromString // when using this see notes on MSDN doc page chat of PROPVARIANT ( http://msdn.microsoft.com/en-us/library/windows/desktop/aa380072%28v=vs.85%29.aspx )this guy says: "VT_LPWSTR must be allocated with CoTaskMemAlloc :: (Presumably this also applies to VT_LPSTR) VT_LPWSTR is described as being a string pointer with no information on how it is allocated. You might then assume that the PROPVARIANT doesn't own the string and just has a pointer to it, but you'd be wrong. In fact, the string stored in a VT_LPWSTR PROPVARIANT must be allocated using CoTaskMemAlloc and be freed using CoTaskMemFree. Evidence for this: Look at what the inline InitPropVariantFromString function does: It sets a VT_LPWSTR using SHStrDupW, which in turn allocates the string using CoTaskMemAlloc. Knowing that, it's obvious that PropVariantClear is expected to free the string using CoTaskMemFree. I can't find this explicitly documented anywhere, which is a shame, but step through this code in a debugger and you can confirm that the string is freed by PropVariantClear: ```#include <Propvarutil.h>	int wmain(int argc, TCHAR *lpszArgv[])	{	PROPVARIANT pv;	InitPropVariantFromString(L"Moo", &pv);	::PropVariantClear(&pv);	}```  If  you put some other kind of string pointer into a VT_LPWSTR PROPVARIANT your program is probably going to crash."
-	]);
-	this.SECURITY_ATTRIBUTES = ctypes.StructType('_SECURITY_ATTRIBUTES', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379560%28v=vs.85%29.aspx
-		{ 'nLength': this.DWORD },
-		{ 'lpSecurityDescriptor': this.LPVOID },
-		{ 'bInheritHandle': this.BOOL }
-	]);
+    this.RECT = ctypes.StructType('_RECT', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/dd162897%28v=vs.85%29.aspx
+        {top: this.LONG},
+        {left: this.LONG},
+        {bottom: this.LONG},
+        {right: this.LONG}
+    ]);
 	
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first
-	this.CLSID = this.GUID;
-	this.PGUID = this.GUID.ptr;
-	this.IID = this.GUID;
-	this.LPOVERLAPPED = this.OVERLAPPED.ptr;
-	this.LPSECURITY_ATTRIBUTES = this.SECURITY_ATTRIBUTES.ptr;
+    this.PRECT = this.RECT.ptr;
+    this.LPRECT = this.RECT.ptr;
 	
 	// FUNCTION TYPES
-	this.FileIOCompletionRoutine = ctypes.FunctionType(this.CALLBACK_ABI, this.VOID, [this.DWORD, this.DWORD, this.LPOVERLAPPED]);
+	
 	
 	// STRUCTS USING FUNC TYPES
-	this.LPOVERLAPPED_COMPLETION_ROUTINE = this.FileIOCompletionRoutine.ptr;
+	
 }
 
 var winInit = function() {
@@ -158,36 +131,7 @@ var winInit = function() {
 
 	// CONSTANTS
 	this.CONST = {
-		ERROR_OPERATION_ABORTED: 995,
-		FILE_ACTION_ADDED: 0x00000001,
-		FILE_ACTION_REMOVED: 0x00000002,
-		FILE_ACTION_MODIFIED: 0x00000003,
-		FILE_ACTION_RENAMED_OLD_NAME: 0x00000004,
-		FILE_ACTION_RENAMED_NEW_NAME: 0x00000005,
-		FILE_FLAG_BACKUP_SEMANTICS: 33554432,
-		FILE_FLAG_OVERLAPPED: 0x40000000,
-		FILE_LIST_DIRECTORY: 0x0001,
-		FILE_NOTIFY_CHANGE_FILE_NAME: 0x00000001,
-		FILE_NOTIFY_CHANGE_DIR_NAME: 0x00000002,
-		FILE_NOTIFY_CHANGE_ATTRIBUTES: 0x00000004,
-		FILE_NOTIFY_CHANGE_SIZE: 0x00000008,
-		FILE_NOTIFY_CHANGE_LAST_WRITE: 0x00000010,
-		FILE_NOTIFY_CHANGE_LAST_ACCESS: 0x00000020,
-		FILE_NOTIFY_CHANGE_CREATION: 0x00000040,
-		FILE_NOTIFY_CHANGE_SECURITY: 0x00000100,
-		FILE_SHARE_DELETE: 4,
-		FILE_SHARE_READ: 1,
-		FILE_SHARE_WRITE: 2,
-		GENERIC_READ: 31, // from https://msdn.microsoft.com/en-us/library/windows/desktop/aa374892%28v=vs.85%29.aspx i have no idea where i got 0x80000000 from // 0x80000000,
-		INVALID_HANDLE_VALUE: -1,
-		MAXIMUM_WAIT_OBJECTS: 64,
-		MB_OK: 0,
-		OPEN_EXISTING: 3,
-		WAIT_ABANDONED_0: 0x00000080, // 128
-		WAIT_FAILED: self.TYPE.DWORD('0xFFFFFFFF'),
-		WAIT_IO_COMPLETION: 0x000000C0, // 192
-		WAIT_OBJECT_0: 0,
-		WAIT_TIMEOUT: 0x00000102 // 258
+		SRCCOPY: self.TYPE.DWORD('0x00CC0020')
 	};
 	
 	var _lib = {}; // cache for lib
@@ -246,195 +190,141 @@ var winInit = function() {
 
 	// start - predefine your declares here
 	var preDec = { //stands for pre-declare (so its just lazy stuff) //this must be pre-populated by dev // do it alphabateized by key so its ez to look through
-		CancelIoEx: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa363792%28v=vs.85%29.aspx
-			 * BOOL WINAPI CancelIoEx(
-			 *   __in_     HANDLE       hFile,
-			 *   __in_opt_ LPOVERLAPPED lpOverlapped
+		BitBlt: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183370%28v=vs.85%29.aspx
+			 * BOOL BitBlt(
+			 *   __in_  HDC hdcDest,
+			 *   __in_  int nXDest,
+			 *   __in_  int nYDest,
+			 *   __in_  int nWidth,
+			 *   __in_  int nHeight,
+			 *   __in_  HDC hdcSrc,
+			 *   __in_  int nXSrc,
+			 *   __in_  int nYSrc,
+			 *   __in_  DWORD dwRop
 			 * );
 			 */
-			return lib('kernel32').declare('CancelIoEx', self.TYPE.ABI,
-				self.TYPE.BOOL,			// return
-				self.TYPE.HANDLE,		// hObject
-				self.TYPE.LPOVERLAPPED	// lpOverlapped
+			return lib('gdi32').declare('BitBlt', self.TYPE.ABI,
+				self.TYPE.BOOL, //return
+				self.TYPE.HDC, // hdcDest
+				self.TYPE.INT, // nXDest
+				self.TYPE.INT, // nYDest
+				self.TYPE.INT, // nWidth
+				self.TYPE.INT, // nHeight
+				self.TYPE.HDC, // hdcSrc
+				self.TYPE.INT, // nXSrc
+				self.TYPE.INT, // nYSrc
+				self.TYPE.DWORD // dwRop
 			);
 		},
-		CloseHandle: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms724211%28v=vs.85%29.aspx
-			 * BOOL WINAPI CloseHandle(
-			 *   __in_  HANDLE hObject
+		CreateCompatibleBitmap: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183488%28v=vs.85%29.aspx
+			 * HBITMAP CreateCompatibleBitmap(
+			 *   __in_  HDC hdc,
+			 *   __in_  int nWidth,
+			 *   __in_  int nHeight
 			 * );
 			 */
-			return lib('kernel32').declare('CloseHandle', self.TYPE.ABI,
-				self.TYPE.BOOL,		// return
-				self.TYPE.HANDLE	// hObject
+			return lib('gdi32').declare('CreateCompatibleBitmap', self.TYPE.ABI,
+				self.TYPE.HBITMAP, //return
+				self.TYPE.HDC, // hdc
+				self.TYPE.INT, // nWidth
+				self.TYPE.INT // nHeight
 			);
 		},
-		CreateFile: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa363858%28v=vs.85%29.aspx
-			 * HANDLE WINAPI CreateFile(
-			 *   __in_      LPCTSTR lpFileName,
-			 *   __in_      DWORD dwDesiredAccess,
-			 *   __in_      DWORD dwShareMode,
-			 *   __in_opt_  LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-			 *   __in_      DWORD dwCreationDisposition,
-			 *   __in_      DWORD dwFlagsAndAttributes,
-			 *   __in_opt_  HANDLE hTemplateFile
+		CreateCompatibleDC: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183489%28v=vs.85%29.aspx
+			 * HDC CreateCompatibleDC(
+			 *   __in_  HDC hdc
 			 * );
 			 */
-			return lib('kernel32').declare(ifdef_UNICODE ? 'CreateFileW' : 'CreateFileA', self.TYPE.ABI,
-				self.TYPE.HANDLE,					// return
-				self.TYPE.LPCTSTR,					// lpFileName
-				self.TYPE.DWORD,					// dwDesiredAccess
-				self.TYPE.DWORD,					// dwShareMode
-				self.TYPE.LPSECURITY_ATTRIBUTES,	// lpSecurityAttributes
-				self.TYPE.DWORD,					// dwCreationDisposition
-				self.TYPE.DWORD,					// dwFlagsAndAttributes
-				self.TYPE.HANDLE					// hTemplateFile
+			return lib('gdi32').declare('CreateCompatibleDC', self.TYPE.ABI,
+				self.TYPE.HDC, //return
+				self.TYPE.HDC // hdc
 			);
 		},
-		CreateEvent: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms682396%28v=vs.85%29.aspx
-			 * HANDLE WINAPI CreateEvent(
-			 *  __in_opt_  LPSECURITY_ATTRIBUTES lpEventAttributes,
-			 *  __in_      BOOL bManualReset,
-			 *  __in_      BOOL bInitialState,
-			 *  __in_opt_  LPCTSTR lpName
+		DeleteDC: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183489%28v=vs.85%29.aspx
+			 * BOOL DeleteDC(
+			 *   __in_  HDC hdc
 			 * );
 			 */
-			return lib('kernel32').declare(ifdef_UNICODE ? 'CreateEventW' : 'CreateEventA', self.TYPE.ABI,
-				self.TYPE.HANDLE,					// return
-				self.TYPE.LPSECURITY_ATTRIBUTES,	// lpEventAttributes
-				self.TYPE.BOOL,						// bManualReset
-				self.TYPE.BOOL,						// bInitialState
-				self.TYPE.LPCTSTR					// lpName
+			return lib('gdi32').declare('DeleteDC', self.TYPE.ABI,
+				self.TYPE.BOOL, //return
+				self.TYPE.HDC // hdc
 			);
 		},
-		CreateIoCompletionPort: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa363862%28v=vs.85%29.aspx
-			 *   HANDLE WINAPI CreateIoCompletionPort(
-			 *     __in_      HANDLE FileHandle,
-			 *     __in_opt_  HANDLE ExistingCompletionPort,
-			 *     __in_      ULONG_PTR CompletionKey,
-			 *     __in_      DWORD NumberOfConcurrentThreads
-			 *   );
-			 */
-			return lib('kernel32').declare('CreateIoCompletionPort', self.TYPE.ABI,
-				self.TYPE.HANDLE,		// return
-				self.TYPE.HANDLE,		// FileHandle
-				self.TYPE.HANDLE,		// ExistingCompletionPort
-				self.TYPE.ULONG_PTR,	// CompletionKey
-				self.TYPE.DWORD			// NumberOfConcurrentThreads
-			);
-		},
-		GetOverlappedResult: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms683209%28v=vs.85%29.aspx
-			 * BOOL WINAPI GetOverlappedResult(
-			 *  __in_   HANDLE hFile,
-			 *  __in_   LPOVERLAPPED lpOverlapped,
-			 *  __out_  LPDWORD lpNumberOfBytesTransferred,
-			 *  __in_   BOOL bWait
+		GetClientRect: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633503%28v=vs.85%29.aspx
+			 * BOOL WINAPI GetClientRect(
+			 *   __in_   HWND hWnd,
+			 *   __out_  LPRECT lpRect
 			 * );
 			 */
-			return lib('kernel32').declare('GetOverlappedResult', self.TYPE.ABI,
-				self.TYPE.BOOL,			// return
-				self.TYPE.HANDLE,		// hFile
-				self.TYPE.LPOVERLAPPED,	// lpOverlapped
-				self.TYPE.LPDWORD,		// lpNumberOfBytesTransferred
-				self.TYPE.BOOL			// bWait
+			return lib('user32').declare('GetClientRect', self.TYPE.ABI,
+				self.TYPE.BOOL, //return
+				self.TYPE.HWND, // hWnd
+				self.TYPE.LPRECT // lpRec
 			);
 		},
-		GetQueuedCompletionStatus: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa364986%28v=vs.85%29.aspx
-			 * BOOL WINAPI GetQueuedCompletionStatus(
-			 *   __in_   HANDLE CompletionPort,
-			 *   __out_  LPDWORD lpNumberOfBytes,
-			 *   __out_  PULONG_PTR lpCompletionKey,
-			 *   __out_  LPOVERLAPPED *lpOverlapped,
-			 *   __in_   DWORD dwMilliseconds
+		GetDC: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd144871%28v=vs.85%29.aspx
+			 * HDC GetDC(
+			 *   __in_ HWND hWnd
 			 * );
 			 */
-			return lib('kernel32').declare('GetQueuedCompletionStatus', self.TYPE.ABI,
-				self.TYPE.BOOL,			// return
-				self.TYPE.HANDLE,		// CompletionPort
-				self.TYPE.LPDWORD,		// lpNumberOfBytes
-				self.TYPE.PULONG_PTR,	// lpCompletionKey
-				self.TYPE.LPOVERLAPPED,	// *lpOverlapped
-				self.TYPE.DWORD			// dwMilliseconds
+			return lib('user32').declare('GetDC', self.TYPE.ABI,
+				self.TYPE.HDC, //return
+				self.TYPE.HWND // hWnd
 			);
 		},
-		MessageBox: function() {
-			/*
-				int WINAPI MessageBox(
-				  _In_opt_  HWND hWnd,
-				  _In_opt_  LPCTSTR lpText,
-				  _In_opt_  LPCTSTR lpCaption,
-				  _In_      UINT uType
-				);
-			*/
-			return lib('user32').declare(ifdef_UNICODE ? 'MessageBoxW' : 'MessageBoxA', self.TYPE.ABI,
-				self.TYPE.INT,			// return
-				self.TYPE.HWND,			// hWnd
-				self.TYPE.LPCTSTR,		// lpText
-				self.TYPE.LPCTSTR,		// lpCaption
-				self.TYPE.UINT			// uType
+		GetDesktopWindow: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633504%28v=vs.85%29.aspx
+			 * HWND WINAPI GetDesktopWindow(void);
+			 */
+			return lib('user32').declare('GetDesktopWindow', self.TYPE.ABI,
+				self.TYPE.HWND //return
 			);
 		},
-		ReadDirectoryChanges: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa365465%28v=vs.85%29.aspx
-			 * BOOL WINAPI ReadDirectoryChangesW(
-			 *   __in_         HANDLE hDirectory,
-			 *   __out_        LPVOID lpBuffer,
-			 *   __in_         DWORD nBufferLength,
-			 *   __in_         BOOL bWatchSubtree,
-			 *   __in_         DWORD dwNotifyFilter,
-			 *   __out_opt_    LPDWORD lpBytesReturned,
-			 *   __inout_opt_  LPOVERLAPPED lpOverlapped,
-			 *   __in_opt_     LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+		GetPixel: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd144909%28v=vs.85%29.aspx
+			 * COLORREF GetPixel(
+			 *   __in_  HDC hdc,
+			 *   __in_  int nXPos,
+			 *   __in_  int nYPos
 			 * );
 			 */
-			return lib('kernel32').declare('ReadDirectoryChangesW', self.TYPE.ABI,
-				self.TYPE.BOOL,								// return
-				self.TYPE.HANDLE,							// hDirectory,
-				self.TYPE.LPVOID,							// lpBuffer,
-				self.TYPE.DWORD,							// nBufferLength,
-				self.TYPE.BOOL,								// bWatchSubtree,
-				self.TYPE.DWORD,							// dwNotifyFilter,
-				self.TYPE.LPDWORD,							// lpBytesReturned,
-				self.TYPE.LPOVERLAPPED,						// lpOverlapped,
-				self.TYPE.LPOVERLAPPED_COMPLETION_ROUTINE	// lpCompletionRoutine
+			return lib('gdi32').declare('GetPixel', self.TYPE.ABI,
+				self.TYPE.COLORREF, //return
+				self.TYPE.HDC, // hWnd
+				self.TYPE.INT, // nXPos
+				self.TYPE.INT // nYPos
 			);
 		},
-		SleepEx: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms686307%28v=vs.85%29.aspx
-			 * DWORD WINAPI SleepEx(
-			 *   __in_  DWORD dwMilliseconds,
-			 *   __in_  BOOL bAlertable
+		ReleaseDC: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd162920%28v=vs.85%29.aspx
+			 * int ReleaseDC(
+			 *   __in_  HWND hWnd,
+			 *   __in_  HDC hDC
 			 * );
 			 */
-			return lib('kernel32').declare('SleepEx', self.TYPE.ABI,
-				self.TYPE.DWORD,	// return
-				self.TYPE.DWORD,	// dwMilliseconds
-				self.TYPE.BOOL		//bAlertable
+			return lib('user32').declare('ReleaseDC', self.TYPE.ABI,
+				self.TYPE.INT, //return
+				self.TYPE.HWND, // hWnd
+				self.TYPE.HDC // hDc
 			);
 		},
-		WaitForMultipleObjectsEx: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms687028%28v=vs.85%29.aspx
-			 * DWORD WINAPI WaitForMultipleObjectsEx(
-			 *   __in_  DWORD nCount,
-			 *   __in_  const HANDLE *lpHandles,
-			 *   __in_  BOOL bWaitAll,
-			 *   __in_  DWORD dwMilliseconds,
-			 *   __in_  BOOL bAlertable
+		SelectObject: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183489%28v=vs.85%29.aspx
+			 * HGDIOBJ SelectObject(
+			 *   __in_  HDC hdc,
+			 *   __in_  HGDIOBJ hgdiobj
 			 * );
 			 */
-			return lib('kernel32').declare('WaitForMultipleObjectsEx', self.TYPE.ABI,
-				self.TYPE.DWORD,		// return
-				self.TYPE.DWORD,		// nCount
-				self.TYPE.HANDLE.ptr,	// *lpHandles
-				self.TYPE.BOOL,			// bWaitAll
-				self.TYPE.DWORD,		// dwMilliseconds
-				self.TYPE.BOOL			// bAlertable
+			return lib('gdi32').declare('SelectObject', self.TYPE.ABI,
+				self.TYPE.HGDIOBJ, //return
+				self.TYPE.HDC, // hdc
+				self.TYPE.HGDIOBJ // hgdiobj
 			);
 		}
 	};

@@ -15,20 +15,22 @@ if (ctypes.voidptr_t.size == 4 /* 32-bit */) {
 function utilsInit() {
 	// start - comparison stuff
 	this.jscGetDeepest = function(obj) {
+		/*
 		if (obj !== null && obj !== undefined) {
-			//console.log('trying on:', obj.toString())
+			console.log('trying on:', obj.toString())
 		}
+		*/
 		while (obj && isNaN(obj) && ('contents' in obj || 'value' in obj)) {
 			if ('contents' in obj) {
 				if (obj.constructor.targetType && obj.constructor.targetType.size === undefined) {
-					console.error('breaking as no targetType.size on obj level:', obj.toString());
+					//console.error('breaking as no targetType.size on obj level:', obj.toString());
 					break;
 				} else {
 					obj = obj.contents;
 				}
 			} else if ('value' in obj) {
 				if (obj.constructor.targetType && obj.constructor.targetType.size === undefined) {
-					console.error('breaking as no targetType.size on obj level:', obj.toString());
+					//console.error('breaking as no targetType.size on obj level:', obj.toString());
 					break;
 				} else {
 					obj = obj.value;

@@ -88,3 +88,175 @@ function init(objCore) {
 	
 	return true;
 }
+
+// Start - Addon Functionality
+function shootSect(c1, c2) {
+	// c1 is object of x,y top left coordinates
+	// c2 is object of x,y top left coordinates
+	
+	var hWindow = ostypes.API('GetDesktopWindow')();
+	console.info('hWindow:', hWindow.toString(), uneval(hWindow), cutils.jscGetDeepest(hWindow));
+	if (ctypes.winLastError != 0) {
+		console.error('Failed hWindow, winLastError:', ctypes.winLastError);
+		throw new Error({
+			name: 'os-api-error',
+			message: 'Failed hWindow, winLastError: "' + ctypes.winLastError + '" and hWindow: "' + hWindow.toString(),
+			winLastError: ctypes.winLastError
+		});
+	}
+	var hdcScreen = ostypes.API('GetDC')(hWindow);
+	console.info('hdcScreen:', hdcScreen.toString(), uneval(hdcScreen), cutils.jscGetDeepest(hdcScreen));
+	if (ctypes.winLastError != 0) {
+		console.error('Failed hdcScreen, winLastError:', ctypes.winLastError);
+		throw new Error({
+			name: 'os-api-error',
+			message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
+			winLastError: ctypes.winLastError
+		});
+	}
+	var rect = ostypes.TYPE.RECT();
+
+	var rez_GCR = ostypes.API('GetClientRect')(hWindow, rect.address());
+	console.info('rez_GCR:', rez_GCR.toString(), uneval(rez_GCR), cutils.jscGetDeepest(rez_GCR));
+	if (ctypes.winLastError != 0) {
+		console.error('Failed rez_GCR, winLastError:', ctypes.winLastError);
+		throw new Error({
+			name: 'os-api-error',
+			message: 'Failed rez_GCR, winLastError: "' + ctypes.winLastError + '" and rez_GCR: "' + rez_GCR.toString(),
+			winLastError: ctypes.winLastError
+		});
+	}
+
+	console.info('rect:', rect.toString(), uneval(rect));
+	rect.bottom = ostypes.TYPE.LONG(10);
+	rect.right = ostypes.TYPE.LONG(10);
+	console.info('rect modded:', rect.toString(), uneval(rect));
+
+	var hbmC = ostypes.API('CreateCompatibleBitmap')(hdcScreen, rect.right, rect.bottom);
+	console.info('hbmC:', hbmC.toString(), uneval(hbmC), cutils.jscGetDeepest(hbmC));
+	if (ctypes.winLastError != 0) {
+		console.error('Failed hbmC, winLastError:', ctypes.winLastError);
+		throw new Error({
+			name: 'os-api-error',
+			message: 'Failed hbmC, winLastError: "' + ctypes.winLastError + '" and hbmC: "' + hbmC.toString(),
+			winLastError: ctypes.winLastError
+		});
+	}
+	
+	if (!hbmC.isNull()) {
+		var hdcC = ostypes.API('CreateCompatibleDC')(hdcScreen);
+		console.info('hdcC:', hdcC.toString(), uneval(hdcC), cutils.jscGetDeepest(hdcC));
+		if (ctypes.winLastError != 0) {
+			console.error('Failed hdcC, winLastError:', ctypes.winLastError);
+			throw new Error({
+				name: 'os-api-error',
+				message: 'Failed hdcC, winLastError: "' + ctypes.winLastError + '" and hdcC: "' + hdcC.toString(),
+				winLastError: ctypes.winLastError
+			});
+		}
+
+		if (!hdcC.isNull()) {
+			var hbmOld = ostypes.API('SelectObject')(hdcC, hbmC);
+			console.info('hbmOld:', hbmOld.toString(), uneval(hbmOld), cutils.jscGetDeepest(hbmOld));
+			if (ctypes.winLastError != 0) {
+				console.error('Failed hbmOld, winLastError:', ctypes.winLastError);
+				throw new Error({
+					name: 'os-api-error',
+					message: 'Failed hbmOld, winLastError: "' + ctypes.winLastError + '" and hbmOld: "' + hbmOld.toString(),
+					winLastError: ctypes.winLastError
+				});
+			}
+
+			var rez_BB = ostypes.API('BitBlt')(hdcC, 0, 0, rect.right, rect.bottom, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
+			console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
+			if (!rez_BB) {
+				console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
+				throw new Error({
+					name: 'os-api-error',
+					message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
+					winLastError: ctypes.winLastError
+				});
+			} else {				
+				// start - trying to get imagedata
+				var w = parseInt(cutils.jscGetDeepest(rect.right));
+				var h = parseInt(cutils.jscGetDeepest(rect.bottom));
+				var imagedata = new ImageData(w, h);
+				console.error('imagedata.data:', imagedata.data.toString());
+				console.error('imagedata.data:', imagedata.data.set.toString());
+				var normalArr = [];
+				for (var nRow=0; nRow<h; ++nRow) {
+					for (var nCol=0; nCol<w; ++nCol) {
+						var rez_colorref = ostypes.API('GetPixel')(hdcC, nCol, nRow);
+						var input = parseInt(cutils.jscGetDeepest(rez_colorref));
+						var r =  input       & 0xff;
+						var g = (input >> 8) & 0xff;
+						var b = (input >>16) & 0xff;
+						var a = 1;
+
+						normalArr.push(r);
+						normalArr.push(g);
+						normalArr.push(b);
+						normalArr.push(a);
+						console.log(nRow, nCol, [r, g, b]);
+						//break;
+					}
+					//break;
+				}
+				// end - trying to get imagedata
+				console.info('normalArr:', normalArr.toString());
+				imagedata.data.set(normalArr);
+				console.error('set done');
+				var rez_SO = ostypes.API('SelectObject')(hdcC, hbmOld);
+				console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
+				if (ctypes.winLastError != 0) {
+					console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
+						winLastError: ctypes.winLastError
+					});
+				}
+				
+				var rez_DDC = ostypes.API('DeleteDC')(hdcC);
+				console.info('rez_DDC:', rez_DDC.toString(), uneval(rez_DDC), cutils.jscGetDeepest(rez_DDC));
+				if (ctypes.winLastError != 0) {
+					console.error('Failed rez_DDC, winLastError:', ctypes.winLastError);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed rez_DDC, winLastError: "' + ctypes.winLastError + '" and rez_DDC: "' + rez_DDC.toString(),
+						winLastError: ctypes.winLastError
+					});
+				}
+			}
+		}
+	}
+
+	var rez_RDC = ostypes.API('ReleaseDC')(hWindow, hdcScreen);
+	console.info('rez_RDC:', rez_RDC.toString(), uneval(rez_RDC), cutils.jscGetDeepest(rez_RDC));
+	if (ctypes.winLastError != 0) {
+		console.error('Failed rez_RDC, winLastError:', ctypes.winLastError);
+		throw new Error({
+			name: 'os-api-error',
+			message: 'Failed rez_RDC, winLastError: "' + ctypes.winLastError + '" and rez_RDC: "' + rez_RDC.toString(),
+			winLastError: ctypes.winLastError
+		});
+	}
+
+	return imagedata;
+	
+	/*
+	return {
+		hbmC: {
+			hdc: hbmC,
+			width: rect.right,
+			height: rect.bottom
+		},
+		hdcC: {
+			hdc: hdcC,
+			width: rect.right,
+			height: rect.bottom
+		}
+	};
+	*/
+}
+// End - Addon Functionality

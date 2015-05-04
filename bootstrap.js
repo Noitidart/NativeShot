@@ -26,7 +26,8 @@ const core = {
 };
 
 var PromiseWorker;
-var MainWorker;
+//var MainWorker = {};
+var bootstrap = this;
 
 const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
 
@@ -94,8 +95,43 @@ function extendCore() {
 }
 
 // START - Addon Functionalities
-function takeShot() {
+function takeShot(aDOMWin) {
 	console.log('taking shot');
+	
+	var topLeft = {x:10, y:10};
+	var botRight = {x:200, y:200};
+	
+	var promise_shootSect = MainWorker.post('shootSect', [topLeft, botRight]);
+	promise_shootSect.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_shootSect - ', aVal);
+			// start - do stuff here - promise_shootSect
+			// aVal is `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
+			var win = aDOMWin//.gBrowser.contentWindow;
+			var doc = win.document;
+			
+			var can = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+			can.width = aVal.width;
+			can.height = aVal.height;
+			var ctx = can.getContext('2d');
+			ctx.putImageData(aVal, 0, 0);
+			
+			doc.documentElement.appendChild(can);
+			// end - do stuff here - promise_shootSect
+		},
+		function(aReason) {
+			var rejObj = {name:'promise_shootSect', aReason:aReason};
+			console.warn('Rejected - promise_shootSect - ', rejObj);
+			Services.prompt.alert(aDOMWin, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+		}
+	).catch(
+		function(aCaught) {
+			var rejObj = {name:'promise_shootSect', aCaught:aCaught};
+			console.error('Caught - promise_shootSect - ', rejObj);
+			Services.prompt.alert(aDOMWin, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
+		}
+	);	
+	
 }
 
 // END - Addon Functionalities
@@ -175,7 +211,7 @@ function startup(aData, aReason) {
 	
 	PromiseWorker = Cu.import(core.addon.path.content + 'modules/PromiseWorker.jsm').BasePromiseWorker;
 	
-	var promise_getMainWorker = SIPWorker(MainWorker, core.addon.path.content + 'modules/workers/MainWorker.js');
+	var promise_getMainWorker = SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js');
 	promise_getMainWorker.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_getMainWorker - ', aVal);
@@ -205,16 +241,16 @@ function startup(aData, aReason) {
 		label: myServices.sb.GetStringFromName('cui_nativeshot_lbl'),
 		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
 		onCommand: function(aEvent) {
-			//var aDOMWin = aEvent.target.ownerDocument.defaultView;
-			takeShot();
+			var aDOMWin = aEvent.target.ownerDocument.defaultView;
+			aDOMWin.setTimeout(function() {
+				takeShot(aDOMWin);
+			}, 3000);
 		}
 	});
 	
 	//windowlistener more
 	windowListener.register();
 	//end windowlistener more
-	
-	Services.prompt.alert(null, myServices.sb.GetStringFromName('startup_prompt_title'), myServices.sb.GetStringFromName('startup_prompt_message'));
 }
 
 function shutdown(aData, aReason) {
@@ -274,7 +310,7 @@ function Deferred() {
 	}
 }
 
-function SIPWorker(workerScopeObj, aPath, aCore=core) {
+function SIPWorker(workerScopeName, aPath, aCore=core) {
 	// "Start and Initialize PromiseWorker"
 	// returns promise
 		// resolve value: jsBool true
@@ -285,14 +321,14 @@ function SIPWorker(workerScopeObj, aPath, aCore=core) {
 	
 	var deferredMain_SIPWorker = new Deferred();
 
-	if (!workerScopeObj) {
-		workerScopeObj = new PromiseWorker(aPath);
+	if (!(workerScopeName in bootstrap)) {
+		bootstrap[workerScopeName] = new PromiseWorker(aPath);
 		
 		if ('addon' in aCore && 'aData' in aCore.addon) {
 			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it
 		}
 		
-		var promise_initWorker = workerScopeObj.post('init', [aCore]);
+		var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
 		promise_initWorker.then(
 			function(aVal) {
 				console.log('Fullfilled - promise_initWorker - ', aVal);
@@ -314,7 +350,7 @@ function SIPWorker(workerScopeObj, aPath, aCore=core) {
 		);
 		
 	} else {
-		deferredMain_SIPWorker.reject('Something is loaded into workerScopeObj already');
+		deferredMain_SIPWorker.reject('Something is loaded into bootstrap[workerScopeName] already');
 	}
 	
 	return deferredMain_SIPWorker.promise;
