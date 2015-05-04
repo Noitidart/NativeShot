@@ -109,7 +109,7 @@ function takeShot(aDOMWin) {
 			// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
 			console.timeEnd('shootSect');
 			
-			var win = aDOMWin;
+			var win = aDOMWin.gBrowser.contentWindow;
 			var doc = win.document;
 			
 			var can = doc.createElementNS(NS_HTML, 'canvas');

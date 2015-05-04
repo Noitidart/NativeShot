@@ -196,7 +196,7 @@ function shootSect(c1, c2) {
 									var r =  input       & 0xff;
 									var g = (input >> 8) & 0xff;
 									var b = (input >>16) & 0xff;
-									var a = 1;
+									var a = 255;
 
 									normalArr.push(r);
 									normalArr.push(g);
