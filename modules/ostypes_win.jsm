@@ -32,6 +32,7 @@ var winTypes = function() {
 	this.BYTE = ctypes.unsigned_char;
 	this.CHAR = ctypes.char;
 	this.DWORD = ctypes.unsigned_long; // IntSafe.h defines it as: // typedef unsigned long DWORD; // so maybe can change this to ctypes.unsigned_long // i was always using `ctypes.uint32_t`
+	this.FXPT2DOT30 = ctypes.long; // http://stackoverflow.com/a/20864995/1828637 // https://github.com/wine-mirror/wine/blob/a7247df6ca54fd1209eff9f9199447643ebdaec5/include/wingdi.h#L150
 	this.INT = ctypes.int;
 	this.INT_PTR = is64bit ? ctypes.int64_t : ctypes.int;
 	this.LONG = ctypes.long;
@@ -136,6 +137,44 @@ var winTypes = function() {
     { "rgbReserved": this.BYTE }
   ]);
 	
+	this.CIEXYZ = ctypes.StructType('CIEXYZ', [
+		{ ciexyzX: this.FXPT2DOT30 },
+		{ ciexyzY: this.FXPT2DOT30 },
+		{ ciexyzZ: this.FXPT2DOT30 }
+	]);
+	
+	this.CIEXYZTRIPLE = ctypes.StructType('CIEXYZTRIPLE', [
+		{ ciexyzRed: this.CIEXYZ },
+		{ ciexyzGreen: this.CIEXYZ },
+		{ ciexyzBlue: this.CIEXYZ }
+	]);
+	this.BITMAPV5HEADER = ctypes.StructType('BITMAPV5HEADER', [
+		{ bV5Size:			this.DWORD },
+		{ bV5Width:			this.LONG },
+		{ bV5Height:		this.LONG },
+		{ bV5Planes:		this.WORD },
+		{ bV5BitCount:		this.WORD },
+		{ bV5Compression:	this.DWORD },
+		{ bV5SizeImage:		this.DWORD },
+		{ bV5XPelsPerMeter:	this.LONG },
+		{ bV5YPelsPerMeter:	this.LONG },
+		{ bV5ClrUsed:		this.DWORD },
+		{ bV5ClrImportant:	this.DWORD },
+		{ bV5RedMask:		this.DWORD },
+		{ bV5GreenMask:		this.DWORD },
+		{ bV5BlueMask:		this.DWORD },
+		{ bV5AlphaMask:		this.DWORD },
+		{ bV5CSType:		this.DWORD },
+		{ bV5Endpoints:		this.CIEXYZTRIPLE },
+		{ bV5GammaRed:		this.DWORD },
+		{ bV5GammaGreen:	this.DWORD },
+		{ bV5GammaBlue:		this.DWORD },
+		{ bV5Intent:		this.DWORD },
+		{ bV5ProfileData:	this.DWORD },
+		{ bV5ProfileSize:	this.DWORD },
+		{ bV5Reserved:		this.DWORD }
+	]);
+	
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first
     this.PRECT = this.RECT.ptr;
     this.LPRECT = this.RECT.ptr;
@@ -164,6 +203,7 @@ var winInit = function() {
 
 	// CONSTANTS
 	this.CONST = {
+		BI_BITFIELDS: 3,
 		BI_RGB: 0,
 		BITSPIXEL: 12,
 		DIB_RGB_COLORS: 0,

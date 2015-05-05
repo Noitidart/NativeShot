@@ -134,6 +134,7 @@ function shootSect(c1, c2) {
 				}
 
 				// CreateDIBSection stuff				
+				///* gives BRG
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
 				bmi.bmiHeader.biWidth = nWidth; //w;
@@ -141,18 +142,40 @@ function shootSect(c1, c2) {
 				bmi.bmiHeader.biPlanes = 1;
 				bmi.bmiHeader.biBitCount = nBPP; //32;
 				bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
-				//bmi.bmiHeader.biSizeImage = nHeight * nWidth * (nBPP / 8);
+				var masks = ctypes.cast(bmi.addressOfField('bmiColors'), ostypes.TYPE.DWORD.ptr);
 				
+				//console.info('masks:', masks.toString(), 'masks[0]:', masks[0].toString());
+				// bmi.bmiColors[0] = 0xf800;
+				// bmi.bmiColors[1] = 0x07e0;
+				// bmi.bmiColors[2] = 0x001f;
 				//console.info('bmi:', bmi.toString());
+				var cBmi = bmi.address();
+				//*/
+
+				/*
+				var bmi = ostypes.TYPE.BITMAPV5HEADER();
+				bmi.bV5Size = ostypes.TYPE.BITMAPV5HEADER.size;
+				bmi.bV5Width = nWidth; //w;
+				bmi.bV5Height = -1 * nHeight; //-1 * h; // top-down
+				bmi.bV5Planes = 1;
+				bmi.bV5BitCount = nBPP; //32;
+				bmi.bV5Compression = ostypes.CONST.BI_BITFIELDS;
+				bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0x00FF0000');
+				bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0x0000FF00');
+				bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0x000000FF');
+				bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0x00000000'); // 0x00000000 for opaque, otherwise 0xff000000
+				console.info('bmi:', bmi.toString());
+				var cBmi = ctypes.cast(bmi.address(), ostypes.TYPE.BITMAPINFO.ptr);
+				//*/
 				
 				var pixelBuffer = ostypes.TYPE.BYTE.ptr();
 				////console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
 				// CreateDIBSection stuff
 				
-				var hbmp = ostypes.API('CreateDIBSection')(hdcMemoryDC, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
-				//console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
+				var hbmp = ostypes.API('CreateDIBSection')(hdcMemoryDC, cBmi, ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
+				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 				if (ctypes.winLastError != 0) {
-					//console.error('Failed hbmp, winLastError:', ctypes.winLastError);
+					console.error('Failed hbmp, winLastError:', ctypes.winLastError);
 					throw new Error({
 						name: 'os-api-error',
 						message: 'Failed hbmp, winLastError: "' + ctypes.winLastError + '" and hbmp: "' + hbmp.toString(),
@@ -185,12 +208,15 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				//var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(w * h * 4).ptr).contents;
+				var modW = w % 4;
+				var useW = modW ? w + modW : w;
+				var arrLen = useW * h * 4
+				//var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
 				////console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				//logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				
 				
-				var imagedata = new ImageData(w, h);
+				var imagedata = new ImageData(useW, h);
 				
 				/*
 				// straight feed way 800ms
@@ -203,7 +229,7 @@ function shootSect(c1, c2) {
 				// normal way 1300ms
 				console.time('normal way');
 				var normalArr = [];
-				for (var nIndex=0; nIndex<casted.length; nIndex=nIndex+4) {
+				for (var nIndex=0; nIndex<arrLen; nIndex=nIndex+4) {
 					
 					var r = casted[nIndex + 2];
 					var g = casted[nIndex + 1];
@@ -232,9 +258,11 @@ function shootSect(c1, c2) {
 				///*
 				// memcpy way 4ms
 				console.time('memcpy way');
-				ostypes.API('memcpy')(imagedata.data, pixelBuffer, w*h*4);
+				ostypes.API('memcpy')(imagedata.data, pixelBuffer, arrLen);
 				console.timeEnd('memcpy way');
 				//*/
+				
+				// DONE: handle this: DIB widths are always a multiple of 4. If your image is not naturally a multiple of 4 pixels wide, then the row is padded out with 0 until it is. Your sample image is 170 pixels, which isn't a multiple of 4. The next multiple of 4 is 172, hence the two extra bytes. from here: http://www.gamedev.net/topic/487517-c-strange-problem-with-createdibsection/#entry4184321
 				
 				return imagedata;
 				
