@@ -116,7 +116,7 @@ function shootSect(c1, c2) {
 				var nHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
 				var nBPP = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.BITSPIXEL)));
 				
-				//console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
+				console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
 				
 				// force fullscreen
 				c1 = {x:0, y:0};
@@ -134,25 +134,27 @@ function shootSect(c1, c2) {
 				}
 
 				// CreateDIBSection stuff				
-				///* gives BRG
+				/* gives BRG
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
 				bmi.bmiHeader.biWidth = nWidth; //w;
 				bmi.bmiHeader.biHeight = -1 * nHeight; //-1 * h; // top-down
 				bmi.bmiHeader.biPlanes = 1;
 				bmi.bmiHeader.biBitCount = nBPP; //32;
-				bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
+				bmi.bmiHeader.biCompression = ostypes.CONST.BI_BITFIELDS;
 				var masks = ctypes.cast(bmi.addressOfField('bmiColors'), ostypes.TYPE.DWORD.ptr);
 				
 				//console.info('masks:', masks.toString(), 'masks[0]:', masks[0].toString());
-				// bmi.bmiColors[0] = 0xf800;
-				// bmi.bmiColors[1] = 0x07e0;
-				// bmi.bmiColors[2] = 0x001f;
-				//console.info('bmi:', bmi.toString());
+				bmi.bmiColors[0] = ostypes.TYPE.DWORD('0xf800');
+				bmi.bmiColors[1] = ostypes.TYPE.DWORD('0x07e0');
+				bmi.bmiColors[2] = ostypes.TYPE.DWORD('0x001f');
+				console.info('bmi:', bmi.toString());
 				var cBmi = bmi.address();
 				//*/
 
-				/*
+				console.error('ostypes.TYPE.BITMAPINFOHEADER.size:', ostypes.TYPE.BITMAPINFOHEADER.size);
+				console.error('ostypes.TYPE.BITMAPV5HEADER.size:', ostypes.TYPE.BITMAPV5HEADER.size);
+				///*
 				var bmi = ostypes.TYPE.BITMAPV5HEADER();
 				bmi.bV5Size = ostypes.TYPE.BITMAPV5HEADER.size;
 				bmi.bV5Width = nWidth; //w;
@@ -163,16 +165,22 @@ function shootSect(c1, c2) {
 				bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0x00FF0000');
 				bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0x0000FF00');
 				bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0x000000FF');
-				bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0x00000000'); // 0x00000000 for opaque, otherwise 0xff000000
-				console.info('bmi:', bmi.toString());
-				var cBmi = ctypes.cast(bmi.address(), ostypes.TYPE.BITMAPINFO.ptr);
+				bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0xFF000000'); // 0x00000000 for opaque, otherwise 0xff000000
+				
+				console.info('bmi:', bmi.toString(), bmi.address().toString());
+				//var cBmi = ctypes.cast(bmi.address(), ostypes.TYPE.BITMAPINFO.ptr);
+				
+				// bmi.bmiColors[0] = ostypes.TYPE.DWORD('0xf800');
+				// bmi.bmiColors[1] = ostypes.TYPE.DWORD('0x07e0');
+				// bmi.bmiColors[2] = ostypes.TYPE.DWORD('0x001f');
+				//console.info('cBmi.contents:', cBmi.contents.toString());
 				//*/
 				
 				var pixelBuffer = ostypes.TYPE.BYTE.ptr();
-				////console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+				console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
 				// CreateDIBSection stuff
 				
-				var hbmp = ostypes.API('CreateDIBSection')(hdcMemoryDC, cBmi, ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
+				var hbmp = ostypes.API('CreateDIBSection')(hdcMemoryDC, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
 				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 				if (ctypes.winLastError != 0) {
 					console.error('Failed hbmp, winLastError:', ctypes.winLastError);
@@ -208,11 +216,13 @@ function shootSect(c1, c2) {
 					});
 				}
 				
+				console.info('POST pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+				
 				var modW = w % 4;
 				var useW = modW ? w + modW : w;
 				var arrLen = useW * h * 4
-				//var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
-				////console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
+				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
+				console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				//logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				
 				

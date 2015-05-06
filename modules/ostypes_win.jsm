@@ -352,7 +352,7 @@ var winInit = function() {
 			return lib('gdi32').declare('CreateDIBSection', self.TYPE.ABI,
 				self.TYPE.HBITMAP,			//return
 				self.TYPE.HDC,				// hdc
-				self.TYPE.BITMAPINFO.ptr,	// *pbmi
+				self.TYPE.BITMAPV5HEADER.ptr,	// *pbmi
 				self.TYPE.UINT,				// iUsage
 				self.TYPE.BYTE.ptr.ptr,	// **ppvBits
 				self.TYPE.HANDLE,			// hSection
