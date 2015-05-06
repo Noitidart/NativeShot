@@ -156,12 +156,12 @@ function shootSect(c1, c2) {
 				//console.error('ostypes.TYPE.BITMAPV5HEADER.size:', ostypes.TYPE.BITMAPV5HEADER.size);
 				///*
 				var bmi = ostypes.TYPE.BITMAPV5HEADER();
-				bmi.bV5Size = ostypes.TYPE.BITMAPINFOHEADER.size;
+				bmi.bV5Size = ostypes.TYPE.BITMAPV5HEADER.size;
 				bmi.bV5Width = nWidth; //w;
 				bmi.bV5Height = -1 * nHeight; //-1 * h; // top-down
 				bmi.bV5Planes = 1;
 				bmi.bV5BitCount = nBPP; //32;
-				bmi.bV5Compression = ostypes.CONST.BI_RGB;
+				bmi.bV5Compression = ostypes.CONST.BITSPIXEL;
 				bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0x00FF0000');
 				bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0x0000FF00');
 				bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0x000000FF');
@@ -182,7 +182,8 @@ function shootSect(c1, c2) {
 				
 				var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, cBmi, ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
 				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
-				if (ctypes.winLastError != 0) {
+				console.error('Failed hbmp, winLastError:', ctypes.winLastError);
+				if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
 					console.error('Failed hbmp, winLastError:', ctypes.winLastError);
 					throw new Error({
 						name: 'os-api-error',
