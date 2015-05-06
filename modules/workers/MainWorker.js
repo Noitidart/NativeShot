@@ -180,7 +180,7 @@ function shootSect(c1, c2) {
 				console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
 				// CreateDIBSection stuff
 				
-				var hbmp = ostypes.API('CreateDIBSection')(hdcMemoryDC, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
+				var hbmp = ostypes.API('CreateDIBSection')(null, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
 				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 				if (ctypes.winLastError != 0) {
 					console.error('Failed hbmp, winLastError:', ctypes.winLastError);

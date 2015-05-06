@@ -113,7 +113,7 @@ function takeShot(aDOMWin) {
 			var doc = win.document;
 			
 			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = c2.x - c1.x; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+			can.width = aVal.width; //c2.x - c1.x; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
 			can.height = aVal.height;
 			var ctx = can.getContext('2d');
 			
