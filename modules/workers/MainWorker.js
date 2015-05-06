@@ -161,11 +161,11 @@ function shootSect(c1, c2) {
 				bmi.bV5Height = -1 * nHeight; //-1 * h; // top-down
 				bmi.bV5Planes = 1;
 				bmi.bV5BitCount = nBPP; //32;
-				bmi.bV5Compression = ostypes.CONST.BITSPIXEL;
-				bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0x00FF0000');
-				bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0x0000FF00');
-				bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0x000000FF');
-				bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0xFF000000'); // 0x00000000 for opaque, otherwise 0xff000000
+				bmi.bV5Compression = ostypes.CONST.BI_BITFIELDS;
+				bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0xff000000');
+				bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0xff00');
+				bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0xff');
+				bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0xff0000');
 				
 				console.info('bmi:', bmi.toString(), bmi.address().toString());
 				var cBmi = ctypes.cast(bmi.address(), ostypes.TYPE.BITMAPINFO.ptr);
@@ -182,7 +182,6 @@ function shootSect(c1, c2) {
 				
 				var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, cBmi, ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
 				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
-				console.error('Failed hbmp, winLastError:', ctypes.winLastError);
 				if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
 					console.error('Failed hbmp, winLastError:', ctypes.winLastError);
 					throw new Error({
@@ -223,8 +222,8 @@ function shootSect(c1, c2) {
 				var useW = modW ? w + modW : w;
 				console.log('useW:', useW, 'realW:', w);
 				var arrLen = useW * h * 4
-				//var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
-				//console.info('casted:', casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
+				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
+				console.info('casted:', casted.toString());
 				//logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				
 				
@@ -243,9 +242,9 @@ function shootSect(c1, c2) {
 				var normalArr = [];
 				for (var nIndex=0; nIndex<arrLen; nIndex=nIndex+4) {
 					
-					var r = casted[nIndex + 2];
+					var r = casted[nIndex + 0];
 					var g = casted[nIndex + 1];
-					var b = casted[nIndex];
+					var b = casted[nIndex + 2];
 					var a = 255;
 					imagedata.data[nIndex] = r;
 					imagedata.data[nIndex+1] = g;
