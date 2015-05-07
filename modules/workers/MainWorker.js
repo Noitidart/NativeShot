@@ -161,12 +161,11 @@ function shootSect(c1, c2) {
 				bmi.bV5Height = -1 * nHeight; //-1 * h; // top-down
 				bmi.bV5Planes = 1;
 				bmi.bV5BitCount = nBPP; //32;
-				bmi.bV5Compression = ostypes.CONST.BI_BITFIELDS;
-				bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0xff000000');
-				bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0xff00');
-				bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0xff');
-				bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0xff0000');
-				
+				bmi.bV5Compression = ostypes.CONST.BI_RGB;
+				// bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0x000000FF');
+				// bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0x0000FF00');
+				// bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0x00FF0000');
+				// bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0x00000000');
 				console.info('bmi:', bmi.toString(), bmi.address().toString());
 				var cBmi = ctypes.cast(bmi.address(), ostypes.TYPE.BITMAPINFO.ptr);
 				
@@ -226,6 +225,11 @@ function shootSect(c1, c2) {
 				console.info('casted:', casted.toString());
 				//logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
 				
+				
+				var src = ostypes.TYPE.BYTE.array()([3, 2, 1, 4, 3, 2, 1, 4, 3, 2, 1, 4]);
+				var dest = ostypes.TYPE.BYTE.array(src.length)();
+				var rez_swap = ostypes.API('_swab')(src, dest, src.length - 3);
+				console.info('dest:', dest.toString());
 				
 				var imagedata = new ImageData(useW, h);
 				

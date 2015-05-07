@@ -117,6 +117,58 @@ function takeShot(aDOMWin) {
 			can.height = aVal.height;
 			var ctx = can.getContext('2d');
 			
+			// based on fact: `// ARGB, and for little-endian machiens (Intel) each pixel is BGRA` from https://dxr.mozilla.org/mozilla-central/source/image/public/imgIEncoder.idl#78
+			var contentType = 'image/png';
+			var encoder = Cc['@mozilla.org/image/encoder;2?type=image/png'].createInstance().QueryInterface(Ci.imgIEncoder);
+
+			encoder.initFromData(aVal.data, aVal.width * aVal.height * 4, aVal.width, aVal.height, aVal.width * 4, Ci.imgIEncoder.INPUT_FORMAT_ARGB, '');
+			
+			var streamListener = {
+				buffer: null,
+				// nsIRequestObserver
+				onStartRequest: function(aRequest, aContext) {
+					this.buffer = [];
+				},
+				// nsIStreamListener
+				onDataAvailable: function(aRequest, aContext, aInputStream, aOffset, aCount) {
+					var reusableStreamInstance = Cc['@mozilla.org/scriptableinputstream;1'].createInstance(Ci.nsIScriptableInputStream);
+					reusableStreamInstance.init(aInputStream);
+					var chunk = reusableStreamInstance.readBytes(aCount);
+					this.buffer.push(chunk);
+				},
+				// nsIRequestObserver
+				onStopRequest: function(aRequest, aContext, aStatusCode) {
+					console.log('end', aStatusCode);
+					var data = this.buffer.join('');
+					console.log(data);
+					var promise_write = OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'blah.png'), new Uint8Array(data));
+					promise_write.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_write - ', aVal);
+							// start - do stuff here - promise_write
+							// end - do stuff here - promise_write
+						},
+						function(aReason) {
+							var rejObj = {name:'promise_write', aReason:aReason};
+							console.warn('Rejected - promise_write - ', rejObj);
+							//deferred_createProfile.reject(rejObj);
+						}
+					).catch(
+						function(aCaught) {
+							var rejObj = {name:'promise_write', aCaught:aCaught};
+							console.error('Caught - promise_write - ', rejObj);
+							//deferred_createProfile.reject(rejObj);
+						}
+					);
+				}
+			};
+			
+			_pump = Cc['@mozilla.org/network/input-stream-pump;1'].createInstance(Ci.nsIInputStreamPump);
+			_pump.init(encoder, -1, -1, 0, 0, true);
+			_pump.asyncRead(streamListener, null);
+			
+			console.log('ok done');
+			
 			ctx.putImageData(aVal, 0, 0);
 			
 			doc.documentElement.appendChild(can);

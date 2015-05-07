@@ -24,6 +24,8 @@ var winTypes = function() {
 	}
 	
 	// C TYPES
+	this.char = ctypes.unsigned_char;
+	this.int = ctypes.int;
 	this.size_t = ctypes.size_t;
 	this.void = ctypes.void_t;
 	
@@ -268,6 +270,14 @@ var winInit = function() {
 
 	// start - predefine your declares here
 	var preDec = { //stands for pre-declare (so its just lazy stuff) //this must be pre-populated by dev // do it alphabateized by key so its ez to look through
+		_swab: function() {
+			return lib('msvcrt').declare('_swab', self.TYPE.ABI,
+				self.TYPE.void,
+				self.TYPE.char.ptr,
+				self.TYPE.char.ptr,
+				self.TYPE.int
+			);
+		},
 		BitBlt: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183370%28v=vs.85%29.aspx
 			 * BOOL BitBlt(
