@@ -6,6 +6,7 @@ Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
+Cu.importGlobalProperties(['btoa']);
 
 // Globals
 const core = {
@@ -108,7 +109,7 @@ function takeShot(aDOMWin) {
 			// start - do stuff here - promise_shootSect
 			// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
 			console.timeEnd('shootSect');
-			
+			console.time('postCtypes');
 			var win = aDOMWin.gBrowser.contentWindow;
 			var doc = win.document;
 			
@@ -121,7 +122,7 @@ function takeShot(aDOMWin) {
 			var contentType = 'image/png';
 			var encoder = Cc['@mozilla.org/image/encoder;2?type=image/png'].createInstance().QueryInterface(Ci.imgIEncoder);
 
-			encoder.initFromData(aVal.data, aVal.width * aVal.height * 4, aVal.width, aVal.height, aVal.width * 4, Ci.imgIEncoder.INPUT_FORMAT_ARGB, '');
+			encoder.initFromData(aVal.data, aVal.width * aVal.height * 4, aVal.width, aVal.height, aVal.width * 4, Ci.imgIEncoder.INPUT_FORMAT_HOSTARGB, '');
 			
 			var streamListener = {
 				buffer: null,
@@ -140,7 +141,14 @@ function takeShot(aDOMWin) {
 				onStopRequest: function(aRequest, aContext, aStatusCode) {
 					console.log('end', aStatusCode);
 					var data = this.buffer.join('');
-					console.log(data);
+					//console.log(data);
+					var encoded = btoa(this.buffer);
+					var dataurl = "data:" + contentType + ";base64," + encoded;
+					//var gClipboardHelper = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper);
+					//gClipboardHelper.copyString(dataurl);
+					console.log('copie to clipboard');
+					console.timeEnd('postCtypes');
+					/*
 					var promise_write = OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'blah.png'), new Uint8Array(data));
 					promise_write.then(
 						function(aVal) {
@@ -160,6 +168,7 @@ function takeShot(aDOMWin) {
 							//deferred_createProfile.reject(rejObj);
 						}
 					);
+					*/
 				}
 			};
 			
