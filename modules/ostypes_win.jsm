@@ -237,6 +237,7 @@ var winInit = function() {
 		BITSPIXEL: 12,
 		CCHDEVICENAME: 32,
 		DIB_RGB_COLORS: 0,
+		DISPLAY_DEVICE_ATTACHED_TO_DESKTOP: 1, // same as DISPLAY_DEVICE_ACTIVE
 		HORZRES: 8,
 		MONITOR_DEFAULTTONEAREST: 2,
 		SRCCOPY: self.TYPE.DWORD('0x00CC0020'),
@@ -393,7 +394,7 @@ var winInit = function() {
 				self.TYPE.HDC,				// hdc
 				self.TYPE.BITMAPINFO.ptr,	// *pbmi
 				self.TYPE.UINT,				// iUsage
-				self.TYPE.BYTE.ptr.ptr,	// **ppvBits
+				self.TYPE.BYTE.ptr.ptr,		// **ppvBits
 				self.TYPE.HANDLE,			// hSection
 				self.TYPE.DWORD				// dwOffset
 			);
@@ -431,16 +432,16 @@ var winInit = function() {
 			 * BOOL EnumDisplayMonitors(
 			 *   __in_  HDC             hdc,
 			 *   __in_  LPCRECT         lprcClip,
-			 *   __in_  MONITORENUMPROC lpfnEnum,
+			 *   __in_  MONITORENUMPROC *lpfnEnum,
 			 *   __in_  LPARAM          dwData
 			 * );
 			 */
-			return lib('gdi32').declare('EnumDisplayMonitors', self.TYPE.ABI,
-				self.TYPE.BOOL,				// return
-				self.TYPE.HDC,				// hdc,
-				self.TYPE.LPCRECT,			// lprcClip,
-				self.TYPE.MONITORENUMPROC,	// lpfnEnum,
-				self.TYPE.LPARAM			// dwData
+			return lib('user32').declare('EnumDisplayMonitors', self.TYPE.ABI,
+				self.TYPE.BOOL,					// return
+				self.TYPE.HDC,					// hdc,
+				self.TYPE.LPCRECT,				// lprcClip,
+				self.TYPE.MONITORENUMPROC.ptr,	// lpfnEnum,
+				self.TYPE.LPARAM				// dwData
 			);
 		},
 		GetClientRect: function() {

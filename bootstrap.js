@@ -100,7 +100,7 @@ function takeShot(aDOMWin) {
 	
 	console.time('takeShot');
 	console.time('chromeworker');
-	var promise_shootSect = MainWorker.post('shootMon', [2]);
+	var promise_shootSect = MainWorker.post('shootMon', [1]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);

@@ -106,7 +106,7 @@ function shootMon(mons) {
 				
 				var rezArr = [];
 				
-				if (mons == 0 || mons == 1) {
+				if (mons == 0) {
 					rezArr.push({
 						argsCreateDC: {
 							lpszDriver: ostypes.TYPE.LPCTSTR.targetType.array()('DISPLAY'),
@@ -115,9 +115,75 @@ function shootMon(mons) {
 						xTopLeft: 0,
 						yTopLeft: 0
 					});
+				} else  if (mons == 1) {
+					// get all monitors
+					/*
+					var iDevNum = -1;
+					while (true) {
+						iDevNum++;
+						var lpDisplayDevice = ostypes.TYPE.DISPLAY_DEVICE();
+						lpDisplayDevice.cb = ostypes.TYPE.DISPLAY_DEVICE.size;
+						var rez_EnumDisplayDevices = ostypes.API('EnumDisplayDevices')(null, iDevNum, lpDisplayDevice.address(), null);
+						console.info('rez_EnumDisplayDevices:', rez_EnumDisplayDevices.toString(), uneval(rez_EnumDisplayDevices), cutils.jscGetDeepest(rez_EnumDisplayDevices));
+						if (cutils.jscEqual(rez_EnumDisplayDevices, 0)) { // ctypes.winLastError != 0
+							// iDevNum is greater than the largest device index.
+							break;
+						}
+						
+						if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+							rezArr.push({
+								argsCreateDC: {
+									lpszDriver: null,
+									lpszDevice: lpDisplayDevice.DeviceName
+								},
+								xTopLeft: parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.left)),
+								yTopLeft: parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.top))
+							});
+						}
+					}
+					*/ // discontinued this because i have to make another call to get topleft x,y of the monitor, that wouldnt be s obad, but this enums non-displays too so thats wasted overhead, the good thing about this thing though was it gave DeviceName, but so now ill just use EnuMDisplayMonitors and then that gives rect and cMon, then ill take cMon to GetMonitorInfo to get DeviceName, so thats just a call per what i actually need so opting for that
 					
-					if (mons == 1) {
-						// get all remaining monitors
+					var jsMonitorEnumProc = function(hMonitor, hdcMonitor, lprcMonitor, dwData) {
+						console.log('in jsMonitorEnumProc', 'hMonitor:', hMonitor.toString(), 'lprcMonitor:', lprcMonitor.contents.toString()); // link3687324
+						rezArr.push({
+							xTopLeft: parseInt(cutils.jscGetDeepest(lprcMonitor.contents.left)),
+							yTopLeft: parseInt(cutils.jscGetDeepest(lprcMonitor.contents.top))
+						});
+						rezArr[rezArr.length - 1].nWidth = parseInt(cutils.jscGetDeepest(lprcMonitor.contents.right)) - rezArr[rezArr.length - 1].xTopLeft;
+						rezArr[rezArr.length - 1].nHeight = parseInt(cutils.jscGetDeepest(lprcMonitor.contents.bottom)) - rezArr[rezArr.length - 1].yTopLeft;
+						
+						// get device name
+						var cMonInfo = ostypes.TYPE.MONITORINFOEX();
+						cMonInfo.cbSize = ostypes.TYPE.MONITORINFOEX.size;
+						var rez_GetMonitorInfo = ostypes.API('GetMonitorInfo')(hMonitor, cMonInfo.address());
+						console.info('rez_GetMonitorInfo:', rez_GetMonitorInfo.toString(), uneval(rez_GetMonitorInfo), cutils.jscGetDeepest(rez_GetMonitorInfo));
+						if (cutils.jscEqual(rez_GetMonitorInfo, 0)) {
+							console.error('Failed rez_GetMonitorInfo, winLastError:', ctypes.winLastError);
+							throw new Error({
+								name: 'os-api-error',
+								message: 'Failed rez_GetMonitorInfo, winLastError: "' + ctypes.winLastError + '" and rez_GetMonitorInfo: "' + rez_GetMonitorInfo.toString(),
+								winLastError: ctypes.winLastError
+							});
+						}
+						
+						rezArr[rezArr.length-1].argsCreateDC = {
+							lpszDriver: null,
+							lpszDevice: cMonInfo.szDevice
+						};
+						
+						return true; // continue enumeration
+					}
+					var cMonitorEnumProc = ostypes.TYPE.MONITORENUMPROC.ptr(jsMonitorEnumProc);
+					var rez_EnumDisplayMonitors = ostypes.API('EnumDisplayMonitors')(null, null, cMonitorEnumProc, 0);
+					console.log('post rez_EnumDisplayMonitors'); // good, this test proves that "in jsMonitorEnumProc, lprcMonitor" callbacks complete before EnuMDisplayMonitors unblocks link3687324
+					console.info('rez_EnumDisplayMonitors:', rez_EnumDisplayMonitors.toString(), uneval(rez_EnumDisplayMonitors), cutils.jscGetDeepest(rez_EnumDisplayMonitors));
+					if (ctypes.winLastError != 0) {
+						console.error('Failed rez_EnumDisplayMonitors, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_EnumDisplayMonitors, winLastError: "' + ctypes.winLastError + '" and rez_EnumDisplayMonitors: "' + rez_EnumDisplayMonitors.toString(),
+							winLastError: ctypes.winLastError
+						});
 					}
 				} else if (mons == 2) {
 					var cPoint = ostypes.TYPE.POINT();
@@ -156,6 +222,8 @@ function shootMon(mons) {
 						});
 					}
 					
+					console.info('cMonInfo.rcMonitor:', cMonInfo.rcMonitor.toString());
+					
 					rezArr.push({
 						argsCreateDC: {
 							lpszDriver: null,
@@ -190,6 +258,9 @@ function shootMon(mons) {
 					var nWidth = 'nWidth' in rezArr[s] ? rezArr[s].nWidth : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 					var nHeight = 'nHeight' in rezArr[s] ? rezArr[s].nHeight : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
 					var nBPP = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.BITSPIXEL)));
+					
+					rezArr[s].nWidth = nWidth; // in case it didnt have nWidth in rezArr[s]
+					rezArr[s].nHeight = nHeight; // in case it didnt have nHeight in rezArr[s]
 					
 					console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
 					
