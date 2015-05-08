@@ -251,18 +251,11 @@ function shootSect(c1, c2) {
 				// swap bytes to go from BRGA to RGBA
 				// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
 				console.time('BGRA -> RGBA');
-				var dataRef = imagedata.data;
-				var pos = 0;
-				while (pos < arrLen) {
-					var B = dataRef[pos];
-					//var G = dataRef[pos+1];
-					//var R = dataRef[pos+2];
-					//var A = dataRef[pos+3];
-
-					dataRef[pos] = dataRef[pos+2];
-					dataRef[pos+2] = B;
-					
-					pos += 4;
+				var d = imagedata.data;
+				var i = 0;
+				while (i < arrLen) {					
+					[d[i], d[i+2]] = [d[i+2], d[i]];
+					i += 4;
 				}
 				console.timeEnd('BGRA -> RGBA');
 				// DONE: handle this: DIB widths are always a multiple of 4. If your image is not naturally a multiple of 4 pixels wide, then the row is padded out with 0 until it is. Your sample image is 170 pixels, which isn't a multiple of 4. The next multiple of 4 is 172, hence the two extra bytes. from here: http://www.gamedev.net/topic/487517-c-strange-problem-with-createdibsection/#entry4184321
