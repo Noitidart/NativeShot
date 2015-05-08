@@ -90,9 +90,12 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-function shootSect(c1, c2) {
-	// c1 is object of x,y top left coordinates
-	// c2 is object of x,y top left coordinates
+function shootMon(mons) {
+	// mons
+		// 0 - primary monitor
+		// 1 - all monitors
+		// 2 - monitor where the mouse currently is
+		
 	
 	switch (core.os.name) {
 		case 'winnt':
@@ -118,8 +121,8 @@ function shootSect(c1, c2) {
 				
 				console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
 				
-				var w = c2.x - c1.x;
-				var h = c2.y - c1.y;
+				var w = nWidth;
+				var h = nHeight;
 				
 				var modW = w % 4;
 				var useW = modW != 0 ? w + (4-modW) : w;
@@ -141,10 +144,10 @@ function shootSect(c1, c2) {
 				// CreateDIBSection stuff
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
-				bmi.bmiHeader.biWidth = w; //w;
-				bmi.bmiHeader.biHeight = -1 * h; //-1 * h; // top-down
+				bmi.bmiHeader.biWidth = nWidth;
+				bmi.bmiHeader.biHeight = -1 * nHeight; // top-down
 				bmi.bmiHeader.biPlanes = 1;
-				bmi.bmiHeader.biBitCount = nBPP; //32;
+				bmi.bmiHeader.biBitCount = nBPP; // 32
 				bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
 				//var masks = ctypes.cast(bmi.addressOfField('bmiColors'), ostypes.TYPE.DWORD.ptr);
 				
@@ -181,7 +184,7 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
+				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, nWidth, nHeight, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
 				//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
 				if (ctypes.winLastError != 0) {
 					//console.error('Failed rez_BB, winLastError:', ctypes.winLastError);

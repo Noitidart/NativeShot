@@ -98,11 +98,9 @@ function extendCore() {
 function takeShot(aDOMWin) {
 	console.log('taking shot');
 	
-	var c1 = {x:2, y:3}; //topLeft coords
-	var c2 = {x:17, y:18}; // bottomRight coords
 	console.time('takeShot');
 	console.time('chromeworker');
-	var promise_shootSect = MainWorker.post('shootSect', [c1, c2]);
+	var promise_shootSect = MainWorker.post('shootMon', [0]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);
@@ -114,8 +112,8 @@ function takeShot(aDOMWin) {
 			var doc = win.document;
 			
 			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = c2.x - c1.x; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
-			can.height = c2.y - c1.y;
+			can.width = aVal.width; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+			can.height = aVal.height;
 			var ctx = can.getContext('2d');
 			
 			ctx.putImageData(aVal, 0, 0);
