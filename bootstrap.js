@@ -100,16 +100,16 @@ function takeShot(aDOMWin) {
 	
 	var c1 = {x:0, y:0}; //topLeft coords
 	var c2 = {x:500, y:500}; // bottomRight coords
-	
-	console.time('shootSect');
+	console.time('takeShot');
+	console.time('chromeworker');
 	var promise_shootSect = MainWorker.post('shootSect', [c1, c2]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);
 			// start - do stuff here - promise_shootSect
 			// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
-			console.timeEnd('shootSect');
-			console.time('postCtypes');
+			console.timeEnd('chromeworker');
+			console.time('mainthread');
 			var win = aDOMWin.gBrowser.contentWindow;
 			var doc = win.document;
 			
@@ -117,13 +117,14 @@ function takeShot(aDOMWin) {
 			can.width = aVal.width; //c2.x - c1.x; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
 			can.height = aVal.height;
 			var ctx = can.getContext('2d');
-			
+			/*
 			// based on fact: `// ARGB, and for little-endian machiens (Intel) each pixel is BGRA` from https://dxr.mozilla.org/mozilla-central/source/image/public/imgIEncoder.idl#78
 			var contentType = 'image/png';
 			var encoder = Cc['@mozilla.org/image/encoder;2?type=image/png'].createInstance().QueryInterface(Ci.imgIEncoder);
 
 			encoder.initFromData(aVal.data, aVal.width * aVal.height * 4, aVal.width, aVal.height, aVal.width * 4, Ci.imgIEncoder.INPUT_FORMAT_HOSTARGB, '');
 			
+			var binaryStream = Cc["@mozilla.org/binaryoutputstream;1"].createInstance(Ci.nsIBinaryOutputStream);
 			var streamListener = {
 				buffer: null,
 				// nsIRequestObserver
@@ -148,27 +149,25 @@ function takeShot(aDOMWin) {
 					//gClipboardHelper.copyString(dataurl);
 					console.log('copie to clipboard');
 					console.timeEnd('postCtypes');
-					/*
-					var promise_write = OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'blah.png'), new Uint8Array(data));
-					promise_write.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_write - ', aVal);
-							// start - do stuff here - promise_write
-							// end - do stuff here - promise_write
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_write', aReason:aReason};
-							console.warn('Rejected - promise_write - ', rejObj);
-							//deferred_createProfile.reject(rejObj);
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_write', aCaught:aCaught};
-							console.error('Caught - promise_write - ', rejObj);
-							//deferred_createProfile.reject(rejObj);
-						}
-					);
-					*/
+					// var promise_write = OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'blah.png'), new Uint8Array(data));
+					// promise_write.then(
+						// function(aVal) {
+							// console.log('Fullfilled - promise_write - ', aVal);
+							start - do stuff here - promise_write
+							end - do stuff here - promise_write
+						// },
+						// function(aReason) {
+							// var rejObj = {name:'promise_write', aReason:aReason};
+							// console.warn('Rejected - promise_write - ', rejObj);
+							deferred_createProfile.reject(rejObj);
+						// }
+					// ).catch(
+						// function(aCaught) {
+							// var rejObj = {name:'promise_write', aCaught:aCaught};
+							// console.error('Caught - promise_write - ', rejObj);
+							deferred_createProfile.reject(rejObj);
+						// }
+					// );
 				}
 			};
 			
@@ -177,13 +176,14 @@ function takeShot(aDOMWin) {
 			_pump.asyncRead(streamListener, null);
 			
 			console.log('ok done');
-			
+			*/
 			ctx.putImageData(aVal, 0, 0);
 			
 			doc.documentElement.appendChild(can);
 			
 			console.error('done appended');
-			
+			console.timeEnd('mainthread');
+			console.timeEnd('takeShot');
 			// end - do stuff here - promise_shootSect
 		},
 		function(aReason) {

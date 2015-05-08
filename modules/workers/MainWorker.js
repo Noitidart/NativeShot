@@ -98,7 +98,7 @@ function shootSect(c1, c2) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
-				
+				console.time('winapi');
 				var cStr = ostypes.TYPE.LPCTSTR.targetType.array()('DISPLAY');
 				
 				var hdcScreen = ostypes.API('CreateDC')(cStr, null, null, null);
@@ -133,8 +133,7 @@ function shootSect(c1, c2) {
 					});
 				}
 
-				// CreateDIBSection stuff				
-				/* gives BRG
+				// CreateDIBSection stuff
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
 				bmi.bmiHeader.biWidth = nWidth; //w;
@@ -150,39 +149,24 @@ function shootSect(c1, c2) {
 				// bmi.bmiColors[2] = ostypes.TYPE.DWORD('0x001f');
 				//console.info('bmi:', bmi.toString());
 				var cBmi = bmi.address();
-				//*/
 
-				//console.error('ostypes.TYPE.BITMAPINFOHEADER.size:', ostypes.TYPE.BITMAPINFOHEADER.size);
-				//console.error('ostypes.TYPE.BITMAPV5HEADER.size:', ostypes.TYPE.BITMAPV5HEADER.size);
-				///*
-				var bmi = ostypes.TYPE.BITMAPV5HEADER();
-				bmi.bV5Size = ostypes.TYPE.BITMAPV5HEADER.size;
-				bmi.bV5Width = nWidth; //w;
-				bmi.bV5Height = -1 * nHeight; //-1 * h; // top-down
-				bmi.bV5Planes = 1;
-				bmi.bV5BitCount = nBPP; //32;
-				bmi.bV5Compression = ostypes.CONST.BI_RGB;
-				// bmi.bV5RedMask   =  ostypes.TYPE.DWORD('0x000000FF');
-				// bmi.bV5GreenMask =  ostypes.TYPE.DWORD('0x0000FF00');
-				// bmi.bV5BlueMask  =  ostypes.TYPE.DWORD('0x00FF0000');
-				// bmi.bV5AlphaMask =  ostypes.TYPE.DWORD('0x00000000');
-				console.info('bmi:', bmi.toString(), bmi.address().toString());
-				var cBmi = ctypes.cast(bmi.address(), ostypes.TYPE.BITMAPINFO.ptr);
+				var w = c2.x - c1.x;
+				var h = c2.y - c1.y;
 				
-				// bmi.bmiColors[0] = ostypes.TYPE.DWORD('0xf800');
-				// bmi.bmiColors[1] = ostypes.TYPE.DWORD('0x07e0');
-				// bmi.bmiColors[2] = ostypes.TYPE.DWORD('0x001f');
-				//console.info('cBmi.contents:', cBmi.contents.toString());
-				//*/
+				var modW = w % 4;
+				var useW = modW ? w + modW : w;
+				console.log('useW:', useW, 'realW:', w);
+				var arrLen = useW * h * 4;
+				var imagedata = new ImageData(useW, h);
 				
+				//console.info('pre imagedata.data:', imagedata.data[0], imagedata.data[1], imagedata.data[2], imagedata.data[3], imagedata.data[4], imagedata.data[5], imagedata.data[6], imagedata.data[7], imagedata.data[8], imagedata.data[9], imagedata.data[10]);
 				var pixelBuffer = ostypes.TYPE.BYTE.ptr();
-				console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+				//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
 				// CreateDIBSection stuff
 				
 				var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, cBmi, ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
-				console.info('hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 				if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
-					console.error('Failed hbmp, winLastError:', ctypes.winLastError);
+					console.error('Failed hbmp, winLastError:', ctypes.winLastError, 'hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 					throw new Error({
 						name: 'os-api-error',
 						message: 'Failed hbmp, winLastError: "' + ctypes.winLastError + '" and hbmp: "' + hbmp.toString(),
@@ -200,9 +184,6 @@ function shootSect(c1, c2) {
 						winLastError: ctypes.winLastError
 					});
 				}
-
-				var w = c2.x - c1.x;
-				var h = c2.y - c1.y;
 				
 				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0,0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
 				//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
@@ -215,23 +196,13 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				console.info('POST pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+				console.timeEnd('winapi');
 				
-				var modW = w % 4;
-				var useW = modW ? w + modW : w;
-				console.log('useW:', useW, 'realW:', w);
-				var arrLen = useW * h * 4
-				var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
-				console.info('casted:', casted.toString());
+				//console.info('POST pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+				//console.info('post imagedata.data:', imagedata.data[0], imagedata.data[1], imagedata.data[2], imagedata.data[3], imagedata.data[4], imagedata.data[5], imagedata.data[6], imagedata.data[7], imagedata.data[8], imagedata.data[9], imagedata.data[10]);
+				//var casted = ctypes.cast(pixelBuffer, ostypes.TYPE.BYTE.array(arrLen).ptr).contents;
+				//console.info('casted:', casted.toString());
 				//logit(casted.toString().replace(/ctypes\.UInt64\("0"\), /g, ''));
-				
-				
-				var src = ostypes.TYPE.BYTE.array()([3, 2, 1, 4, 3, 2, 1, 4, 3, 2, 1, 4]);
-				var dest = ostypes.TYPE.BYTE.array(src.length)();
-				var rez_swap = ostypes.API('_swab')(src, dest, src.length - 3);
-				console.info('dest:', dest.toString());
-				
-				var imagedata = new ImageData(useW, h);
 				
 				/*
 				// straight feed way 800ms
@@ -277,6 +248,22 @@ function shootSect(c1, c2) {
 				console.timeEnd('memcpy way');
 				//*/
 				
+				// swap bytes to go from BRGA to RGBA
+				// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
+				console.time('BGRA -> RGBA');
+				var view = new DataView(imagedata.data.buffer); // create DataView for byte-buffer
+				var pos = 0;
+				while (pos < arrLen) {
+					var B = view.getUint8(pos, true);
+					//var G = view.getUint8(pos+1, true);
+					var R = view.getUint8(pos+2, true);
+					//var A = view.getUint8(pos+3, true);
+
+					view.setUint8(pos, R, true);
+					view.setUint8(pos+2, B, true);
+					pos += 4;
+				}
+				console.timeEnd('BGRA -> RGBA');
 				// DONE: handle this: DIB widths are always a multiple of 4. If your image is not naturally a multiple of 4 pixels wide, then the row is padded out with 0 until it is. Your sample image is 170 pixels, which isn't a multiple of 4. The next multiple of 4 is 172, hence the two extra bytes. from here: http://www.gamedev.net/topic/487517-c-strange-problem-with-createdibsection/#entry4184321
 				
 				return imagedata;
