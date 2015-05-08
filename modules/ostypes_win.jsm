@@ -13,7 +13,7 @@ if (ctypes.voidptr_t.size == 4 /* 32-bit */) {
 var ifdef_UNICODE = true;
 
 var winTypes = function() {
-	
+
 	// ABIs
 	if (is64bit) {
 	  this.CALLBACK_ABI = ctypes.default_abi;
@@ -22,13 +22,13 @@ var winTypes = function() {
 	  this.CALLBACK_ABI = ctypes.stdcall_abi;
 	  this.ABI = ctypes.winapi_abi;
 	}
-	
+
 	// C TYPES
 	this.char = ctypes.unsigned_char;
 	this.int = ctypes.int;
 	this.size_t = ctypes.size_t;
 	this.void = ctypes.void_t;
-	
+
 	// SIMPLE TYPES // based on ctypes.BLAH // as per WinNT.h etc
 	this.BOOL = ctypes.bool;
 	this.BYTE = ctypes.unsigned_char;
@@ -40,7 +40,7 @@ var winTypes = function() {
 	this.LONG = ctypes.long;
 	this.LONG_PTR = is64bit ? ctypes.int64_t : ctypes.long; // i left it at what i copied pasted it as but i thought it would be `ctypes.intptr_t`
 	this.LPCVOID = ctypes.voidptr_t;
-	this.LPVOID = ctypes.voidptr_t;	
+	this.LPVOID = ctypes.voidptr_t;
 	this.NTSTATUS = ctypes.long; // https://msdn.microsoft.com/en-us/library/cc230357.aspx // typedef long NTSTATUS;
 	this.PVOID = ctypes.voidptr_t;
 	this.RM_APP_TYPE = ctypes.unsigned_int; // i dont know im just guessing, i cant find a typedef that makes sense to me: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373670%28v=vs.85%29.aspx
@@ -54,7 +54,7 @@ var winTypes = function() {
 	this.VOID = ctypes.void_t;
 	this.WCHAR = ctypes.jschar;
 	this.WORD = ctypes.unsigned_short;
-	
+
 	// ADVANCED TYPES // as per how it was defined in WinNT.h // defined by "simple types"
 	this.ATOM = this.WORD;
 	this.BOOLEAN = this.BYTE; // http://blogs.msdn.com/b/oldnewthing/archive/2004/12/22/329884.aspx
@@ -78,7 +78,7 @@ var winTypes = function() {
 	this.SYSTEM_INFORMATION_CLASS = this.INT; // i think due to this search: http://stackoverflow.com/questions/28858849/where-is-system-information-class-defined
 	this.TCHAR = ifdef_UNICODE ? this.WCHAR : ctypes.char; // when i copied pasted this it was just ctypes.char and had this comment: // Mozilla compiled with UNICODE/_UNICODE macros and wchar_t = jschar // in "advanced types" section even though second half is ctypes.char because it has something that is advanced, which is the first part, this.WCHAR
 	this.WPARAM = this.UINT_PTR;
-	
+
 	// SUPER ADVANCED TYPES // defined by "advanced types"
 	this.HBITMAP = this.HANDLE;
 	this.HBRUSH = this.HANDLE;
@@ -90,13 +90,14 @@ var winTypes = function() {
 	this.HINSTANCE = this.HANDLE;
 	this.HKEY = this.HANDLE;
 	this.HMENU = this.HANDLE;
+	this.HMONITOR = this.HANDLE;
 	this.HWND = this.HANDLE;
 	this.LPCOLESTR = this.OLECHAR.ptr; // typedef [string] const OLECHAR *LPCOLESTR; // https://github.com/wine-mirror/wine/blob/bdeb761357c87d41247e0960f71e20d3f05e40e6/include/wtypes.idl#L288
 	this.LPCTSTR = ifdef_UNICODE ? this.LPCWSTR : this.LPCSTR;
 	this.LPHANDLE = this.HANDLE.ptr;
 	this.LPOLESTR = this.OLECHAR.ptr; // typedef [string] OLECHAR *LPOLESTR; // https://github.com/wine-mirror/wine/blob/bdeb761357c87d41247e0960f71e20d3f05e40e6/include/wtypes.idl#L287 // http://stackoverflow.com/a/1607335/1828637 // LPOLESTR is usually to be allocated with CoTaskMemAlloc()
-	this.LPTSTR = ifdef_UNICODE ? this.LPWSTR : this.LPSTR;	
-	
+	this.LPTSTR = ifdef_UNICODE ? this.LPWSTR : this.LPSTR;
+
 	// SUPER DUPER ADVANCED TYPES // defined by "super advanced types"
 	this.HCURSOR = this.HICON;
 	this.HMODULE = this.HINSTANCE;
@@ -108,48 +109,82 @@ var winTypes = function() {
 	this.WIN32_FIND_DATA = ctypes.voidptr_t;
 	this.WINOLEAPI = ctypes.voidptr_t; // i guessed on this one
 	this.DEVMODE = ctypes.voidptr_t;
-	
+
 	// STRUCTURES
+	// consts for structures
+	var struct_const = {
+		CCHDEVICENAME: 32
+	};
 	
 	// SIMPLE STRUCTS // based on any of the types above
+	this.BITMAPINFOHEADER = ctypes.StructType('BITMAPINFOHEADER', [
+		{ biSize: this.DWORD },
+		{ biWidth: this.LONG },
+		{ biHeight: this.LONG },
+		{ biPlanes: this.WORD },
+		{ biBitCount: this.WORD },
+		{ biCompression: this.DWORD },
+		{ biSizeImage: this.DWORD },
+		{ biXPelsPerMeter: this.LONG },
+		{ biYPelsPerMeter: this.LONG },
+		{ biClrUsed: this.DWORD },
+		{ biClrImportant: this.DWORD }
+	]);
+	this.CIEXYZ = ctypes.StructType('CIEXYZ', [
+		{ ciexyzX: this.FXPT2DOT30 },
+		{ ciexyzY: this.FXPT2DOT30 },
+		{ ciexyzZ: this.FXPT2DOT30 }
+	]);
+	this.DISPLAY_DEVICE = ctypes.StructType('_DISPLAY_DEVICE', [
+		{ cb:			this.DWORD },
+		{ DeviceName:	this.TCHAR.array(32) },
+		{ DeviceString:	this.TCHAR.array(128) },
+		{ StateFlags:	this.DWORD },
+		{ DeviceID:		this.TCHAR.array(128) },
+		{ DeviceKey:	this.TCHAR.array(128) }
+	]);
+	this.POINT = ctypes.StructType('tagPOINT', [
+		{ x: this.LONG },
+		{ y: this.LONG }
+	]);
+	this.RGBQUAD = ctypes.StructType('RGBQUAD', [
+		{ rgbBlue:		this.BYTE },
+		{ rgbGreen:		this.BYTE },
+		{ rgbRed:		this.BYTE },
+		{ rgbReserved:	this.BYTE }
+	]);
     this.RECT = ctypes.StructType('_RECT', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/dd162897%28v=vs.85%29.aspx
         { left: this.LONG },
         { top: this.LONG },
         { right: this.LONG },
         { bottom: this.LONG }
     ]);
-	
-  this.BITMAPINFOHEADER = ctypes.StructType("BITMAPINFOHEADER", [
-    { "biSize": this.DWORD },
-    { "biWidth": this.LONG },
-    { "biHeight": this.LONG },
-    { "biPlanes": this.WORD },
-    { "biBitCount": this.WORD },
-    { "biCompression": this.DWORD },
-    { "biSizeImage": this.DWORD },
-    { "biXPelsPerMeter": this.LONG },
-    { "biYPelsPerMeter": this.LONG },
-    { "biClrUsed": this.DWORD },
-    { "biClrImportant": this.DWORD }
-  ]);
-  this.RGBQUAD = ctypes.StructType("RGBQUAD", [
-    { "rgbBlue": this.BYTE },
-    { "rgbGreen": this.BYTE },
-    { "rgbRed": this.BYTE },
-    { "rgbReserved": this.BYTE }
-  ]);
-	
-	this.CIEXYZ = ctypes.StructType('CIEXYZ', [
-		{ ciexyzX: this.FXPT2DOT30 },
-		{ ciexyzY: this.FXPT2DOT30 },
-		{ ciexyzZ: this.FXPT2DOT30 }
+
+	// ADVANCED STRUCTS // based on "simple structs" to be defined first
+	this.BITMAPINFO = ctypes.StructType('BITMAPINFO', [
+		{ bmiHeader: this.BITMAPINFOHEADER },
+		{ bmiColors: this.RGBQUAD.array(1) }
 	]);
-	
 	this.CIEXYZTRIPLE = ctypes.StructType('CIEXYZTRIPLE', [
 		{ ciexyzRed: this.CIEXYZ },
 		{ ciexyzGreen: this.CIEXYZ },
 		{ ciexyzBlue: this.CIEXYZ }
 	]);
+	this.MONITORINFOEX = ctypes.StructType('tagMONITORINFOEX', [
+		{ cbSize:		this.DWORD },
+		{ rcMonitor:	this.RECT },
+		{ rcWork:		this.RECT },
+		{ dwFlags:		this.DWORD },
+		{ szDevice:		this.TCHAR.array(struct_const.CCHDEVICENAME) }
+	]);
+    this.PRECT = this.RECT.ptr;
+    this.LPRECT = this.RECT.ptr;
+    this.LPCRECT = this.RECT.ptr;
+	this.LPPOINT = this.POINT.ptr;
+	this.PBITMAPINFOHEADER = this.BITMAPINFOHEADER.ptr;
+	this.PDISPLAY_DEVICE = this.DISPLAY_DEVICE.ptr;
+
+	// FURTHER ADVANCED STRUCTS
 	this.BITMAPV5HEADER = ctypes.StructType('BITMAPV5HEADER', [
 		{ bV5Size:			this.DWORD },
 		{ bV5Width:			this.LONG },
@@ -176,31 +211,23 @@ var winTypes = function() {
 		{ bV5ProfileSize:	this.DWORD },
 		{ bV5Reserved:		this.DWORD }
 	]);
-	
-	// ADVANCED STRUCTS // based on "simple structs" to be defined first
-    this.PRECT = this.RECT.ptr;
-    this.LPRECT = this.RECT.ptr;
-	this.PBITMAPINFOHEADER = this.BITMAPINFOHEADER.ptr;
-  this.BITMAPINFO = ctypes.StructType("BITMAPINFO", [
-    { "bmiHeader": this.BITMAPINFOHEADER },
-    { "bmiColors": this.RGBQUAD.array(1) }
-  ]);
+	this.LPMONITORINFOEX = this.MONITORINFOEX.ptr;
 	
 	// FURTHER ADV STRUCTS
 	this.PBITMAPINFO = this.BITMAPINFO.ptr;
-	
+
 	// FUNCTION TYPES
-	
-	
+	this.MONITORENUMPROC = ctypes.FunctionType(this.CALLBACK_ABI, this.BOOL, [this.HMONITOR, this.HDC, this.LPRECT, this.LPARAM]);
+
 	// STRUCTS USING FUNC TYPES
-	
+
 }
 
 var winInit = function() {
 	var self = this;
-	
+
 	this.IS64BIT = is64bit;
-	
+
 	this.TYPE = new winTypes();
 
 	// CONSTANTS
@@ -208,12 +235,14 @@ var winInit = function() {
 		BI_BITFIELDS: 3,
 		BI_RGB: 0,
 		BITSPIXEL: 12,
+		CCHDEVICENAME: 32,
 		DIB_RGB_COLORS: 0,
 		HORZRES: 8,
+		MONITOR_DEFAULTTONEAREST: 2,
 		SRCCOPY: self.TYPE.DWORD('0x00CC0020'),
 		VERTRES: 10
 	};
-	
+
 	var _lib = {}; // cache for lib
 	var lib = function(path) {
 		//ensures path is in lib, if its in lib then its open, if its not then it adds it to lib and opens it. returns lib
@@ -226,7 +255,7 @@ var winInit = function() {
 			switch (path) {
 				/* for libc which is unix
 				case 'libc':
-				
+
 					if (core.os.name == 'darwin') {
 						_lib[path] = ctypes.open('libc.dylib');
 					} else if (core.os.name == 'freebsd') {
@@ -241,7 +270,7 @@ var winInit = function() {
 							message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
 						});
 					}
-					
+
 					break;
 				*/
 				default:
@@ -258,7 +287,7 @@ var winInit = function() {
 		}
 		return _lib[path];
 	};
-	
+
 	// start - function declares
 	var _api = {};
 	this.API = function(declaration) { // it means ensureDeclared and return declare. if its not declared it declares it. else it returns the previously declared.
@@ -380,6 +409,40 @@ var winInit = function() {
 				self.TYPE.HDC // hdc
 			);
 		},
+		EnumDisplayDevices: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd162609%28v=vs.85%29.aspx
+			 * BOOL EnumDisplayDevices(
+			 *   _In_   LPCTSTR         lpDevice,
+			 *   _In_   DWORD           iDevNum,
+			 *   _Out_  PDISPLAY_DEVICE lpDisplayDevice,
+			 *   _In_   DWORD           dwFlags
+			 * );
+			 */
+			return lib('user32').declare(ifdef_UNICODE ? 'EnumDisplayDevicesW' : 'EnumDisplayDevicesA', self.TYPE.ABI,
+				self.TYPE.BOOL,				// return
+				self.TYPE.LPCTSTR,			// lpDevice
+				self.TYPE.DWORD,			// iDevNum
+				self.TYPE.PDISPLAY_DEVICE,	// lpDisplayDevice
+				self.TYPE.DWORD				// dwFlags
+			);			
+		},
+		EnumDisplayMonitors: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183489%28v=vs.85%29.aspx
+			 * BOOL EnumDisplayMonitors(
+			 *   __in_  HDC             hdc,
+			 *   __in_  LPCRECT         lprcClip,
+			 *   __in_  MONITORENUMPROC lpfnEnum,
+			 *   __in_  LPARAM          dwData
+			 * );
+			 */
+			return lib('gdi32').declare('EnumDisplayMonitors', self.TYPE.ABI,
+				self.TYPE.BOOL,				// return
+				self.TYPE.HDC,				// hdc,
+				self.TYPE.LPCRECT,			// lprcClip,
+				self.TYPE.MONITORENUMPROC,	// lpfnEnum,
+				self.TYPE.LPARAM			// dwData
+			);
+		},
 		GetClientRect: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633503%28v=vs.85%29.aspx
 			 * BOOL WINAPI GetClientRect(
@@ -425,6 +488,19 @@ var winInit = function() {
 				self.TYPE.INT	// nIndex
 			);
 		},
+		GetMonitorInfo: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd144901%28v=vs.85%29.aspx
+			 * BOOL GetMonitorInfo(
+			 *   __in_   HMONITOR      hMonitor,
+			 *   __out_  LPMONITORINFO lpmi
+			 * );
+			 */
+			return lib('user32').declare(ifdef_UNICODE ? 'GetMonitorInfoW' : 'GetMonitorInfoA', self.TYPE.ABI,
+				self.TYPE.BOOL,				//return
+				self.TYPE.HMONITOR,			// hMonitor
+				self.TYPE.LPMONITORINFOEX	// lpmi
+			);
+		},
 		GetPixel: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd144909%28v=vs.85%29.aspx
 			 * COLORREF GetPixel(
@@ -440,12 +516,23 @@ var winInit = function() {
 				self.TYPE.INT // nYPos
 			);
 		},
+		GetCursorPos: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms648390%28v=vs.85%29.aspx
+			 * BOOL WINAPI GetCursorPos(
+			 *   __out_ LPPOINT lpPoint
+			 * );
+			 */
+			return lib('user32').declare('GetCursorPos', self.TYPE.ABI,
+				self.TYPE.BOOL,		//return
+				self.TYPE.LPPOINT	// hWnd
+			);
+		},
 		memcpy: function() {
 			/* https://msdn.microsoft.com/en-us/library/dswaw1wk.aspx
 			 * void *memcpy(
 			 *    void *dest,
 			 *    const void *src,
-			 *    size_t count 
+			 *    size_t count
 			 * );
 			 */
 			return lib('msvcrt').declare('memcpy', self.TYPE.ABI,
@@ -453,6 +540,19 @@ var winInit = function() {
 				self.TYPE.void.ptr,	// *dest
 				self.TYPE.void.ptr,	// *src
 				self.TYPE.size_t	// count
+			);
+		},
+		MonitorFromPoint: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd145062%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
+			 * HMONITOR MonitorFromPoint(
+			 *   __in_  POINT pt,
+			 *   __in_  DWORD dwFlags
+			 * );
+			 */
+			return lib('user32').declare('MonitorFromPoint', self.TYPE.ABI,
+				self.TYPE.HMONITOR,	// HMONITOR
+				self.TYPE.POINT,	// pt
+				self.TYPE.DWORD		// dwFlags
 			);
 		},
 		ReleaseDC: function() {
@@ -484,7 +584,7 @@ var winInit = function() {
 	};
 	// end - predefine your declares here
 	// end - function declares
-	
+
 	this.HELPER = {
 		checkHRESULT: function(hr /*HRESULT*/, funcName /*jsStr*/) {
 			if(parseInt(cutils.jscGetDeepest(hr)) < 0) {
@@ -496,13 +596,13 @@ var winInit = function() {
 			var GUID_or_IID = self.TYPE.GUID();
 
 			var pieces = lpsz.split('-');
-			
+
 			GUID_or_IID.Data1 = parseInt(pieces[0], 16);
 			GUID_or_IID.Data2 = parseInt(pieces[1], 16);
 			GUID_or_IID.Data3 = parseInt(pieces[2], 16);
-			
+
 			var piece34 = pieces[3] + '' + pieces[4];
-			
+
 			for (var i=0; i<8; i++) {
 			  GUID_or_IID.Data4[i] = parseInt(piece34.substr(i*2,2), 16);
 			};

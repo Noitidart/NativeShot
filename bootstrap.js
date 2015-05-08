@@ -100,7 +100,7 @@ function takeShot(aDOMWin) {
 	
 	console.time('takeShot');
 	console.time('chromeworker');
-	var promise_shootSect = MainWorker.post('shootMon', [0]);
+	var promise_shootSect = MainWorker.post('shootMon', [2]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);
@@ -111,16 +111,16 @@ function takeShot(aDOMWin) {
 			var win = aDOMWin.gBrowser.contentWindow;
 			var doc = win.document;
 			
-			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = aVal.width; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
-			can.height = aVal.height;
-			var ctx = can.getContext('2d');
-			
-			ctx.putImageData(aVal, 0, 0);
-			
-			doc.documentElement.appendChild(can);
-			
-			console.error('done appended');
+			for (var s=0; s<aVal.length; s++) {
+				var can = doc.createElementNS(NS_HTML, 'canvas');
+				can.width = aVal[s].nWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+				can.height = aVal[s].nHeight;
+				var ctx = can.getContext('2d');
+				
+				ctx.putImageData(aVal[s].idat, 0, 0);
+				
+				doc.documentElement.appendChild(can);
+			}
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
 			// end - do stuff here - promise_shootSect
@@ -248,9 +248,15 @@ function startup(aData, aReason) {
 		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
 		onCommand: function(aEvent) {
 			var aDOMWin = aEvent.target.ownerDocument.defaultView;
-			aDOMWin.setTimeout(function() {
+			if (aEvent.shiftKey == 1) {
+				// default time delay queue
+				aDOMWin.setTimeout(function() {
+					takeShot(aDOMWin);
+				}, 5000);
+			} else {
+				// imemdiate freeze
 				takeShot(aDOMWin);
-			}, 3000);
+			}
 		}
 	});
 	
