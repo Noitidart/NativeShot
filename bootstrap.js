@@ -98,8 +98,8 @@ function extendCore() {
 function takeShot(aDOMWin) {
 	console.log('taking shot');
 	
-	var c1 = {x:0, y:0}; //topLeft coords
-	var c2 = {x:500, y:500}; // bottomRight coords
+	var c1 = {x:2, y:3}; //topLeft coords
+	var c2 = {x:17, y:18}; // bottomRight coords
 	console.time('takeShot');
 	console.time('chromeworker');
 	var promise_shootSect = MainWorker.post('shootSect', [c1, c2]);
@@ -114,69 +114,10 @@ function takeShot(aDOMWin) {
 			var doc = win.document;
 			
 			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = aVal.width; //c2.x - c1.x; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
-			can.height = aVal.height;
+			can.width = c2.x - c1.x; // cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+			can.height = c2.y - c1.y;
 			var ctx = can.getContext('2d');
-			/*
-			// based on fact: `// ARGB, and for little-endian machiens (Intel) each pixel is BGRA` from https://dxr.mozilla.org/mozilla-central/source/image/public/imgIEncoder.idl#78
-			var contentType = 'image/png';
-			var encoder = Cc['@mozilla.org/image/encoder;2?type=image/png'].createInstance().QueryInterface(Ci.imgIEncoder);
-
-			encoder.initFromData(aVal.data, aVal.width * aVal.height * 4, aVal.width, aVal.height, aVal.width * 4, Ci.imgIEncoder.INPUT_FORMAT_HOSTARGB, '');
 			
-			var binaryStream = Cc["@mozilla.org/binaryoutputstream;1"].createInstance(Ci.nsIBinaryOutputStream);
-			var streamListener = {
-				buffer: null,
-				// nsIRequestObserver
-				onStartRequest: function(aRequest, aContext) {
-					this.buffer = [];
-				},
-				// nsIStreamListener
-				onDataAvailable: function(aRequest, aContext, aInputStream, aOffset, aCount) {
-					var reusableStreamInstance = Cc['@mozilla.org/scriptableinputstream;1'].createInstance(Ci.nsIScriptableInputStream);
-					reusableStreamInstance.init(aInputStream);
-					var chunk = reusableStreamInstance.readBytes(aCount);
-					this.buffer.push(chunk);
-				},
-				// nsIRequestObserver
-				onStopRequest: function(aRequest, aContext, aStatusCode) {
-					console.log('end', aStatusCode);
-					var data = this.buffer.join('');
-					//console.log(data);
-					var encoded = btoa(this.buffer);
-					var dataurl = "data:" + contentType + ";base64," + encoded;
-					//var gClipboardHelper = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper);
-					//gClipboardHelper.copyString(dataurl);
-					console.log('copie to clipboard');
-					console.timeEnd('postCtypes');
-					// var promise_write = OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'blah.png'), new Uint8Array(data));
-					// promise_write.then(
-						// function(aVal) {
-							// console.log('Fullfilled - promise_write - ', aVal);
-							start - do stuff here - promise_write
-							end - do stuff here - promise_write
-						// },
-						// function(aReason) {
-							// var rejObj = {name:'promise_write', aReason:aReason};
-							// console.warn('Rejected - promise_write - ', rejObj);
-							deferred_createProfile.reject(rejObj);
-						// }
-					// ).catch(
-						// function(aCaught) {
-							// var rejObj = {name:'promise_write', aCaught:aCaught};
-							// console.error('Caught - promise_write - ', rejObj);
-							deferred_createProfile.reject(rejObj);
-						// }
-					// );
-				}
-			};
-			
-			_pump = Cc['@mozilla.org/network/input-stream-pump;1'].createInstance(Ci.nsIInputStreamPump);
-			_pump.init(encoder, -1, -1, 0, 0, true);
-			_pump.asyncRead(streamListener, null);
-			
-			console.log('ok done');
-			*/
 			ctx.putImageData(aVal, 0, 0);
 			
 			doc.documentElement.appendChild(can);

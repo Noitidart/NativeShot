@@ -118,9 +118,14 @@ function shootSect(c1, c2) {
 				
 				console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
 				
-				// force fullscreen
-				c1 = {x:0, y:0};
-				c2 = {x:nWidth, y:nHeight};
+				var w = c2.x - c1.x;
+				var h = c2.y - c1.y;
+				
+				var modW = w % 4;
+				var useW = modW != 0 ? w + (4-modW) : w;
+				console.log('useW:', useW, 'realW:', w);
+				var arrLen = useW * h * 4;
+				var imagedata = new ImageData(useW, h);
 				
 				var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
 				//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
@@ -136,8 +141,8 @@ function shootSect(c1, c2) {
 				// CreateDIBSection stuff
 				var bmi = ostypes.TYPE.BITMAPINFO();
 				bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
-				bmi.bmiHeader.biWidth = nWidth; //w;
-				bmi.bmiHeader.biHeight = -1 * nHeight; //-1 * h; // top-down
+				bmi.bmiHeader.biWidth = w; //w;
+				bmi.bmiHeader.biHeight = -1 * h; //-1 * h; // top-down
 				bmi.bmiHeader.biPlanes = 1;
 				bmi.bmiHeader.biBitCount = nBPP; //32;
 				bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
@@ -149,15 +154,6 @@ function shootSect(c1, c2) {
 				// bmi.bmiColors[2] = ostypes.TYPE.DWORD('0x001f');
 				//console.info('bmi:', bmi.toString());
 				var cBmi = bmi.address();
-
-				var w = c2.x - c1.x;
-				var h = c2.y - c1.y;
-				
-				var modW = w % 4;
-				var useW = modW ? w + modW : w;
-				console.log('useW:', useW, 'realW:', w);
-				var arrLen = useW * h * 4;
-				var imagedata = new ImageData(useW, h);
 				
 				//console.info('pre imagedata.data:', imagedata.data[0], imagedata.data[1], imagedata.data[2], imagedata.data[3], imagedata.data[4], imagedata.data[5], imagedata.data[6], imagedata.data[7], imagedata.data[8], imagedata.data[9], imagedata.data[10]);
 				var pixelBuffer = ostypes.TYPE.BYTE.ptr();
@@ -185,7 +181,7 @@ function shootSect(c1, c2) {
 					});
 				}
 				
-				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0,0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
+				var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
 				//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
 				if (ctypes.winLastError != 0) {
 					//console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
@@ -251,11 +247,18 @@ function shootSect(c1, c2) {
 				// swap bytes to go from BRGA to RGBA
 				// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
 				console.time('BGRA -> RGBA');
-				var d = imagedata.data;
-				var i = 0;
-				while (i < arrLen) {					
-					[d[i], d[i+2]] = [d[i+2], d[i]];
-					i += 4;
+				var dataRef = imagedata.data;
+				var pos = 0;
+				while (pos < arrLen) {
+					var B = dataRef[pos];
+					//var G = dataRef[pos+1];
+					//var R = dataRef[pos+2];
+					//var A = dataRef[pos+3];
+
+					dataRef[pos] = dataRef[pos+2];
+					dataRef[pos+2] = B;
+
+					pos += 4;
 				}
 				console.timeEnd('BGRA -> RGBA');
 				// DONE: handle this: DIB widths are always a multiple of 4. If your image is not naturally a multiple of 4 pixels wide, then the row is padded out with 0 until it is. Your sample image is 170 pixels, which isn't a multiple of 4. The next multiple of 4 is 172, hence the two extra bytes. from here: http://www.gamedev.net/topic/487517-c-strange-problem-with-createdibsection/#entry4184321
