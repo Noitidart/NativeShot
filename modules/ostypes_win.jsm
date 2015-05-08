@@ -24,7 +24,7 @@ var winTypes = function() {
 	}
 
 	// C TYPES
-	this.char = ctypes.unsigned_char;
+	this.char = ctypes.char;
 	this.int = ctypes.int;
 	this.size_t = ctypes.size_t;
 	this.void = ctypes.void_t;

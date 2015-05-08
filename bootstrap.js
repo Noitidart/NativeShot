@@ -87,6 +87,7 @@ function extendCore() {
 	}
 	
 	core.os.toolkit = Services.appinfo.widgetToolkit.toLowerCase();
+	core.os.xpcomabi = Services.appinfo.XPCOMABI;
 	
 	core.firefox = {};
 	core.firefox.version = Services.appinfo.version;
