@@ -6,6 +6,7 @@ Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
+Cu.importGlobalProperties(['btoa']);
 
 // Globals
 const core = {
@@ -97,32 +98,31 @@ function extendCore() {
 function takeShot(aDOMWin) {
 	console.log('taking shot');
 	
-	var c1 = {x:0, y:0}; //topLeft coords
-	var c2 = {x:1280, y:1024}; // bottomRight coords
-	
-	console.time('shootSect');
-	var promise_shootSect = MainWorker.post('shootSect', [c1, c2]);
+	console.time('takeShot');
+	console.time('chromeworker');
+	var promise_shootSect = MainWorker.post('shootMon', [1]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);
 			// start - do stuff here - promise_shootSect
 			// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
-			console.timeEnd('shootSect');
-			
+			console.timeEnd('chromeworker');
+			console.time('mainthread');
 			var win = aDOMWin.gBrowser.contentWindow;
 			var doc = win.document;
 			
-			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = aVal.width;
-			can.height = aVal.height;
-			var ctx = can.getContext('2d');
-			
-			ctx.putImageData(aVal, 0, 0);
-			
-			doc.documentElement.appendChild(can);
-			
-			console.error('done appended');
-			
+			for (var s=0; s<aVal.length; s++) {
+				var can = doc.createElementNS(NS_HTML, 'canvas');
+				can.width = aVal[s].nWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+				can.height = aVal[s].nHeight;
+				var ctx = can.getContext('2d');
+				
+				ctx.putImageData(aVal[s].idat, 0, 0);
+				
+				doc.documentElement.appendChild(can);
+			}
+			console.timeEnd('mainthread');
+			console.timeEnd('takeShot');
 			// end - do stuff here - promise_shootSect
 		},
 		function(aReason) {
@@ -248,9 +248,15 @@ function startup(aData, aReason) {
 		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
 		onCommand: function(aEvent) {
 			var aDOMWin = aEvent.target.ownerDocument.defaultView;
-			aDOMWin.setTimeout(function() {
+			if (aEvent.shiftKey == 1) {
+				// default time delay queue
+				aDOMWin.setTimeout(function() {
+					takeShot(aDOMWin);
+				}, 5000);
+			} else {
+				// imemdiate freeze
 				takeShot(aDOMWin);
-			}, 3000);
+			}
 		}
 	});
 	

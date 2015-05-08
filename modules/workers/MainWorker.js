@@ -42,7 +42,7 @@ self.addEventListener('message', msg => worker.handleMessage(msg));
 ////// end of imports and definitions
 
 function init(objCore) {
-	console.log('in worker init');
+	//console.log('in worker init');
 	
 	// merge objCore into core
 	// core and objCore is object with main keys, the sub props
@@ -90,195 +90,270 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-function shootSect(c1, c2) {
-	// c1 is object of x,y top left coordinates
-	// c2 is object of x,y top left coordinates
+function shootMon(mons) {
+	// mons
+		// 0 - primary monitor
+		// 1 - all monitors
+		// 2 - monitor where the mouse currently is
+		
 	
 	switch (core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
 				
-				var hWindow = ostypes.API('GetDesktopWindow')();
-				console.info('hWindow:', hWindow.toString(), uneval(hWindow), cutils.jscGetDeepest(hWindow));
-				if (ctypes.winLastError != 0) {
-					console.error('Failed hWindow, winLastError:', ctypes.winLastError);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed hWindow, winLastError: "' + ctypes.winLastError + '" and hWindow: "' + hWindow.toString(),
-						winLastError: ctypes.winLastError
-					});
-				}
-				var hdcScreen = ostypes.API('GetDC')(hWindow);
-				console.info('hdcScreen:', hdcScreen.toString(), uneval(hdcScreen), cutils.jscGetDeepest(hdcScreen));
-				if (ctypes.winLastError != 0) {
-					console.error('Failed hdcScreen, winLastError:', ctypes.winLastError);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
-						winLastError: ctypes.winLastError
-					});
-				}
-				var rect = ostypes.TYPE.RECT();
-
-				var rez_GCR = ostypes.API('GetClientRect')(hWindow, rect.address());
-				console.info('rez_GCR:', rez_GCR.toString(), uneval(rez_GCR), cutils.jscGetDeepest(rez_GCR));
-				if (ctypes.winLastError != 0) {
-					console.error('Failed rez_GCR, winLastError:', ctypes.winLastError);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed rez_GCR, winLastError: "' + ctypes.winLastError + '" and rez_GCR: "' + rez_GCR.toString(),
-						winLastError: ctypes.winLastError
-					});
-				}
-
-				console.info('rect:', rect.toString(), uneval(rect));
-				// rect.bottom = ostypes.TYPE.LONG(c2.y);
-				// rect.right = ostypes.TYPE.LONG(c2.x);
-				// console.info('rect modded:', rect.toString(), uneval(rect));
-
-				var hbmC = ostypes.API('CreateCompatibleBitmap')(hdcScreen, rect.right, rect.bottom);
-				console.info('hbmC:', hbmC.toString(), uneval(hbmC), cutils.jscGetDeepest(hbmC));
-				if (ctypes.winLastError != 0) {
-					console.error('Failed hbmC, winLastError:', ctypes.winLastError);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed hbmC, winLastError: "' + ctypes.winLastError + '" and hbmC: "' + hbmC.toString(),
-						winLastError: ctypes.winLastError
-					});
-				}
+				console.time('winapi');
 				
-				if (!hbmC.isNull()) {
-					var hdcC = ostypes.API('CreateCompatibleDC')(hdcScreen);
-					console.info('hdcC:', hdcC.toString(), uneval(hdcC), cutils.jscGetDeepest(hdcC));
+				var rezArr = [];
+				
+				if (mons == 0) {
+					rezArr.push({
+						argsCreateDC: {
+							lpszDriver: ostypes.TYPE.LPCTSTR.targetType.array()('DISPLAY'),
+							lpszDevice: null
+						},
+						xTopLeft: 0,
+						yTopLeft: 0
+					});
+				} else  if (mons == 1) {
+					// get all monitors
+					/*
+					var iDevNum = -1;
+					while (true) {
+						iDevNum++;
+						var lpDisplayDevice = ostypes.TYPE.DISPLAY_DEVICE();
+						lpDisplayDevice.cb = ostypes.TYPE.DISPLAY_DEVICE.size;
+						var rez_EnumDisplayDevices = ostypes.API('EnumDisplayDevices')(null, iDevNum, lpDisplayDevice.address(), null);
+						console.info('rez_EnumDisplayDevices:', rez_EnumDisplayDevices.toString(), uneval(rez_EnumDisplayDevices), cutils.jscGetDeepest(rez_EnumDisplayDevices));
+						if (cutils.jscEqual(rez_EnumDisplayDevices, 0)) { // ctypes.winLastError != 0
+							// iDevNum is greater than the largest device index.
+							break;
+						}
+						
+						if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+							rezArr.push({
+								argsCreateDC: {
+									lpszDriver: null,
+									lpszDevice: lpDisplayDevice.DeviceName
+								},
+								xTopLeft: parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.left)),
+								yTopLeft: parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.top))
+							});
+						}
+					}
+					*/ // discontinued this because i have to make another call to get topleft x,y of the monitor, that wouldnt be s obad, but this enums non-displays too so thats wasted overhead, the good thing about this thing though was it gave DeviceName, but so now ill just use EnuMDisplayMonitors and then that gives rect and cMon, then ill take cMon to GetMonitorInfo to get DeviceName, so thats just a call per what i actually need so opting for that
+					
+					var jsMonitorEnumProc = function(hMonitor, hdcMonitor, lprcMonitor, dwData) {
+						console.log('in jsMonitorEnumProc', 'hMonitor:', hMonitor.toString(), 'lprcMonitor:', lprcMonitor.contents.toString()); // link3687324
+						rezArr.push({
+							xTopLeft: parseInt(cutils.jscGetDeepest(lprcMonitor.contents.left)),
+							yTopLeft: parseInt(cutils.jscGetDeepest(lprcMonitor.contents.top))
+						});
+						rezArr[rezArr.length - 1].nWidth = parseInt(cutils.jscGetDeepest(lprcMonitor.contents.right)) - rezArr[rezArr.length - 1].xTopLeft;
+						rezArr[rezArr.length - 1].nHeight = parseInt(cutils.jscGetDeepest(lprcMonitor.contents.bottom)) - rezArr[rezArr.length - 1].yTopLeft;
+						
+						// get device name
+						var cMonInfo = ostypes.TYPE.MONITORINFOEX();
+						cMonInfo.cbSize = ostypes.TYPE.MONITORINFOEX.size;
+						var rez_GetMonitorInfo = ostypes.API('GetMonitorInfo')(hMonitor, cMonInfo.address());
+						console.info('rez_GetMonitorInfo:', rez_GetMonitorInfo.toString(), uneval(rez_GetMonitorInfo), cutils.jscGetDeepest(rez_GetMonitorInfo));
+						if (cutils.jscEqual(rez_GetMonitorInfo, 0)) {
+							console.error('Failed rez_GetMonitorInfo, winLastError:', ctypes.winLastError);
+							throw new Error({
+								name: 'os-api-error',
+								message: 'Failed rez_GetMonitorInfo, winLastError: "' + ctypes.winLastError + '" and rez_GetMonitorInfo: "' + rez_GetMonitorInfo.toString(),
+								winLastError: ctypes.winLastError
+							});
+						}
+						
+						rezArr[rezArr.length-1].argsCreateDC = {
+							lpszDriver: null,
+							lpszDevice: cMonInfo.szDevice
+						};
+						
+						return true; // continue enumeration
+					}
+					var cMonitorEnumProc = ostypes.TYPE.MONITORENUMPROC.ptr(jsMonitorEnumProc);
+					var rez_EnumDisplayMonitors = ostypes.API('EnumDisplayMonitors')(null, null, cMonitorEnumProc, 0);
+					console.log('post rez_EnumDisplayMonitors'); // good, this test proves that "in jsMonitorEnumProc, lprcMonitor" callbacks complete before EnuMDisplayMonitors unblocks link3687324
+					console.info('rez_EnumDisplayMonitors:', rez_EnumDisplayMonitors.toString(), uneval(rez_EnumDisplayMonitors), cutils.jscGetDeepest(rez_EnumDisplayMonitors));
 					if (ctypes.winLastError != 0) {
-						console.error('Failed hdcC, winLastError:', ctypes.winLastError);
+						console.error('Failed rez_EnumDisplayMonitors, winLastError:', ctypes.winLastError);
 						throw new Error({
 							name: 'os-api-error',
-							message: 'Failed hdcC, winLastError: "' + ctypes.winLastError + '" and hdcC: "' + hdcC.toString(),
+							message: 'Failed rez_EnumDisplayMonitors, winLastError: "' + ctypes.winLastError + '" and rez_EnumDisplayMonitors: "' + rez_EnumDisplayMonitors.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+				} else if (mons == 2) {
+					var cPoint = ostypes.TYPE.POINT();
+					var rez_GetCursorPos = ostypes.API('GetCursorPos')(cPoint.address());
+					console.info('rez_GetCursorPos:', rez_GetCursorPos.toString(), uneval(rez_GetCursorPos), cutils.jscGetDeepest(rez_GetCursorPos));
+					if (ctypes.winLastError != 0) {
+						console.error('Failed rez_GetCursorPos, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_GetCursorPos, winLastError: "' + ctypes.winLastError + '" and rez_GetCursorPos: "' + rez_GetCursorPos.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var cMon = ostypes.API('MonitorFromPoint')(cPoint, ostypes.CONST.MONITOR_DEFAULTTONEAREST);
+					console.info('cMon:', cMon.toString(), uneval(cMon), cutils.jscGetDeepest(cMon));
+					if (cMon.isNull()) { // removed `ctypes.winLastError != 0` because docs dont specify we can check last error and i didnt test it
+						console.error('Failed cMon, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed cMon, winLastError: "' + ctypes.winLastError + '" and cMon: "' + cMon.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var cMonInfo = ostypes.TYPE.MONITORINFOEX();
+					cMonInfo.cbSize = ostypes.TYPE.MONITORINFOEX.size;
+					var rez_GetMonitorInfo = ostypes.API('GetMonitorInfo')(cMon, cMonInfo.address());
+					console.info('rez_GetMonitorInfo:', rez_GetMonitorInfo.toString(), uneval(rez_GetMonitorInfo), cutils.jscGetDeepest(rez_GetMonitorInfo));
+					if (cutils.jscEqual(rez_GetMonitorInfo, 0)) {
+						console.error('Failed rez_GetMonitorInfo, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_GetMonitorInfo, winLastError: "' + ctypes.winLastError + '" and rez_GetMonitorInfo: "' + rez_GetMonitorInfo.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					console.info('cMonInfo.rcMonitor:', cMonInfo.rcMonitor.toString());
+					
+					rezArr.push({
+						argsCreateDC: {
+							lpszDriver: null,
+							lpszDevice: cMonInfo.szDevice
+						},
+						xTopLeft: parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.left)),
+						yTopLeft: parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.top))
+					});
+					rezArr[rezArr.length - 1].nWidth = parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.right)) - rezArr[rezArr.length - 1].xTopLeft;
+					rezArr[rezArr.length - 1].nHeight = parseInt(cutils.jscGetDeepest(cMonInfo.rcMonitor.bottom)) - rezArr[rezArr.length - 1].yTopLeft;
+				} else {
+					throw new Error({
+						name: 'devuser-error',
+						message: 'Invalid paramter of "' + mons + '" passed to mons argument'
+					})
+				}
+				
+				for (var s=0; s<rezArr.length; s++) {
+					var hdcScreen = ostypes.API('CreateDC')(rezArr[s].argsCreateDC.lpszDriver, rezArr[s].argsCreateDC.lpszDevice, null, null);
+					//console.info('hdcScreen:', hdcScreen.toString(), uneval(hdcScreen), cutils.jscGetDeepest(hdcScreen));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed hdcScreen, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					delete rezArr[s].argsCreateDC; // as we dont want to return CData to mainthread
+					
+					var nWidth = 'nWidth' in rezArr[s] ? rezArr[s].nWidth : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
+					var nHeight = 'nHeight' in rezArr[s] ? rezArr[s].nHeight : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
+					var nBPP = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.BITSPIXEL)));
+					
+					rezArr[s].nWidth = nWidth; // in case it didnt have nWidth in rezArr[s]
+					rezArr[s].nHeight = nHeight; // in case it didnt have nHeight in rezArr[s]
+					
+					console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
+					
+					var w = nWidth;
+					var h = nHeight;
+					
+					var modW = w % 4;
+					var useW = modW != 0 ? w + (4-modW) : w;
+					console.log('useW:', useW, 'realW:', w);
+					var arrLen = useW * h * 4;
+					var imagedata = new ImageData(useW, h);
+					
+					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
+					//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed hdcMemoryDC, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hdcMemoryDC, winLastError: "' + ctypes.winLastError + '" and hdcMemoryDC: "' + hdcMemoryDC.toString(),
 							winLastError: ctypes.winLastError
 						});
 					}
 
-					if (!hdcC.isNull()) {
-						var hbmOld = ostypes.API('SelectObject')(hdcC, hbmC);
-						console.info('hbmOld:', hbmOld.toString(), uneval(hbmOld), cutils.jscGetDeepest(hbmOld));
-						if (ctypes.winLastError != 0) {
-							console.error('Failed hbmOld, winLastError:', ctypes.winLastError);
-							throw new Error({
-								name: 'os-api-error',
-								message: 'Failed hbmOld, winLastError: "' + ctypes.winLastError + '" and hbmOld: "' + hbmOld.toString(),
-								winLastError: ctypes.winLastError
-							});
-						}
-
-						var w = c2.x - c1.x;
-						var h = c2.y - c1.y;
-						var rez_BB = ostypes.API('BitBlt')(hdcC, 0, 0, w, h, hdcScreen, c1.x, c1.y, ostypes.CONST.SRCCOPY);
-						console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
-						if (!rez_BB) {
-							console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
-							throw new Error({
-								name: 'os-api-error',
-								message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
-								winLastError: ctypes.winLastError
-							});
-						} else {				
-							// start - trying to get imagedata
-							var imagedata = new ImageData(w, h);
-							console.error('imagedata.data:', imagedata.data.toString());
-							console.error('imagedata.data:', imagedata.data.set.toString());
-							/*
-							// normal way
-							console.time('normal way');
-							var normalArr = [];							
-							for (var nRow=0; nRow<h; ++nRow) {
-								for (var nCol=0; nCol<w; ++nCol) {
-									var rez_colorref = ostypes.API('GetPixel')(hdcC, nCol, nRow);
-									var input = parseInt(cutils.jscGetDeepest(rez_colorref));
-									
-									
-									var r =  input       & 0xff;
-									var g = (input >> 8) & 0xff;
-									var b = (input >>16) & 0xff;
-									var a = 255;
-
-									normalArr.push(r);
-									normalArr.push(g);
-									normalArr.push(b);
-									normalArr.push(a);
-									//console.log(nRow, nCol, [r, g, b]);
-									
-									//break;
-								}
-								//break;
-							}
-							//console.info('normalArr:', normalArr.toString());
-							imagedata.data.set(normalArr);
-							console.timeEnd('normal way');
-							// normal way
-							//*/
-							///*
-							// uint32 way
-							console.time('uint32 way');
-							var buf = new ArrayBuffer(w * h * 4);
-							var buf8 = new Uint8ClampedArray(buf);
-							var buf32 = new Uint32Array(buf);
-							
-							for (var nRow=0; nRow<h; ++nRow) {
-								for (var nCol=0; nCol<w; ++nCol) {
-									var rez_colorref = ostypes.API('GetPixel')(hdcC, nCol, nRow);
-									var input = parseInt(cutils.jscGetDeepest(rez_colorref));
-									
-									buf32[nRow * w + nCol] = input | (255 << 24); //alpha of 255 otherwise it is 0
-									//break;
-								}
-								//break;
-							}
-							//console.info('normalArr:', normalArr.toString());
-							imagedata.data.set(buf8);
-							console.timeEnd('uint32 way');
-							// uint32 way
-							//*/
-							// end - trying to get imagedata
-							console.error('set done');
-							var rez_SO = ostypes.API('SelectObject')(hdcC, hbmOld);
-							console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
-							if (ctypes.winLastError != 0) {
-								console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
-								throw new Error({
-									name: 'os-api-error',
-									message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
-									winLastError: ctypes.winLastError
-								});
-							}
-							
-							var rez_DDC = ostypes.API('DeleteDC')(hdcC);
-							console.info('rez_DDC:', rez_DDC.toString(), uneval(rez_DDC), cutils.jscGetDeepest(rez_DDC));
-							if (ctypes.winLastError != 0) {
-								console.error('Failed rez_DDC, winLastError:', ctypes.winLastError);
-								throw new Error({
-									name: 'os-api-error',
-									message: 'Failed rez_DDC, winLastError: "' + ctypes.winLastError + '" and rez_DDC: "' + rez_DDC.toString(),
-									winLastError: ctypes.winLastError
-								});
-							}
-						}
+					// CreateDIBSection stuff
+					var bmi = ostypes.TYPE.BITMAPINFO();
+					bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
+					bmi.bmiHeader.biWidth = nWidth;
+					bmi.bmiHeader.biHeight = -1 * nHeight; // top-down
+					bmi.bmiHeader.biPlanes = 1;
+					bmi.bmiHeader.biBitCount = nBPP; // 32
+					bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
+					
+					var pixelBuffer = ostypes.TYPE.BYTE.ptr();
+					//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+					// CreateDIBSection stuff
+					
+					var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
+					if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
+						console.error('Failed hbmp, winLastError:', ctypes.winLastError, 'hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hbmp, winLastError: "' + ctypes.winLastError + '" and hbmp: "' + hbmp.toString(),
+							winLastError: ctypes.winLastError
+						});
 					}
-				}
+					
+					var rez_SO = ostypes.API('SelectObject')(hdcMemoryDC, hbmp);
+					//console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, nWidth, nHeight, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
+					//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					console.timeEnd('winapi');
+					
+					console.time('memcpy');
+					ostypes.API('memcpy')(imagedata.data, pixelBuffer, arrLen);
+					console.timeEnd('memcpy');
+					
+					// swap bytes to go from BRGA to RGBA
+					// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
+					console.time('BGRA -> RGBA');
+					var dataRef = imagedata.data;
+					var pos = 0;
+					while (pos < arrLen) {
+						var B = dataRef[pos];
 
-				var rez_RDC = ostypes.API('ReleaseDC')(hWindow, hdcScreen);
-				console.info('rez_RDC:', rez_RDC.toString(), uneval(rez_RDC), cutils.jscGetDeepest(rez_RDC));
-				if (ctypes.winLastError != 0) {
-					console.error('Failed rez_RDC, winLastError:', ctypes.winLastError);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed rez_RDC, winLastError: "' + ctypes.winLastError + '" and rez_RDC: "' + rez_RDC.toString(),
-						winLastError: ctypes.winLastError
-					});
-				}
+						dataRef[pos] = dataRef[pos+2];
+						dataRef[pos+2] = B;
 
-				return imagedata;
+						pos += 4;
+					}
+					console.timeEnd('BGRA -> RGBA');
+					
+					rezArr[s].idat = imagedata;
+				}
+				
+				return rezArr;
 				
 			break;
 		default:
@@ -289,3 +364,12 @@ function shootSect(c1, c2) {
 	}
 }
 // End - Addon Functionality
+
+var txtEn = new TextEncoder()
+var pth = OS.Path.join(OS.Constants.Path.desktopDir, 'logit.txt');
+
+function logit(txt) {
+	var valOpen = OS.File.open(pth, {write: true, append: true});
+	var valWrite = valOpen.write(txtEn.encode(txt + '\n'));
+	valOpen.close();
+}
