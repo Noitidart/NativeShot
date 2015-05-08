@@ -251,16 +251,17 @@ function shootSect(c1, c2) {
 				// swap bytes to go from BRGA to RGBA
 				// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
 				console.time('BGRA -> RGBA');
-				var view = new DataView(imagedata.data.buffer); // create DataView for byte-buffer
+				var dataRef = imagedata.data;
 				var pos = 0;
 				while (pos < arrLen) {
-					var B = view.getUint8(pos, true);
-					//var G = view.getUint8(pos+1, true);
-					var R = view.getUint8(pos+2, true);
-					//var A = view.getUint8(pos+3, true);
+					var B = dataRef[pos];
+					//var G = dataRef[pos+1];
+					//var R = dataRef[pos+2];
+					//var A = dataRef[pos+3];
 
-					view.setUint8(pos, R, true);
-					view.setUint8(pos+2, B, true);
+					dataRef[pos] = dataRef[pos+2];
+					dataRef[pos+2] = B;
+					
 					pos += 4;
 				}
 				console.timeEnd('BGRA -> RGBA');
