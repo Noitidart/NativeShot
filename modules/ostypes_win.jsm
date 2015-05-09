@@ -459,6 +459,17 @@ var winInit = function() {
 				self.TYPE.HDC // hdc
 			);
 		},
+		DeleteObject: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd183539%28v=vs.85%29.aspx
+			 * BOOL DeleteObject(
+			 *   _in_  HGDIOBJ hObject
+			 * );
+			 */
+			return lib('gdi32').declare('DeleteObject', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.HGDIOBJ	// hObject
+			);
+		},
 		EnumDisplayDevices: function() {
 			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd162609%28v=vs.85%29.aspx
 			 * BOOL EnumDisplayDevices(

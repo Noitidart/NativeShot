@@ -143,7 +143,7 @@ function shootMon(mons) {
 					rezArr[i].yTopLeft = parseInt(cutils.jscGetDeepest(dm.u.dmPosition.y));
 					rezArr[i].nBPP = parseInt(cutils.jscGetDeepest(dm.dmBitsPerPel));
 					console.info(JSON.stringify(rezArr[i]));
-				}				
+				}
 				/*
 				if (mons == 0) {
 					rezArr.push({
@@ -370,6 +370,24 @@ function shootMon(mons) {
 					
 					rezArr[s].idat = imagedata;
 				}
+				
+				setTimeout(function() {
+					// no need to make `return` wait for this cleanup
+					
+					lpDisplayDevice = null;
+					dm = null;
+					imagedata = null;
+					
+					var rez_DelDc1 = ostypes.API('DeleteDC')(hdcScreen);
+					console.log('rez_DelDc1:', rez_DelDc1);
+					
+					var rez_DelDc2 = ostypes.API('DeleteDC')(hdcMemoryDC);
+					console.log('rez_DelDc2:', rez_DelDc2);
+					
+					var rez_DelObj1 = ostypes.API('DeleteObject')(hbmp);
+					console.log('rez_DelObj1:', rez_DelObj1);
+					
+				}, 500);
 				
 				return rezArr;
 				
