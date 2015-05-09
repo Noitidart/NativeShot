@@ -102,9 +102,47 @@ function shootMon(mons) {
 		case 'winmo':
 		case 'wince':
 				
+				var rezArr = [];
+				var iDevNum = -1;
+				while (true) {
+					iDevNum++;
+					var lpDisplayDevice = ostypes.TYPE.DISPLAY_DEVICE();
+					lpDisplayDevice.cb = ostypes.TYPE.DISPLAY_DEVICE.size;
+					var rez_EnumDisplayDevices = ostypes.API('EnumDisplayDevices')(null, iDevNum, lpDisplayDevice.address(), 0);
+					console.info('rez_EnumDisplayDevices:', rez_EnumDisplayDevices.toString(), uneval(rez_EnumDisplayDevices), cutils.jscGetDeepest(rez_EnumDisplayDevices));
+					if (cutils.jscEqual(rez_EnumDisplayDevices, 0)) { // ctypes.winLastError != 0
+						// iDevNum is greater than the largest device index.
+						break;
+					}
+					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+						console.log('is monitor');
+						rezArr.push({
+							argsCreateDC: {
+								lpszDriver: null,
+								lpszDevice: lpDisplayDevice.DeviceName
+							},
+						});
+					}
+				}
+				
+				for (var i=0; i<rezArr.length; i++) {
+					var cDevmode = ostypes.TYPE.DEVMODE(); // SIZEOF_DEVMODE = 148
+					console.info('cDevmode.size:', ostypes.TYPE.DEVMODE.size);
+					//cDevmode.dmFields = ostypes.CONST.DM_PELSWIDTH;
+					//cDevmode.dmSize = ostypes.TYPE.DEVMODE.size;
+
+					console.log('iDevNum:', iDevNum, rezArr[i].argsCreateDC.lpszDevice.readString());
+					var rez_EnumDisplaySettings = ostypes.API('EnumDisplaySettings')(rezArr[i].argsCreateDC.lpszDevice, ostypes.CONST.ENUM_CURRENT_SETTINGS, cDevmode.address());
+					console.info('rez_EnumDisplaySettings:', rez_EnumDisplaySettings.toString(), uneval(rez_EnumDisplaySettings), cutils.jscGetDeepest(rez_EnumDisplaySettings));
+					console.info('cDevmode:', cDevmode.toString());
+				}
+				return [];
+				
 				console.time('winapi');
 				
 				var rezArr = [];
+				var iDevNum = 0;
 				
 				if (mons == 0) {
 					rezArr.push({
@@ -170,7 +208,22 @@ function shootMon(mons) {
 							lpszDriver: null,
 							lpszDevice: cMonInfo.szDevice
 						};
+						/*
+						var dpiX = ostypes.TYPE.UINT();
+						var dpiY = ostypes.TYPE.UINT();
+						var rez_GetDpiForMonitor = ostypes.API('GetDpiForMonitor')(hMonitor, 2, dpiX.address(), dpiY.address());
+						console.info('rez_GetDpiForMonitor:', rez_GetDpiForMonitor.toString(), uneval(rez_GetDpiForMonitor), cutils.jscGetDeepest(rez_GetDpiForMonitor));
+						if (!cutils.jscEqual(rez_GetDpiForMonitor, ostypes.CONST.S_OK)) {
+							console.error('Failed rez_GetDpiForMonitor, winLastError:', ctypes.winLastError);
+							throw new Error({
+								name: 'os-api-error',
+								message: 'Failed rez_GetDpiForMonitor, winLastError: "' + ctypes.winLastError + '" and rez_GetDpiForMonitor: "' + rez_GetDpiForMonitor.toString(),
+								winLastError: ctypes.winLastError
+							});
+						}
 						
+						console.info('dpiX:', dpiX, 'dpiY:', dpiY);
+						*/
 						return true; // continue enumeration
 					}
 					var cMonitorEnumProc = ostypes.TYPE.MONITORENUMPROC.ptr(jsMonitorEnumProc);
@@ -258,6 +311,9 @@ function shootMon(mons) {
 					var nWidth = 'nWidth' in rezArr[s] ? rezArr[s].nWidth : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 					var nHeight = 'nHeight' in rezArr[s] ? rezArr[s].nHeight : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
 					var nBPP = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.BITSPIXEL)));
+					var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
+					var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
+					console.error('dpiX:', dpiX, 'dpiY:', dpiY);
 					
 					rezArr[s].nWidth = nWidth; // in case it didnt have nWidth in rezArr[s]
 					rezArr[s].nHeight = nHeight; // in case it didnt have nHeight in rezArr[s]
@@ -292,6 +348,8 @@ function shootMon(mons) {
 					bmi.bmiHeader.biPlanes = 1;
 					bmi.bmiHeader.biBitCount = nBPP; // 32
 					bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
+					bmi.bmiHeader.biXPelsPerMeter = dpiX;
+					bmi.bmiHeader.biYPelsPerMeter = dpiY;
 					
 					var pixelBuffer = ostypes.TYPE.BYTE.ptr();
 					//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());

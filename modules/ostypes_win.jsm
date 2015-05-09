@@ -44,6 +44,7 @@ var winTypes = function() {
 	this.NTSTATUS = ctypes.long; // https://msdn.microsoft.com/en-us/library/cc230357.aspx // typedef long NTSTATUS;
 	this.PVOID = ctypes.voidptr_t;
 	this.RM_APP_TYPE = ctypes.unsigned_int; // i dont know im just guessing, i cant find a typedef that makes sense to me: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373670%28v=vs.85%29.aspx
+	this.SHORT = ctypes.short;
 	this.UINT = ctypes.unsigned_int;
 	this.UINT_PTR = is64bit ? ctypes.uint64_t : ctypes.unsigned_int;
 	this.ULONG = ctypes.unsigned_long;
@@ -104,18 +105,19 @@ var winTypes = function() {
 	this.WNDENUMPROC = ctypes.FunctionType(this.CALLBACK_ABI, this.BOOL, [this.HWND, this.LPARAM]); // "super advanced type" because its highest type is `this.HWND` which is "advanced type"
 
 	// inaccrurate types - i know these are something else but setting them to voidptr_t or something just works and all the extra work isnt needed
+	this.MONITOR_DPI_TYPE = ctypes.unsigned_int;
 	this.PCIDLIST_ABSOLUTE = ctypes.voidptr_t; // https://github.com/west-mt/ssbrowser/blob/452e21d728706945ad00f696f84c2f52e8638d08/chrome/content/modules/WindowsShortcutService.jsm#L115
 	this.PIDLIST_ABSOLUTE = ctypes.voidptr_t;
 	this.WIN32_FIND_DATA = ctypes.voidptr_t;
 	this.WINOLEAPI = ctypes.voidptr_t; // i guessed on this one
-	this.DEVMODE = ctypes.voidptr_t;
 
 	// STRUCTURES
 	// consts for structures
 	var struct_const = {
-		CCHDEVICENAME: 32
+		CCHDEVICENAME: 32,
+		CCHFORMNAME: 32
 	};
-	
+
 	// SIMPLE STRUCTS // based on any of the types above
 	this.BITMAPINFOHEADER = ctypes.StructType('BITMAPINFOHEADER', [
 		{ biSize: this.DWORD },
@@ -147,6 +149,10 @@ var winTypes = function() {
 		{ x: this.LONG },
 		{ y: this.LONG }
 	]);
+	this.POINTL = ctypes.StructType('_POINTL', [ // https://github.com/wine-mirror/wine/blob/7eddb864b36d159fa6e6807f65e117ca0a81485c/include/windef.h#L368
+		{ x: this.LONG },
+		{ y: this.LONG }
+	]);
 	this.RGBQUAD = ctypes.StructType('RGBQUAD', [
 		{ rgbBlue:		this.BYTE },
 		{ rgbGreen:		this.BYTE },
@@ -169,6 +175,41 @@ var winTypes = function() {
 		{ ciexyzRed: this.CIEXYZ },
 		{ ciexyzGreen: this.CIEXYZ },
 		{ ciexyzBlue: this.CIEXYZ }
+	]);
+	this.DEVMODE = ctypes.StructType('_devicemode', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/dd183565%28v=vs.85%29.aspx // https://github.com/mdsitton/pyglwindow/blob/5aab9de8036938166c01caf26b220c43400aaadb/src/library/win32/wintypes.py#L150
+		{ 'dmDeviceName': this.TCHAR.array(struct_const.CCHDEVICENAME) },
+		{ 'dmSpecVersion': this.WORD },
+		{ 'dmDriverVersion': this.WORD },
+		{ 'dmSize': this.WORD },
+		{ 'dmDriverExtra': this.WORD },
+		{ 'dmFields': this.DWORD },
+		{
+			'u': ctypes.StructType('_U', [	// union1
+				{ 'dmPosition': this.POINTL },
+				{ 'dmDisplayOrientation': this.DWORD },
+				{ 'dmDisplayFixedOutput': this.DWORD }
+			])
+		},
+		{ 'dmColor': this.SHORT },
+		{ 'dmDuplex': this.SHORT },
+		{ 'dmYResolution': this.SHORT },
+		{ 'dmTTOption': this.SHORT },
+		{ 'dmCollate': this.SHORT },
+		{ 'dmFormName': this.TCHAR.array(struct_const.CCHFORMNAME) },
+		{ 'dmLogPixels': this.WORD },
+		{ 'dmBitsPerPel': this.DWORD },
+		{ 'dmPelsWidth': this.DWORD },
+		{ 'dmPelsHeight': this.DWORD },
+		{ 'dmDisplayFlags': this.DWORD  },	// union2
+		{ 'dmDisplayFrequency': this.DWORD },
+		{ 'dmICMMethod': this.DWORD },
+		{ 'dmICMIntent': this.DWORD },
+		{ 'dmMediaType': this.DWORD },
+		{ 'dmDitherType': this.DWORD },
+		{ 'dmReserved1': this.DWORD },
+		{ 'dmReserved2': this.DWORD },
+		{ 'dmPanningWidth': this.DWORD },
+		{ 'dmPanningHeight': this.DWORD }
 	]);
 	this.MONITORINFOEX = ctypes.StructType('tagMONITORINFOEX', [
 		{ cbSize:		this.DWORD },
@@ -212,7 +253,7 @@ var winTypes = function() {
 		{ bV5Reserved:		this.DWORD }
 	]);
 	this.LPMONITORINFOEX = this.MONITORINFOEX.ptr;
-	
+
 	// FURTHER ADV STRUCTS
 	this.PBITMAPINFO = this.BITMAPINFO.ptr;
 
@@ -238,8 +279,16 @@ var winInit = function() {
 		CCHDEVICENAME: 32,
 		DIB_RGB_COLORS: 0,
 		DISPLAY_DEVICE_ATTACHED_TO_DESKTOP: 1, // same as DISPLAY_DEVICE_ACTIVE
+		DM_BITSPERPEL: 0x00040000,
+		DM_DISPLAYFREQUENCY: 0x00400000,
+		DM_PELSHEIGHT: 0x00100000,
+		DM_PELSWIDTH: 0x00080000,
+		ENUM_CURRENT_SETTINGS: self.TYPE.DWORD('0xFFFFFFFF'),
 		HORZRES: 8,
+		LOGPIXELSX: 88,
+		LOGPIXELSY: 90,
 		MONITOR_DEFAULTTONEAREST: 2,
+		S_OK: 0,
 		SRCCOPY: self.TYPE.DWORD('0x00CC0020'),
 		VERTRES: 10
 	};
@@ -372,10 +421,10 @@ var winInit = function() {
 			 */
 			return lib('gdi32').declare(ifdef_UNICODE ? 'CreateDCW' : 'CreateDCA', self.TYPE.ABI,
 				self.TYPE.HDC, //return
-				self.TYPE.LPCTSTR, // lpszDriver
-				self.TYPE.LPCTSTR, // lpszDevice
-				self.TYPE.LPCTSTR, // lpszOutput
-				self.TYPE.DEVMODE // *lpInitData
+				self.TYPE.LPCTSTR,		// lpszDriver
+				self.TYPE.LPCTSTR, 		// lpszDevice
+				self.TYPE.LPCTSTR, 		// lpszOutput
+				self.TYPE.DEVMODE.ptr	// *lpInitData
 			);
 		},
 		CreateDIBSection: function() {
@@ -425,7 +474,7 @@ var winInit = function() {
 				self.TYPE.DWORD,			// iDevNum
 				self.TYPE.PDISPLAY_DEVICE,	// lpDisplayDevice
 				self.TYPE.DWORD				// dwFlags
-			);			
+			);
 		},
 		EnumDisplayMonitors: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183489%28v=vs.85%29.aspx
@@ -444,6 +493,21 @@ var winInit = function() {
 				self.TYPE.LPARAM				// dwData
 			);
 		},
+		EnumDisplaySettings: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd162611%28v=vs.85%29.aspx
+			 * BOOL EnumDisplaySettings(
+			 *   _In_   LPCTSTR lpszDeviceName,
+			 *   _In_   DWORD   iModeNum,
+			 *   _Out_  DEVMODE *lpDevMode
+			 * );
+			 */
+			return lib('user32').declare(ifdef_UNICODE ? 'EnumDisplaySettingsW' : 'EnumDisplaySettingsA', self.TYPE.ABI,
+				self.TYPE.BOOL,			// return
+				self.TYPE.LPCTSTR,		// lpszDeviceName
+			    self.TYPE.DWORD,		// iModeNum
+			    self.TYPE.DEVMODE.ptr	// *lpDevMode
+			);
+		},
 		GetClientRect: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633503%28v=vs.85%29.aspx
 			 * BOOL WINAPI GetClientRect(
@@ -455,6 +519,17 @@ var winInit = function() {
 				self.TYPE.BOOL, //return
 				self.TYPE.HWND, // hWnd
 				self.TYPE.LPRECT // lpRec
+			);
+		},
+		GetCursorPos: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms648390%28v=vs.85%29.aspx
+			 * BOOL WINAPI GetCursorPos(
+			 *   __out_ LPPOINT lpPoint
+			 * );
+			 */
+			return lib('user32').declare('GetCursorPos', self.TYPE.ABI,
+				self.TYPE.BOOL,		//return
+				self.TYPE.LPPOINT	// hWnd
 			);
 		},
 		GetDC: function() {
@@ -489,6 +564,23 @@ var winInit = function() {
 				self.TYPE.INT	// nIndex
 			);
 		},
+		GetDpiForMonitor: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dn280510%28v=vs.85%29.aspx
+			 * HRESULT WINAPI GetDpiForMonitor(
+			 *   __in_  HMONITOR         hmonitor,
+			 *   __in_  MONITOR_DPI_TYPE dpiType,
+			 *   __out_ UINT             *dpiX,
+			 *   __out_ UINT             *dpiY
+			 * );
+			 */
+			return lib('shcore').declare('GetDpiForMonitor', self.TYPE.ABI,
+				self.TYPE.HRESULT,			// return
+				self.TYPE.HMONITOR,			// hmonitor
+				self.TYPE.MONITOR_DPI_TYPE,	// dpiType
+				self.TYPE.UINT.ptr,			// *dpiX
+				self.TYPE.UINT.ptr			// *dpiY
+			);
+		},
 		GetMonitorInfo: function() {
 			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd144901%28v=vs.85%29.aspx
 			 * BOOL GetMonitorInfo(
@@ -515,17 +607,6 @@ var winInit = function() {
 				self.TYPE.HDC, // hWnd
 				self.TYPE.INT, // nXPos
 				self.TYPE.INT // nYPos
-			);
-		},
-		GetCursorPos: function() {
-			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms648390%28v=vs.85%29.aspx
-			 * BOOL WINAPI GetCursorPos(
-			 *   __out_ LPPOINT lpPoint
-			 * );
-			 */
-			return lib('user32').declare('GetCursorPos', self.TYPE.ABI,
-				self.TYPE.BOOL,		//return
-				self.TYPE.LPPOINT	// hWnd
 			);
 		},
 		memcpy: function() {
