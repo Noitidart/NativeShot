@@ -326,7 +326,7 @@ var winInit = function() {
 				default:
 					try {
 						_lib[path] = ctypes.open(path);
-					} catch (e) {
+					} catch (ex) {
 						throw new Error({
 							name: 'addon-error',
 							message: 'Could not open ctypes library path of "' + path + '"',

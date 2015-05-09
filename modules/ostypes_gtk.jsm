@@ -13,7 +13,7 @@ if (ctypes.voidptr_t.size == 4 /* 32-bit */) {
 var gtkTypes = function() {
 
 	// ABIs
-	this.CALLBACK_ABI = ctypes.default_abi
+	this.CALLBACK_ABI = ctypes.default_abi;
 	this.ABI = ctypes.default_abi;
   
 	// C TYPES
@@ -109,16 +109,7 @@ var gtkInit = function() {
 
 	// CONSTANTS
 	this.CONST = {
-		BI_BITFIELDS: 3,
-		BI_RGB: 0,
-		BITSPIXEL: 12,
-		CCHDEVICENAME: 32,
-		DIB_RGB_COLORS: 0,
-		DISPLAY_DEVICE_ATTACHED_TO_DESKTOP: 1, // same as DISPLAY_DEVICE_ACTIVE
-		HORZRES: 8,
-		MONITOR_DEFAULTTONEAREST: 2,
-		SRCCOPY: self.TYPE.DWORD('0x00CC0020'),
-		VERTRES: 10
+		
 	};
 
 	var _lib = {}; // cache for lib
@@ -141,7 +132,7 @@ var gtkInit = function() {
 						_lib[path] = ctypes.open('libgdk-3.so.0');
 				
 					break;
-				case 'gtk+',
+				case 'gtk':
 				
 						_lib[path] = ctypes.open('libgtk-x11-2.0.so.0');
 				
@@ -172,7 +163,7 @@ var gtkInit = function() {
 				default:
 					try {
 						_lib[path] = ctypes.open(path);
-					} catch (e) {
+					} catch (ex) {
 						throw new Error({
 							name: 'addon-error',
 							message: 'Could not open ctypes library path of "' + path + '"',
@@ -215,17 +206,6 @@ var gtkInit = function() {
 			return lib('gdk2').declare('gdk_x11_drawable_get_xid', self.TYPE.ABI,
 				self.TYPE.XID,				// return
 				self.TYPE.GdkDrawable.ptr	// *drawable
-			);
-		},
-		gtk_widget_get_window: function() {
-			/* https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-window
-			 * GdkWindow *gtk_widget_get_window (
-			 *   GtkWidget *widget
-			 * );
-			 */
-			return lib('gtk').declare('gtk_widget_get_window', self.TYPE.ABI,
-				self.TYPE.GdkWindow.ptr,	// *return
-				self.TYPE.GtkWidget.ptr		// *widget
 			);
 		},
 		gdk_window_get_user_data: function() {
@@ -303,7 +283,7 @@ var gtkInit = function() {
 			 * );
 			 */
 			return lib('gdk2').declare('gdk_display_get_n_screens', self.TYPE.ABI,
-				self.TYPE.gint				// return
+				self.TYPE.gint,				// return
 				self.TYPE.GdkDisplay.ptr	// *display
 			);
 		},
@@ -372,7 +352,7 @@ var gtkInit = function() {
 			}
 			var gptr = self.TYPE.gpointer();
 			self.API('gdk_window_get_user_data')(GdkWinPtr, gptr.address());
-			var GtkWinPtr = ctypes.cast(gptr, GtkWindow.ptr);
+			var GtkWinPtr = ctypes.cast(gptr, self.TYPE.GtkWindow.ptr);
 			return GtkWinPtr;
 		},
 		gtkWinPtrToXID: function(aGTKWinPtr) {

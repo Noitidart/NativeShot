@@ -401,7 +401,7 @@ function shootMon(mons) {
 			break;
 		case 'gtk':
 			
-				var rootGdkWin = ostypes.API('get_default_root_window')();
+				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
 				console.info('root:', root.toString(), uneval(root), cutils.jscGetDeepest(root));
 				if (ctypes.errno != 0) {
 					console.error('Failed , errno:', ctypes.errno);
