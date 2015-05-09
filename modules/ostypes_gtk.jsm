@@ -283,7 +283,7 @@ var gtkInit = function() {
 		gdk_pixbuf_new: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-Image-Data-in-Memory.html#gdk-pixbuf-new
 		gdk_pixbuf_get_width: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-width
 		gdk_pixbuf_get_height: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-height
-		gdk_pixbuf_get_pixels: function() {} // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-pixels
+		gdk_pixbuf_get_pixels: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-pixels
 		
 		gdk_display_get_default: function() {
 			/* https://developer.gnome.org/gdk3/stable/GdkDisplay.html#gdk-display-get-default

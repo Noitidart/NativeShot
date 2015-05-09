@@ -59,12 +59,19 @@ function init(objCore) {
 		}
 	}
 
+	if (core.os.toolkit == 'gtk2') {
+		core.os.name = 'gtk';
+	}
+	
 	// I import ostypes_*.jsm in init as they may use things like core.os.isWinXp etc
 	switch (core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
 			importScripts(core.addon.path.content + 'modules/ostypes_win.jsm');
+			break
+		case 'gtk':
+			importScripts(core.addon.path.content + 'modules/ostypes_gtk.jsm');
 			break;
 		default:
 			throw new Error({
@@ -390,6 +397,40 @@ function shootMon(mons) {
 				}, 500);
 				
 				return rezArr;
+				
+			break;
+		case 'gtk':
+			
+				var rootGdkWin = ostypes.API('get_default_root_window')();
+				console.info('root:', root.toString(), uneval(root), cutils.jscGetDeepest(root));
+				if (ctypes.errno != 0) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + root.toString(),
+						errno: ctypes.errno
+					});
+				}
+
+				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(null, rootGdkWin);
+				console.info('rootGtkWin:', rootGtkWin.toString());
+				
+				var w = ostypes.TYPE.gint();
+				var h = ostypes.TYPE.gint();
+				var rez_getSize = ostypes.API('gtk_window_get_size')(rootGtkWin, w.address(), h.address());
+				console.info('rez_getSize:', rez_getSize.toString(), uneval(rez_getSize), cutils.jscGetDeepest(rez_getSize));
+				if (ctypes.errno != 0) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rez_getSize.toString(),
+						errno: ctypes.errno
+					});
+				}
+				
+				console.info('w:', w.toString(), 'h:', h.toString());
+				
+				
 				
 			break;
 		default:
