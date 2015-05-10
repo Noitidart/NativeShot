@@ -522,14 +522,14 @@ function shootMon(mons) {
 					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
 						rez_width,										// pixelsWide
 						rez_height,										// pixelsHigh
-						8,												// bitsPerSample
-						4,												// samplesPerPixel
+						ostypes.TYPE.NSInteger(8),												// bitsPerSample
+						ostypes.TYPE.NSInteger(4),												// samplesPerPixel
 						ostypes.CONST.YES,								// hasAlpha
 						ostypes.CONST.NO,								// isPlanar
 						myNSStrings.get('NSCalibratedRGBColorSpace'),	// colorSpaceName
-						0,												// bitmapFormat
-						0,												// bytesPerRow
-						32												// bitsPerPixel
+						ostypes.TYPE.NSInteger(0),												// bitmapFormat
+						ostypes.TYPE.NSInteger(0),												// bytesPerRow
+						ostypes.TYPE.NSInteger(32)												// bitsPerPixel
 					);
 					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));
 					if (imageRep.isNull()) { // im guessing this is how to error check it

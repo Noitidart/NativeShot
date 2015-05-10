@@ -177,6 +177,11 @@ var macTypes = function() {
 	
 	// SIMPLE OBJC TYPES
 	this.BOOL = ctypes.signed_char;
+	this.NSInteger = ctypes.long;
+	this.NSUInteger = ctypes.unsigned_long;
+	
+	// ADV OBJC TYPES
+	this.NSBitmapFormat = this.NSUInteger;
 	
 	// GUESS TYPES OBJC - they work though
 	this.id = ctypes.voidptr_t;
@@ -205,10 +210,10 @@ var macInit = function() {
 		get kCFTypeArrayCallBacks () { if (!('kCFTypeArrayCallBacks' in _const)) { _const['kCFTypeArrayCallBacks'] = lib('CoreFoundation').declare('kCFTypeArrayCallBacks', self.TYPE.CFArrayCallBacks); } return _const['kCFTypeArrayCallBacks']; },
 		kCGErrorSuccess: 0,
 		kCGNullDirectDisplay: 0,
-		///////// OBJC
-		NO: 0, //self.TYPE.BOOL(0)
-		NSPNGFileType: 4,
-		YES: 1 //self.TYPE.BOOL(1)
+		///////// OBJC - all consts are wrapped in a type as if its passed to variadic it needs to have type defind, see jsctypes chat with arai on 051015 357p
+		NO: self.TYPE.BOOL(0)
+		NSPNGFileType: self.TYPE.NSUInteger(4),
+		YES: self.TYPE.BOOL(1) // i do this instead of 1 becuase for varidic types we need to expclicitly define it
 	};
 
 	var _lib = {}; // cache for lib
