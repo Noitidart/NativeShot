@@ -504,10 +504,13 @@ var macInit = function() {
 			// if get and it doesnt exist then it makes and stores it
 			// if get and already exists then it returns that lazy
 			// can releaseAll on it
+			console.error('nssstringColll');
 			this.coll = {};
 			this.class = {};
 			this.get = function(jsStr) {
+				console.error('enter get');
 				if (!(jsStr in this.coll)) {
+					console.error('here');
 					this.class[jsStr] = self.API('objc_msgSend')(self.HELPER.class('NSString'), self.HELPER.sel('alloc'));;
 					console.info('pre init this.class[jsStr]:', jsStr, this.class[jsStr].toString());
 					
