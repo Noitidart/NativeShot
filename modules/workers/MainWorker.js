@@ -73,6 +73,9 @@ function init(objCore) {
 		case 'gtk':
 			importScripts(core.addon.path.content + 'modules/ostypes_gtk.jsm');
 			break;
+		case 'darwin':
+			importScripts(core.addon.path.content + 'modules/ostypes_mac.jsm');
+			break;
 		default:
 			throw new Error({
 				name: 'addon-error',
@@ -402,18 +405,20 @@ function shootMon(mons) {
 		case 'gtk':
 			
 				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
-				console.info('root:', root.toString(), uneval(root), cutils.jscGetDeepest(root));
+				console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
 				if (ctypes.errno != 0) {
 					console.error('Failed , errno:', ctypes.errno);
 					throw new Error({
 						name: 'os-api-error',
-						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + root.toString(),
+						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
 						errno: ctypes.errno
 					});
 				}
 
-				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(null, rootGdkWin);
+				/*
+				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(rootGdkWin);
 				console.info('rootGtkWin:', rootGtkWin.toString());
+				*/
 				
 				var w = ostypes.TYPE.gint();
 				var h = ostypes.TYPE.gint();
@@ -432,6 +437,196 @@ function shootMon(mons) {
 				
 				
 				
+			break;
+		case 'darwin':
+				
+				var displays = ostypes.TYPE.CGDirectDisplayID.array(32);
+				var count = ostypes.TYPE.uint32_t();
+				
+				var maxDisplays = displays.constructor.size / displays[0].constructor.size;
+				var activeDspys = displays.address();
+				var dspyCnt = count.address();
+				console.info('maxDisplays:', maxDisplays);
+				
+				var rez_CGGetActiveDisplayList = ostypes.API('CGGetActiveDisplayList')(maxDisplays, activeDspys, dspyCnt);
+				console.info('rez_CGGetActiveDisplayList:', rez_CGGetActiveDisplayList.toString(), uneval(rez_CGGetActiveDisplayList), cutils.jscGetDeepest(rez_CGGetActiveDisplayList));
+				if (!cutils.jscEqual(rez_CGGetActiveDisplayList, kCGErrorSuccess)) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rez_CGGetActiveDisplayList.toString(),
+						errno: ctypes.errno
+					});
+				}
+				
+				count = parseInt(cutils.jscGetDeepest(count));
+				console.info('count:', count);
+				var i_nonMirror = {};
+				
+				var rect = ostypes.CONST.CGRectNull;
+				for (var i=0; i<count; i++) {
+					// if display is secondary mirror of another display, skip it
+					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);
+					console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
+					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, kCGNullDirectDisplay)) {
+						continue;
+					}
+					i_nonMirror[i] = null;
+					
+					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
+					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds), cutils.jscGetDeepest(rez_CGDisplayBounds));
+					
+					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
+				}
+				
+				/*
+				NSBitmapImageRep* imageRep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                                         pixelsWide:CGRectGetWidth(rect)
+                                                                         pixelsHigh:CGRectGetHeight(rect)
+                                                                      bitsPerSample:8
+                                                                    samplesPerPixel:4
+                                                                           hasAlpha:YES
+                                                                           isPlanar:NO
+                                                                     colorSpaceName:NSCalibratedRGBColorSpace
+                                                                       bitmapFormat:0
+                                                                        bytesPerRow:0
+                                                                       bitsPerPixel:32];
+				*/
+				var myNSStrings;
+				var allocNSBIP;
+				try {
+					myNSStrings = new ostypes.HELPER.nsstringColl();
+					
+					var rez_width = ostypes.API('CGRectGetWidth')(rect);
+					console.info('rez_width:', rez_width.toString(), uneval(rez_width), cutils.jscGetDeepest(rez_width));
+					
+					var rez_height = ostypes.API('CGRectGetHeight')(rect);
+					console.info('rez_height:', rez_height.toString(), uneval(rez_height), cutils.jscGetDeepest(rez_height));
+					
+					var NSBitmapImageRep = ostypes.HELPER.class('NSBitmapImageRep');
+					allocNSBIP = ostypes.API('objc_msgSend')(NSBitmapImageRep, ostypes.HELPER.sel('alloc'));
+					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
+						rez_width,									// pixelsWide
+						rez_height,									// pixelsHigh
+						8,											// bitsPerSample
+						4,											// samplesPerPixel
+						ostypes.CONST.YES,							// hasAlpha
+						ostypes.CONST.NO,							// isPlanar
+						myNSStrings.get('NSCalibratedRGBColorSpace'),	// colorSpaceName
+						0,											// bitmapFormat
+						0,											// bytesPerRow
+						32											// bitsPerPixel
+					);
+					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));
+					if (imageRep.isNull()) { // im guessing this is how to error check it
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed imageRep, errno: "' + ctypes.errno + '" and : "' + imageRep.toString(),
+							errno: ctypes.errno
+						});
+					}
+					
+					// NSGraphicsContext* context = [NSGraphicsContext graphicsContextWithBitmapImageRep:imageRep];
+					var NSGraphicsContext = ostypes.HELPER.class('NSGraphicsContext');
+					var context = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('graphicsContextWithBitmapImageRep:'), imageRep);
+					console.info('context:', context.toString(), uneval(context), cutils.jscGetDeepest(context));
+					if (context.isNull()) { // im guessing this is how to error check it
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed context, errno: "' + ctypes.errno + '" and : "' + context.toString(),
+							errno: ctypes.errno
+						});
+					}
+					
+					// [NSGraphicsContext saveGraphicsState];
+					var rez_saveGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('saveGraphicsState'));
+					console.info('rez_saveGraphicsState:', rez_saveGraphicsState.toString(), uneval(rez_saveGraphicsState), cutils.jscGetDeepest(rez_saveGraphicsState));
+					
+					// [NSGraphicsContext setCurrentContext:context];
+					var rez_setCurrentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('setCurrentContext:'), context);
+					console.info('rez_setCurrentContext:', rez_setCurrentContext.toString(), uneval(rez_setCurrentContext), cutils.jscGetDeepest(rez_setCurrentContext));
+					
+					// CGContextRef cgcontext = [context graphicsPort];
+					var cgcontext = ostypes.API('objc_msgSend')(context, ostypes.HELPER.sel('graphicsPort'));
+					console.info('cgcontext:', cgcontext.toString(), uneval(cgcontext), cutils.jscGetDeepest(cgcontext));
+					
+					// CGContextClearRect(cgcontext, CGRectMake(0, 0, CGRectGetWidth(rect), CGRectGetHeight(rect)));
+					var rez_width2 = ostypes.API('CGRectGetWidth')(rect);
+					console.info('rez_width2:', rez_width2.toString(), uneval(rez_width2), cutils.jscGetDeepest(rez_width2));
+					
+					var rez_height2 = ostypes.API('CGRectGetHeight')(rect);
+					console.info('rez_height2:', rez_height2.toString(), uneval(rez_height2), cutils.jscGetDeepest(rez_height2));
+					
+					var rez_CGRectMake = ostypes.API('CGRectMake')(0, 0, rez_width2, rez_height2);
+					console.info('rez_CGRectMake:', rez_CGRectMake.toString(), uneval(rez_CGRectMake), cutils.jscGetDeepest(rez_CGRectMake));
+					
+					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(cgcontext, rez_CGRectMake);
+					console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
+					
+					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
+						// CGRect displayRect = CGDisplayBounds(displays[i]);
+						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
+						console.info('displayRect:', displayRect.toString(), uneval(displayRect), cutils.jscGetDeepest(displayRect));
+						
+						// CGImageRef image = CGDisplayCreateImage(displays[i]);
+						var image = ostypes.API('CGDisplayCreateImage')(displays[i]);
+						console.info('image:', image.toString(), uneval(image), cutils.jscGetDeepest(image));
+						if (!image) {
+							console.warn('no image so continuing');
+							continue;
+						}
+						
+						// CGRect dest = CGRectMake(displayRect.origin.x - rect.origin.x,
+						//               displayRect.origin.y - rect.origin.y,
+						//               displayRect.size.width,
+						//               displayRect.size.height);
+						var dest = ostypes.API('CGRectmake')(
+							displayRect.origin.x - rect.origin.x,
+							displayRect.origin.y - rect.origin.y,
+							displayRect.size.width,
+							displayRect.size.height
+						);
+						console.info('dest:', dest.toString(), uneval(dest), cutils.jscGetDeepest(dest));
+						
+						// CGContextDrawImage(cgcontext, dest, image);
+						ostypes.API('CGContextDrawImage')(cgcontext, dest, image); // reutrns void
+						
+						// CGImageRelease(image);
+						ostypes.API('CGImageRelease')(image); // returns void
+						
+					}
+					
+					// [[NSGraphicsContext currentContext] flushGraphics];
+					var rez_currentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('currentContext'));
+					console.info('rez_currentContext:', rez_currentContext.toString(), uneval(rez_currentContext), cutils.jscGetDeepest(rez_currentContext));
+					
+					var rez_flushGraphics = ostypes.API('objc_msgSend')(rez_currentContext, ostypes.HELPER.sel('flushGraphics'));
+					console.info('rez_flushGraphics:', rez_flushGraphics.toString(), uneval(rez_flushGraphics), cutils.jscGetDeepest(rez_flushGraphics));
+					
+					// [NSGraphicsContext restoreGraphicsState];
+					var rez_restoreGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('restoreGraphicsState'));
+					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState), cutils.jscGetDeepest(rez_restoreGraphicsState));
+					
+					// NSData* data = [imageRep representationUsingType:NSPNGFileType properties:@{ }];
+					
+					var NSDictionary = ostypes.HELPER.class('NSDictionary');
+					var tempDict = ostypes.API('objc_msgSend')(NSDictionary, ostypes.HELPER.sel('dictionary')); //gives us temporary dicationary, one that gets auto released? well whatever its something not allocated so we dont have to release it
+					console.info('tempDict:', tempDict.toString(), uneval(tempDict));
+					
+					var data = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('representationUsingType:properties:'), ostypes.CONST.NSPNGFileType, tempDict); // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/representationUsingType:properties:
+					
+					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
+					var rez_writeToFile = objc.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
+					console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
+					
+				} finally {
+					if (allocNSBIP) {
+						ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
+					}
+					if (myNSStrings) {
+						myNSStrings.destroy()
+					}
+				}
 			break;
 		default:
 			throw new Error({

@@ -30,6 +30,7 @@ var gtkTypes = function() {
 	this.gchar = ctypes.char;
 	this.GCancellable = ctypes.StructType('_GCancellable');
 	this.GdkDisplay = ctypes.StructType('GdkDisplay');
+	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
 	this.GdkDrawable = ctypes.StructType('GdkDrawable');
 	this.GdkWindow = ctypes.StructType('GdkWindow');
 	this.GFile = ctypes.StructType('_GFile');
@@ -72,6 +73,16 @@ var gtkTypes = function() {
 		{ y:		this.int },
 		{ width:	this.int },
 		{ height:	this.int }
+	]);
+	this.GList = ctypes.StructType('GList');
+	this.GList.define([
+		{'data': this.gpointer},
+		{'next': this.GList.ptr},
+	]);
+	this.GSList = ctypes.StructType('GList');
+	this.GSList.define([ // https://developer.gnome.org/glib/unstable/glib-Singly-Linked-Lists.html#GSList
+		{'data': this.gpointer},
+		{'next': this.GSList.ptr}
 	]);
 	this.GdkRectangle = ctypes.StructType('GdkRectangle', [ // https://developer.gnome.org/gdk3/stable/gdk3-Points-Rectangles-and-Regions.html#GdkRectangle
 		{ x:		this.int },
@@ -325,6 +336,38 @@ var gtkInit = function() {
 				self.TYPE.GdkScreen.ptr,	// *return
 				self.TYPE.GdkDisplay.ptr	// *display
 			);
+		},
+		gdk_display_manager_get: function() {
+			/* https://developer.gnome.org/gdk3/stable/GdkDisplayManager.html#gdk-display-manager-get
+			 * GdkDisplayManager *gdk_display_manager_get (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').delcare('gdk_display_manager_get', self.TYPE.ABI,
+				self.TYPE.GdkDisplayManager.ptr		// *return
+			);
+		},
+		gdk_display_manager_list_displays: function() {
+			/* https://developer.gnome.org/gdk3/stable/GdkDisplayManager.html#gdk-display-manager-list-displays
+			 * GSList *gdk_display_manager_list_displays (
+			 *   GdkDisplayManager *manager
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_display_manager_list_displays', self.TYPE.ABI,
+				self.TYPE.GSList.ptr,				// *return
+				self.TYPE.GdkDisplayManager.ptr		// *manager
+			);
+		},
+		g_slist_free() {
+			/* https://developer.gnome.org/glib/unstable/glib-Singly-Linked-Lists.html#g-slist-free
+			 * void g_slist_free (
+			 *   GSList *list
+			 * );
+			 */
+			return lib('gdk2').declare('g_slist_free', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.GSList.ptr	// *list
+			);
 		}
 		// libgdk_pixbuf-2.0-0
 	};
@@ -332,26 +375,14 @@ var gtkInit = function() {
 	// end - function declares
 
 	this.HELPER = {
-		gdkWinPtrToXID: function(aGDKWindowPtrStr, aGDKWindowPtr) {
-			// pass str or ptr. reason for str option is because baseWindow.nativeHandle is a ptrstr
-			if (aGDKWindowPtrStr) {
-				var GdkWinPtr = self.TYPE.GdkWindow.ptr(ctypes.UInt64(aGDKWindowPtrStr));
-			} else if (aGDKWindowPtr) {
-				var GdkWinPtr = aGDKWindowPtr;
-			}
-			var GdkDrawPtr = ctypes.cast(GdkWinPtr, self.TYPE.GdkDrawable.ptr);
+		gdkWinPtrToXID: function(aGDKWindowPtr) {
+			var GdkDrawPtr = ctypes.cast(aGDKWindowPtr, self.TYPE.GdkDrawable.ptr);
 			var xidOfWin = self.API('gdk_x11_drawable_get_xid')(GdkDrawPtr);
 			return xidOfWin;
 		},
-		gdkWinPtrToGtkWinPtr: function(aGDKWindowPtrStr, aGDKWindowPtr) {
-			// pass str or ptr. reason for str option is because baseWindow.nativeHandle is a ptrstr
-			if (aGDKWindowPtrStr) {
-				var GdkWinPtr = self.TYPE.GdkWindow.ptr(ctypes.UInt64(aGDKWindowPtrStr));
-			} else if (aGDKWindowPtr) {
-				var GdkWinPtr = aGDKWindowPtr;
-			}
+		gdkWinPtrToGtkWinPtr: function(aGDKWindowPtr) {
 			var gptr = self.TYPE.gpointer();
-			self.API('gdk_window_get_user_data')(GdkWinPtr, gptr.address());
+			self.API('gdk_window_get_user_data')(aGDKWindowPtr, gptr.address());
 			var GtkWinPtr = ctypes.cast(gptr, self.TYPE.GtkWindow.ptr);
 			return GtkWinPtr;
 		},
@@ -375,6 +406,25 @@ var gtkInit = function() {
 			var aGDKWinPtr = self.HELPER.xidToGdkWinPtr(aXID);
 			var aGTKWinPtr = self.HELPER.gdkWinPtrToGtkWinPtr(aGDKWinPtr);
 			return aGTKWinPtr;
+		},
+		mozNativeHandlToGdkWinPtr: function(aMozNativeHandlePtrStr) {
+			var GdkWinPtr = self.TYPE.GdkWindow.ptr(ctypes.UInt64(aMozNativeHandlePtrStr));
+			return GdkWinPtr;
+		},
+		mozNativeHandlToGtkWinPtr: function(aMozNativeHandlePtrStr) {
+			GdkWinPtr = self.HELPER.mozNativeHandlToGdkWinPtr(aMozNativeHandlePtrStr);
+			var GtkWinPtr = self.HELPER.gdkWinPtrToGtkWinPtr(GdkWinPtr);
+			/*
+			var gptr = self.TYPE.gpointer();
+			self.API('gdk_window_get_user_data')(GdkWinPtr, gptr.address());
+			var GtkWinPtr = ctypes.cast(gptr, self.TYPE.GtkWindow.ptr);
+			*/
+			return GtkWinPtr;
+		},
+		mozNativeHandlToXID: function(aMozNativeHandlePtrStr) {
+			GdkWinPtr = self.TYPE.mozNativeHandlToGdkWinPtr(aMozNativeHandlePtrStr);
+			var xid = self.HELPER.gdkWinPtrToXID(GdkWinPtr);
+			return GtkWinPtr;
 		}
 	};
 }
