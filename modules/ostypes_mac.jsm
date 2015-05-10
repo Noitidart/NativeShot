@@ -537,7 +537,7 @@ var macInit = function() {
 				this.coll = null;
 			};
 		},
-		variadicNULL: ctypes.voidptr_t(ctypes.uint64_t(0x0));
+		variadicNULL: ctypes.voidptr_t(ctypes.uint64_t(0x0))
 	};
 }
 
