@@ -632,6 +632,7 @@ function shootMon(mons) {
 					console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
 					
 				} finally {
+					console.error('starting finally block');
 					if (allocNSBIP) {
 						var rez_relNSBPI = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
 						console.info('rez_relNSBPI:', rez_relNSBPI.toString());
