@@ -505,13 +505,14 @@ var macInit = function() {
 			// if get and already exists then it returns that lazy
 			// can releaseAll on it
 			this.coll = {};
-			
+			this.class = {};
 			this.get = function(jsStr) {
 				if (!(jsStr in this.coll)) {
-					this.coll[jsStr] = self.API('objc_msgSend')(self.HELPER.class('NSString'), self.HELPER.sel('alloc'));;
-					console.info('this.coll[jsStr]:', jsStr, this.coll[jsStr].toString());
+					this.class[jsStr] = self.API('objc_msgSend')(self.HELPER.class('NSString'), self.HELPER.sel('alloc'));;
+					console.info('pre init this.class[jsStr]:', jsStr, this.coll[jsStr].toString());
 					var rez_initWithUTF8String = self.API('objc_msgSend')(this.coll[jsStr], self.HELPER.sel('initWithUTF8String:'), self.TYPE.char.array()(jsStr));
-					console.info('rez_initWithUTF8String:', jsStr, rez_initWithUTF8String.toString(), 'this.coll[jsStr]:', this.coll[jsStr].toString());
+					this.coll[jsStr] = rez_initWithUTF8String;
+					console.info('post init this.class:', jsStr, this.class[jsStr].toString(), 'this.coll[jsStr]:', this.coll[jsStr].toString());
 				}
 				return this.coll[jsStr];
 			};
@@ -519,7 +520,8 @@ var macInit = function() {
 			this.releaseAll = function() {
 				for (var nsstring in this.coll) {
 					var rez_relNSS = self.API('objc_msgSend')(this.coll[nsstring], self.HELPER.sel('release'));
-					console.info('rez_relNSS:', rez_relNSS.toString());
+					var rez_relCLASS = self.API('objc_msgSend')(this.class[nsstring], self.HELPER.sel('release'));
+					console.info('rez_relNSS:', rez_relNSS.toString(), 'rez_relCLASS:', rez_relCLASS.toString());
 				}
 				this.coll = null;
 			};
