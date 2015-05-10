@@ -440,17 +440,19 @@ function shootMon(mons) {
 			break;
 		case 'darwin':
 				
-				var displays = ostypes.TYPE.CGDirectDisplayID.array(32);
+				var displays = ostypes.TYPE.CGDirectDisplayID.array(32)(); // i guess max possible monitors is 32
 				var count = ostypes.TYPE.uint32_t();
+				console.info('displays.constructor.size:', displays.constructor.size);
+				console.info('ostypes.TYPE.CGDirectDisplayID.size:', ostypes.TYPE.CGDirectDisplayID.size);
 				
-				var maxDisplays = displays.constructor.size / displays[0].constructor.size;
-				var activeDspys = displays.address();
+				var maxDisplays = displays.constructor.size / ostypes.TYPE.CGDirectDisplayID.size;
+				var activeDspys = displays; // displays.address() didnt work it threw `expected type pointer, got ctypes.uint32_t.array(32).ptr(ctypes.UInt64("0x11e978080"))` // the arg in declare is `self.TYPE.CGDirectDisplayID.ptr,	// *activeDisplays` // without .address() worked
 				var dspyCnt = count.address();
 				console.info('maxDisplays:', maxDisplays);
 				
 				var rez_CGGetActiveDisplayList = ostypes.API('CGGetActiveDisplayList')(maxDisplays, activeDspys, dspyCnt);
 				console.info('rez_CGGetActiveDisplayList:', rez_CGGetActiveDisplayList.toString(), uneval(rez_CGGetActiveDisplayList), cutils.jscGetDeepest(rez_CGGetActiveDisplayList));
-				if (!cutils.jscEqual(rez_CGGetActiveDisplayList, kCGErrorSuccess)) {
+				if (!cutils.jscEqual(rez_CGGetActiveDisplayList, ostypes.CONST.kCGErrorSuccess)) {
 					console.error('Failed , errno:', ctypes.errno);
 					throw new Error({
 						name: 'os-api-error',
@@ -464,19 +466,29 @@ function shootMon(mons) {
 				var i_nonMirror = {};
 				
 				var rect = ostypes.CONST.CGRectNull;
+				console.info('rect preloop:', rect.toString());
 				for (var i=0; i<count; i++) {
 					// if display is secondary mirror of another display, skip it
-					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);
+					console.info('displays[i]:', displays[i]);
+					
+					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
 					console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
-					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, kCGNullDirectDisplay)) {
+
+					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
 						continue;
 					}
 					i_nonMirror[i] = null;
 					
 					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
-					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds), cutils.jscGetDeepest(rez_CGDisplayBounds));
+					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds)/*, cutils.jscGetDeepest(rez_CGDisplayBounds)*/); // :todo: fix cutils.jscEqual because its throwing `Error: cannot convert to primitive value` for ctypes.float64_t and ctypes.double ACTUALLY its a struct, so no duhhh so no :todo:
 					
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
+					console.info('rect post loop ' + i + ':', rect.toString());
+				}
+				
+				if (Object.keys(i_nonMirror).length == 0) {
+					// what on earth, no monitors that arent mirrors?
+					return []; // as there is nothing to screenshot
 				}
 				
 				/*
@@ -506,16 +518,16 @@ function shootMon(mons) {
 					var NSBitmapImageRep = ostypes.HELPER.class('NSBitmapImageRep');
 					allocNSBIP = ostypes.API('objc_msgSend')(NSBitmapImageRep, ostypes.HELPER.sel('alloc'));
 					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
-						rez_width,									// pixelsWide
-						rez_height,									// pixelsHigh
-						8,											// bitsPerSample
-						4,											// samplesPerPixel
-						ostypes.CONST.YES,							// hasAlpha
-						ostypes.CONST.NO,							// isPlanar
+						rez_width,										// pixelsWide
+						rez_height,										// pixelsHigh
+						8,												// bitsPerSample
+						4,												// samplesPerPixel
+						ostypes.CONST.YES,								// hasAlpha
+						ostypes.CONST.NO,								// isPlanar
 						myNSStrings.get('NSCalibratedRGBColorSpace'),	// colorSpaceName
-						0,											// bitmapFormat
-						0,											// bytesPerRow
-						32											// bitsPerPixel
+						0,												// bitmapFormat
+						0,												// bytesPerRow
+						32												// bitsPerPixel
 					);
 					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));
 					if (imageRep.isNull()) { // im guessing this is how to error check it
@@ -621,11 +633,13 @@ function shootMon(mons) {
 					
 				} finally {
 					if (allocNSBIP) {
-						ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
+						var rez_relNSBPI = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
+						console.info('rez_relNSBPI:', rez_relNSBPI.toString());
 					}
 					if (myNSStrings) {
-						myNSStrings.destroy()
+						myNSStrings.releaseAll()
 					}
+					console.info('released things, i want to know if it gets here even if return was called within the try block');
 				}
 			break;
 		default:
