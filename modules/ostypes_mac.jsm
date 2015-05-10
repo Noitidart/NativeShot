@@ -27,7 +27,7 @@ var macTypes = function() {
 	this.size_t = ctypes.size_t;
 	this.uint16_t = ctypes.uint16_t;
 	this.uint32_t = ctypes.uint32_t;
-	this.uintptr_t = ctypes.uintptr_t
+	this.uintptr_t = ctypes.uintptr_t;
 	this.uint64_t = ctypes.uint64_t;
 	this.unsigned_long = ctypes.unsigned_long;
 	this.void = ctypes.void_t;
@@ -202,10 +202,10 @@ var macInit = function() {
 	// CONSTANTS
 	var _const = {}; // lazy load consts
 	this.CONST = {
-		get CGRectNull () { if (!('CGRectNull' in _const)) { _const['CGRectNull'] = lib('CoreGraphics').declare('CGRectNull', self.TYPE.CGRect); } return _const['CGRectNull']; }
+		get CGRectNull () { if (!('CGRectNull' in _const)) { _const['CGRectNull'] = lib('CoreGraphics').declare('CGRectNull', self.TYPE.CGRect); } return _const['CGRectNull']; },
 		get kCFTypeArrayCallBacks () { if (!('kCFTypeArrayCallBacks' in _const)) { _const['kCFTypeArrayCallBacks'] = lib('CoreFoundation').declare('kCFTypeArrayCallBacks', self.TYPE.CFArrayCallBacks); } return _const['kCFTypeArrayCallBacks']; },
 		kCGErrorSuccess: 0,
-		kCGNullDirectDisplay: 0 // i guess on this one based on some github searching
+		kCGNullDirectDisplay: 0, // i guess on this one based on some github searching
 		///////// OBJC
 		NO: 0, //self.TYPE.BOOL(0)
 		NSPNGFileType: 4,
@@ -331,7 +331,7 @@ var macInit = function() {
 			 * ); 
 			 */
 			return lib('CoreFoundation').declare('CFRelease', self.TYPE.ABI,
-				self.TYPE.VOID,		// return
+				self.TYPE.void,		// return
 				self.TYPE.CFTypeRef	// cf
 			);
 		},
@@ -342,7 +342,7 @@ var macInit = function() {
 				self.TYPE.CGRect
 			);
 		},
-		CGContextDrawImage: function() [
+		CGContextDrawImage: function() {
 			/* https://developer.apple.com/library/mac/documentation/GraphicsImaging/Reference/CGContext/index.html#//apple_ref/c/func/CGContextDrawImage
 			 * void CGContextDrawImage (
 			 *   CGContextRef c,
@@ -368,7 +368,7 @@ var macInit = function() {
 				self.TYPE.CGImageRef,
 				self.TYPE.CGDirectDisplayID
 			);
-		}
+		},
 		CGDisplayMirrorsDisplay: function() {
 			return lib('CoreGraphics').declare('CGDisplayMirrorsDisplay', self.TYPE.ABI,
 				self.TYPE.CGDirectDisplayID,
@@ -393,9 +393,9 @@ var macInit = function() {
 		CGImageRelease: function() {
 			return lib('CoreGraphics').declare('CGImageRelease', self.TYPE.ABI,
 				self.TYPE.void,
-				self.TYPE..CGImageRef
+				self.TYPE.CGImageRef
 			);
-		}
+		},
 		CGRectMake: function() {
 			/* https://developer.apple.com/library/ios/documentation/GraphicsImaging/Reference/CGGeometry/index.html#//apple_ref/c/func/CGRectMake
 			 *  CGRect CGRectMake (
@@ -418,7 +418,7 @@ var macInit = function() {
 				this.CGFloat,
 				this.CGRect
 			);
-		}
+		},
 		CGRectGetWidth: function() {
 			return lib('CoreGraphics').declare('CGRectGetWidth', self.TYPE.ABI,
 				self.TYPE.CGFloat,
@@ -439,7 +439,7 @@ var macInit = function() {
 			 *   const char *name
 			 * ); 
 			 */
-			return lib('objc').declare('objc_getClass', ctypes.default_abi,
+			return lib('objc').declare('objc_getClass', self.TYPE.ABI,
 				self.TYPE.Class,		// return
 				self.TYPE.char.ptr		// *name
 			);
@@ -465,7 +465,7 @@ var macInit = function() {
 			 *   const char *str
 			 * ); 
 			 */
-			var sel_registerName = objc.declare('sel_registerName', ctypes.default_abi,
+			return lib('objc').declare('sel_registerName', self.TYPE.ABI,
 				self.TYPE.SEL,		// return
 				self.type.char.ptr	// *str
 			);
@@ -486,17 +486,17 @@ var macInit = function() {
 		// OBJC HELPERS
 		_selLC: {}, // LC = Lazy Cache
 		sel: function(jsStrSEL) {
-			if (!(jsStrSEL in _selLC)) {
-				_selLC = self.API('sel_registerName')(jsStrSEL);
+			if (!(jsStrSEL in self.HELPER._selLC)) {
+				self.HELPER._selLC = self.API('sel_registerName')(jsStrSEL);
 			}
-			return _selLC[jsStrSEL];
+			return self.HELPER._selLC[jsStrSEL];
 		},
 		_classLC: {}, // LC = Lazy Cache
 		class: function(jsStrCLASS) {
-			if (!(jsStrCLASS in _classLC)) {
-				_classLC = self.API('objc_getClass')(jsStrCLASS);
+			if (!(jsStrCLASS in self.HELPER._classLC)) {
+				self.HELPER._classLC = self.API('objc_getClass')(jsStrCLASS);
 			}
-			return _classLC[jsStrCLASS];
+			return self.HELPER._classLC[jsStrCLASS];
 		},
 		nsstringColl: function() { // collection of NSStrings with methods of .release to release all of them
 			// creates a collection
@@ -527,4 +527,4 @@ var macInit = function() {
 	};
 }
 
-var ostypes = new winInit();
+var ostypes = new macInit();
