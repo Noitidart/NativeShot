@@ -520,7 +520,7 @@ function shootMon(mons) {
 					console.info('allocNSBIP:', allocNSBIP.toString(), uneval(allocNSBIP));
 					console.info('NSCal:', uneval(myNSStrings.get('NSCalibratedRGBColorSpace')));
 					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
-						ostypes.HELPER.variadicNULL(ostyps.unsigned_char.ptr.ptr),										// planes
+						ostypes.HELPER.variadicNULL(ostypes.TYPE.unsigned_char.ptr.ptr),										// planes
 						ostypes.TYPE.NSInteger(rez_width),										// pixelsWide
 						ostypes.TYPE.NSInteger(rez_height),										// pixelsHigh
 						ostypes.TYPE.NSInteger(8),												// bitsPerSample
