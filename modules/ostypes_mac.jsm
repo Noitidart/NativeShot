@@ -518,7 +518,7 @@ var macInit = function() {
 			
 			this.releaseAll = function() {
 				for (var nsstring in this.coll) {
-					va rez_relNSS = self.API('objc_msgSend')(this.coll[nsstring], self.HELPER.sel('release'));
+					var rez_relNSS = self.API('objc_msgSend')(this.coll[nsstring], self.HELPER.sel('release'));
 					console.info('rez_relNSS:', rez_relNSS.toString());
 				}
 				this.coll = null;
