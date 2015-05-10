@@ -29,6 +29,7 @@ var macTypes = function() {
 	this.uint32_t = ctypes.uint32_t;
 	this.uintptr_t = ctypes.uintptr_t;
 	this.uint64_t = ctypes.uint64_t;
+	this.unsigned_char = ctypes.unsigned_char;
 	this.unsigned_long = ctypes.unsigned_long;
 	this.void = ctypes.void_t;
 	
@@ -188,6 +189,9 @@ var macTypes = function() {
 	this.IMP = ctypes.voidptr_t;
 	this.SEL = ctypes.voidptr_t;
 	this.Class = ctypes.voidptr_t;
+	
+	// NULL CONSTs that i use for vaiadic args
+	
 	
 	// SIMPLE OBJC STRUCTS
 	
@@ -537,7 +541,9 @@ var macInit = function() {
 				this.coll = null;
 			};
 		},
-		variadicNULL: ctypes.voidptr_t(ctypes.uint64_t(0x0))
+		variadicNULL: function(type) {
+		return type(null); //ctypes.cast(ctypes.uint64_t(0x0), type); //ctypes.voidptr_t(ctypes.uint64_t(0x0))
+		}
 	};
 }
 
