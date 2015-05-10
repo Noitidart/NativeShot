@@ -211,7 +211,7 @@ var macInit = function() {
 		kCGErrorSuccess: 0,
 		kCGNullDirectDisplay: 0,
 		///////// OBJC - all consts are wrapped in a type as if its passed to variadic it needs to have type defind, see jsctypes chat with arai on 051015 357p
-		NO: self.TYPE.BOOL(0)
+		NO: self.TYPE.BOOL(0),
 		NSPNGFileType: self.TYPE.NSUInteger(4),
 		YES: self.TYPE.BOOL(1) // i do this instead of 1 becuase for varidic types we need to expclicitly define it
 	};
