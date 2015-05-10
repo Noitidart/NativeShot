@@ -525,7 +525,7 @@ var macInit = function() {
 				} else {
 					console.error('jsStr already in coll', jsStr);
 				}
-				return this.coll[jsStr];
+				return this.class[jsStr];
 			};
 			
 			this.releaseAll = function() {

@@ -527,7 +527,7 @@ function shootMon(mons) {
 						ostypes.CONST.YES,								// hasAlpha
 						ostypes.CONST.NO,								// isPlanar
 						myNSStrings.get('NSCalibratedRGBColorSpace'),	// colorSpaceName
-						ostypes.TYPE.NSInteger(0),												// bitmapFormat
+						ostypes.TYPE.NSBitmapFormat(0),												// bitmapFormat
 						ostypes.TYPE.NSInteger(0),												// bytesPerRow
 						ostypes.TYPE.NSInteger(32)												// bitsPerPixel
 					);
