@@ -466,7 +466,7 @@ function shootMon(mons) {
 				var i_nonMirror = {};
 				
 				var rect = ostypes.CONST.CGRectNull;
-				console.info('rect preloop:', rect.toString());
+				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
 					// if display is secondary mirror of another display, skip it
 					console.info('displays[i]:', displays[i]);
