@@ -487,7 +487,7 @@ var macInit = function() {
 		sel: function(jsStrSEL) {
 			if (!(jsStrSEL in self.HELPER._selLC)) {
 				self.HELPER._selLC[jsStrSEL] = self.API('sel_registerName')(jsStrSEL);
-				console.info('sel c got', jsStrSEL, self.HELPER._selLC[jsStrSEL]);
+				console.info('sel c got', jsStrSEL, self.HELPER._selLC[jsStrSEL].toString());
 			}
 			return self.HELPER._selLC[jsStrSEL];
 		},
@@ -495,7 +495,7 @@ var macInit = function() {
 		class: function(jsStrCLASS) {
 			if (!(jsStrCLASS in self.HELPER._classLC)) {
 				self.HELPER._classLC[jsStrCLASS] = self.API('objc_getClass')(jsStrCLASS);
-				console.info('class c got', jsStrCLASS, self.HELPER._classLC[jsStrCLASS]);
+				console.info('class c got', jsStrCLASS, self.HELPER._classLC[jsStrCLASS].toString());
 			}
 			return self.HELPER._classLC[jsStrCLASS];
 		},
