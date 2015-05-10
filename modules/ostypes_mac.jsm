@@ -517,6 +517,8 @@ var macInit = function() {
 					var rez_initWithUTF8String = self.API('objc_msgSend')(this.class[jsStr], self.HELPER.sel('initWithUTF8String:'), self.TYPE.char.array()(jsStr));
 					this.coll[jsStr] = rez_initWithUTF8String;
 					console.info('post init this.class:', jsStr, this.class[jsStr].toString(), 'this.coll[jsStr]:', this.coll[jsStr].toString());
+				} else {
+					console.error('jsStr already in coll', jsStr);
 				}
 				return this.coll[jsStr];
 			};
