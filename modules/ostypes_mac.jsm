@@ -509,7 +509,7 @@ var macInit = function() {
 			this.get = function(jsStr) {
 				if (!(jsStr in this.coll)) {
 					this.class[jsStr] = self.API('objc_msgSend')(self.HELPER.class('NSString'), self.HELPER.sel('alloc'));;
-					console.info('pre init this.class[jsStr]:', jsStr, this.coll[jsStr].toString());
+					console.info('pre init this.class[jsStr]:', jsStr, this.class[jsStr].toString());
 					var rez_initWithUTF8String = self.API('objc_msgSend')(this.coll[jsStr], self.HELPER.sel('initWithUTF8String:'), self.TYPE.char.array()(jsStr));
 					this.coll[jsStr] = rez_initWithUTF8String;
 					console.info('post init this.class:', jsStr, this.class[jsStr].toString(), 'this.coll[jsStr]:', this.coll[jsStr].toString());
