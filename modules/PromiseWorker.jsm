@@ -289,6 +289,7 @@ this.BasePromiseWorker.prototype = {
 
         if (error instanceof ErrorEvent) {
           // Other errors get propagated as instances of ErrorEvent
+		  console.error('error:', error, 'error.stack:', error.stack);
           this.log("Error serialized by DOM", error.message, error.filename, error.lineno);
           throw new Error(error.message, error.filename, error.lineno);
         }
