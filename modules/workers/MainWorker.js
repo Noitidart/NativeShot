@@ -540,6 +540,8 @@ function shootMon(mons) {
 						});
 					}
 					
+					return []; // debug
+					
 					// NSGraphicsContext* context = [NSGraphicsContext graphicsContextWithBitmapImageRep:imageRep];
 					var NSGraphicsContext = ostypes.HELPER.class('NSGraphicsContext');
 					var context = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('graphicsContextWithBitmapImageRep:'), imageRep);
