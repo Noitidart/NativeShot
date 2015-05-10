@@ -23,6 +23,7 @@ const Cu = Components.utils;
 const Ci = Components.interfaces;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm", this);
+Cu.import('resource://gre/modules/devtools/Console.jsm');
 
 XPCOMUtils.defineLazyModuleGetter(this, "Promise",
   "resource://gre/modules/Promise.jsm");
