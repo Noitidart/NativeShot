@@ -504,7 +504,6 @@ var macInit = function() {
 			// if get and it doesnt exist then it makes and stores it
 			// if get and already exists then it returns that lazy
 			// can releaseAll on it
-			throw new Error('got here?');
 			console.error('nssstringColll');
 			this.coll = {};
 			this.class = {};
