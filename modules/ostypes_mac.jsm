@@ -29,6 +29,7 @@ var macTypes = function() {
 	this.uint32_t = ctypes.uint32_t;
 	this.uintptr_t = ctypes.uintptr_t;
 	this.uint64_t = ctypes.uint64_t;
+	this.unsigned_char = ctypes.unsigned_char;
 	this.unsigned_long = ctypes.unsigned_long;
 	this.void = ctypes.void_t;
 	
@@ -43,7 +44,7 @@ var macTypes = function() {
 	this.CFTypeRef = ctypes.voidptr_t;
 	this.CGDirectDisplayID = ctypes.uint32_t;
 	this.CGError = ctypes.int32_t;
-	this.CGFloat = ctypes.float;
+	this.CGFloat = is64bit ? ctypes.double : ctypes.float; // ctypes.float is 32bit deosntw ork as of May 10th 2015 see this bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1163406 this would cause crash on CGDisplayGetBounds http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac#comment48414568_28247749
 	this.ConstStr255Param = ctypes.unsigned_char.ptr;
 	this.ConstStringPtr = ctypes.unsigned_char.ptr;
 	this.OpaqueDialogPtr = ctypes.StructType("OpaqueDialogPtr");
@@ -85,12 +86,12 @@ var macTypes = function() {
 	this.__CFRunLoop = ctypes.StructType("__CFRunLoop");
 	this.__CFString = ctypes.StructType('__CFString');
 	this.__CFURL = ctypes.StructType('__CFURL');
-    this.__FSEventStream = ctypes.StructType("__FSEventStream");
+	this.__FSEventStream = ctypes.StructType("__FSEventStream");
 	this.CGImage = ctypes.StructType('CGImage');
 	this.CGContext = ctypes.StructType('CGContext');
 	this.CGPoint = ctypes.StructType('CGPoint', [
-		{x: this.CGFloat},
-		{y: this.CGFloat}
+		{ x: this.CGFloat },
+		{ y: this.CGFloat }
 	]);
 	this.Point = ctypes.StructType('Point', [
 		{ v: this.short },
@@ -177,6 +178,11 @@ var macTypes = function() {
 	
 	// SIMPLE OBJC TYPES
 	this.BOOL = ctypes.signed_char;
+	this.NSInteger = ctypes.long;
+	this.NSUInteger = ctypes.unsigned_long;
+	
+	// ADV OBJC TYPES
+	this.NSBitmapFormat = this.NSUInteger;
 	
 	// GUESS TYPES OBJC - they work though
 	this.id = ctypes.voidptr_t;
@@ -184,8 +190,10 @@ var macTypes = function() {
 	this.SEL = ctypes.voidptr_t;
 	this.Class = ctypes.voidptr_t;
 	
+	// NULL CONSTs that i use for vaiadic args
+	
+	
 	// SIMPLE OBJC STRUCTS
-	this.Class = ctypes.StructType('objc_class');
 	
 	// ADV OBJC STRUCTS
 	
@@ -205,11 +213,11 @@ var macInit = function() {
 		get CGRectNull () { if (!('CGRectNull' in _const)) { _const['CGRectNull'] = lib('CoreGraphics').declare('CGRectNull', self.TYPE.CGRect); } return _const['CGRectNull']; },
 		get kCFTypeArrayCallBacks () { if (!('kCFTypeArrayCallBacks' in _const)) { _const['kCFTypeArrayCallBacks'] = lib('CoreFoundation').declare('kCFTypeArrayCallBacks', self.TYPE.CFArrayCallBacks); } return _const['kCFTypeArrayCallBacks']; },
 		kCGErrorSuccess: 0,
-		kCGNullDirectDisplay: 0, // i guess on this one based on some github searching
-		///////// OBJC
-		NO: 0, //self.TYPE.BOOL(0)
-		NSPNGFileType: 4,
-		YES: 1 //self.TYPE.BOOL(1)
+		kCGNullDirectDisplay: 0,
+		///////// OBJC - all consts are wrapped in a type as if its passed to variadic it needs to have type defind, see jsctypes chat with arai on 051015 357p
+		NO: self.TYPE.BOOL(0),
+		NSPNGFileType: self.TYPE.NSUInteger(4),
+		YES: self.TYPE.BOOL(1) // i do this instead of 1 becuase for varidic types we need to expclicitly define it
 	};
 
 	var _lib = {}; // cache for lib
@@ -350,7 +358,7 @@ var macInit = function() {
 			 *   CGImageRef image
 			 * ); 
 			 */
-			return lib('CoreFoundation').declare('CGContextDrawImage', self.TYPE.ABI,
+			return lib('CoreGraphics').declare('CGContextDrawImage', self.TYPE.ABI,
 				self.TYPE.void,		// return
 				self.TYPE.CGContextRef,	// c
 				self.TYPE.CGRect,		// rect
@@ -405,18 +413,26 @@ var macInit = function() {
 			 *    CGFloat height
 			 * ); 
 			 */
-			return lib('CoreGraphics').declare('CGRectMake', self.TYPE.ABI,
+			 /*
+			return lib('CGGeometry').declare('CGRectMake', self.TYPE.ABI,
 				self.TYPE.CGRect,	// return
 				self.TYPE.CGFloat,	// x
 				self.TYPE.CGFloat,	// y
 				self.TYPE.CGFloat,	// width
 				self.TYPE.CGFloat	// height
 			);
+			*/
+			return function(x, y, width, height) {
+				return self.TYPE.CGRect(
+					self.TYPE.CGPoint(x, y),
+					self.TYPE.CGSize(width, height)
+				);
+			};
 		},
 		CGRectGetHeight: function() {
 			return lib('CoreGraphics').declare('CGRectGetHeight', self.TYPE.ABI,
-				this.CGFloat,
-				this.CGRect
+				self.TYPE.CGFloat,
+				self.TYPE.CGRect
 			);
 		},
 		CGRectGetWidth: function() {
@@ -467,7 +483,7 @@ var macInit = function() {
 			 */
 			return lib('objc').declare('sel_registerName', self.TYPE.ABI,
 				self.TYPE.SEL,		// return
-				self.type.char.ptr	// *str
+				self.TYPE.char.ptr	// *str
 			);
 		}
 	};
@@ -487,14 +503,16 @@ var macInit = function() {
 		_selLC: {}, // LC = Lazy Cache
 		sel: function(jsStrSEL) {
 			if (!(jsStrSEL in self.HELPER._selLC)) {
-				self.HELPER._selLC = self.API('sel_registerName')(jsStrSEL);
+				self.HELPER._selLC[jsStrSEL] = self.API('sel_registerName')(jsStrSEL);
+				console.info('sel c got', jsStrSEL, self.HELPER._selLC[jsStrSEL].toString());
 			}
 			return self.HELPER._selLC[jsStrSEL];
 		},
 		_classLC: {}, // LC = Lazy Cache
 		class: function(jsStrCLASS) {
 			if (!(jsStrCLASS in self.HELPER._classLC)) {
-				self.HELPER._classLC = self.API('objc_getClass')(jsStrCLASS);
+				self.HELPER._classLC[jsStrCLASS] = self.API('objc_getClass')(jsStrCLASS);
+				console.info('class c got', jsStrCLASS, self.HELPER._classLC[jsStrCLASS].toString());
 			}
 			return self.HELPER._classLC[jsStrCLASS];
 		},
@@ -503,25 +521,32 @@ var macInit = function() {
 			// if get and it doesnt exist then it makes and stores it
 			// if get and already exists then it returns that lazy
 			// can releaseAll on it
-			this.NSString = self.API('objc_msgSend')(self.HELPER.class('NSString'), self.HELPER.sel('alloc'));
+			console.error('nssstringColll');
 			this.coll = {};
-			
+			this.class = {};
 			this.get = function(jsStr) {
+				console.error('enter get');
 				if (!(jsStr in this.coll)) {
-					this.coll[jsStr] = self.API('objc_msgSend')(this.NSString, self.HELPER.sel('initWithUTF8String:'), self.TYPE.char.array()(jsStr));
+					console.error('here');
+					this.class[jsStr] = self.API('objc_msgSend')(self.HELPER.class('NSString'), self.HELPER.sel('alloc'));;
+					console.info('pre init this.class[jsStr]:', jsStr, this.class[jsStr].toString());
+					
+					var rez_initWithUTF8String = self.API('objc_msgSend')(this.class[jsStr], self.HELPER.sel('initWithUTF8String:'), self.TYPE.char.array()(jsStr));
+					this.coll[jsStr] = rez_initWithUTF8String;
+					console.info('post init this.class:', jsStr, this.class[jsStr].toString(), 'this.coll[jsStr]:', this.coll[jsStr].toString());
+				} else {
+					console.error('jsStr already in coll', jsStr);
 				}
 				return this.coll[jsStr];
 			};
 			
-			this.destroy = function() {
-				// releases everything
+			this.releaseAll = function() {
 				for (var nsstring in this.coll) {
-					self.API('objc_msgSend')(this.coll[nsstring], self.HELPER.sel('release'));
+					var rez_relNSS = self.API('objc_msgSend')(this.coll[nsstring], self.HELPER.sel('release'));
+					var rez_relCLASS = self.API('objc_msgSend')(this.class[nsstring], self.HELPER.sel('release'));
+					console.info(nsstring, 'rez_relNSS:', rez_relNSS.toString(), 'rez_relCLASS:', rez_relCLASS.toString());
 				}
 				this.coll = null;
-				
-				self.API('objc_msgSend')(this.NSString, self.HELPER.sel('release'));
-				this.NSString = null;
 			};
 		}
 	};
