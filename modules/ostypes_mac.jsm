@@ -235,6 +235,11 @@ var macInit = function() {
 						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/CarbonCore');
 					
 					break;
+				case 'CGGeometry':
+				
+						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation');
+					
+					break;
 				case 'CoreFoundation':
 				
 						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation');
@@ -413,7 +418,7 @@ var macInit = function() {
 			 *    CGFloat height
 			 * ); 
 			 */
-			return lib('CoreGraphics').declare('CGRectMake', self.TYPE.ABI,
+			return lib('CGGeometry').declare('CGRectMake', self.TYPE.ABI,
 				self.TYPE.CGRect,	// return
 				self.TYPE.CGFloat,	// x
 				self.TYPE.CGFloat,	// y
@@ -540,11 +545,16 @@ var macInit = function() {
 				}
 				this.coll = null;
 			};
-		},
-		variadicNULL: function(type) {
-		return type(null); //ctypes.cast(ctypes.uint64_t(0x0), type); //ctypes.voidptr_t(ctypes.uint64_t(0x0))
 		}
 	};
+	
+	for (var p in preDec) {
+		try {
+			preDec[p]();
+		} catch (ex) {
+			console.error(p.toString(), ex.message.toString());
+		}
+	}
 }
 
 var ostypes = new macInit();
