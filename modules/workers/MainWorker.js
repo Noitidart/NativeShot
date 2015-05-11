@@ -632,10 +632,11 @@ function shootMon(mons) {
 					var tempDict = ostypes.API('objc_msgSend')(NSDictionary, ostypes.HELPER.sel('dictionary')); //gives us temporary dicationary, one that gets auto released? well whatever its something not allocated so we dont have to release it
 					console.info('tempDict:', tempDict.toString(), uneval(tempDict));
 					
-					var data = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('representationUsingType:properties:'), ostypes.CONST.NSPNGFileType, tempDict); // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/representationUsingType:properties:
+					//var data = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('representationUsingType:properties:'), ostypes.CONST.NSPNGFileType, tempDict); // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/representationUsingType:properties:
+					//console.info('data:', data.toString());
 					
 					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
-					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
+					//var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
 					//console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile));
 					
 				} finally {
