@@ -637,7 +637,7 @@ function shootMon(mons) {
 					
 					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
 					console.info(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png'));
-					console.info(myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')));
+					console.info(myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')).toString());
 					//var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
 					//console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile));
 					
