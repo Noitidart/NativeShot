@@ -575,8 +575,8 @@ function shootMon(mons) {
 					var rez_CGRectMake = ostypes.API('CGRectMake')(0, 0, rez_width2, rez_height2);
 					console.info('rez_CGRectMake:', rez_CGRectMake.toString(), uneval(rez_CGRectMake)/*, cutils.jscGetDeepest(rez_CGRectMake)*/);
 					
-					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(cgcontext, rez_CGRectMake);
-					console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
+					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(cgcontext, rez_CGRectMake); // returns void
+					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
 					
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
