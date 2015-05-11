@@ -237,7 +237,7 @@ var macInit = function() {
 					break;
 				case 'CGGeometry':
 				
-						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics');
+						_lib[path] = ctypes.open(CGGeometry'/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics');
 					
 					break;
 				case 'CoreFoundation':
