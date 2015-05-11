@@ -586,6 +586,7 @@ function shootMon(mons) {
 						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
 						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
 						
+						console.warn('pre CGDisplayCreateImage');
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
 						var image = ostypes.API('CGDisplayCreateImage')(displays[i]);
 						console.info('image:', image.toString(), uneval(image));
