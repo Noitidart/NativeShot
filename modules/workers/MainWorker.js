@@ -636,7 +636,7 @@ function shootMon(mons) {
 					
 					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
 					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
-					console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
+					//console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile));
 					
 				} finally {
 					console.error('starting finally block');
