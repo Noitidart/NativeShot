@@ -599,7 +599,7 @@ function shootMon(mons) {
 						//               displayRect.origin.y - rect.origin.y,
 						//               displayRect.size.width,
 						//               displayRect.size.height);
-						var dest = ostypes.API('CGRectmake')(
+						var dest = ostypes.API('CGRectMake')(
 							displayRect.origin.x - rect.origin.x,
 							displayRect.origin.y - rect.origin.y,
 							displayRect.size.width,
