@@ -550,6 +550,14 @@ var macInit = function() {
 			};
 		}
 	};
+	
+	for (var p in preDec) {
+		try {
+			preDec[p]();
+		} catch (ex) {
+			console.error(p.toString(), ex.message.toString());
+		}
+	}
 }
 
 var ostypes = new macInit();
