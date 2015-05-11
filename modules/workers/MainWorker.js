@@ -608,7 +608,7 @@ function shootMon(mons) {
 						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
-						ostypes.API('CGContextDrawImage')(cgcontext, dest, image); // reutrns void
+						ostypes.API('CGContextDrawImage')(casted_cgcontext, dest, image); // reutrns void
 						
 						// CGImageRelease(image);
 						ostypes.API('CGImageRelease')(image); // returns void
