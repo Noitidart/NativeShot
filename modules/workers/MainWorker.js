@@ -518,7 +518,7 @@ function shootMon(mons) {
 					var NSBitmapImageRep = ostypes.HELPER.class('NSBitmapImageRep');
 					allocNSBIP = ostypes.API('objc_msgSend')(NSBitmapImageRep, ostypes.HELPER.sel('alloc'));
 					console.info('allocNSBIP:', allocNSBIP.toString(), uneval(allocNSBIP));
-					console.info('NSCal:', uneval(myNSStrings.get('NSCalibratedRGBColorSpace')));
+		
 					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
 						ostypes.TYPE.unsigned_char.ptr.ptr(null),								// planes
 						ostypes.TYPE.NSInteger(rez_width),										// pixelsWide
@@ -590,7 +590,7 @@ function shootMon(mons) {
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
 						var image = ostypes.API('CGDisplayCreateImage')(displays[i]);
 						console.info('image:', image.toString(), uneval(image));
-						if (!image) {
+						if (image.isNull()) {
 							console.warn('no image so continuing');
 							continue;
 						}
@@ -640,7 +640,7 @@ function shootMon(mons) {
 					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
 					console.info(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png'));
 					console.info(myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')).toString());
-					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
+					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeToFile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
 					//console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile));
 					
 				} finally {

@@ -23,7 +23,6 @@ const Cu = Components.utils;
 const Ci = Components.interfaces;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm", this);
-Cu.import('resource://gre/modules/devtools/Console.jsm');
 
 XPCOMUtils.defineLazyModuleGetter(this, "Promise",
   "resource://gre/modules/Promise.jsm");
@@ -290,8 +289,7 @@ this.BasePromiseWorker.prototype = {
 
         if (error instanceof ErrorEvent) {
           // Other errors get propagated as instances of ErrorEvent
-		  console.error('error:', error, 'error.stack:', error.stack);
-          this.log("Error serialized by DOM", error.message, error.filename, error.lineno);
+		  this.log("Error serialized by DOM", error.message, error.filename, error.lineno);
           throw new Error(error.message, error.filename, error.lineno);
         }
 
