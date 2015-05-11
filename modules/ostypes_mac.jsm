@@ -363,7 +363,7 @@ var macInit = function() {
 			 *   CGImageRef image
 			 * ); 
 			 */
-			return lib('CoreFoundation').declare('CGContextDrawImage', self.TYPE.ABI,
+			return lib('CoreGraphics').declare('CGContextDrawImage', self.TYPE.ABI,
 				self.TYPE.void,		// return
 				self.TYPE.CGContextRef,	// c
 				self.TYPE.CGRect,		// rect
