@@ -582,11 +582,11 @@ function shootMon(mons) {
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
 						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
-						console.info('displayRect:', displayRect.toString(), uneval(displayRect), cutils.jscGetDeepest(displayRect));
+						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
 						
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
 						var image = ostypes.API('CGDisplayCreateImage')(displays[i]);
-						console.info('image:', image.toString(), uneval(image), cutils.jscGetDeepest(image));
+						console.info('image:', image.toString(), uneval(image));
 						if (!image) {
 							console.warn('no image so continuing');
 							continue;
@@ -602,7 +602,7 @@ function shootMon(mons) {
 							displayRect.size.width,
 							displayRect.size.height
 						);
-						console.info('dest:', dest.toString(), uneval(dest), cutils.jscGetDeepest(dest));
+						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
 						ostypes.API('CGContextDrawImage')(cgcontext, dest, image); // reutrns void
@@ -614,14 +614,14 @@ function shootMon(mons) {
 					
 					// [[NSGraphicsContext currentContext] flushGraphics];
 					var rez_currentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('currentContext'));
-					console.info('rez_currentContext:', rez_currentContext.toString(), uneval(rez_currentContext), cutils.jscGetDeepest(rez_currentContext));
+					console.info('rez_currentContext:', rez_currentContext.toString(), uneval(rez_currentContext));
 					
 					var rez_flushGraphics = ostypes.API('objc_msgSend')(rez_currentContext, ostypes.HELPER.sel('flushGraphics'));
-					console.info('rez_flushGraphics:', rez_flushGraphics.toString(), uneval(rez_flushGraphics), cutils.jscGetDeepest(rez_flushGraphics));
+					console.info('rez_flushGraphics:', rez_flushGraphics.toString(), uneval(rez_flushGraphics));
 					
 					// [NSGraphicsContext restoreGraphicsState];
 					var rez_restoreGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('restoreGraphicsState'));
-					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState), cutils.jscGetDeepest(rez_restoreGraphicsState));
+					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState));
 					
 					// NSData* data = [imageRep representationUsingType:NSPNGFileType properties:@{ }];
 					
