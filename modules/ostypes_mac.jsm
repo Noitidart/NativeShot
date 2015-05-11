@@ -427,6 +427,7 @@ var macInit = function() {
 					self.TYPE.CGPoint(x, y),
 					self.TYPE.CGSize(width, height)
 				);
+			};
 		},
 		CGRectGetHeight: function() {
 			return lib('CoreGraphics').declare('CGRectGetHeight', self.TYPE.ABI,
