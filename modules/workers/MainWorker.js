@@ -575,7 +575,7 @@ function shootMon(mons) {
 					var rez_CGRectMake = ostypes.API('CGRectMake')(0, 0, rez_width2, rez_height2);
 					console.info('rez_CGRectMake:', rez_CGRectMake.toString(), uneval(rez_CGRectMake)/*, cutils.jscGetDeepest(rez_CGRectMake)*/);
 					
-					var casted_cgcontext = ctypes.cast(cgontext, ostypes.TYPE.CGContextRef.ptr);
+					var casted_cgcontext = ctypes.cast(cgcontext, ostypes.TYPE.CGContextRef.ptr);
 					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(casted_cgcontext, rez_CGRectMake); // returns void
 					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
 					
