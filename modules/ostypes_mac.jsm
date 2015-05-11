@@ -235,11 +235,6 @@ var macInit = function() {
 						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/CarbonCore');
 					
 					break;
-				case 'CGGeometry':
-				
-						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics');
-					
-					break;
 				case 'CoreFoundation':
 				
 						_lib[path] = ctypes.open('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation');
@@ -418,6 +413,7 @@ var macInit = function() {
 			 *    CGFloat height
 			 * ); 
 			 */
+			 /*
 			return lib('CGGeometry').declare('CGRectMake', self.TYPE.ABI,
 				self.TYPE.CGRect,	// return
 				self.TYPE.CGFloat,	// x
@@ -425,6 +421,12 @@ var macInit = function() {
 				self.TYPE.CGFloat,	// width
 				self.TYPE.CGFloat	// height
 			);
+			*/
+			return function(x, y, width, height) {
+				return self.TYPE.CGRect(
+					self.TYPE.CGPoint(x, y),
+					self.TYPE.CGSize(width, height)
+				);
 		},
 		CGRectGetHeight: function() {
 			return lib('CoreGraphics').declare('CGRectGetHeight', self.TYPE.ABI,
