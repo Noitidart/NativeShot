@@ -578,8 +578,10 @@ function shootMon(mons) {
 					var casted_cgcontext = ctypes.cast(cgcontext, ostypes.TYPE.CGContextRef);
 					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(casted_cgcontext, rez_CGRectMake); // returns void
 					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
+					console.log('did CGContextClearRect');
 					
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
+						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
 						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
 						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
