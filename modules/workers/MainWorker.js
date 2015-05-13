@@ -419,7 +419,7 @@ function shootMon(mons) {
 				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(rootGdkWin);
 				console.info('rootGtkWin:', rootGtkWin.toString());
 				*/
-				
+				/*
 				var w = ostypes.TYPE.gint();
 				var h = ostypes.TYPE.gint();
 				var rez_getSize = ostypes.API('gtk_window_get_size')(rootGtkWin, w.address(), h.address());
@@ -434,8 +434,50 @@ function shootMon(mons) {
 				}
 				
 				console.info('w:', w.toString(), 'h:', h.toString());
+				*/
+				/*
+				var rezArr = [];
+				gdk_display_manager_list_displays
+				
+				for (var d=0; d<displays.length; d++) {
+					
+					var nScreens = gdk_display_get_n_screens(displays[d]);
+					
+					for (var s=0; s<nScreens; s++) {
+						var cScreen = gdk_display_get_screen(displays[d], s);
+						// var nMonitors = gdk_screen_get_n_monitors(cScreen);
+						// for (var m=0; m<nMonitors; m++) {
+							// var gdkRect = GdkRectangle();
+							// gdk_screen_get_monitor_geometry(cScreen, m, gdkRect);
+						// }
+						
+						var cRootWin = gdk_screen_get_root_window(cScreen);
+						var cWidth = gdk_screen_get_width(cScreen);
+						var cHeight = gdk_screen_get_height(cScreen);
+						var cColormap = GdkColormap();
+						gdk_screen_set_default_colormap(cScreen, cColormap);
+						var cPixbuf = gdk_pixbuf_new(COLORSPACE_RGB, false, 8, cWidth, cScreen);
+						var cDrawable = ctypes.cast(cScreen, self.TYPE.GdkDrawable.ptr);
+						var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
+						var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
+						var dest_x = 0;
+						var dest_y = 0;
+						gdk_pixbuf_get_from_drawable(cPixbuf, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
+						rezArr.push(
+							{
+								// i dont know how to get x1, y1 yet. but x2 and y2 is just x1 + cWidth and y1 + cHeight
+								// monitorTopLeftX: x1,
+								// monitorTopLetY: y1,
+								// monitorBottomRightX: x2,
+								// monitorBottomRightY: y2,
+								pixbuf: cPixbuf
+							}
+						);
+					}
+				}
 				
 				
+				*/
 				
 			break;
 		case 'darwin':

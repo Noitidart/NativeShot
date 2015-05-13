@@ -55,6 +55,7 @@ var gtkTypes = function() {
 	
 	// GUESS/INACCURATE TYPES AS THEY ARE ENUM OR SOMETHING I COULDNT FIND BUT THE FOLLOWING WORK FOR MY APPLICATIONS
 	this.GCallback = ctypes.voidptr_t;
+	this.GdkDeviceType = ctypes.unsigned_int;
 	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	this.GFileMonitorEvent = ctypes.unsigned_int;
 	this.GFileMonitorFlags = ctypes.unsigned_int;
@@ -356,6 +357,46 @@ var gtkInit = function() {
 			return lib('gdk2').declare('gdk_display_manager_list_displays', self.TYPE.ABI,
 				self.TYPE.GSList.ptr,				// *return
 				self.TYPE.GdkDisplayManager.ptr		// *manager
+			);
+		},
+		gdk_display_get_window_at_pointer: function() {
+			/* https://developer.gnome.org/gdk3/stable/GdkDisplay.html#gdk-display-get-window-at-pointer
+			 * NOTE: gdk_display_get_window_at_pointer has been deprecated since version 3.0 and should not be used in newly-written code. Use gdk_device_get_window_at_position() instead.
+			 * GdkWindow * gdk_display_get_window_at_pointer (
+			 *   GdkDisplay *display,
+			 *   gint *win_x,
+			 *   gint *win_y
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_at_pointer', self.TYPE.ABI,
+				self.TYPE.GdkDisplay.ptr,	// *display
+				self.TYPE.gint.ptr,	// *win_x
+				self.TYPE.gint.ptr	// *win_y
+			);
+		},
+		gdk_device_get_window_at_position: function() {
+			/* https://developer.gnome.org/gdk3/stable/GdkDevice.html#gdk-device-get-window-at-position
+			 * GdkWindow * gdk_device_get_window_at_position (
+			 *   GdkDevice *device,
+			 *   gint *win_x,
+			 *   gint *win_y
+			 * );
+			 */
+			return lib('gdk3').declare('gdk_device_get_window_at_position', self.TYPE.ABI,
+				self.TYPE.GdkDisplay.ptr,	// *display
+				self.TYPE.gint.ptr,			// *win_x
+				self.TYPE.gint.ptr			// *win_y			
+			);
+		},
+		gdk_device_get_device_type: function() {
+			/* https://developer.gnome.org/gdk3/stable/GdkDevice.html#gdk-device-get-window-at-position
+			 * GdkDeviceType gdk_device_get_device_type (
+			 *   GdkDevice *device
+			 * );
+			 */
+			return lib('gdk2').delcare('gdk_device_get_device_type', self.TYPE.ABI,
+				self.TYPE.GdkDeviceType,	// return
+				self.TYPE.GdkDevice.ptr		// *device
 			);
 		},
 		g_slist_free() {
