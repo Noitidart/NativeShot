@@ -107,7 +107,7 @@ var gtkTypes = function() {
 	// FURTHER ADV STRUCTS
 
 	// FUNCTION TYPES
-
+	var GFunc = ctypes.FunctionType(this.CALLBACK_ABI, this.void, [this.gpointer, this.gpointer]);
 	// STRUCTS USING FUNC TYPES
 
 }
@@ -399,7 +399,25 @@ var gtkInit = function() {
 				self.TYPE.GdkDevice.ptr		// *device
 			);
 		},
-		g_slist_free() {
+		gdk_pixbuf_get_from_window: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Pixbufs.html#gdk-pixbuf-get-from-window
+			 * GdkPixbuf *gdk_pixbuf_get_from_window (
+			 *   GdkWindow *window,
+			 *   gint src_x,
+			 *   gint src_y,
+			 *   gint width,
+			 *   gint height
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_get_from_window', self.TYPE.ABI,
+				self.TYPE.GdkWindow.ptr,		// return
+				self.TYPE.gint,					// src_x
+				self.TYPE.gint,					// src_y
+				self.TYPE.gint,					// width
+				self.TYPE.gint					// height
+			);
+		},
+		g_slist_free: function() {
 			/* https://developer.gnome.org/glib/unstable/glib-Singly-Linked-Lists.html#g-slist-free
 			 * void g_slist_free (
 			 *   GSList *list
@@ -408,6 +426,21 @@ var gtkInit = function() {
 			return lib('gdk2').declare('g_slist_free', self.TYPE.ABI,
 				self.TYPE.void,			// return
 				self.TYPE.GSList.ptr	// *list
+			);
+		},
+		g_slist_foreach: function() {
+			/* https://developer.gnome.org/glib/unstable/glib-Singly-Linked-Lists.html#g-slist-foreach
+			 * void g_slist_foreach (
+			 *   GSList *list,
+             *   GFunc func,
+             *   gpointer user_data
+			 * );
+			 */
+			return lib('gdk2').declare('g_slist_foreach', self.TYPE.ABI,
+				self.TYPE.void,		// return
+				self.TYPE.GSList.ptr,	// *list
+				self.TYPE.GFunc,		// func
+				self.TYPE.gpointer		// user_data
 			);
 		}
 		// libgdk_pixbuf-2.0-0

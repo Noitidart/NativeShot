@@ -436,38 +436,62 @@ function shootMon(mons) {
 				console.info('w:', w.toString(), 'h:', h.toString());
 				*/
 				var rezArr = [];
-				gdk_display_manager_list_displays
+				var mgr = ostypes.API('gdk_display_manager_get')();
+				console.info('mgr:', mgr.toString());
 				
-				for (var d=0; d<displays.length; d++) {
+				var gslist = ostypes.API('gdk_display_manager_list_displays')(mgr);
+				console.info('gslist mgr:', gslist.toString());
+				
+				var d = -1;
+				var gfunc_js = function(data, user_data) {
+					d++;
+					console.log('in gfunc_js, d:', d);
 					
-					var nScreens = gdk_display_get_n_screens(displays[d]);
+					var nScreens = ostypes.API('gdk_display_get_n_screens')(data);
+					console.info('pixbuf for d=' + d + ':', nScreens.toString());
 					
 					var rezObjPerDisp = {mon:[], pixbuf:[]};
 					for (var s=0; s<nScreens; s++) {
-						var cScreen = gdk_display_get_screen(displays[d], s);
-						var nMonitors = gdk_screen_get_n_monitors(cScreen);
+						var cScreen = ostypes.API('gdk_display_get_screen')(data, s);
+						var nMonitors = ostypes.API('gdk_screen_get_n_monitors')(cScreen);
 						for (var m=0; m<nMonitors; m++) {
-							var gdkRect = GdkRectangle();
-							gdk_screen_get_monitor_geometry(cScreen, m, gdkRect);
-							rezObjPerDisp.mon.push(gdkRect.toString());
+							var gdkRect = ostypes.TYPE.GdkRectangle();
+							ostypes.API('gdk_screen_get_monitor_geometry'))(cScreen, m, gdkRect);
+							console.info('mon geo for d=' + d + ' and s=' + s + ' and m=' + m + ':', gdkRect.toString());
+							rezObjPerDisp.mon.push({
+								x: gdkRect.x,
+								y: gdkRect.y,
+								width: gdkRect.width,
+								height: gdkRect.height
+							});
 						}
 						
-						var cRootWin = gdk_screen_get_root_window(cScreen);
-						var cWidth = gdk_screen_get_width(cScreen);
-						var cHeight = gdk_screen_get_height(cScreen);
-						var cColormap = GdkColormap();
-						gdk_screen_set_default_colormap(cScreen, cColormap);
-						var cPixbuf = gdk_pixbuf_new(COLORSPACE_RGB, false, 8, cWidth, cScreen);
-						var cDrawable = ctypes.cast(cScreen, self.TYPE.GdkDrawable.ptr);
+						var cRootWin = ostypes.API('gdk_screen_get_root_window')(cScreen);
+						console.info('cRootWin for d=' + d + ' and s=' + s + ':', cRootWin.toString());
+						var cWidth = ostypes.API('gdk_screen_get_width')(cScreen);
+						console.info('cWidth for d=' + d + ' and s=' + s + ':', cWidth.toString());
+						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
+						console.info('cHeight for d=' + d + ' and s=' + s + ':', cHeight.toString());
+						// var cColormap = GdkColormap();
+						// ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
+						// var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
+						//var cDrawable = ctypes.cast(cScreen, self.TYPE.GdkDrawable.ptr);
 						var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
 						var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-						var dest_x = 0;
-						var dest_y = 0;
-						gdk_pixbuf_get_from_drawable(cPixbuf, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
+						// var dest_x = 0;
+						// var dest_y = 0;
+						//ostypes.API('gdk_pixbuf_get_from_drawable')(cPixbuf, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
+						var pixbuf = ostypes.API('gdk_pixbuf_get_from_window')(cRootWin, src_x, src_y, cWidth, cHeight);
+						console.info('pixbuf for d=' + d + ' and s=' + s + ':', pixbuf.toString());
 						rezObjPerDisp.pixbuf.push(pixbuf);
 					}
 					rezArr.push(rezObjPerDisp);
-				}
+				};
+				
+				var gfunc_c = ostypes.TYPE.GFunc.ptr(gfunc_js);
+				
+				var rez_foreach = ostypes.API('g_slist_foreach')(gslist, gfunc_c, null);
+				console.info('rez_foreach:', rez_foreach.toString());
 				
 			break;
 		case 'darwin':
