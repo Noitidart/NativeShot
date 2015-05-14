@@ -435,7 +435,6 @@ function shootMon(mons) {
 				
 				console.info('w:', w.toString(), 'h:', h.toString());
 				*/
-				/*
 				var rezArr = [];
 				gdk_display_manager_list_displays
 				
@@ -443,13 +442,15 @@ function shootMon(mons) {
 					
 					var nScreens = gdk_display_get_n_screens(displays[d]);
 					
+					var rezObjPerDisp = {mon:[], pixbuf:[]};
 					for (var s=0; s<nScreens; s++) {
 						var cScreen = gdk_display_get_screen(displays[d], s);
-						// var nMonitors = gdk_screen_get_n_monitors(cScreen);
-						// for (var m=0; m<nMonitors; m++) {
-							// var gdkRect = GdkRectangle();
-							// gdk_screen_get_monitor_geometry(cScreen, m, gdkRect);
-						// }
+						var nMonitors = gdk_screen_get_n_monitors(cScreen);
+						for (var m=0; m<nMonitors; m++) {
+							var gdkRect = GdkRectangle();
+							gdk_screen_get_monitor_geometry(cScreen, m, gdkRect);
+							rezObjPerDisp.mon.push(gdkRect.toString());
+						}
 						
 						var cRootWin = gdk_screen_get_root_window(cScreen);
 						var cWidth = gdk_screen_get_width(cScreen);
@@ -463,21 +464,10 @@ function shootMon(mons) {
 						var dest_x = 0;
 						var dest_y = 0;
 						gdk_pixbuf_get_from_drawable(cPixbuf, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
-						rezArr.push(
-							{
-								// i dont know how to get x1, y1 yet. but x2 and y2 is just x1 + cWidth and y1 + cHeight
-								// monitorTopLeftX: x1,
-								// monitorTopLetY: y1,
-								// monitorBottomRightX: x2,
-								// monitorBottomRightY: y2,
-								pixbuf: cPixbuf
-							}
-						);
+						rezObjPerDisp.pixbuf.push(pixbuf);
 					}
+					rezArr.push(rezObjPerDisp);
 				}
-				
-				
-				*/
 				
 			break;
 		case 'darwin':
