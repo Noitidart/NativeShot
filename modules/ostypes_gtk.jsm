@@ -107,7 +107,7 @@ var gtkTypes = function() {
 	// FURTHER ADV STRUCTS
 
 	// FUNCTION TYPES
-	var GFunc = ctypes.FunctionType(this.CALLBACK_ABI, this.void, [this.gpointer, this.gpointer]);
+	this.GFunc = ctypes.FunctionType(this.CALLBACK_ABI, this.void, [this.gpointer, this.gpointer]);
 	// STRUCTS USING FUNC TYPES
 
 }
