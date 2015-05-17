@@ -488,7 +488,7 @@ function shootMon(mons) {
 					rezArr.push(rezObjPerDisp);
 				};
 				
-				var gfunc_c = ostypes.TYPE.GFunc.ptr(gfunc_js);
+				var gfunc_c = ostypes.TYPE.GFunc(gfunc_js);
 				
 				var rez_foreach = ostypes.API('g_slist_foreach')(gslist, gfunc_c, null);
 				console.info('rez_foreach:', rez_foreach.toString());
