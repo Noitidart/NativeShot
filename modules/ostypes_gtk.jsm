@@ -84,6 +84,7 @@ var gtkTypes = function() {
 	]);
 	*/
 	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
+	
 	// SIMPLE STRUCTS // based on any of the types above
 	this.cairo_rectangle_int_t = ctypes.StructType('cairo_rectangle_int_t', [ // https://developer.gnome.org/cairo/stable/cairo-Types.html#cairo-rectangle-int-t
 		{ x:		this.int },
@@ -304,7 +305,7 @@ var gtkInit = function() {
 			return lib('gdk2').declare('gdk_pixbuf_get_from_drawable', self.TYPE.ABI,
 				self.TYPE.GdkPixbuf.ptr,	// return
 				self.TYPE.GdkPixbuf.ptr,	// *dest
-				self.TYPE.GdkWindow.ptr,	// *src
+				self.TYPE.GdkDrawable.ptr,	// *src
 				self.TYPE.GdkColormap.ptr,	// *cmap
 				self.TYPE.int,				// src_x
 				self.TYPE.int,				// src_y

@@ -477,13 +477,13 @@ function shootMon(mons) {
 						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
 						console.info('cHeight for d=' + d + ' and s=' + s + ':', cHeight.toString());
 						
-						var useMethod = 'gdk2'; // or gdk3
+						var useMethod = 'gdk3'; // or gdk3
 						
 						if (useMethod == 'gdk2') {
 							var cColormap = null; //GdkColormap();
 							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
 							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
-							var cDrawable = cRootWin; //ctypes.cast(cRootWin, ostypes.TYPE.GdkDrawable.ptr);
+							var cDrawable = ctypes.cast(cRootWin, ostypes.TYPE.GdkDrawable.ptr);
 							var dest_x = 0;
 							var dest_y = 0;
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
