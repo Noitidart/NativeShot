@@ -344,7 +344,7 @@ var gtkInit = function() {
 			 *   void
 			 * );
 			 */
-			return lib('gdk2').delcare('gdk_display_manager_get', self.TYPE.ABI,
+			return lib('gdk2').declare('gdk_display_manager_get', self.TYPE.ABI,
 				self.TYPE.GdkDisplayManager.ptr		// *return
 			);
 		},
@@ -394,7 +394,7 @@ var gtkInit = function() {
 			 *   GdkDevice *device
 			 * );
 			 */
-			return lib('gdk2').delcare('gdk_device_get_device_type', self.TYPE.ABI,
+			return lib('gdk2').declare('gdk_device_get_device_type', self.TYPE.ABI,
 				self.TYPE.GdkDeviceType,	// return
 				self.TYPE.GdkDevice.ptr		// *device
 			);
