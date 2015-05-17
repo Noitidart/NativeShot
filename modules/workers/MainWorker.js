@@ -488,7 +488,7 @@ function shootMon(mons) {
 							var dest_y = 0;
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
 							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
+							var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, parseInt(cWidth.toString()), parseInt(cHeight.toString()));
 						} else if (useMethod == 'gdk3') {						
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
 							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
