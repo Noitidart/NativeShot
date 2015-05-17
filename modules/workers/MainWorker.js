@@ -495,7 +495,7 @@ function shootMon(mons) {
 				var gfunc_c = ostypes.TYPE.GFunc(gfunc_js);
 				
 				var rez_foreach = ostypes.API('g_slist_foreach')(gslist, gfunc_c, null);
-				console.info('rez_foreach:', rez_foreach.toString());
+				console.info('rez_foreach:', rez_foreach);
 				
 			break;
 		case 'darwin':
