@@ -453,7 +453,7 @@ var gtkInit = function() {
 			 *   gint height
 			 * );
 			 */
-			return lib('gdk2').declare('gdk_pixbuf_get_from_window', self.TYPE.ABI,
+			return lib('gdk3').declare('gdk_pixbuf_get_from_window', self.TYPE.ABI,
 				self.TYPE.GdkWindow.ptr,		// return
 				self.TYPE.gint,					// src_x
 				self.TYPE.gint,					// src_y
