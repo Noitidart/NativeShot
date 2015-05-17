@@ -483,12 +483,12 @@ function shootMon(mons) {
 							var cColormap = null; //GdkColormap();
 							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
 							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
-							var cDrawable = ctypes.cast(cRootWin, ostypes.TYPE.GdkDrawable.ptr);
+							var cDrawable = cRootWin; //ctypes.cast(cRootWin, ostypes.TYPE.GdkDrawable.ptr);
 							var dest_x = 0;
 							var dest_y = 0;
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
 							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, parseInt(cWidth.toString()), parseInt(cHeight.toString()));
+							var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
 						} else if (useMethod == 'gdk3') {						
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
 							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
