@@ -449,12 +449,12 @@ function shootMon(mons) {
 					
 					var data_gdkDisp = ctypes.cast(data, ostypes.TYPE.GdkDisplay.ptr);
 					
-					var nScreens = ostypes.API('gdk_display_get_n_screens')(data);
+					var nScreens = ostypes.API('gdk_display_get_n_screens')(data_gdkDisp);
 					console.info('nScreens for d=' + d + ':', nScreens.toString());
 					
 					var rezObjPerDisp = {mon:[], pixbuf:[]};
 					for (var s=0; s<nScreens; s++) {
-						var cScreen = ostypes.API('gdk_display_get_screen')(data, s);
+						var cScreen = ostypes.API('gdk_display_get_screen')(data_gdkDisp, s);
 						console.info('cScreen:', cScreen.toString());
 						var nMonitors = ostypes.API('gdk_screen_get_n_monitors')(cScreen);
 						console.info('nMonitors:', nMonitors.toString());
