@@ -70,6 +70,7 @@ var gtkTypes = function() {
 	var struct_const = {
 		
 	};
+	/*
 	this.GdkPixbuf = ctypes.StructType('GdkPixbuf', [
 		{ colorspace: this.GdkColorspace },
 		{ 'n-channels': this.gint },
@@ -81,7 +82,8 @@ var gtkTypes = function() {
 		{ rowstride: this.gint },
 		{ 'pixel-bytes': this.GBytes.ptr },
 	]);
-	
+	*/
+	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	// SIMPLE STRUCTS // based on any of the types above
 	this.cairo_rectangle_int_t = ctypes.StructType('cairo_rectangle_int_t', [ // https://developer.gnome.org/cairo/stable/cairo-Types.html#cairo-rectangle-int-t
 		{ x:		this.int },
