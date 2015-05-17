@@ -28,6 +28,7 @@ var gtkTypes = function() {
 	// SIMPLE TYPES
 	this.CARD32 = /^(Alpha|hppa|ia64|ppc64|s390|x86_64)-/.test(core.os.xpcomabi) ? ctypes.unsigned_int : ctypes.unsigned_long;
 	this.gchar = ctypes.char;
+	this.GBytes = ctypes.StructType('_GBytes');
 	this.GCancellable = ctypes.StructType('_GCancellable');
 	this.GdkDisplay = ctypes.StructType('GdkDisplay');
 	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
@@ -40,6 +41,7 @@ var gtkTypes = function() {
 	this.GtkWindow = ctypes.StructType('GtkWindow');
 	this.gint = ctypes.int;
 	this.gpointer = ctypes.void_t.ptr;
+	this.guchar = ctypes.unsigned_char;
 	this.guint32 = ctypes.unsigned_int;
 	this.gulong = ctypes.unsigned_long;
 	
@@ -55,8 +57,8 @@ var gtkTypes = function() {
 	
 	// GUESS/INACCURATE TYPES AS THEY ARE ENUM OR SOMETHING I COULDNT FIND BUT THE FOLLOWING WORK FOR MY APPLICATIONS
 	this.GCallback = ctypes.voidptr_t;
+	this.GdkColorspace = ctypes.unsigned_int;
 	this.GdkDeviceType = ctypes.unsigned_int;
-	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	this.GFileMonitorEvent = ctypes.unsigned_int;
 	this.GFileMonitorFlags = ctypes.unsigned_int;
 	this.GClosureNotify	= ctypes.voidptr_t;
@@ -67,6 +69,17 @@ var gtkTypes = function() {
 	var struct_const = {
 		
 	};
+	this.GdkPixbuf = ctypes.StructType('GdkPixbuf', [
+		{ colorspace: this.GdkColorspace },
+		{ 'n-channels': this.gint },
+		{ 'has-alpha': this.gboolean },
+		{ 'bits-per-sample': this.gint },
+		{ pixels: this.gpointer },
+		{ width: this.gint },
+		{ height: this.gint },
+		{ rowstride: this.gint },
+		{ 'pixel-bytes': this.GBytes.ptr },
+	]);
 	
 	// SIMPLE STRUCTS // based on any of the types above
 	this.cairo_rectangle_int_t = ctypes.StructType('cairo_rectangle_int_t', [ // https://developer.gnome.org/cairo/stable/cairo-Types.html#cairo-rectangle-int-t
