@@ -454,7 +454,8 @@ var gtkInit = function() {
 			 * );
 			 */
 			return lib('gdk3').declare('gdk_pixbuf_get_from_window', self.TYPE.ABI,
-				self.TYPE.GdkWindow.ptr,		// return
+				self.TYPE.GdkPixbuf.ptr,		// return
+				self.TYPE.GdkWindow.ptr,		// *window
 				self.TYPE.gint,					// src_x
 				self.TYPE.gint,					// src_y
 				self.TYPE.gint,					// width
