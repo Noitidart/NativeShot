@@ -310,6 +310,28 @@ var gtkInit = function() {
 				self.TYPE.GdkScreen.ptr		// *screen
 			);
 		},
+		gdk_screen_get_width: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-width
+			 * gint gdk_screen_get_width (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_width', self.TYPE.ABI,
+				self.TYPE.gint,	// return
+				self.TYPE.GdkScreen.ptr	// *screen
+			);
+		},
+		gdk_screen_get_height: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-height
+			 * gint gdk_screen_get_height (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_height', self.TYPE.ABI,
+				self.TYPE.gint,	// return
+				self.TYPE.GdkScreen.ptr	// *screen
+			);
+		},
 		gdk_screen_get_monitor_geometry: function() {
 			/* https://developer.gnome.org/gdk3/stable/GdkScreen.html#gdk-screen-get-monitor-geometry
 			 * void gdk_screen_get_monitor_geometry (
