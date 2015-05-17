@@ -58,6 +58,7 @@ var gtkTypes = function() {
 	// GUESS/INACCURATE TYPES AS THEY ARE ENUM OR SOMETHING I COULDNT FIND BUT THE FOLLOWING WORK FOR MY APPLICATIONS
 	this.GCallback = ctypes.voidptr_t;
 	this.GdkColorspace = ctypes.unsigned_int;
+	this.GdkColormap = ctypes.unsigned_int;
 	this.GdkDeviceType = ctypes.unsigned_int;
 	this.GFileMonitorEvent = ctypes.unsigned_int;
 	this.GFileMonitorFlags = ctypes.unsigned_int;
