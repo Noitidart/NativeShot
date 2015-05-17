@@ -453,7 +453,9 @@ function shootMon(mons) {
 					var rezObjPerDisp = {mon:[], pixbuf:[]};
 					for (var s=0; s<nScreens; s++) {
 						var cScreen = ostypes.API('gdk_display_get_screen')(data, s);
+						console.info('cScreen:', cScreen.toString());
 						var nMonitors = ostypes.API('gdk_screen_get_n_monitors')(cScreen);
+						console.info('nMonitors:', nMonitors.toString());
 						for (var m=0; m<nMonitors; m++) {
 							var gdkRect = ostypes.TYPE.GdkRectangle();
 							ostypes.API('gdk_screen_get_monitor_geometry')(cScreen, m, gdkRect);
