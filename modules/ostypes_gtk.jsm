@@ -299,6 +299,17 @@ var gtkInit = function() {
 				self.TYPE.GdkDisplay.ptr	// *display // self.TYPE.gpointer //
 			);
 		},
+		gdk_screen_get_root_window: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-root-window
+			 * GdkWindow *gdk_screen_get_root_window (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_root_window', self.TYPE.ABI,
+				self.TYPE.GdkWindow.ptr,	// return
+				self.TYPE.GdkScreen.ptr		// *screen
+			);
+		},
 		gdk_screen_get_monitor_geometry: function() {
 			/* https://developer.gnome.org/gdk3/stable/GdkScreen.html#gdk-screen-get-monitor-geometry
 			 * void gdk_screen_get_monitor_geometry (
