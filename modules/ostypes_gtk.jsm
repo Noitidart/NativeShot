@@ -302,6 +302,7 @@ var gtkInit = function() {
 			return lib('gdk2').declare('gdk_pixbuf_get_from_drawable', self.TYPE.ABI,
 				self.TYPE.GdkPixbuf.ptr,	// return
 				self.TYPE.GdkPixbuf.ptr,	// *dest
+				self.TYPE.GdkDrawable.ptr,	// *src
 				self.TYPE.GdkColormap.ptr,	// *cmap
 				self.TYPE.int,				// src_x
 				self.TYPE.int,				// src_y
