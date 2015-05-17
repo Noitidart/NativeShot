@@ -458,7 +458,7 @@ function shootMon(mons) {
 						console.info('nMonitors:', nMonitors.toString());
 						for (var m=0; m<nMonitors; m++) {
 							var gdkRect = ostypes.TYPE.GdkRectangle();
-							ostypes.API('gdk_screen_get_monitor_geometry')(cScreen, m, gdkRect);
+							ostypes.API('gdk_screen_get_monitor_geometry')(cScreen, m, gdkRect.address());
 							console.info('mon geo for d=' + d + ' and s=' + s + ' and m=' + m + ':', gdkRect.toString());
 							rezObjPerDisp.mon.push({
 								x: gdkRect.x,
