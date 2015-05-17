@@ -284,7 +284,32 @@ var gtkInit = function() {
 				self.TYPE.gint.ptr				// *height
 			);
 		},
-		gdk_pixbuf_get_from_drawable: function() {},
+		gdk_pixbuf_get_from_drawable: function() {
+			/* https://developer.gnome.org/gdk2/stable/gdk2-Pixbufs.html#gdk-pixbuf-get-from-drawable
+			 * GdkPixbuf *gdk_pixbuf_get_from_drawable (
+			 *   GdkPixbuf *dest,
+			 *   GdkDrawable *src,
+			 *   GdkColormap *cmap,
+			 *   int src_x,
+			 *   int src_y,
+			 *   int dest_x,
+			 *   int dest_y,
+			 *   int width,
+			 *   int height
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_get_from_drawable', self.TYPE.ABI,
+				self.TYPE.GdkPixbuf.ptr,	// return
+				self.TYPE.GdkPixbuf.ptr,	// *dest
+				self.TYPE.GdkColormap.ptr,	// *cmap
+				self.TYPE.int,				// src_x
+				self.TYPE.int,				// src_y
+				self.TYPE.int,				// dest_x
+				self.TYPE.int,				// dest_y
+				self.TYPE.int,				// width
+				self.TYPE.int				// height
+			);
+		},
 		gdk_pixbuf_new: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-Image-Data-in-Memory.html#gdk-pixbuf-new
 		gdk_pixbuf_get_width: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-width
 		gdk_pixbuf_get_height: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-height
