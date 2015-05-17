@@ -447,6 +447,8 @@ function shootMon(mons) {
 					d++;
 					console.log('in gfunc_js, d:', d, 'data:', data.toString(), 'user_data', user_data.toString());
 					
+					var data_gdkDisp = ctypes.cast(data, ostypes.TYPE.GdkDisplay.ptr);
+					
 					var nScreens = ostypes.API('gdk_display_get_n_screens')(data);
 					console.info('nScreens for d=' + d + ':', nScreens.toString());
 					
