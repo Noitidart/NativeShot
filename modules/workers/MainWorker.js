@@ -481,7 +481,7 @@ function shootMon(mons) {
 						
 						if (useMethod == 'gdk2') {
 							var cColormap = null; //GdkColormap();
-							ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
+							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
 							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
 							var cDrawable = ctypes.cast(cRootWin, self.TYPE.GdkDrawable.ptr);
 							var dest_x = 0;
