@@ -445,10 +445,10 @@ function shootMon(mons) {
 				var d = -1;
 				var gfunc_js = function(data, user_data) {
 					d++;
-					console.log('in gfunc_js, d:', d);
+					console.log('in gfunc_js, d:', d, 'data:', data.toString(), 'user_data', user_data.toString());
 					
 					var nScreens = ostypes.API('gdk_display_get_n_screens')(data);
-					console.info('pixbuf for d=' + d + ':', nScreens.toString());
+					console.info('nScreens for d=' + d + ':', nScreens.toString());
 					
 					var rezObjPerDisp = {mon:[], pixbuf:[]};
 					for (var s=0; s<nScreens; s++) {
