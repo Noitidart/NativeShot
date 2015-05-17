@@ -296,7 +296,7 @@ var gtkInit = function() {
 			 */
 			return lib('gdk2').declare('gdk_display_get_n_screens', self.TYPE.ABI,
 				self.TYPE.gint,				// return
-				self.TYPE.GdkDisplay.ptr	// *display
+				self.TYPE.gpointer //self.TYPE.GdkDisplay.ptr	// *display
 			);
 		},
 		gdk_screen_get_monitor_geometry: function() {
@@ -323,7 +323,7 @@ var gtkInit = function() {
 			 */
 			return lib('gdk2').declare('gdk_display_get_screen', self.TYPE.ABI,
 				self.TYPE.GdkScreen.ptr,	// *return
-				self.TYPE.GdkDisplay.ptr,	// *display
+				self.TYPE.gpointer, //self.TYPE.GdkDisplay.ptr,	// *display
 				self.TYPE.gint				// screen_num
 			);
 		},
