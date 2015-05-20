@@ -472,6 +472,10 @@ function shootMon(mons) {
 						
 						var cRootWin = ostypes.API('gdk_screen_get_root_window')(cScreen);
 						console.info('cRootWin for d=' + d + ' and s=' + s + ':', cRootWin.toString());
+						
+						var gtkRootWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(cRootWin);
+						console.info('gtkRootWin:', gtkRootWin.toString());
+						
 						var cWidth = ostypes.API('gdk_screen_get_width')(cScreen);
 						console.info('cWidth for d=' + d + ' and s=' + s + ':', cWidth.toString());
 						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
@@ -483,7 +487,7 @@ function shootMon(mons) {
 							var cColormap = null; //GdkColormap();
 							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
 							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
-							var cDrawable = ctypes.cast(cRootWin, ostypes.TYPE.GdkDrawable.ptr);
+							var cDrawable = ctypes.cast(gtkRootWin, ostypes.TYPE.GdkDrawable.ptr);
 							var dest_x = 0;
 							var dest_y = 0;
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
@@ -492,7 +496,7 @@ function shootMon(mons) {
 						} else if (useMethod == 'gdk3') {						
 							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
 							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var pixbuf = ostypes.API('gdk_pixbuf_get_from_window')(cRootWin, src_x, src_y, cWidth, cHeight);
+							var pixbuf = ostypes.API('gdk_pixbuf_get_from_window')(gtkRootWin, src_x, src_y, cWidth, cHeight);
 						}
 						console.info('pixbuf for d=' + d + ' and s=' + s + ':', pixbuf.toString());
 						rezObjPerDisp.pixbuf.push(pixbuf);
