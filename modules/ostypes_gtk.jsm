@@ -223,7 +223,7 @@ var gtkInit = function() {
 			 */
 			return lib('gtk').declare('gtk_widget_get_window', self.TYPE.ABI,
 				self.TYPE.GdkWindow.ptr,	// *return
-				self.TYPE.GdkWidget.ptr		// *widget
+				self.TYPE.GtkWidget.ptr		// *widget
 			);
 		},
 		gdk_x11_drawable_get_xid: function() {
