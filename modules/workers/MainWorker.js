@@ -473,9 +473,6 @@ function shootMon(mons) {
 						var cRootWin = ostypes.API('gdk_screen_get_root_window')(cScreen);
 						console.info('cRootWin for d=' + d + ' and s=' + s + ':', cRootWin.toString());
 						
-						var gtkRootWin = ostypes.HELPER.gtkWinPtrToGdkWinPtr(cRootWin);
-						console.info('gtkRootWin:', gtkRootWin.toString());
-						
 						var cWidth = ostypes.API('gdk_screen_get_width')(cScreen);
 						console.info('cWidth for d=' + d + ' and s=' + s + ':', cWidth.toString());
 						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
