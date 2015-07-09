@@ -157,7 +157,7 @@ function takeShot(aDOMWin) {
 			var rootGdkDrawable = ctypesGTK.TYPE.GdkDrawable.ptr(ctypes.UInt64(aVal.rootGdkDrawable_strPtr));
 			console.info('rootGdkDrawable:', rootGdkDrawable, 'x_orig:', aVal.x_orig, 'y_orig:', aVal.y_orig, 'width:', aVal.width, 'height:', aVal.height, '_END_');
 			var screenshot = ctypesGTK.gdk_pixbuf_get_from_drawable(null, rootGdkDrawable, null, aVal.x_orig, aVal.y_orig, 0, 0, aVal.width, aVal.height);
-			if (ctypes.errno != 0) {
+			if (ctypes.errno != 11) {
 				console.error('Failed gdk_pixbuf_get_from_drawable, errno:', ctypes.errno);
 				throw new Error({
 					name: 'os-api-error',
