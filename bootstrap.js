@@ -155,8 +155,8 @@ function takeShot(aDOMWin) {
 		var ctypesGTK = get_gtk_ctypes();
 		var do_gtkMainThreadStart = function(aVal) {
 			var rootGdkDrawable = ctypesGTK.TYPE.GdkDrawable.ptr(ctypes.UInt64(aVal.rootGdkDrawable_strPtr));
+			console.info('null:', null, 'rootGdkDrawable:', rootGdkDrawable, 'null:', null, 'aVal:', aVal, 'x_orig:', x_orig, 'aVal:', aVal, 'y_orig:', y_orig, '0:', 0, '0:', 0, 'aVal:', aVal, 'width:', width, 'aVal:', aVal, 'height:', height, '_END_');
 			var screenshot = ctypesGTK.gdk_pixbuf_get_from_drawable(null, rootGdkDrawable, null, aVal.x_orig, aVal.y_orig, 0, 0, aVal.width, aVal.height);
-			ctypesGTK.screenshot = screenshot;
 			if (ctypes.errno != 0) {
 				console.error('Failed gdk_pixbuf_get_from_drawable, errno:', ctypes.errno);
 				throw new Error({
@@ -166,6 +166,7 @@ function takeShot(aDOMWin) {
 				});
 			}
 			
+			ctypesGTK.screenshot = screenshot;
 			var screenshot_ptrStr = screenshot.toString().match(/.*"(.*?)"/);
 			ctypesGTK.screenshot_ptrStr = screenshot_ptrStr;
 			do_gtkMainThreadFinish(screenshot_ptrStr);
