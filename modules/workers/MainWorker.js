@@ -98,7 +98,7 @@ function init(objCore) {
 			break;
 		case 'gtk':
 				
-				ostypes.API('gdk_threads_init')();
+				// ostypes.API('gdk_threads_init')();
 				
 			break;
 		default:
@@ -109,7 +109,7 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-function shootMon(mons) {
+function shootMon(mons, aOptions={}) {
 	// mons
 		// 0 - primary monitor
 		// 1 - all monitors
@@ -413,150 +413,158 @@ function shootMon(mons) {
 			break;
 		case 'gtk':
 			
-				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
-				console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
-				if (ctypes.errno != 0) {
-					console.error('Failed gdk_get_default_root_window, errno:', ctypes.errno);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
-						errno: ctypes.errno
+				if (!aOptions.doGtkWrapUp) {
+					var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
+					console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
+					if (ctypes.errno != 0) {
+						console.error('Failed gdk_get_default_root_window, errno:', ctypes.errno);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+							errno: ctypes.errno
+						});
+					}
+
+					var x_orig = ostypes.TYPE.gint();
+					var y_orig = ostypes.TYPE.gint();
+					var width = ostypes.TYPE.gint();
+					var height = ostypes.TYPE.gint();
+					
+					var rez_gdkDrawGetSiz = ostypes.API('gdk_drawable_get_size')(rootGdkWin, width.address(), height.address());
+					console.info('width:', width.value, 'height:', height.value);
+					if (ctypes.errno != 0) {
+						console.error('Failed gdk_drawable_get_size, errno:', ctypes.errno);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+							errno: ctypes.errno
+						});
+					}
+					
+					var rez_gdkWinGetOrg = ostypes.API('gdk_window_get_origin')(rootGdkWin, x_orig.address(), y_orig.address());
+					console.info('x:', x_orig.value, 'y:', y_orig.value);
+					if (ctypes.errno != 11) {
+						console.error('Failed , errno:', ctypes.errno);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed gdk_window_get_origin, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+							errno: ctypes.errno
+						});
+					}
+					
+					var rootGdkDrawable = ctypes.cast(rootGdkWin, ostypes.TYPE.GdkDrawable.ptr);
+					
+					OSStuff.keepAlive = {
+						x_orig: x_orig,
+						y_orig: y_orig,
+						width: width,
+						height: height,
+						rootGdkWin: rootGdkWin,
+						rootGdkDrawable: rootGdkDrawable
+					};
+					
+					return {
+						rootGdkDrawable_strPtr: cutils.stringOfPtr(rootGdkDrawable),
+						x_orig: x_orig.value,
+						y_orig: y_orig.value,
+						width: width.value,
+						height: height.value
+					};
+				} else {
+					delete OSStuff.keepAlive; // note if the main thread ctypes throws then keepAlive is not GC'ed this is perf thing to fix up. :todo:
+					
+					var screenshot = ostypes.TYPE.GdkPixbuf.ptr(ctypes.UInt64(aOptions.screenshot_ptrStr)); //ostypes.API('gdk_pixbuf_get_from_drawable')(null, rootGdkDrawable, null, x_orig.value, y_orig.value, 0, 0, width.value, height.value);
+					
+					/* METHOD 1 - use js to add alpha
+					console.time('gdk_pixels');
+					var rgb = gdk_pixbuf_get_pixels(screenshot);
+					console.timeEnd('gdk_pixels');
+					 
+					var n_channels = 3;
+					var pixbuf_len = width.value * height.value * n_channels;
+					 
+					// console.time('cast pixels');
+					// var casted_rgb = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
+					// console.timeEnd('cast pixels');
+					// console.info('casted_rgb:', casted_rgb, casted_rgb[0], casted_rgb[1], casted_rgb[2], casted_rgb[3]);
+					 
+					console.time('init imagedata');
+					var imagedata = new ImageData(width.value, height.value);
+					console.timeEnd('init imagedata');
+					 
+					console.time('memcpy');
+					memcpy(imagedata.data, rgb, pixbuf_len);
+					console.timeEnd('memcpy');
+					 
+					var pixbuf_pos = pixbuf_len - 1;
+					var dataRef = imagedata.data;
+					var dataRef_pos = parseInt(imagedata.data.length)- 1;
+					console.time('js_rgba');
+					while (dataRef_pos > -1) {
+						dataRef[dataRef_pos-3] = dataRef[pixbuf_pos-2];
+						dataRef[dataRef_pos-2] = dataRef[pixbuf_pos-1];
+						dataRef[dataRef_pos-1] = dataRef[pixbuf_pos];
+						dataRef[dataRef_pos] = 255;
+						pixbuf_pos -= 3;
+						dataRef_pos -= 4;
+					}
+					console.timeEnd('js_rgba');
+					console.info('ok rgba done, pixbuf_pos:', pixbuf_pos, 'dataRef_pos:', dataRef_pos);
+					*/
+					
+					///* METHOD 2 - use c to add alpha
+					console.time('gdk_rgba');
+					var screenshot_with_a = ostypes.API('gdk_pixbuf_add_alpha')(screenshot, false, 0, 0, 0);
+					if (ctypes.errno != 0) {
+						console.error('Failed , errno:', ctypes.errno);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed gdk_pixbuf_add_alpha, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+							errno: ctypes.errno
+						});
+					}
+					console.timeEnd('gdk_rgba');
+
+					console.time('gdk_pixels');
+					var rgba = ostypes.API('gdk_pixbuf_get_pixels')(screenshot_with_a);
+					if (ctypes.errno != 0) {
+						console.error('Failed , errno:', ctypes.errno);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed gdk_pixbuf_get_pixels, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+							errno: ctypes.errno
+						});
+					}
+					console.timeEnd('gdk_pixels');
+
+					var n_channels = 4;
+					var pixbuf_len = width.value * height.value * n_channels;
+
+					// console.time('cast pixels');
+					// var casted_rgba = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
+					// console.timeEnd('cast pixels');
+					// console.info('casted_rgba:', casted_rgba, casted_rgba[0], casted_rgba[1], casted_rgba[2], casted_rgba[3]);
+
+					console.time('init imagedata');
+					var imagedata = new ImageData(width.value, height.value);
+					console.timeEnd('init imagedata');
+
+					console.time('memcpy');
+					ostypes.API('memcpy')(imagedata.data, rgba, pixbuf_len);
+					console.timeEnd('memcpy');
+					//*/
+
+					var rezArr = []; // windows popluates this with an object per monitors, for linux i just do one object for all monitors
+					rezArr.push({
+						idat: imagedata,
+						nHeight: height.value,
+						nWidth: width.value,
+						xTopLeft: x_orig.value,
+						yTopLeft: y_orig.value
 					});
+					
+					return rezArr;
 				}
-
-				var x_orig = ostypes.TYPE.gint();
-				var y_orig = ostypes.TYPE.gint();
-				var width = ostypes.TYPE.gint();
-				var height = ostypes.TYPE.gint();
-				
-				var rez_gdkDrawGetSiz = ostypes.API('gdk_drawable_get_size')(rootGdkWin, width.address(), height.address());
-				console.info('width:', width.value, 'height:', height.value);
-				if (ctypes.errno != 0) {
-					console.error('Failed gdk_drawable_get_size, errno:', ctypes.errno);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
-						errno: ctypes.errno
-					});
-				}
-				
-				var rez_gdkWinGetOrg = ostypes.API('gdk_window_get_origin')(rootGdkWin, x_orig.address(), y_orig.address());
-				console.info('x:', x_orig.value, 'y:', y_orig.value);
-				if (ctypes.errno != 11) {
-					console.error('Failed , errno:', ctypes.errno);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed gdk_window_get_origin, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
-						errno: ctypes.errno
-					});
-				}
-				
-				var rootGdkDrawable = ctypes.cast(rootGdkWin, ostypes.TYPE.GdkDrawable.ptr);
-				
-				ostypes.API('gdk_threads_enter')();
-				
-				var screenshot = ostypes.API('gdk_pixbuf_get_from_drawable')(null, rootGdkDrawable, null, x_orig.value, y_orig.value, 0, 0, width.value, height.value);
-				
-				ostypes.API('gdk_threads_leave')(); // leave asap so main thread goes back to its thing, so i test errno for gdk_pixbuf_get_from_drawable after this
-				
-				if (ctypes.errno != 0) {
-					console.error('Failed , errno:', ctypes.errno);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed gdk_pixbuf_get_from_drawable, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
-						errno: ctypes.errno
-					});
-				}
-				
-				/* METHOD 1 - use js to add alpha
-				console.time('gdk_pixels');
-				var rgb = gdk_pixbuf_get_pixels(screenshot);
-				console.timeEnd('gdk_pixels');
-				 
-				var n_channels = 3;
-				var pixbuf_len = width.value * height.value * n_channels;
-				 
-				// console.time('cast pixels');
-				// var casted_rgb = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
-				// console.timeEnd('cast pixels');
-				// console.info('casted_rgb:', casted_rgb, casted_rgb[0], casted_rgb[1], casted_rgb[2], casted_rgb[3]);
-				 
-				console.time('init imagedata');
-				var imagedata = new ImageData(width.value, height.value);
-				console.timeEnd('init imagedata');
-				 
-				console.time('memcpy');
-				memcpy(imagedata.data, rgb, pixbuf_len);
-				console.timeEnd('memcpy');
-				 
-				var pixbuf_pos = pixbuf_len - 1;
-				var dataRef = imagedata.data;
-				var dataRef_pos = parseInt(imagedata.data.length)- 1;
-				console.time('js_rgba');
-				while (dataRef_pos > -1) {
-					dataRef[dataRef_pos-3] = dataRef[pixbuf_pos-2];
-					dataRef[dataRef_pos-2] = dataRef[pixbuf_pos-1];
-					dataRef[dataRef_pos-1] = dataRef[pixbuf_pos];
-					dataRef[dataRef_pos] = 255;
-					pixbuf_pos -= 3;
-					dataRef_pos -= 4;
-				}
-				console.timeEnd('js_rgba');
-				console.info('ok rgba done, pixbuf_pos:', pixbuf_pos, 'dataRef_pos:', dataRef_pos);
-				*/
-				
-				///* METHOD 2 - use c to add alpha
-				console.time('gdk_rgba');
-				var screenshot_with_a = ostypes.API('gdk_pixbuf_add_alpha')(screenshot, false, 0, 0, 0);
-				if (ctypes.errno != 0) {
-					console.error('Failed , errno:', ctypes.errno);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed gdk_pixbuf_add_alpha, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
-						errno: ctypes.errno
-					});
-				}
-				console.timeEnd('gdk_rgba');
-
-				console.time('gdk_pixels');
-				var rgba = ostypes.API('gdk_pixbuf_get_pixels')(screenshot_with_a);
-				if (ctypes.errno != 0) {
-					console.error('Failed , errno:', ctypes.errno);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed gdk_pixbuf_get_pixels, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
-						errno: ctypes.errno
-					});
-				}
-				console.timeEnd('gdk_pixels');
-
-				var n_channels = 4;
-				var pixbuf_len = width.value * height.value * n_channels;
-
-				// console.time('cast pixels');
-				// var casted_rgba = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
-				// console.timeEnd('cast pixels');
-				// console.info('casted_rgba:', casted_rgba, casted_rgba[0], casted_rgba[1], casted_rgba[2], casted_rgba[3]);
-
-				console.time('init imagedata');
-				var imagedata = new ImageData(width.value, height.value);
-				console.timeEnd('init imagedata');
-
-				console.time('memcpy');
-				ostypes.API('memcpy')(imagedata.data, rgba, pixbuf_len);
-				console.timeEnd('memcpy');
-				//*/
-
-				var rezArr = []; // windows popluates this with an object per monitors, for linux i just do one object for all monitors
-				rezArr.push({
-					idat: imagedata,
-					nHeight: height.value,
-					nWidth: width.value,
-					xTopLeft: x_orig.value,
-					yTopLeft: y_orig.value
-				});
-				
-				return rezArr;
 				
 			break;
 		case 'darwin':
