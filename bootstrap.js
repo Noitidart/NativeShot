@@ -168,7 +168,7 @@ function takeShot(aDOMWin) {
 						
 			ctypesGTK.screenshot = screenshot;
 			
-			var screenshot_ptrStr = screenshot.toString().match(/.*"(.*?)"/)[0];
+			var screenshot_ptrStr = screenshot.toString().match(/.*"(.*?)"/)[1];
 			ctypesGTK.screenshot_ptrStr = screenshot_ptrStr;
 			
 			console.info('screenshot:', screenshot.toString(), 'screenshot_ptrStr:', screenshot_ptrStr);
