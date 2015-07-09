@@ -310,7 +310,7 @@ var gtkInit = function() {
 			 */
 			return lib('gdk2').declare('gdk_pixbuf_get_pixels', self.TYPE.ABI,
 				self.TYPE.guchar.ptr,		// return
-				self.TYPE.GdkPixbuf.ptr,	// *pixbuf
+				self.TYPE.GdkPixbuf.ptr		// *pixbuf
 			);
 		},
 		gdk_display_get_default: function() {
