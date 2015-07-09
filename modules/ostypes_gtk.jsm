@@ -570,7 +570,7 @@ var gtkInit = function() {
 				self.TYPE.gint,				// return
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.gint.ptr,			// *x
-				self.TYPE.gint.ptr,			// *y
+				self.TYPE.gint.ptr			// *y
 			);
 		},
 		gdk_window_get_origin: function() {
@@ -585,7 +585,7 @@ var gtkInit = function() {
 				self.TYPE.gint,				// return
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.gint.ptr,			// *x
-				self.TYPE.gint.ptr,			// *y
+				self.TYPE.gint.ptr			// *y
 			);
 		},
 		memcpy: function() {
