@@ -472,7 +472,6 @@ function shootMon(mons, aOptions={}) {
 					};
 				} else {
 					console.info('incoming on doGtkWrapUp:', aOptions)
-					delete OSStuff.keepAlive; // note if the main thread ctypes throws then keepAlive is not GC'ed this is perf thing to fix up. :todo:
 					
 					var screenshot = ostypes.TYPE.GdkPixbuf.ptr(ctypes.UInt64(aOptions.screenshot_ptrStr)); //ostypes.API('gdk_pixbuf_get_from_drawable')(null, rootGdkDrawable, null, x_orig.value, y_orig.value, 0, 0, width.value, height.value);
 					
@@ -539,7 +538,7 @@ function shootMon(mons, aOptions={}) {
 					console.timeEnd('gdk_pixels');
 
 					var n_channels = 4;
-					var pixbuf_len = width.value * height.value * n_channels;
+					var pixbuf_len = OSStuff.keepAlive.width.value * OSStuff.keepAlive.height.value * n_channels;
 
 					// console.time('cast pixels');
 					// var casted_rgba = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
@@ -547,7 +546,7 @@ function shootMon(mons, aOptions={}) {
 					// console.info('casted_rgba:', casted_rgba, casted_rgba[0], casted_rgba[1], casted_rgba[2], casted_rgba[3]);
 
 					console.time('init imagedata');
-					var imagedata = new ImageData(width.value, height.value);
+					var imagedata = new ImageData(OSStuff.keepAlive.width.value, OSStuff.keepAlive.height.value);
 					console.timeEnd('init imagedata');
 
 					console.time('memcpy');
@@ -558,11 +557,13 @@ function shootMon(mons, aOptions={}) {
 					var rezArr = []; // windows popluates this with an object per monitors, for linux i just do one object for all monitors
 					rezArr.push({
 						idat: imagedata,
-						nHeight: height.value,
-						nWidth: width.value,
-						xTopLeft: x_orig.value,
-						yTopLeft: y_orig.value
+						nHeight: OSStuff.keepAlive.height.value,
+						nWidth: OSStuff.keepAlive.width.value,
+						xTopLeft: OSStuff.keepAlive.x_orig.value,
+						yTopLeft: OSStuff.keepAlive.y_orig.value
 					});
+					
+					delete OSStuff.keepAlive; // note if the main thread ctypes throws then keepAlive is not GC'ed this is perf thing to fix up. :todo:
 					
 					return rezArr;
 				}
