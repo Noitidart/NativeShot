@@ -165,10 +165,14 @@ function takeShot(aDOMWin) {
 					errno: ctypes.errno
 				});
 			}
-			
+						
 			ctypesGTK.screenshot = screenshot;
+			
 			var screenshot_ptrStr = screenshot.toString().match(/.*"(.*?)"/);
 			ctypesGTK.screenshot_ptrStr = screenshot_ptrStr;
+			
+			console.info('screenshot:', screenshot.toString(), 'screenshot_ptrStr:', screenshot_ptrStr);
+			
 			do_gtkMainThreadFinish(screenshot_ptrStr);
 		};
 		
@@ -189,14 +193,16 @@ function takeShot(aDOMWin) {
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_shootSectGtkWrapUp', aReason:aReason};
-					console.warn('Rejected - promise_shootSectGtkWrapUp - ', rejObj);
-					deferred_createProfile.reject(rejObj);
+					console.error('Rejected - promise_shootSectGtkWrapUp - ', rejObj);
+					Services.prompt.alert(aDOMWin, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+					//deferred_createProfile.reject(rejObj);
 				}
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_shootSectGtkWrapUp', aCaught:aCaught};
 					console.error('Caught - promise_shootSectGtkWrapUp - ', rejObj);
-					deferred_createProfile.reject(rejObj);
+					//deferred_createProfile.reject(rejObj);
+					Services.prompt.alert(aDOMWin, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
 				}
 			);
 		};

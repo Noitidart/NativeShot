@@ -471,6 +471,7 @@ function shootMon(mons, aOptions={}) {
 						height: height.value
 					};
 				} else {
+					console.info('incoming on doGtkWrapUp:', aOptions)
 					delete OSStuff.keepAlive; // note if the main thread ctypes throws then keepAlive is not GC'ed this is perf thing to fix up. :todo:
 					
 					var screenshot = ostypes.TYPE.GdkPixbuf.ptr(ctypes.UInt64(aOptions.screenshot_ptrStr)); //ostypes.API('gdk_pixbuf_get_from_drawable')(null, rootGdkDrawable, null, x_orig.value, y_orig.value, 0, 0, width.value, height.value);
