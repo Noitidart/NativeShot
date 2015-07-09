@@ -464,7 +464,7 @@ function shootMon(mons, aOptions={}) {
 					};
 					
 					return {
-						rootGdkDrawable_strPtr: cutils.stringOfPtr(rootGdkDrawable),
+						rootGdkDrawable_strPtr: cutils.strOfPtr(rootGdkDrawable),
 						x_orig: x_orig.value,
 						y_orig: y_orig.value,
 						width: width.value,
