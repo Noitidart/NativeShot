@@ -419,12 +419,12 @@ function shootMon(mons) {
 					});
 				}
 
-				var x_orig = gint();
-				var y_orig = gint();
-				var width = gint();
-				var height = gint();
+				var x_orig = ostypes.TYPE.gint();
+				var y_orig = ostypes.TYPE.gint();
+				var width = ostypes.TYPE.gint();
+				var height = ostypes.TYPE.gint();
 				
-				var rez_gdkDrawGetSiz = gdk_drawable_get_size(rootGdkWin, width.address(), height.address());
+				var rez_gdkDrawGetSiz = ostypes.API('gdk_drawable_get_size')(rootGdkWin, width.address(), height.address());
 				console.info('width:', width.value, 'height:', height.value);
 				if (ctypes.errno != 0) {
 					console.error('Failed gdk_drawable_get_size, errno:', ctypes.errno);
@@ -435,7 +435,7 @@ function shootMon(mons) {
 					});
 				}
 				
-				var rez_gdkWinGetOrg = gdk_window_get_origin(rootGdkWin, x_orig.address(), y_orig.address());
+				var rez_gdkWinGetOrg = ostypes.API('gdk_window_get_origin')(rootGdkWin, x_orig.address(), y_orig.address());
 				console.info('x:', x_orig.value, 'y:', y_orig.value);
 				if (ctypes.errno != 0) {
 					console.error('Failed , errno:', ctypes.errno);
@@ -446,7 +446,7 @@ function shootMon(mons) {
 					});
 				}
 				
-				var rootGdkDrawable = ctypes.cast(rootGdkWin, GdkDrawable.ptr);
+				var rootGdkDrawable = ctypes.cast(rootGdkWin, ostypes.TYPE.GdkDrawable.ptr);
 				
 				ostypes.API('gdk_threads_enter')();
 				
@@ -502,11 +502,27 @@ function shootMon(mons) {
 				
 				///* METHOD 2 - use c to add alpha
 				console.time('gdk_rgba');
-				var screenshot_with_a = gdk_pixbuf_add_alpha(screenshot, false, 0, 0, 0);
+				var screenshot_with_a = ostypes.API('gdk_pixbuf_add_alpha')(screenshot, false, 0, 0, 0);
+				if (ctypes.errno != 0) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed gdk_pixbuf_add_alpha, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+						errno: ctypes.errno
+					});
+				}
 				console.timeEnd('gdk_rgba');
 
 				console.time('gdk_pixels');
-				var rgba = gdk_pixbuf_get_pixels(screenshot_with_a);
+				var rgba = ostypes.API('gdk_pixbuf_get_pixels')(screenshot_with_a);
+				if (ctypes.errno != 0) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed gdk_pixbuf_get_pixels, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+						errno: ctypes.errno
+					});
+				}
 				console.timeEnd('gdk_pixels');
 
 				var n_channels = 4;
@@ -522,7 +538,7 @@ function shootMon(mons) {
 				console.timeEnd('init imagedata');
 
 				console.time('memcpy');
-				memcpy(imagedata.data, rgba, pixbuf_len);
+				ostypes.API('memcpy')(imagedata.data, rgba, pixbuf_len);
 				console.timeEnd('memcpy');
 				//*/
 

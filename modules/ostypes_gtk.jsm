@@ -158,6 +158,8 @@ var gtkInit = function() {
 							_lib[path] = ctypes.open('libc.so.61.0');
 						} else if (core.os.name == 'sunos') {
 							_lib[path] = ctypes.open('libc.so');
+						}  else if (core.os.name == 'linux') {
+							_lib[path] = ctypes.open('libc.so.6');
 						} else {
 							throw new Error({
 								name: 'watcher-api-error',
@@ -584,6 +586,21 @@ var gtkInit = function() {
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.gint.ptr,			// *x
 				self.TYPE.gint.ptr,			// *y
+			);
+		},
+		memcpy: function() {
+			/* http://linux.die.net/man/3/memcpy
+			 * void *memcpy(
+			 *   void *dest,
+			 *   const void *src,
+			 *   size_t n
+			 * );
+			 */
+			return lib('libc').declare('memcpy', self.TYPE.ABI,
+				self.TYPE.void,		// return
+				self.TYPE.void.ptr,	// *dest
+				self.TYPE.void.ptr,	// *src
+				self.TYPE.size_t	// count
 			);
 		}
 		// libgdk_pixbuf-2.0-0
