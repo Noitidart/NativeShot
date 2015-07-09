@@ -68,7 +68,7 @@ function init(objCore) {
 	// }
 	
 	// I import ostypes_*.jsm in init as they may use things like core.os.isWinXp etc
-	switch (core.os.name == 'gtk2' ? 'gtk' : core.os.name) {
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
@@ -88,7 +88,7 @@ function init(objCore) {
 	}
 	
 	// OS Specific Init
-	switch (core.os.name == 'gtk2' ? 'gtk' : core.os.name) {
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
@@ -116,7 +116,7 @@ function shootMon(mons) {
 		// 2 - monitor where the mouse currently is
 		
 	
-	switch (core.os.name == 'gtk2' ? 'gtk' : core.os.name) {
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
