@@ -28,10 +28,13 @@ var gtkTypes = function() {
 	// SIMPLE TYPES
 	this.CARD32 = /^(Alpha|hppa|ia64|ppc64|s390|x86_64)-/.test(core.os.xpcomabi) ? ctypes.unsigned_int : ctypes.unsigned_long;
 	this.gchar = ctypes.char;
+	this.GBytes = ctypes.StructType('_GBytes');
 	this.GCancellable = ctypes.StructType('_GCancellable');
+	this.GdkColormap = ctypes.StructType('GdkColormap');
 	this.GdkDisplay = ctypes.StructType('GdkDisplay');
 	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
 	this.GdkDrawable = ctypes.StructType('GdkDrawable');
+	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	this.GdkWindow = ctypes.StructType('GdkWindow');
 	this.GFile = ctypes.StructType('_GFile');
 	this.GFileMonitor = ctypes.StructType('_GFileMonitor');
@@ -40,6 +43,8 @@ var gtkTypes = function() {
 	this.GtkWindow = ctypes.StructType('GtkWindow');
 	this.gint = ctypes.int;
 	this.gpointer = ctypes.void_t.ptr;
+	this.guchar = ctypes.unsigned_char;
+	this.guint = ctypes.unsigned_int;
 	this.guint32 = ctypes.unsigned_int;
 	this.gulong = ctypes.unsigned_long;
 	
@@ -54,13 +59,7 @@ var gtkTypes = function() {
 	// SUPER DUPER ADVANCED TYPES // defined by "super advanced types"
 	
 	// GUESS/INACCURATE TYPES AS THEY ARE ENUM OR SOMETHING I COULDNT FIND BUT THE FOLLOWING WORK FOR MY APPLICATIONS
-	this.GCallback = ctypes.voidptr_t;
-	this.GdkDeviceType = ctypes.unsigned_int;
-	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
-	this.GFileMonitorEvent = ctypes.unsigned_int;
-	this.GFileMonitorFlags = ctypes.unsigned_int;
-	this.GClosureNotify	= ctypes.voidptr_t;
-	this.GConnectFlags = ctypes.unsigned_int;
+	this.GdkDeviceType = ctypes.int; // its enum: https://developer.gnome.org/gdk3/stable/GdkDevice.html#GdkDeviceType so this is a pretty good guess, i need to figure out though what exactly enum is. 
 	
 	// STRUCTURES
 	// consts for structures
@@ -107,7 +106,7 @@ var gtkTypes = function() {
 	// FURTHER ADV STRUCTS
 
 	// FUNCTION TYPES
-
+	this.GFunc = ctypes.FunctionType(this.CALLBACK_ABI, this.void, [this.gpointer, this.gpointer]).ptr;
 	// STRUCTS USING FUNC TYPES
 
 }
@@ -144,7 +143,7 @@ var gtkInit = function() {
 						_lib[path] = ctypes.open('libgdk-3.so.0');
 				
 					break;
-				case 'gtk':
+				case 'gtk2':
 				
 						_lib[path] = ctypes.open('libgtk-x11-2.0.so.0');
 				
@@ -159,6 +158,8 @@ var gtkInit = function() {
 							_lib[path] = ctypes.open('libc.so.61.0');
 						} else if (core.os.name == 'sunos') {
 							_lib[path] = ctypes.open('libc.so');
+						}  else if (core.os.name == 'linux') {
+							_lib[path] = ctypes.open('libc.so.6');
 						} else {
 							throw new Error({
 								name: 'watcher-api-error',
@@ -204,9 +205,9 @@ var gtkInit = function() {
 			 *   GtkWidget *widget
 			 * );
 			 */
-			return lib('gtk').declare('gtk_widget_get_window', self.TYPE.ABI,
+			return lib('gtk2').declare('gtk_widget_get_window', self.TYPE.ABI,
 				self.TYPE.GdkWindow.ptr,	// *return
-				self.TYPE.GdkWidget.ptr		// *widget
+				self.TYPE.GtkWidget.ptr		// *widget
 			);
 		},
 		gdk_x11_drawable_get_xid: function() {
@@ -264,19 +265,54 @@ var gtkInit = function() {
 			 *   gint *height
 			 * );
 			 */
-			return lib('gtk').declare('gtk_window_get_size', self.TYPE.ABI,
+			return lib('gtk2').declare('gtk_window_get_size', self.TYPE.ABI,
 				self.TYPE.void,					// return
 				self.TYPE.GtkWindow.ptr,		// *window
 				self.TYPE.gint.ptr,				// *width
 				self.TYPE.gint.ptr				// *height
 			);
 		},
-		gdk_pixbuf_get_from_drawable: function() {},
+		gdk_pixbuf_get_from_drawable: function() {
+			/* https://developer.gnome.org/gdk2/stable/gdk2-Pixbufs.html#gdk-pixbuf-get-from-drawable
+			 * GdkPixbuf *gdk_pixbuf_get_from_drawable (
+			 *   GdkPixbuf *dest,
+			 *   GdkDrawable *src,
+			 *   GdkColormap *cmap,
+			 *   int src_x,
+			 *   int src_y,
+			 *   int dest_x,
+			 *   int dest_y,
+			 *   int width,
+			 *   int height
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_get_from_drawable', self.TYPE.ABI,
+				self.TYPE.GdkPixbuf.ptr,	// return
+				self.TYPE.GdkPixbuf.ptr,	// *dest
+				self.TYPE.GdkDrawable.ptr,	// *src
+				self.TYPE.GdkColormap.ptr,	// *cmap
+				self.TYPE.int,				// src_x
+				self.TYPE.int,				// src_y
+				self.TYPE.int,				// dest_x
+				self.TYPE.int,				// dest_y
+				self.TYPE.int,				// width
+				self.TYPE.int				// height
+			);
+		},
 		gdk_pixbuf_new: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-Image-Data-in-Memory.html#gdk-pixbuf-new
 		gdk_pixbuf_get_width: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-width
 		gdk_pixbuf_get_height: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-height
-		gdk_pixbuf_get_pixels: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-pixels
-		
+		gdk_pixbuf_get_pixels: function() {
+			/* https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-pixels
+			 * guchar *gdk_pixbuf_get_pixels (
+			 *   const GdkPixbuf *pixbuf
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_get_pixels', self.TYPE.ABI,
+				self.TYPE.guchar.ptr,		// return
+				self.TYPE.GdkPixbuf.ptr		// *pixbuf
+			);
+		},
 		gdk_display_get_default: function() {
 			/* https://developer.gnome.org/gdk3/stable/GdkDisplay.html#gdk-display-get-default
 			 * GdkDisplay *gdk_display_get_default (
@@ -296,7 +332,40 @@ var gtkInit = function() {
 			 */
 			return lib('gdk2').declare('gdk_display_get_n_screens', self.TYPE.ABI,
 				self.TYPE.gint,				// return
-				self.TYPE.GdkDisplay.ptr	// *display
+				self.TYPE.GdkDisplay.ptr	// *display // self.TYPE.gpointer //
+			);
+		},
+		gdk_screen_get_root_window: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-root-window
+			 * GdkWindow *gdk_screen_get_root_window (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_root_window', self.TYPE.ABI,
+				self.TYPE.GdkWindow.ptr,	// return
+				self.TYPE.GdkScreen.ptr		// *screen
+			);
+		},
+		gdk_screen_get_width: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-width
+			 * gint gdk_screen_get_width (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_width', self.TYPE.ABI,
+				self.TYPE.gint,	// return
+				self.TYPE.GdkScreen.ptr	// *screen
+			);
+		},
+		gdk_screen_get_height: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-height
+			 * gint gdk_screen_get_height (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_height', self.TYPE.ABI,
+				self.TYPE.gint,	// return
+				self.TYPE.GdkScreen.ptr	// *screen
 			);
 		},
 		gdk_screen_get_monitor_geometry: function() {
@@ -323,8 +392,19 @@ var gtkInit = function() {
 			 */
 			return lib('gdk2').declare('gdk_display_get_screen', self.TYPE.ABI,
 				self.TYPE.GdkScreen.ptr,	// *return
-				self.TYPE.GdkDisplay.ptr,	// *display
+				self.TYPE.GdkDisplay.ptr,	// *display // self.TYPE.gpointer, //
 				self.TYPE.gint				// screen_num
+			);
+		},
+		gdk_screen_get_n_monitors: function() {
+			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-n-monitors
+			 * gint gdk_screen_get_n_monitors (
+			 *   GdkScreen *screen
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_screen_get_n_monitors', self.TYPE.ABI,
+				self.TYPE.gint,	// return
+				self.TYPE.GdkScreen.ptr	// *screen
 			);
 		},
 		gdk_display_get_default_screen: function() {
@@ -344,7 +424,7 @@ var gtkInit = function() {
 			 *   void
 			 * );
 			 */
-			return lib('gdk2').delcare('gdk_display_manager_get', self.TYPE.ABI,
+			return lib('gdk2').declare('gdk_display_manager_get', self.TYPE.ABI,
 				self.TYPE.GdkDisplayManager.ptr		// *return
 			);
 		},
@@ -389,17 +469,36 @@ var gtkInit = function() {
 			);
 		},
 		gdk_device_get_device_type: function() {
-			/* https://developer.gnome.org/gdk3/stable/GdkDevice.html#gdk-device-get-window-at-position
+			/* https://developer.gnome.org/gdk3/stable/GdkDevice.html#gdk-device-get-device-type
 			 * GdkDeviceType gdk_device_get_device_type (
 			 *   GdkDevice *device
 			 * );
 			 */
-			return lib('gdk2').delcare('gdk_device_get_device_type', self.TYPE.ABI,
+			return lib('gdk2').declare('gdk_device_get_device_type', self.TYPE.ABI,
 				self.TYPE.GdkDeviceType,	// return
 				self.TYPE.GdkDevice.ptr		// *device
 			);
 		},
-		g_slist_free() {
+		gdk_pixbuf_get_from_window: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Pixbufs.html#gdk-pixbuf-get-from-window
+			 * GdkPixbuf *gdk_pixbuf_get_from_window (
+			 *   GdkWindow *window,
+			 *   gint src_x,
+			 *   gint src_y,
+			 *   gint width,
+			 *   gint height
+			 * );
+			 */
+			return lib('gdk3').declare('gdk_pixbuf_get_from_window', self.TYPE.ABI,
+				self.TYPE.GdkPixbuf.ptr,		// return
+				self.TYPE.GdkWindow.ptr,		// *window
+				self.TYPE.gint,					// src_x
+				self.TYPE.gint,					// src_y
+				self.TYPE.gint,					// width
+				self.TYPE.gint					// height
+			);
+		},
+		g_slist_free: function() {
 			/* https://developer.gnome.org/glib/unstable/glib-Singly-Linked-Lists.html#g-slist-free
 			 * void g_slist_free (
 			 *   GSList *list
@@ -409,7 +508,129 @@ var gtkInit = function() {
 				self.TYPE.void,			// return
 				self.TYPE.GSList.ptr	// *list
 			);
-		}
+		},
+		g_slist_foreach: function() {
+			/* https://developer.gnome.org/glib/unstable/glib-Singly-Linked-Lists.html#g-slist-foreach
+			 * void g_slist_foreach (
+			 *   GSList *list,
+             *   GFunc func,
+             *   gpointer user_data
+			 * );
+			 */
+			return lib('gdk2').declare('g_slist_foreach', self.TYPE.ABI,
+				self.TYPE.void,		// return
+				self.TYPE.GSList.ptr,	// *list
+				self.TYPE.GFunc,		// func
+				self.TYPE.gpointer		// user_data
+			);
+		},
+		gdk_threads_init: function() {
+			/* https://developer.gnome.org/gdk3/unstable/gdk3-Threads.html#gdk-threads-init
+			 * void gdk_threads_init (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_threads_init', self.TYPE.ABI,
+				self.TYPE.void	// return
+			);
+		},
+		gtk_init: function() {
+			/* https://developer.gnome.org/gtk3/stable/gtk3-General.html#gtk-init
+			 * void gtk_init (
+			 *   int *argc,
+			 *   char ***argv
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_init', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.int.ptr,			// *argc
+				self.TYPE.char.ptr.ptr.ptr	// ***argv
+			);
+		},
+		gdk_threads_enter: function() {
+			/* https://developer.gnome.org/gdk3/unstable/gdk3-Threads.html#gdk-threads-enter
+			 * void gdk_threads_enter (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_threads_enter', self.TYPE.ABI,
+				self.TYPE.void		// return
+			);
+		},
+		gdk_threads_leave: function() {
+			/* https://developer.gnome.org/gdk3/unstable/gdk3-Threads.html#gdk-threads-enter
+			 * void gdk_threads_leave (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_threads_leave', self.TYPE.ABI,
+				self.TYPE.void		// return
+			);
+		},
+		gdk_drawable_get_size: function() {
+			/* https://developer.gnome.org/gdk2/stable/gdk2-Drawing-Primitives.html#gdk-drawable-get-size
+			 * gint gdk_drawable_get_size (
+			 *   GdkWindow *window,
+			 *   gint *x,
+			 *   gint *y
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_drawable_get_size', self.TYPE.ABI,
+				self.TYPE.gint,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.gint.ptr,			// *x
+				self.TYPE.gint.ptr			// *y
+			);
+		},
+		gdk_window_get_origin: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-get-origin
+			 * gint gdk_window_get_origin (
+			 *   GdkWindow *window,
+			 *   gint *x,
+			 *   gint *y
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_get_origin', self.TYPE.ABI,
+				self.TYPE.gint,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.gint.ptr,			// *x
+				self.TYPE.gint.ptr			// *y
+			);
+		},
+		memcpy: function() {
+			/* http://linux.die.net/man/3/memcpy
+			 * void *memcpy (
+			 *   void *dest,
+			 *   const void *src,
+			 *   size_t n
+			 * );
+			 */
+			return lib('libc').declare('memcpy', self.TYPE.ABI,
+				self.TYPE.void,		// return
+				self.TYPE.void.ptr,	// *dest
+				self.TYPE.void.ptr,	// *src
+				self.TYPE.size_t	// count
+			);
+		},
+		gdk_pixbuf_add_alpha: function() {
+			/* https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-Utilities.html#gdk-pixbuf-add-alpha
+			 * GdkPixbuf *gdk_pixbuf_add_alpha (
+			 *   const GdkPixbuf *pixbuf,
+			 *   gboolean substitute_color,
+			 *   guchar r,
+			 *   guchar g,
+			 *   guchar b
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_add_alpha', self.TYPE.ABI,
+				self.TYPE.GdkPixbuf.ptr,		// return
+				self.TYPE.GdkPixbuf.ptr,		// *pixbuf
+				self.TYPE.gboolean,				// substitute_color
+				self.TYPE.guchar,				// r
+				self.TYPE.guchar,				// g
+				self.TYPE.guchar				// b
+			);
+		},
 		// libgdk_pixbuf-2.0-0
 	};
 	// end - predefine your declares here

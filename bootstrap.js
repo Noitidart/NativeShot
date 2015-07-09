@@ -2,6 +2,7 @@
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
+Cu.import('resource://gre/modules/ctypes.jsm'); // needed for GTK+
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
@@ -96,34 +97,129 @@ function extendCore() {
 }
 
 // START - Addon Functionalities
+var _cache_get_gtk_ctypes; // {lib:theLib, declared:theFunc, TYPE:types}
+function get_gtk_ctypes() {
+	if (!_cache_get_gtk_ctypes) {
+		_cache_get_gtk_ctypes = {
+			lib: ctypes.open('libgdk-x11-2.0.so.0'),
+			TYPE: {
+				GdkPixbuf: ctypes.StructType('GdkPixbuf'),
+				GdkDrawable: ctypes.StructType('GdkDrawable'),
+				GdkColormap: ctypes.StructType('GdkColormap'),
+				int: ctypes.int
+			}
+		};
+		_cache_get_gtk_ctypes.gdk_pixbuf_get_from_drawable = _cache_get_gtk_ctypes.lib.declare('gdk_pixbuf_get_from_drawable', ctypes.default_abi,
+			_cache_get_gtk_ctypes.TYPE.GdkPixbuf.ptr,	// return
+			_cache_get_gtk_ctypes.TYPE.GdkPixbuf.ptr,	// *dest
+			_cache_get_gtk_ctypes.TYPE.GdkDrawable.ptr,	// *src
+			_cache_get_gtk_ctypes.TYPE.GdkColormap.ptr,	// *cmap
+			_cache_get_gtk_ctypes.TYPE.int,				// src_x
+			_cache_get_gtk_ctypes.TYPE.int,				// src_y
+			_cache_get_gtk_ctypes.TYPE.int,				// dest_x
+			_cache_get_gtk_ctypes.TYPE.int,				// dest_y
+			_cache_get_gtk_ctypes.TYPE.int,				// width
+			_cache_get_gtk_ctypes.TYPE.int				// height
+		);
+	}
+	return _cache_get_gtk_ctypes;
+}
+
 function takeShot(aDOMWin) {
 	console.log('taking shot');
 	
 	console.time('takeShot');
+	
+	var do_drawToCanvas = function(aVal) {
+		// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
+		console.timeEnd('chromeworker');
+		console.time('mainthread');
+		var win = aDOMWin.gBrowser.contentWindow;
+		var doc = win.document;
+		
+		for (var s=0; s<aVal.length; s++) {
+			var can = doc.createElementNS(NS_HTML, 'canvas');
+			can.width = aVal[s].nWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+			can.height = aVal[s].nHeight;
+			var ctx = can.getContext('2d');
+			
+			ctx.putImageData(aVal[s].idat, 0, 0);
+			
+			doc.documentElement.appendChild(can);
+		}
+		console.timeEnd('mainthread');
+		console.timeEnd('takeShot');
+	};
+	
+	if (core.os.toolkit.indexOf('gtk') == 0) {
+		var ctypesGTK = get_gtk_ctypes();
+		var do_gtkMainThreadStart = function(aVal) {
+			var rootGdkDrawable = ctypesGTK.TYPE.GdkDrawable.ptr(ctypes.UInt64(aVal.rootGdkDrawable_strPtr));
+			console.info('rootGdkDrawable:', rootGdkDrawable, 'x_orig:', aVal.x_orig, 'y_orig:', aVal.y_orig, 'width:', aVal.width, 'height:', aVal.height, '_END_');
+			var screenshot = ctypesGTK.gdk_pixbuf_get_from_drawable(null, rootGdkDrawable, null, aVal.x_orig, aVal.y_orig, 0, 0, aVal.width, aVal.height);
+			if (ctypes.errno != 11) {
+				console.error('Failed gdk_pixbuf_get_from_drawable, errno:', ctypes.errno);
+				throw new Error({
+					name: 'os-api-error',
+					message: 'Failed gdk_pixbuf_get_from_drawable, errno: "' + ctypes.errno + '" and : "' + rootGdkDrawable.toString(),
+					errno: ctypes.errno
+				});
+			}
+						
+			ctypesGTK.screenshot = screenshot;
+			
+			var screenshot_ptrStr = screenshot.toString().match(/.*"(.*?)"/)[1];
+			ctypesGTK.screenshot_ptrStr = screenshot_ptrStr;
+			
+			console.info('screenshot:', screenshot.toString(), 'screenshot_ptrStr:', screenshot_ptrStr);
+			
+			do_gtkMainThreadFinish(screenshot_ptrStr);
+		};
+		
+		var do_gtkMainThreadFinish = function(aVal) {
+			var promise_shootSectGtkWrapUp = MainWorker.post('shootMon', [1, {
+				doGtkWrapUp: true,
+				screenshot_ptrStr: aVal
+			}]);
+			promise_shootSectGtkWrapUp.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_shootSectGtkWrapUp - ', aVal);
+					// start - do stuff here - promise_shootSectGtkWrapUp
+					// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
+					delete ctypesGTK.screenshot;
+					delete ctypesGTK.screenshot_ptrStr;
+					do_drawToCanvas(aVal);
+					// end - do stuff here - promise_shootSectGtkWrapUp
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_shootSectGtkWrapUp', aReason:aReason};
+					console.error('Rejected - promise_shootSectGtkWrapUp - ', rejObj);
+					Services.prompt.alert(aDOMWin, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+					//deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_shootSectGtkWrapUp', aCaught:aCaught};
+					console.error('Caught - promise_shootSectGtkWrapUp - ', rejObj);
+					//deferred_createProfile.reject(rejObj);
+					Services.prompt.alert(aDOMWin, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
+				}
+			);
+		};
+	}
+	
 	console.time('chromeworker');
 	var promise_shootSect = MainWorker.post('shootMon', [1]);
 	promise_shootSect.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shootSect - ', aVal);
 			// start - do stuff here - promise_shootSect
-			// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
-			console.timeEnd('chromeworker');
-			console.time('mainthread');
-			var win = aDOMWin.gBrowser.contentWindow;
-			var doc = win.document;
-			
-			for (var s=0; s<aVal.length; s++) {
-				var can = doc.createElementNS(NS_HTML, 'canvas');
-				can.width = aVal[s].nWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
-				can.height = aVal[s].nHeight;
-				var ctx = can.getContext('2d');
-				
-				ctx.putImageData(aVal[s].idat, 0, 0);
-				
-				doc.documentElement.appendChild(can);
+			if (core.os.toolkit.indexOf('gtk') == 0) {
+				do_gtkMainThreadStart(aVal);
+			} else {
+				// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
+				do_drawToCanvas(aVal);
 			}
-			console.timeEnd('mainthread');
-			console.timeEnd('takeShot');
 			// end - do stuff here - promise_shootSect
 		},
 		function(aReason) {
@@ -276,6 +372,10 @@ function shutdown(aData, aReason) {
 	//end windowlistener more
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
+	
+	if (_cache_get_gtk_ctypes) { // for GTK+
+		_cache_get_gtk_ctypes.lib.close();
+	}
 }
 
 // start - common helper functions
