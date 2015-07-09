@@ -30,9 +30,11 @@ var gtkTypes = function() {
 	this.gchar = ctypes.char;
 	this.GBytes = ctypes.StructType('_GBytes');
 	this.GCancellable = ctypes.StructType('_GCancellable');
+	this.GdkColormap = ctypes.StructType('GdkColormap');
 	this.GdkDisplay = ctypes.StructType('GdkDisplay');
 	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
 	this.GdkDrawable = ctypes.StructType('GdkDrawable');
+	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	this.GdkWindow = ctypes.StructType('GdkWindow');
 	this.GFile = ctypes.StructType('_GFile');
 	this.GFileMonitor = ctypes.StructType('_GFileMonitor');
@@ -42,6 +44,7 @@ var gtkTypes = function() {
 	this.gint = ctypes.int;
 	this.gpointer = ctypes.void_t.ptr;
 	this.guchar = ctypes.unsigned_char;
+	this.guint = ctypes.unsigned_int;
 	this.guint32 = ctypes.unsigned_int;
 	this.gulong = ctypes.unsigned_long;
 	
@@ -56,34 +59,13 @@ var gtkTypes = function() {
 	// SUPER DUPER ADVANCED TYPES // defined by "super advanced types"
 	
 	// GUESS/INACCURATE TYPES AS THEY ARE ENUM OR SOMETHING I COULDNT FIND BUT THE FOLLOWING WORK FOR MY APPLICATIONS
-	this.GCallback = ctypes.voidptr_t;
-	this.GdkColorspace = ctypes.unsigned_int;
-	this.GdkColormap = ctypes.unsigned_int;
-	this.GdkDeviceType = ctypes.unsigned_int;
-	this.GFileMonitorEvent = ctypes.unsigned_int;
-	this.GFileMonitorFlags = ctypes.unsigned_int;
-	this.GClosureNotify	= ctypes.voidptr_t;
-	this.GConnectFlags = ctypes.unsigned_int;
+	this.GdkDeviceType = ctypes.int; // its enum: https://developer.gnome.org/gdk3/stable/GdkDevice.html#GdkDeviceType so this is a pretty good guess, i need to figure out though what exactly enum is. 
 	
 	// STRUCTURES
 	// consts for structures
 	var struct_const = {
 		
 	};
-	/*
-	this.GdkPixbuf = ctypes.StructType('GdkPixbuf', [
-		{ colorspace: this.GdkColorspace },
-		{ 'n-channels': this.gint },
-		{ 'has-alpha': this.gboolean },
-		{ 'bits-per-sample': this.gint },
-		{ pixels: this.gpointer },
-		{ width: this.gint },
-		{ height: this.gint },
-		{ rowstride: this.gint },
-		{ 'pixel-bytes': this.GBytes.ptr },
-	]);
-	*/
-	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	
 	// SIMPLE STRUCTS // based on any of the types above
 	this.cairo_rectangle_int_t = ctypes.StructType('cairo_rectangle_int_t', [ // https://developer.gnome.org/cairo/stable/cairo-Types.html#cairo-rectangle-int-t
@@ -161,7 +143,7 @@ var gtkInit = function() {
 						_lib[path] = ctypes.open('libgdk-3.so.0');
 				
 					break;
-				case 'gtk':
+				case 'gtk2':
 				
 						_lib[path] = ctypes.open('libgtk-x11-2.0.so.0');
 				
@@ -221,7 +203,7 @@ var gtkInit = function() {
 			 *   GtkWidget *widget
 			 * );
 			 */
-			return lib('gtk').declare('gtk_widget_get_window', self.TYPE.ABI,
+			return lib('gtk2').declare('gtk_widget_get_window', self.TYPE.ABI,
 				self.TYPE.GdkWindow.ptr,	// *return
 				self.TYPE.GtkWidget.ptr		// *widget
 			);
@@ -281,7 +263,7 @@ var gtkInit = function() {
 			 *   gint *height
 			 * );
 			 */
-			return lib('gtk').declare('gtk_window_get_size', self.TYPE.ABI,
+			return lib('gtk2').declare('gtk_window_get_size', self.TYPE.ABI,
 				self.TYPE.void,					// return
 				self.TYPE.GtkWindow.ptr,		// *window
 				self.TYPE.gint.ptr,				// *width
@@ -476,7 +458,7 @@ var gtkInit = function() {
 			);
 		},
 		gdk_device_get_device_type: function() {
-			/* https://developer.gnome.org/gdk3/stable/GdkDevice.html#gdk-device-get-window-at-position
+			/* https://developer.gnome.org/gdk3/stable/GdkDevice.html#gdk-device-get-device-type
 			 * GdkDeviceType gdk_device_get_device_type (
 			 *   GdkDevice *device
 			 * );
@@ -529,6 +511,79 @@ var gtkInit = function() {
 				self.TYPE.GSList.ptr,	// *list
 				self.TYPE.GFunc,		// func
 				self.TYPE.gpointer		// user_data
+			);
+		},
+		gdk_threads_init: function() {
+			/* https://developer.gnome.org/gdk3/unstable/gdk3-Threads.html#gdk-threads-init
+			 * void gdk_threads_init (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_threads_init', self.TYPE.ABI,
+				self.TYPE.void	// return
+			);
+		},
+		gtk_init: function() {
+			/* https://developer.gnome.org/gtk3/stable/gtk3-General.html#gtk-init
+			 * void gtk_init (
+			 *   int *argc,
+			 *   char ***argv
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_init', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.int.ptr,			// *argc
+				self.TYPE.char.ptr.ptr.ptr	// ***argv
+			);
+		},
+		gdk_threads_enter: function() {
+			/* https://developer.gnome.org/gdk3/unstable/gdk3-Threads.html#gdk-threads-enter
+			 * void gdk_threads_enter (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_threads_enter', self.TYPE.ABI,
+				self.TYPE.void		// return
+			);
+		},
+		gdk_threads_leave: function() {
+			/* https://developer.gnome.org/gdk3/unstable/gdk3-Threads.html#gdk-threads-enter
+			 * void gdk_threads_leave (
+			 *   void
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_threads_leave', self.TYPE.ABI,
+				self.TYPE.void		// return
+			);
+		},
+		gdk_drawable_get_size: function() {
+			/* https://developer.gnome.org/gdk2/stable/gdk2-Drawing-Primitives.html#gdk-drawable-get-size
+			 * gint gdk_drawable_get_size (
+			 *   GdkWindow *window,
+			 *   gint *x,
+			 *   gint *y
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_drawable_get_size', self.TYPE.ABI,
+				self.TYPE.gint,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.gint.ptr,			// *x
+				self.TYPE.gint.ptr,			// *y
+			);
+		},
+		gdk_window_get_origin: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-get-origin
+			 * gint gdk_window_get_origin (
+			 *   GdkWindow *window,
+			 *   gint *x,
+			 *   gint *y
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_get_origin', self.TYPE.ABI,
+				self.TYPE.gint,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.gint.ptr,			// *x
+				self.TYPE.gint.ptr,			// *y
 			);
 		}
 		// libgdk_pixbuf-2.0-0

@@ -27,15 +27,19 @@ importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
 
 // Setup PromiseWorker
 var PromiseWorker = require(core.addon.path.content + 'modules/workers/PromiseWorker.js');
+
 var worker = new PromiseWorker.AbstractWorker();
 worker.dispatch = function(method, args = []) {
 	return self[method](...args);
-};
-worker.postMessage = function(result, ...transfers) {
-	self.postMessage(result, ...transfers);
+},
+worker.postMessage = function(...args) {
+	self.postMessage(...args);
 };
 worker.close = function() {
 	self.close();
+};
+worker.log = function(...args) {
+	dump('Worker: ' + args.join(' ') + '\n');
 };
 self.addEventListener('message', msg => worker.handleMessage(msg));
 
@@ -407,7 +411,7 @@ function shootMon(mons) {
 				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
 				console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
 				if (ctypes.errno != 0) {
-					console.error('Failed , errno:', ctypes.errno);
+					console.error('Failed gdk_get_default_root_window, errno:', ctypes.errno);
 					throw new Error({
 						name: 'os-api-error',
 						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
@@ -415,96 +419,123 @@ function shootMon(mons) {
 					});
 				}
 
-				/*
-				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(rootGdkWin);
-				console.info('rootGtkWin:', rootGtkWin.toString());
-				*/
-				/*
-				var w = ostypes.TYPE.gint();
-				var h = ostypes.TYPE.gint();
-				var rez_getSize = ostypes.API('gtk_window_get_size')(rootGtkWin, w.address(), h.address());
-				console.info('rez_getSize:', rez_getSize.toString(), uneval(rez_getSize), cutils.jscGetDeepest(rez_getSize));
+				var x_orig = gint();
+				var y_orig = gint();
+				var width = gint();
+				var height = gint();
+				
+				var rez_gdkDrawGetSiz = gdk_drawable_get_size(rootGdkWin, width.address(), height.address());
+				console.info('width:', width.value, 'height:', height.value);
 				if (ctypes.errno != 0) {
-					console.error('Failed , errno:', ctypes.errno);
+					console.error('Failed gdk_drawable_get_size, errno:', ctypes.errno);
 					throw new Error({
 						name: 'os-api-error',
-						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rez_getSize.toString(),
+						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
 						errno: ctypes.errno
 					});
 				}
 				
-				console.info('w:', w.toString(), 'h:', h.toString());
+				var rez_gdkWinGetOrg = gdk_window_get_origin(rootGdkWin, x_orig.address(), y_orig.address());
+				console.info('x:', x_orig.value, 'y:', y_orig.value);
+				if (ctypes.errno != 0) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed gdk_window_get_origin, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+						errno: ctypes.errno
+					});
+				}
+				
+				var rootGdkDrawable = ctypes.cast(rootGdkWin, GdkDrawable.ptr);
+				
+				ostypes.API('gdk_threads_enter')();
+				
+				var screenshot = ostypes.API('gdk_pixbuf_get_from_drawable')(null, rootGdkDrawable, null, x_orig.value, y_orig.value, 0, 0, width.value, height.value);
+				
+				ostypes.API('gdk_threads_leave')(); // leave asap so main thread goes back to its thing, so i test errno for gdk_pixbuf_get_from_drawable after this
+				
+				if (ctypes.errno != 0) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed gdk_pixbuf_get_from_drawable, errno: "' + ctypes.errno + '" and : "' + rootGdkWin.toString(),
+						errno: ctypes.errno
+					});
+				}
+				
+				/* METHOD 1 - use js to add alpha
+				console.time('gdk_pixels');
+				var rgb = gdk_pixbuf_get_pixels(screenshot);
+				console.timeEnd('gdk_pixels');
+				 
+				var n_channels = 3;
+				var pixbuf_len = width.value * height.value * n_channels;
+				 
+				// console.time('cast pixels');
+				// var casted_rgb = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
+				// console.timeEnd('cast pixels');
+				// console.info('casted_rgb:', casted_rgb, casted_rgb[0], casted_rgb[1], casted_rgb[2], casted_rgb[3]);
+				 
+				console.time('init imagedata');
+				var imagedata = new ImageData(width.value, height.value);
+				console.timeEnd('init imagedata');
+				 
+				console.time('memcpy');
+				memcpy(imagedata.data, rgb, pixbuf_len);
+				console.timeEnd('memcpy');
+				 
+				var pixbuf_pos = pixbuf_len - 1;
+				var dataRef = imagedata.data;
+				var dataRef_pos = parseInt(imagedata.data.length)- 1;
+				console.time('js_rgba');
+				while (dataRef_pos > -1) {
+					dataRef[dataRef_pos-3] = dataRef[pixbuf_pos-2];
+					dataRef[dataRef_pos-2] = dataRef[pixbuf_pos-1];
+					dataRef[dataRef_pos-1] = dataRef[pixbuf_pos];
+					dataRef[dataRef_pos] = 255;
+					pixbuf_pos -= 3;
+					dataRef_pos -= 4;
+				}
+				console.timeEnd('js_rgba');
+				console.info('ok rgba done, pixbuf_pos:', pixbuf_pos, 'dataRef_pos:', dataRef_pos);
 				*/
-				var rezArr = [];
-				var mgr = ostypes.API('gdk_display_manager_get')();
-				console.info('mgr:', mgr.toString());
 				
-				var gslist = ostypes.API('gdk_display_manager_list_displays')(mgr);
-				console.info('gslist mgr:', gslist.toString());
+				///* METHOD 2 - use c to add alpha
+				console.time('gdk_rgba');
+				var screenshot_with_a = gdk_pixbuf_add_alpha(screenshot, false, 0, 0, 0);
+				console.timeEnd('gdk_rgba');
+
+				console.time('gdk_pixels');
+				var rgba = gdk_pixbuf_get_pixels(screenshot_with_a);
+				console.timeEnd('gdk_pixels');
+
+				var n_channels = 4;
+				var pixbuf_len = width.value * height.value * n_channels;
+
+				// console.time('cast pixels');
+				// var casted_rgba = ctypes.cast(rgba, guchar.array(pixbuf_len).ptr).contents;
+				// console.timeEnd('cast pixels');
+				// console.info('casted_rgba:', casted_rgba, casted_rgba[0], casted_rgba[1], casted_rgba[2], casted_rgba[3]);
+
+				console.time('init imagedata');
+				var imagedata = new ImageData(width.value, height.value);
+				console.timeEnd('init imagedata');
+
+				console.time('memcpy');
+				memcpy(imagedata.data, rgba, pixbuf_len);
+				console.timeEnd('memcpy');
+				//*/
+
+				var rezArr = []; // windows popluates this with an object per monitors, for linux i just do one object for all monitors
+				rezArr.push({
+					idat: imagedata,
+					nHeight: height.value,
+					nWidth: width.value,
+					xTopLeft: x_orig.value,
+					yTopLeft: y_orig.value
+				});
 				
-				var d = -1;
-				var gfunc_js = function(data, user_data) {
-					d++;
-					console.log('in gfunc_js, d:', d, 'data:', data.toString(), 'user_data', user_data.toString());
-					
-					var data_gdkDisp = ctypes.cast(data, ostypes.TYPE.GdkDisplay.ptr);
-					
-					var nScreens = ostypes.API('gdk_display_get_n_screens')(data_gdkDisp);
-					console.info('nScreens for d=' + d + ':', nScreens.toString());
-					
-					var rezObjPerDisp = {mon:[], pixbuf:[]};
-					for (var s=0; s<nScreens; s++) {
-						var cScreen = ostypes.API('gdk_display_get_screen')(data_gdkDisp, s);
-						console.info('cScreen:', cScreen.toString());
-						var nMonitors = ostypes.API('gdk_screen_get_n_monitors')(cScreen);
-						console.info('nMonitors:', nMonitors.toString());
-						for (var m=0; m<nMonitors; m++) {
-							var gdkRect = ostypes.TYPE.GdkRectangle();
-							ostypes.API('gdk_screen_get_monitor_geometry')(cScreen, m, gdkRect.address());
-							console.info('mon geo for d=' + d + ' and s=' + s + ' and m=' + m + ':', gdkRect.toString());
-							rezObjPerDisp.mon.push({
-								x: gdkRect.x,
-								y: gdkRect.y,
-								width: gdkRect.width,
-								height: gdkRect.height
-							});
-						}
-						
-						var cRootWin = ostypes.API('gdk_screen_get_root_window')(cScreen);
-						console.info('cRootWin for d=' + d + ' and s=' + s + ':', cRootWin.toString());
-						
-						var cWidth = ostypes.API('gdk_screen_get_width')(cScreen);
-						console.info('cWidth for d=' + d + ' and s=' + s + ':', cWidth.toString());
-						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
-						console.info('cHeight for d=' + d + ' and s=' + s + ':', cHeight.toString());
-						
-						var useMethod = 'gdk3'; // or gdk3
-						
-						if (useMethod == 'gdk2') {
-							var cColormap = null; //GdkColormap();
-							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
-							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
-							var cDrawable = ctypes.cast(gtkRootWin, ostypes.TYPE.GdkDrawable.ptr);
-							var dest_x = 0;
-							var dest_y = 0;
-							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
-						} else if (useMethod == 'gdk3') {						
-							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var pixbuf = ostypes.API('gdk_pixbuf_get_from_window')(gtkRootWin, src_x, src_y, cWidth, cHeight);
-						}
-						console.info('pixbuf for d=' + d + ' and s=' + s + ':', pixbuf.toString());
-						rezObjPerDisp.pixbuf.push(pixbuf);
-					}
-					rezArr.push(rezObjPerDisp);
-				};
-				
-				var gfunc_c = ostypes.TYPE.GFunc(gfunc_js);
-				
-				var rez_foreach = ostypes.API('g_slist_foreach')(gslist, gfunc_c, null);
-				console.info('rez_foreach:', rez_foreach);
+				return rezArr;
 				
 			break;
 		case 'darwin':
