@@ -96,6 +96,11 @@ function init(objCore) {
 				OSStuff.hiiii = true;
 				
 			break;
+		case 'gtk':
+				
+				ostypes.API('gdk_threads_init')();
+				
+			break;
 		default:
 			// do nothing special
 	}
@@ -437,7 +442,7 @@ function shootMon(mons) {
 				
 				var rez_gdkWinGetOrg = ostypes.API('gdk_window_get_origin')(rootGdkWin, x_orig.address(), y_orig.address());
 				console.info('x:', x_orig.value, 'y:', y_orig.value);
-				if (ctypes.errno != 0) {
+				if (ctypes.errno != 11) {
 					console.error('Failed , errno:', ctypes.errno);
 					throw new Error({
 						name: 'os-api-error',

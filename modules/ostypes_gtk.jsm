@@ -302,8 +302,17 @@ var gtkInit = function() {
 		gdk_pixbuf_new: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-Image-Data-in-Memory.html#gdk-pixbuf-new
 		gdk_pixbuf_get_width: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-width
 		gdk_pixbuf_get_height: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-height
-		gdk_pixbuf_get_pixels: function() {}, // https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-pixels
-		
+		gdk_pixbuf_get_pixels: function() {
+			/* https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html#gdk-pixbuf-get-pixels
+			 * guchar *gdk_pixbuf_get_pixels (
+			 *   const GdkPixbuf *pixbuf
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_get_pixels', self.TYPE.ABI,
+				self.TYPE.guchar.ptr,		// return
+				self.TYPE.GdkPixbuf.ptr,	// *pixbuf
+			);
+		},
 		gdk_display_get_default: function() {
 			/* https://developer.gnome.org/gdk3/stable/GdkDisplay.html#gdk-display-get-default
 			 * GdkDisplay *gdk_display_get_default (
@@ -590,7 +599,7 @@ var gtkInit = function() {
 		},
 		memcpy: function() {
 			/* http://linux.die.net/man/3/memcpy
-			 * void *memcpy(
+			 * void *memcpy (
 			 *   void *dest,
 			 *   const void *src,
 			 *   size_t n
@@ -602,7 +611,26 @@ var gtkInit = function() {
 				self.TYPE.void.ptr,	// *src
 				self.TYPE.size_t	// count
 			);
-		}
+		},
+		gdk_pixbuf_add_alpha: function() {
+			/* https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-Utilities.html#gdk-pixbuf-add-alpha
+			 * GdkPixbuf *gdk_pixbuf_add_alpha (
+			 *   const GdkPixbuf *pixbuf,
+			 *   gboolean substitute_color,
+			 *   guchar r,
+			 *   guchar g,
+			 *   guchar b
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_pixbuf_add_alpha', self.TYPE.ABI,
+				self.TYPE.GdkPixbuf.ptr,		// return
+				self.TYPE.GdkPixbuf.ptr,		// *pixbuf
+				self.TYPE.gboolean,				// substitute_color
+				self.TYPE.guchar,				// r
+				self.TYPE.guchar,				// g
+				self.TYPE.guchar				// b
+			);
+		},
 		// libgdk_pixbuf-2.0-0
 	};
 	// end - predefine your declares here
