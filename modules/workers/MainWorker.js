@@ -596,6 +596,9 @@ function shootMon(mons, aOptions={}) {
 				console.info('count:', count);
 				var i_nonMirror = {};
 				
+				var xTopLeftMost; // determine top left x as i will need to draw panel starting from there
+				var yTopLeftMost; // top left most y
+				
 				var rect = ostypes.CONST.CGRectNull;
 				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
@@ -612,6 +615,20 @@ function shootMon(mons, aOptions={}) {
 					
 					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
 					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds)/*, cutils.jscGetDeepest(rez_CGDisplayBounds)*/); // :todo: fix cutils.jscEqual because its throwing `Error: cannot convert to primitive value` for ctypes.float64_t and ctypes.double ACTUALLY its a struct, so no duhhh so no :todo:
+					
+					var curXTopLeft = parseInt(rez_CGDisplayBounds.origin.x.toString());
+					if (xTopLeftMost === undefined) {
+						xTopLeftMost = curXTopLeft;
+						yTopLeftMost = parseInt(rez_CGDisplayBounds.origin.y.toString());
+					} else {
+						var curYTopLeft = parseInt(rez_CGDisplayBounds.origin.y.toString());
+						if (curXTopLeft < xTopLeftMost){
+							xTopLeftMost = curXTopLeft;
+						}
+						if (curYTopLeft < yTopLeftMost){
+							yTopLeftMost = curYTopLeft;
+						}
+					}
 					
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
 					console.info('rect post loop ' + i + ':', rect.toString());
@@ -783,9 +800,12 @@ function shootMon(mons, aOptions={}) {
 						idat: imagedata,
 						nHeight: rez_height,
 						nWidth: rez_width,
-						xTopLeft: 0, // :todo: get this
-						yTopLeft: 0 // :todo: get this
+						xTopLeft: xTopLeftMost,
+						yTopLeft: yTopLeftMost
 					});
+					
+					console.error('xTopLeftMost', xTopLeftMost);
+					console.error('yTopLeftMost', yTopLeftMost);
 					
 					return rezArr;
 					// end - try to get byte array
