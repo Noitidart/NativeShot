@@ -269,6 +269,8 @@ var macInit = function() {
 							_lib[path] = ctypes.open('libc.so.61.0');
 						} else if (core.os.name == 'sunos') {
 							_lib[path] = ctypes.open('libc.so');
+						}  else if (core.os.name == 'linux') {
+							_lib[path] = ctypes.open('libc.so.6');
 						} else {
 							throw new Error({
 								name: 'watcher-api-error',
@@ -484,6 +486,22 @@ var macInit = function() {
 			return lib('objc').declare('sel_registerName', self.TYPE.ABI,
 				self.TYPE.SEL,		// return
 				self.TYPE.char.ptr	// *str
+			);
+		},
+		///////////// LIBC
+		memcpy: function() {
+			/* https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/memcpy.3.html#//apple_ref/doc/man/3/memcpy
+			 * void *memcpy (
+			 *   void *restrict dst,
+			 *   const void *restrict src,
+			 *   size_t n
+			 * );
+			 */
+			return lib('libc').declare('memcpy', self.TYPE.ABI,
+				self.TYPE.void,		// return
+				self.TYPE.void.ptr,	// *dst
+				self.TYPE.void.ptr,	// *src
+				self.TYPE.size_t	// n
 			);
 		}
 	};

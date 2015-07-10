@@ -660,7 +660,7 @@ function shootMon(mons, aOptions={}) {
 						ostypes.CONST.NO,														// isPlanar
 						myNSStrings.get('NSCalibratedRGBColorSpace'),							// colorSpaceName
 						ostypes.TYPE.NSBitmapFormat(0),											// bitmapFormat
-						ostypes.TYPE.NSInteger(0),												// bytesPerRow
+						ostypes.TYPE.NSInteger(4 * rez_width),												// bytesPerRow
 						ostypes.TYPE.NSInteger(32)												// bitsPerPixel
 					);
 					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));
@@ -758,6 +758,37 @@ function shootMon(mons, aOptions={}) {
 					// [NSGraphicsContext restoreGraphicsState];
 					var rez_restoreGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('restoreGraphicsState'));
 					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState));
+					
+					// start - try to get byte array
+					// [imageRep bitmapData]
+					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
+					console.info('rgba_buf:', rgba_buf.toString());
+					
+					var bitmapBytesPerRow = rez_width * 4;
+					var bitmapByteCount = bitmapBytesPerRow * rez_height;
+					
+					// var rgba_arr = ctypes.cast(rgba_buf, ostypes.TYPE.unsigned_char.array(bitmapByteCount).ptr).contents;
+					// console.info('rgba_arr:', rgba_arr.toString());
+					
+					console.time('init imagedata');
+					var imagedata = new ImageData(rez_width, rez_height);
+					console.timeEnd('init imagedata');
+
+					console.time('memcpy');
+					ostypes.API('memcpy')(imagedata.data, rgba_buf, bitmapByteCount);
+					console.timeEnd('memcpy');
+					
+					var rezArr = []; // windows popluates this with an object per monitors, for linux i just do one object for all monitors
+					rezArr.push({
+						idat: imagedata,
+						nHeight: rez_height,
+						nWidth: rez_width,
+						xTopLeft: 0, // :todo: get this
+						yTopLeft: 0 // :todo: get this
+					});
+					
+					return rezArr;
+					// end - try to get byte array
 					
 					// NSData* data = [imageRep representationUsingType:NSPNGFileType properties:@{ }];
 					
