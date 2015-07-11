@@ -175,7 +175,18 @@ function takeShot(aDOMWin) {
 							.getInterface(Ci.nsIXULWindow);
 			Services.appShell.unregisterTopLevelWindow(xulwin);
 			*/
-			panel.resize();
+			try {
+			panel.gNavToolbox.setAttribute("inFullscreen", true);
+			} catch(ex) { console.error('ex 1:', ex)}
+			
+			try {
+			panel.document.documentElement.setAttribute("inFullscreen", true);
+			} catch(ex) { console.error('ex 2:', ex)}
+			
+			try {
+			panel.document.documentElement.setAttribute("OSXLionFullscreen", true);
+			} catch(ex) { console.error('ex 3:', ex)}
+			
 			var win = panel;
 			var doc = panel.document;
 			
