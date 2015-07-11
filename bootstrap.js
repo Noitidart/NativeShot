@@ -159,14 +159,15 @@ function takeShot(aDOMWin) {
 			console.error('yeaaa loaddded');
 			panel.focus();			
 			if (core.os.name == 'darwin' || core.os.toolkit.indexOf('gtk') == 0) {
-				console.error('setting fullScreen');
 				panel.fullScreen = true; // fix for ubuntu
 			}
 			if (core.os.name == 'drawin') {
 				//panel.resizeTo(fullWidth, fullHeight);
 			}
 			panel.moveTo(topLeftMostX, topLeftMostY); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
-			panel.resizeTo(100, 100);
+			panel.setTimeout(function() {
+				panel.resizeTo(fullWidth, fullHeight);
+			}, 10);
 			/* // was thinking of using this to prevent the window from adding to taskbar, but i then realized its not big deal as ill have a solid panel over it, so they wont ever see the extra window in taskbar
 			var xulwin = panel.QueryInterface(Ci.nsIInterfaceRequestor)
 							.getInterface(Ci.nsIWebNavigation)
