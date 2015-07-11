@@ -191,7 +191,7 @@ function takeShot(aDOMWin) {
 				ctx.putImageData(aVal[s].idat, aVal[s].xTopLeft + Math.abs(topLeftMostX), aVal[s].yTopLeft + Math.abs(topLeftMostY));
 			}
 			
-			ctx.fillStyle = 'red';
+			ctx.fillStyle = 'rgba(0, 0, 0, .6)';
 			ctx.fillRect(0, 0, fullWidth, fullHeight);
 			
 			doc.documentElement.appendChild(can);
