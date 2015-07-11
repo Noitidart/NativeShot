@@ -165,6 +165,7 @@ function takeShot(aDOMWin) {
 			if (core.os.name == 'drawin') {
 				panel.setTimeout(function() {
 					panel.resizeTo(fullWidth, fullHeight);
+					panel.moveTo(topLeftMostX, topLeftMostY);
 				}, 10);
 			} else {
 				panel.resizeTo(fullWidth, fullHeight);
