@@ -134,21 +134,49 @@ function takeShot(aDOMWin) {
 		// aVal is of form `ImageData { width: 1024, height: 1280, data: Uint8ClampedArray[5242880] }`
 		console.timeEnd('chromeworker');
 		console.time('mainthread');
-		var win = aDOMWin.gBrowser.contentWindow;
-		var doc = win.document;
 		
+		var topLeftMostX = 0;
+		var topLeftMostY = 0;
+		var fullWidth = 0;
+		var fullHeight = 0;
 		for (var s=0; s<aVal.length; s++) {
+			fullWidth += aVal[s].nWidth;
+			fullHeight += aVal[s].nHeight;
+			
+			if (aVal[s].yTopLeft < topLeftMostY) {
+				topLeftMostY = aVal[s].yTopLeft;
+			}
+			if (aVal[s].xTopLeft < topLeftMostX) {
+				topLeftMostX = aVal[s].xTopLeft;
+			}
+		}
+		
+		
+		console.error('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
+		var panel = Services.ww.openWindow(null, core.addon.path.content + "panel.xul", "_blank", "chrome,width=" + fullWidth + ",height=" + fullHeight + ",screenX=" + topLeftMostX + ",screenY=" + topLeftMostY, null);
+		console.info('panel:', panel);
+		panel.addEventListener('load', function() {
+			console.error('yeaaa loaddded');
+			panel.moveTo(topLeftMostX, topLeftMostY); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
+			
+			var win = panel;
+			var doc = panel.document;
+			
 			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = aVal[s].nWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
-			can.height = aVal[s].nHeight;
+			can.width = fullWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
+			can.height = fullHeight;
 			var ctx = can.getContext('2d');
 			
-			ctx.putImageData(aVal[s].idat, 0, 0);
+			for (var s=0; s<aVal.length; s++) {
+				//ctx.putImageData(aVal[s].idat, aVal[s].xTopLeft + Math.abs(topLeftMostX), aVal[s].yTopLeft + Math.abs(topLeftMostY));
+			}
 			
 			doc.documentElement.appendChild(can);
-		}
-		console.timeEnd('mainthread');
-		console.timeEnd('takeShot');
+
+			console.timeEnd('mainthread');
+			console.timeEnd('takeShot');
+			
+		}, false);
 	};
 	
 	if (core.os.toolkit.indexOf('gtk') == 0) {
