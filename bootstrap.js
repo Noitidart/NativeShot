@@ -165,9 +165,10 @@ function takeShot(aDOMWin) {
 				panel.fullScreen = true; // fix for ubuntu
 			}
 			if (core.os.name == 'drawin') {
+				console.error('did setimtoue for osx');
+				panel.moveTo(topLeftMostX, topLeftMostY);
 				panel.setTimeout(function() {
 					panel.resizeTo(fullWidth, fullHeight);
-					//panel.moveTo(topLeftMostX, topLeftMostY);
 				}, 10);
 			} else {
 				panel.resizeTo(fullWidth, fullHeight);
