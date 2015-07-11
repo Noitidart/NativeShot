@@ -153,7 +153,7 @@ function takeShot(aDOMWin) {
 		
 		
 		console.error('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
-		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=' + fullWidth + ',height=' + fullHeight + ',screenX=' + topLeftMostX + ',screenY=' + topLeftMostY, null);
+		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,fullscreen,width=' + fullWidth + ',height=' + fullHeight + ',screenX=' + topLeftMostX + ',screenY=' + topLeftMostY, null);
 		console.info('panel:', panel);
 		panel.addEventListener('load', function() {
 			console.error('yeaaa loaddded');
