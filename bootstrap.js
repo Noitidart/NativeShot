@@ -158,15 +158,17 @@ function takeShot(aDOMWin) {
 		panel.addEventListener('load', function() {
 			console.error('yeaaa loaddded');
 			panel.focus();
-			panel.moveTo(topLeftMostX, topLeftMostY); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
+			if (core.os.name != 'darwin') {
+				panel.moveTo(topLeftMostX, topLeftMostY); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
+			}
 			if (core.os.name == 'darwin' || core.os.toolkit.indexOf('gtk') == 0) {
 				panel.fullScreen = true; // fix for ubuntu
 			}
 			if (core.os.name == 'drawin') {
 				panel.setTimeout(function() {
 					panel.resizeTo(fullWidth, fullHeight);
-					//panel.moveTo(topLeftMostX, topLeftMostY);
-				}, 100);
+					panel.moveTo(topLeftMostX, topLeftMostY);
+				}, 10);
 			} else {
 				panel.resizeTo(fullWidth, fullHeight);
 			}
