@@ -3,7 +3,7 @@
 <!-- Extremely recommended to keep this css include!! -->
 <window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         hidechrome="true"
-        style="background-color: rgba(0, 0, 0, 0.7);"
+        style="background-color: rgba(0, 0, 0, 0.6);"
         onclick="window.close();">
 
 </window>
