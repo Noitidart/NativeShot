@@ -153,7 +153,7 @@ function takeShot(aDOMWin) {
 		
 		
 		console.error('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
-		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,modal', null);
+		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,modal,dialog', null);
 		console.info('panel:', panel);
 		panel.addEventListener('load', function() {
 			console.error('yeaaa loaddded');
