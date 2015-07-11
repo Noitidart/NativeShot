@@ -153,7 +153,7 @@ function takeShot(aDOMWin) {
 		
 		
 		console.error('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
-		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=' + fullWidth + ',height=' + fullHeight + ',screenX=' + topLeftMostX + ',screenY=' + topLeftMostY, null);
+		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised', null);
 		console.info('panel:', panel);
 		panel.addEventListener('load', function() {
 			console.error('yeaaa loaddded');
@@ -164,8 +164,9 @@ function takeShot(aDOMWin) {
 				panel.fullScreen = true; // fix for ubuntu
 			}
 			if (core.os.name == 'drawin') {
-				panel.resizeTo(fullWidth, fullHeight);
+				//panel.resizeTo(fullWidth, fullHeight);
 			}
+			panel.resizeTo(fullWidth, fullHeight);
 			/* // was thinking of using this to prevent the window from adding to taskbar, but i then realized its not big deal as ill have a solid panel over it, so they wont ever see the extra window in taskbar
 			var xulwin = panel.QueryInterface(Ci.nsIInterfaceRequestor)
 							.getInterface(Ci.nsIWebNavigation)
