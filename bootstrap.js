@@ -153,7 +153,7 @@ function takeShot(aDOMWin) {
 		
 		
 		console.error('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
-		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,dialog', null);
+		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome', null);
 		console.info('panel:', panel);
 		panel.addEventListener('load', function() {
 			console.error('yeaaa loaddded');
@@ -164,8 +164,8 @@ function takeShot(aDOMWin) {
 			if (core.os.name == 'drawin') {
 				//panel.resizeTo(fullWidth, fullHeight);
 			}
-			panel.moveTo(topLeftMostX, topLeftMostY-300); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
-			panel.resizeTo(fullWidth, fullHeight+600);
+			panel.moveTo(topLeftMostX, topLeftMostY); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
+			panel.resizeTo(fullWidth, fullHeight);
 			/* // was thinking of using this to prevent the window from adding to taskbar, but i then realized its not big deal as ill have a solid panel over it, so they wont ever see the extra window in taskbar
 			var xulwin = panel.QueryInterface(Ci.nsIInterfaceRequestor)
 							.getInterface(Ci.nsIWebNavigation)
@@ -175,9 +175,6 @@ function takeShot(aDOMWin) {
 							.getInterface(Ci.nsIXULWindow);
 			Services.appShell.unregisterTopLevelWindow(xulwin);
 			*/
-			try {
-			panel.gNavToolbox.setAttribute("inFullscreen", true);
-			} catch(ex) { console.error('ex 1:', ex)}
 			
 			var win = panel;
 			var doc = panel.document;
