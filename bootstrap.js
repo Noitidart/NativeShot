@@ -175,7 +175,7 @@ function takeShot(aDOMWin) {
 							.getInterface(Ci.nsIXULWindow);
 			Services.appShell.unregisterTopLevelWindow(xulwin);
 			*/
-			
+			panel.resize();
 			var win = panel;
 			var doc = panel.document;
 			
