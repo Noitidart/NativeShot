@@ -651,7 +651,7 @@ var gtkInit = function() {
 			 *   GdkFullscreenMode mode
 			 * );
 			 */
-			return lib('gdk2').declare('gdk_window_set_fullscreen_mode', self.TYPE.ABI,
+			return lib('gdk3').declare('gdk_window_set_fullscreen_mode', self.TYPE.ABI,
 				self.TYPE.void,				// void
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.GdkFullscreenMode	// mode
