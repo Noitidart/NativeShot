@@ -195,7 +195,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
 								// start - do stuff here - promise_makeWinFullAllMon
 								aEditorDOMWindow.setTimeout(function() {
-									aEditorDOMWindow.fullscreen = true;
+									aEditorDOMWindow.fullScreen = true;
 								}, 1000);
 								// end - do stuff here - promise_makeWinFullAllMon
 							},
@@ -306,7 +306,7 @@ function takeShot(aDOMWin) {
 				console.error('os not supported');
 		}
 		
-		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=100,height=100', null);
+		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=100,height=100,screenX=10,screenY=10', null);
 		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
 		console.info('aEditorDOMWindow:', aEditorDOMWindow);
 	};
