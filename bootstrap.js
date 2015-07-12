@@ -122,6 +122,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			
 			var aEditorDOMWindow;
 			var aEditorFound = false;
+			
 			for (var i=0; i<collEditorDOMWindows.length; i++) {
 				aEditorDOMWindow = collEditorDOMWindows[i].get();
 				if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
@@ -175,6 +176,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 							ctx.putImageData(collCanMonInfos[s].idat, collCanMonInfos[s].xTopLeft + Math.abs(topLeftMostX), collCanMonInfos[s].yTopLeft + Math.abs(topLeftMostY));
 						}
 
+						collCanMonInfos = null;
+						
 						aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
 						aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 						
@@ -217,6 +220,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						
 						ctx.putImageData(collCanMonInfos[0].idat, collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
 
+						collCanMonInfos = null;
+						
 					break;
 				
 				case 'darwin':
@@ -228,15 +233,68 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					console.error('os not supported');
 			}
 			
-			ctx.fillStyle = 'rgba(0,0,0,.6)';
-			ctx.fillRect(0, 0, can.width, can.height);
-			
 			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
+			//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
+
+			var json = 
+			[
+				'xul:stack', {id:'stack'},
+					['html:canvas', {id:'canDim',width:can.width,height:can.height}],
+					['html:div', {id:'divTools',style:'pointer-events:none;border:1px dashed #ccc;width:1px;height:1px;display:block;position:fixed;'}]
+			];
+
+			var el = {};
+			doc.documentElement.appendChild(jsonToDOM(json, doc, el));
+			el.stack.insertBefore(can, el.stack.firstChild);
 			
-			// aEditorDOMWindow.setTimeout(function() {
-				// console.error('ok appending now');
-				doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
-			// }, 1000);
+			var ctxDim = el.canDim.getContext('2d');
+			ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+			ctxDim.fillRect(0, 0, can.width, can.height);
+			
+			// event handlers
+			var win = aEditorDOMWindow;
+			
+			var md_x; //mousedowned x pos
+			var md_y; //mousedowned y pos
+			var mousemove = function(e) {
+				var mm_x = e.layerX;
+				var mm_y = e.layerY;
+				var calc_x = (mm_x - md_x);
+				var calc_y = (mm_y - md_y);
+				
+				if (calc_x < 0) {
+					el.divTools.style.left = (md_x - Math.abs(calc_x)) + 'px';
+				} else {
+					el.divTools.style.left = md_x + 'px';
+				}
+				if (calc_y < 0) {
+					el.divTools.style.top = (md_y - Math.abs(calc_y)) + 'px';
+				} else {
+					el.divTools.style.top = md_y + 'px';
+				}
+				el.divTools.style.width =  Math.abs(calc_x) + 'px';
+				el.divTools.style.height = Math.abs(calc_y) + 'px';
+			};
+			
+			win.addEventListener('mousedown', function(e) {
+				if (e.button != 0) {
+					return;
+				}
+				console.info('mousedown', 'e:', e);
+				md_x = e.layerX;
+				md_y = e.layerY;
+				el.divTools.style.left = md_x + 'px';
+				el.divTools.style.top = md_y + 'px';
+				el.divTools.style.width = '1px';
+				el.divTools.style.height = '1px';
+				win.addEventListener('mousemove', mousemove, false);
+			});
+			
+			win.addEventListener('mouseup', function(e) {
+				console.info('mouseup', 'e:', e);
+				win.removeEventListener('mousemove', mousemove, false);
+			});
+			
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
 }
@@ -304,7 +362,7 @@ function takeShot(aDOMWin) {
 				console.error('os not supported');
 		}
 		
-		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=1,height=1,screenX=0,screenY=0', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
+		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,width=1,height=1,screenX=0,screenY=0', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
 		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
 		console.info('aEditorDOMWindow:', aEditorDOMWindow);
 	};
@@ -638,5 +696,68 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 	
 	return deferredMain_SIPWorker.promise;
 	
+}
+function jsonToDOM(json, doc, nodes) {
+
+    var namespaces = {
+        html: 'http://www.w3.org/1999/xhtml',
+        xul: 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul'
+    };
+    var defaultNamespace = namespaces.html;
+
+    function namespace(name) {
+        var m = /^(?:(.*):)?(.*)$/.exec(name);        
+        return [namespaces[m[1]], m[2]];
+    }
+
+    function tag(name, attr) {
+        if (Array.isArray(name)) {
+            var frag = doc.createDocumentFragment();
+            Array.forEach(arguments, function (arg) {
+                if (!Array.isArray(arg[0]))
+                    frag.appendChild(tag.apply(null, arg));
+                else
+                    arg.forEach(function (arg) {
+                        frag.appendChild(tag.apply(null, arg));
+                    });
+            });
+            return frag;
+        }
+
+        var args = Array.slice(arguments, 2);
+        var vals = namespace(name);
+        var elem = doc.createElementNS(vals[0] || defaultNamespace, vals[1]);
+
+        for (var key in attr) {
+            var val = attr[key];
+            if (nodes && key == 'id')
+                nodes[val] = elem;
+
+            vals = namespace(key);
+            if (typeof val == 'function')
+                elem.addEventListener(key.replace(/^on/, ''), val, false);
+            else
+                elem.setAttributeNS(vals[0] || '', vals[1], val);
+        }
+        args.forEach(function(e) {
+            try {
+                elem.appendChild(
+                                    Object.prototype.toString.call(e) == '[object Array]'
+                                    ?
+                                        tag.apply(null, e)
+                                    :
+                                        e instanceof doc.defaultView.Node
+                                        ?
+                                            e
+                                        :
+                                            doc.createTextNode(e)
+                                );
+            } catch (ex) {
+                elem.appendChild(doc.createTextNode(ex));
+            }
+        });
+        return elem;
+    }
+    return tag.apply(null, json);
 }
 // end - common helper functions
