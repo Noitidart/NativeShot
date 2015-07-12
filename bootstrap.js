@@ -232,7 +232,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			ctx.fillRect(0, 0, can.width, can.height);
 			
 			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
-			//doc.documentElement.appendChild(can);
+			
+			aEditorDOMWindow.setTimeout(function() {
+				console.error('ok appending now');
+				doc.documentElement.appendChild(can);
+			}, 1000);
 			
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
