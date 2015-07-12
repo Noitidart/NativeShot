@@ -639,7 +639,7 @@ var gtkInit = function() {
 			 *   GdkWindow *window
 			 * );
 			 */
-			return lib('gdk2').delare('gdk_window_fullscreen', self.TYPE.ABI,
+			return lib('gdk2').declare('gdk_window_fullscreen', self.TYPE.ABI,
 				self.TYPE.void,			// void
 				self.TYPE.GdkWindow.ptr	// *window
 			);
@@ -651,7 +651,7 @@ var gtkInit = function() {
 			 *   GdkFullscreenMode mode
 			 * );
 			 */
-			return lib('gdk2').delare('gdk_window_set_fullscreen_mode', self.TYPE.ABI,
+			return lib('gdk2').declare('gdk_window_set_fullscreen_mode', self.TYPE.ABI,
 				self.TYPE.void,				// void
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.GdkFullscreenMode	// mode
