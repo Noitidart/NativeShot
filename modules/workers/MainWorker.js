@@ -117,9 +117,9 @@ function makeWinFullAllMon(aHwndStr) {
 				console.info('incoming aHwndStr:', aHwndStr);
 				var aHwnd = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr));
 				//var rez_setMode = ostypes.API('gdk_window_set_fullscreen_mode', aHwnd, ostypes.CONST.GDK_FULLSCREEN_ON_ALL_MONITORS);
-				
-				var rez_makeFull = ostypes.API('gdk_window_fullscreen', aHwnd);
-				console.error('ctypes.errno', ctypes.errno);
+				setTimeout(function() {
+					var rez_makeFull = ostypes.API('gdk_window_fullscreen', aHwnd);
+				}, 100);
 				
 			break;
 		default:
