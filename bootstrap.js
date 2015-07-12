@@ -235,7 +235,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			
 			// aEditorDOMWindow.setTimeout(function() {
 				// console.error('ok appending now');
-				//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
+				doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
 			// }, 1000);
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
