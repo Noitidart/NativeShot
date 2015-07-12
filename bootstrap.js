@@ -187,7 +187,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										.treeOwner
 										.QueryInterface(Ci.nsIInterfaceRequestor)
 										.getInterface(Ci.nsIBaseWindow)
-										.baseWindow
 										.nativeHandle;
 
 						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr]);
@@ -195,6 +194,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 							function(aVal) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
 								// start - do stuff here - promise_makeWinFullAllMon
+								//aEditorDOMWindow.setTimeout(function() {
+									aEditorDOMWindow.fullScreen = true;
+								//}, 1000);
 								// end - do stuff here - promise_makeWinFullAllMon
 							},
 							function(aReason) {
@@ -230,8 +232,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			ctx.fillRect(0, 0, can.width, can.height);
 			
 			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
-			//doc.documentElement.appendChild(can);
 			
+			// aEditorDOMWindow.setTimeout(function() {
+				// console.error('ok appending now');
+				doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
+			// }, 1000);
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
 }
@@ -299,7 +304,7 @@ function takeShot(aDOMWin) {
 				console.error('os not supported');
 		}
 		
-		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=1,height=1', null);
+		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=100,height=100,screenX=10,screenY=10', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
 		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
 		console.info('aEditorDOMWindow:', aEditorDOMWindow);
 	};
