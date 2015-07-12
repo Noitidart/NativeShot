@@ -235,7 +235,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			
 			aEditorDOMWindow.setTimeout(function() {
 				console.error('ok appending now');
-				doc.documentElement.appendChild(can);
+				//doc.documentElement.appendChild(can);
+				aEditorDOMWindow.fullscreen = true;
 			}, 1000);
 			
 			console.timeEnd('mainthread');
