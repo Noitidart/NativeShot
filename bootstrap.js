@@ -29,8 +29,10 @@ const core = {
 
 var PromiseWorker;
 var bootstrap = this;
+var OSStuff = {};
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
+var collCanMonInfos;
 
 // Lazy Imports
 const myServices = {};
@@ -96,7 +98,144 @@ function extendCore() {
 	console.log('done adding to core, it is now:', core);
 }
 
+//start obs stuff
+var observers = {
+	'nativeshot-editor-loaded': { // this trick detects actual load of iframe from bootstrap scope
+		observe: function (aSubject, aTopic, aData) {
+			obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData);
+		},
+		reg: function () {
+			Services.obs.addObserver(observers['nativeshot-editor-loaded'], core.addon.id + '_nativeshot-editor-loaded', false);
+		},
+		unreg: function () {
+			Services.obs.removeObserver(observers['nativeshot-editor-loaded'], core.addon.id + '_nativeshot-editor-loaded');
+		}
+	}
+};
+//end obs stuff
+
 // START - Addon Functionalities
+// start - observer handlers
+var collEditorDOMWindows = [];
+function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
+			console.error('yeaaa loaddded');
+			
+			var aEditorDOMWindow;
+			var aEditorFound = false;
+			for (var i=0; i<collEditorDOMWindows.length; i++) {
+				aEditorDOMWindow = collEditorDOMWindows[i].get();
+				if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
+					collEditorDOMWindows.splice(i, 1);
+					continue;
+				}
+				if (aEditorDOMWindow.document.readyState == 'complete') {
+					collEditorDOMWindows.splice(i, 1);
+					aEditorFound = true;
+					break;
+				}
+			}		
+	
+			if (!aEditorFound) {
+				console.error('WARNNNNING could not found editor dom window');
+				return;
+			}
+			
+			aEditorDOMWindow.focus();
+			var doc = aEditorDOMWindow.document;			
+			var can = doc.createElementNS(NS_HTML, 'canvas');
+			var ctx = can.getContext('2d');
+			
+			switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+				case 'winnt':
+				case 'winmo':
+				case 'wince':
+						
+						var topLeftMostX = 0;
+						var topLeftMostY = 0;
+						var fullWidth = 0;
+						var fullHeight = 0;
+						for (var s=0; s<collCanMonInfos.length; s++) {
+							fullWidth += collCanMonInfos[s].nWidth;
+							fullHeight += collCanMonInfos[s].nHeight;
+							
+							if (collCanMonInfos[s].yTopLeft < topLeftMostY) {
+								topLeftMostY = collCanMonInfos[s].yTopLeft;
+							}
+							if (collCanMonInfos[s].xTopLeft < topLeftMostX) {
+								topLeftMostX = collCanMonInfos[s].xTopLeft;
+							}
+						}
+
+						console.info('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
+
+						can.width = fullWidth; // just a note from left over stuff, i can do collCanMonInfos[s].idat.width now but this tells me some stuff: cannot do `collCanMonInfos.width` because DIB widths are by 4's so it might have padding, so have to use real width
+						can.height = fullHeight;
+
+						for (var s=0; s<collCanMonInfos.length; s++) {
+							ctx.putImageData(collCanMonInfos[s].idat, collCanMonInfos[s].xTopLeft + Math.abs(topLeftMostX), collCanMonInfos[s].yTopLeft + Math.abs(topLeftMostY));
+						}
+
+						aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
+						aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
+						
+					break;
+				case 'gtk':
+					
+						var aHwndStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+										.getInterface(Ci.nsIWebNavigation)
+										.QueryInterface(Ci.nsIDocShellTreeItem)
+										.treeOwner
+										.QueryInterface(Ci.nsIInterfaceRequestor)
+										.getInterface(Ci.nsIBaseWindow)
+										.baseWindow
+										.nativeHandle;
+
+						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr]);
+						promise_makeWinFullAllMon.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
+								// start - do stuff here - promise_makeWinFullAllMon
+								// end - do stuff here - promise_makeWinFullAllMon
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_makeWinFullAllMon', aReason:aReason};
+								console.error('Rejected - promise_makeWinFullAllMon - ', rejObj);
+								//deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_makeWinFullAllMon', aCaught:aCaught};
+								console.error('Caught - promise_makeWinFullAllMon - ', rejObj);
+								//deferred_createProfile.reject(rejObj);
+							}
+						);
+						
+						can.width = collCanMonInfos[0].nWidth;
+						can.height = collCanMonInfos[0].nHeight;
+						
+						ctx.putImageData(collCanMonInfos[0].idat, collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
+
+					break;
+				
+				case 'darwin':
+					
+						
+					
+					break;
+				default:
+					console.error('os not supported');
+			}
+			
+			ctx.fillStyle = 'rgba(0,0,0,.6)';
+			ctx.fillRect(0, 0, can.width, can.height);
+			
+			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
+			//doc.documentElement.appendChild(can);
+			
+			console.timeEnd('mainthread');
+			console.timeEnd('takeShot');
+}
+// end - observer handlers
 var _cache_get_gtk_ctypes; // {lib:theLib, declared:theFunc, TYPE:types}
 function get_gtk_ctypes() {
 	if (!_cache_get_gtk_ctypes) {
@@ -135,63 +274,34 @@ function takeShot(aDOMWin) {
 		console.timeEnd('chromeworker');
 		console.time('mainthread');
 		
-		var topLeftMostX = 0;
-		var topLeftMostY = 0;
-		var fullWidth = 0;
-		var fullHeight = 0;
-		for (var s=0; s<aVal.length; s++) {
-			fullWidth += aVal[s].nWidth;
-			fullHeight += aVal[s].nHeight;
+		collCanMonInfos = aVal;
+		
+		switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+			case 'winnt':
+			case 'winmo':
+			case 'wince':
+				
+					
+				
+				break;
+			case 'gtk':
+				
+					
+				
+				break;
 			
-			if (aVal[s].yTopLeft < topLeftMostY) {
-				topLeftMostY = aVal[s].yTopLeft;
-			}
-			if (aVal[s].xTopLeft < topLeftMostX) {
-				topLeftMostX = aVal[s].xTopLeft;
-			}
+			case 'darwin':
+				
+					
+				
+				break;
+			default:
+				console.error('os not supported');
 		}
 		
-		
-		console.error('topLeftMostX:', topLeftMostX, 'topLeftMostY:', topLeftMostY, 'fullWidth:', fullWidth, 'fullHeight:', fullHeight, '_END_');
-		var panel = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=' + fullWidth + ',height=' + fullHeight + ',screenX=' + topLeftMostX + ',screenY=' + topLeftMostY, null);
-		console.info('panel:', panel);
-		panel.addEventListener('load', function() {
-			console.error('yeaaa loaddded');
-			
-			panel.moveTo(topLeftMostX, topLeftMostY); // i cant set left and top off screen in openWindow because per docs from https://developer.mozilla.org/en-US/docs/Web/API/Window/open#Note_on_position_and_dimension_error_correction ==> "Note on position and dimension error correction Requested position and requested dimension values in the features list will not be honored and will be corrected if any of such requested value does not allow the entire browser window to be rendered within the work area for applications of the user's operating system. No part of the new window can be initially positioned offscreen. This is by default in all Mozilla-based browser releases."
-			panel.focus();
-			/* // was thinking of using this to prevent the window from adding to taskbar, but i then realized its not big deal as ill have a solid panel over it, so they wont ever see the extra window in taskbar
-			var xulwin = panel.QueryInterface(Ci.nsIInterfaceRequestor)
-							.getInterface(Ci.nsIWebNavigation)
-							.QueryInterface(Ci.nsIDocShellTreeItem)
-							.treeOwner
-							.QueryInterface(Ci.nsIInterfaceRequestor)
-							.getInterface(Ci.nsIXULWindow);
-			Services.appShell.unregisterTopLevelWindow(xulwin);
-			*/
-			
-			var win = panel;
-			var doc = panel.document;
-			
-			var can = doc.createElementNS(NS_HTML, 'canvas');
-			can.width = fullWidth; // just a note from left over stuff, i can do aVal[s].idat.width now but this tells me some stuff: cannot do `aVal.width` because DIB widths are by 4's so it might have padding, so have to use real width
-			can.height = fullHeight;
-			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
-			var ctx = can.getContext('2d');
-			
-			for (var s=0; s<aVal.length; s++) {
-				ctx.putImageData(aVal[s].idat, aVal[s].xTopLeft + Math.abs(topLeftMostX), aVal[s].yTopLeft + Math.abs(topLeftMostY));
-			}
-			
-			ctx.fillStyle = 'rgba(0,0,0,.6)';
-			ctx.fillRect(0, 0, fullWidth, fullHeight);
-			
-			doc.documentElement.appendChild(can);
-
-			console.timeEnd('mainthread');
-			console.timeEnd('takeShot');
-			
-		}, false);
+		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,alwaysRaised,width=1,height=1', null);
+		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
+		console.info('aEditorDOMWindow:', aEditorDOMWindow);
 	};
 	
 	if (core.os.toolkit.indexOf('gtk') == 0) {
@@ -403,6 +513,12 @@ function startup(aData, aReason) {
 	//windowlistener more
 	windowListener.register();
 	//end windowlistener more
+	
+	//start observers stuff more
+	for (var o in observers) {
+		observers[o].reg();
+	}
+	//end observers stuff more
 }
 
 function shutdown(aData, aReason) {
@@ -413,6 +529,12 @@ function shutdown(aData, aReason) {
 	//windowlistener more
 	windowListener.unregister();
 	//end windowlistener more
+	
+	//start observers stuff more
+	for (var o in observers) {
+		observers[o].unreg();
+	}
+	//end observers stuff more
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
 	

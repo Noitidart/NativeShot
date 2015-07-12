@@ -34,6 +34,7 @@ var gtkTypes = function() {
 	this.GdkDisplay = ctypes.StructType('GdkDisplay');
 	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
 	this.GdkDrawable = ctypes.StructType('GdkDrawable');
+	this.GdkFullscreenMode = ctypes.int;
 	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
 	this.GdkWindow = ctypes.StructType('GdkWindow');
 	this.GFile = ctypes.StructType('_GFile');
@@ -120,7 +121,8 @@ var gtkInit = function() {
 
 	// CONSTANTS
 	this.CONST = {
-		
+		GDK_FULLSCREEN_ON_CURRENT_MONITOR: 0,
+		GDK_FULLSCREEN_ON_ALL_MONITORS: 1
 	};
 
 	var _lib = {}; // cache for lib
@@ -631,6 +633,30 @@ var gtkInit = function() {
 				self.TYPE.guchar				// b
 			);
 		},
+		gdk_window_fullscreen: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-fullscreen
+			 * void gdk_window_fullscreen (
+			 *   GdkWindow *window
+			 * );
+			 */
+			return lib('gdk2').delare('gdk_window_fullscreen', self.TYPE.ABI,
+				self.TYPE.void,			// void
+				self.TYPE.GdkWindow.ptr	// *window
+			);
+		},
+		gdk_window_set_fullscreen_mode: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-set-fullscreen-mode
+			 * void gdk_window_set_fullscreen_mode (
+			 *   GdkWindow *window,
+			 *   GdkFullscreenMode mode
+			 * );
+			 */
+			return lib('gdk2').delare('gdk_window_set_fullscreen_mode', self.TYPE.ABI,
+				self.TYPE.void,				// void
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.GdkFullscreenMode	// mode
+			);
+		}
 		// libgdk_pixbuf-2.0-0
 	};
 	// end - predefine your declares here
