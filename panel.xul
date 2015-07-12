@@ -1,9 +1,7 @@
 <?xml version="1.0"?>
-<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
-<!-- Extremely recommended to keep this css include!! -->
 <window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         hidechrome="true"
-        onclick="window.close();"
+		onclick="window.close()"
 		windowtype="nativeshot:editor"
 		onload="Components.utils.import('resource://gre/modules/Services.jsm');Services.obs.notifyObservers(null, 'NativeShot@jetpack_nativeshot-editor-loaded', null);">
 </window>
