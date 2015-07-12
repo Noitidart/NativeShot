@@ -195,7 +195,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
 								// start - do stuff here - promise_makeWinFullAllMon
 								//aEditorDOMWindow.setTimeout(function() {
-									aEditorDOMWindow.fullScreen = true;
+									// aEditorDOMWindow.fullScreen = true;
 								//}, 1000);
 								// end - do stuff here - promise_makeWinFullAllMon
 							},
@@ -233,12 +233,10 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			
 			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
 			
-			aEditorDOMWindow.setTimeout(function() {
-				console.error('ok appending now');
-				//doc.documentElement.appendChild(can);
-				//aEditorDOMWindow.fullscreen = true;
-			}, 1000);
-			
+			// aEditorDOMWindow.setTimeout(function() {
+				// console.error('ok appending now');
+				doc.documentElement.appendChild(can);
+			// }, 1000);
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
 }
