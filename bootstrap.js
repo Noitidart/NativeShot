@@ -194,6 +194,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 							function(aVal) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
 								// start - do stuff here - promise_makeWinFullAllMon
+								aEditorDOMWindow.fullscreen = true;
 								// end - do stuff here - promise_makeWinFullAllMon
 							},
 							function(aReason) {
