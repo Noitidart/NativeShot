@@ -341,7 +341,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								['xul:menuitem', {label:'Photobucket'}]
 							]
 						],
-						['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)' }},
+						['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
 							['xul:menupopup', {},
 								['xul:menuitem', {label:'FreeImageHosting.net'}],
 								['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
