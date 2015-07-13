@@ -285,7 +285,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				if (e.button != 0) {
 					return;
 				}
-				if (e.target.id == 'divTools') {
+				if (e.target.id != 'canDim') {
 					return;
 				}
 				console.info('mousedown', 'e:', e);
@@ -312,6 +312,54 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				win.removeEventListener('mousemove', mousemove, false);
 				el.divTools.style.pointerEvents = '';
 			});
+			
+			var menuJson = 
+				['xul:popupset', {},
+					['xul:menupopup', {id: 'myMenu1'},
+						['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
+						['xul:menuseparator', {}],
+						['xul:menuitem', {label:'Save to File (preset dir & name pattern)'}],
+						['xul:menuitem', {label:'Save to File (file picker dir and name)'}],
+						['xul:menuitem', {label:'Copy to Clipboard'}],
+						['xul:menu', {label:'Upload to Image Host (click this for last used host)'},
+							['xul:menupopup', {},
+								['xul:menuitem', {label:'Imgur'}],
+								['xul:menuitem', {label:'Photobucket'}]
+							]
+						],
+						['xul:menu', {label:'Share to Social Media'},
+							['xul:menupopup', {},
+								['xul:menuitem', {label:'Facebook'}],
+								['xul:menuitem', {label:'Twitter'}]
+							]
+						],
+						['xul:menuseparator', {}],
+						['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
+							['xul:menupopup', {},
+								['xul:menuitem', {label:'Current Monitor'}],
+								['xul:menuitem', {label:'All Monitors'}],
+								['xul:menuitem', {label:'Monitor 1'}],
+								['xul:menuitem', {label:'Monitor 2'}]
+							]
+						],
+						['xul:menu', {label:'Selection to Application Window'},
+							['xul:menupopup', {},
+								['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
+								['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
+									['xul:menupopup', {},
+										['xul:menuitem', {label:'Window 1'}],
+										['xul:menuitem', {label:'Window 2'}],
+										['xul:menuitem', {label:'Window 3'}]
+									]
+								],
+								['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
+							]
+						]
+					]
+				];
+
+			doc.documentElement.appendChild(jsonToDOM(menuJson, doc, el));
+			doc.documentElement.setAttribute('context', 'myMenu1');
 			
 			console.timeEnd('mainthread');
 			console.timeEnd('takeShot');
