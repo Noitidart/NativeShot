@@ -321,7 +321,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						['xul:menuseparator', {}],
 						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
 						['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
-						['xul:menuitem', {label:'Copy to Clipboard'}],
+						['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
 						['xul:menu', {label:'Upload to Image Host (click this for last used host)'},
 							['xul:menupopup', {},
 								['xul:menuitem', {label:'Imgur'}],
@@ -368,9 +368,10 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 // end - observer handlers
 // start - editor functions
 function editorSaveToFile(aEditorDOMWindow, showFilePicker) {
+	// start - common to all editor functions
 	var owin = Services.wm.getMostRecentWindow('navigator:browser');
 	/*
-	var ws = Service.wm.getEnumerator(null);
+	var ws = Services.wm.getEnumerator(null);
 	while (var w = ws.getNext()) {
 		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
 			owin = w;
@@ -395,6 +396,7 @@ function editorSaveToFile(aEditorDOMWindow, showFilePicker) {
 	
 	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
 	win.close();
+	// end - common to all editor functions
 	
 	/*
 	can.style.position = 'fixed'; // :debug:
@@ -476,6 +478,86 @@ function editorSaveToFile(aEditorDOMWindow, showFilePicker) {
 		do_saveCanToDisk();
 	}
 	
+}
+
+function editorCopyImageToClipboard(aEditorDOMWindow) {
+	// start - common to all editor functions
+	var owin = Services.wm.getMostRecentWindow('navigator:browser');
+	/*
+	var ws = Services.wm.getEnumerator(null);
+	while (var w = ws.getNext()) {
+		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
+			owin = w;
+		}
+	}
+	*/
+	if (!owin) { throw new Error('could not find other then this editor window') }
+	var odoc = owin.document;
+
+	var win = aEditorDOMWindow;
+	var doc = win.document;
+	
+	var can = odoc.createElementNS(NS_HTML, 'canvas');
+	var ctx = can.getContext('2d');
+	
+	var divTools = doc.getElementById('divTools');
+	
+	can.width = parseInt(divTools.style.width);
+	can.height = parseInt(divTools.style.height);
+	
+	var baseCan = doc.querySelector('canvas');
+	
+	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
+	win.close();
+	// end - common to all editor functions
+    
+	// based on:
+		// mostly: https://github.com/mxOBS/deb-pkg_icedove/blob/8f8955df7c9db605cf6903711dcbfc6dd7776e50/mozilla/toolkit/devtools/gcli/commands/screenshot.js#L161
+		// somewhat on: https://github.com/dadler/thumbnail-zoom/blob/76a6edded0ca4ef1eb76d4c1b2bc363b433cde63/src/resources/clipboardService.js#L78-L209
+		
+	var data = can.toDataURL('image/png', '')
+	var channel = Services.io.newChannel(data, null, null);
+	var input = channel.open();
+	var imgTools = Cc['@mozilla.org/image/tools;1'].getService(Ci.imgITools);
+	
+	var container = {};
+	imgTools.decodeImageData(input, channel.contentType, container);
+
+	var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
+	wrapped.data = container.value;
+	
+	var trans = Transferable(owin);
+	console.info('channel.contentType:', channel.contentType);
+	trans.addDataFlavor(channel.contentType);
+	
+	trans.setTransferData(channel.contentType, wrapped, -1);
+	
+	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+	
+	/* to consider
+		// have to first set imageURL = createBlob
+      
+       // Also put the image's html <img> tag on the clipboard.  This is 
+       // important (at least on OSX): if we copy just jpg image data,
+       // programs like Photoshop and Thunderbird seem to receive it as
+       // uncompressed png data, which is very large, bloating emails and
+       // causing randomly truncated data.  But if we also include a
+       // text/html flavor referring to the jpg image on the Internet, 
+       // those programs retrieve the image directly as the original jpg
+       // data, so there is no data bloat.
+      
+      var str = Components.classes['@mozilla.org/supports-string;1'].createInstance(Ci.nsISupportsString);
+      if (str) {
+        str.data = '<img src="' + imageURL + '" />';
+        trans.addDataFlavor('text/html');
+        trans.setTransferData('text/html', str, str.data.length * 2);
+      }    
+	*/
+	
+	owin.setTimeout(function() {
+		myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Image Copied', 'Screenshot was successfully copied to clipboard');
+	}, 100);
+
 }
 // end - editor functions
 var _cache_get_gtk_ctypes; // {lib:theLib, declared:theFunc, TYPE:types}
