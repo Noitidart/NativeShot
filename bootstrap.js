@@ -1,5 +1,5 @@
 // Imports
-const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
+const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
 Cu.import('resource://gre/modules/ctypes.jsm'); // needed for GTK+
@@ -36,6 +36,7 @@ var collCanMonInfos;
 
 // Lazy Imports
 const myServices = {};
+XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'global.properties?' + Math.random()); /* Randomize URI to work around bug 719376 */ });
 
@@ -239,7 +240,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			var json = 
 			[
 				'xul:stack', {id:'stack'},
-					['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;'}],
+					['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;cursor:crosshair;'}],
 					['xul:box', {id:'divTools',style:'border:1px dashed #ccc;left:0;top:0;width:1px;height:1px;display:block;position:fixed;'}]
 			];
 
@@ -251,7 +252,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			ctxDim.fillStyle = 'rgba(0,0,0,.6)';
 			ctxDim.fillRect(0, 0, can.width, can.height);
 			
-			// event handlers
+			// event handlers - the reason i dont do this in the panel.xul file or import a .js file into is because i want the panel and canvas drawing to show asap, then worry about attaching js stuff. otherwise it will wait to load js file then trigger load.
 			var win = aEditorDOMWindow;
 			
 			var md_x; //mousedowned x pos
@@ -318,7 +319,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					['xul:menupopup', {id: 'myMenu1'},
 						['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
 						['xul:menuseparator', {}],
-						['xul:menuitem', {label:'Save to File (preset dir & name pattern)'}],
+						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFilePre(win) }}],
 						['xul:menuitem', {label:'Save to File (file picker dir and name)'}],
 						['xul:menuitem', {label:'Copy to Clipboard'}],
 						['xul:menu', {label:'Upload to Image Host (click this for last used host)'},
@@ -365,6 +366,101 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			console.timeEnd('takeShot');
 }
 // end - observer handlers
+// start - editor functions
+function editorSaveToFilePre(aEditorDOMWindow) {
+	var owin = Services.wm.getMostRecentWindow('navigator:browser');
+	/*
+	var ws = Service.wm.getEnumerator(null);
+	while (var w = ws.getNext()) {
+		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
+			owin = w;
+		}
+	}
+	*/
+	if (!owin) { throw new Error('could not find other then this editor window') }
+	var odoc = owin.document;
+
+	var win = aEditorDOMWindow;
+	var doc = win.document;
+	
+	var can = odoc.createElementNS(NS_HTML, 'canvas');
+	var ctx = can.getContext('2d');
+	
+	var divTools = doc.getElementById('divTools');
+	
+	can.width = parseInt(divTools.style.width);
+	can.height = parseInt(divTools.style.height);
+	
+	var baseCan = doc.querySelector('canvas');
+	
+	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
+	win.close();
+	
+	/*
+	can.style.position = 'fixed'; // :debug:
+	can.style.left = '2000px'; // :debug:
+	can.style.top = '1300px'; // :debug:
+	
+	doc.documentElement.appendChild(can); // :debug:
+	*/
+	
+	// get save path
+	var OSPath_saveDir;
+	try {
+		OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+	} catch (ex) {
+		console.warn('ex:', ex);
+		try {
+			OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
+		} catch (ex) {
+			console.warn('ex:', ex);
+			OSPath_saveDir = OS.Constants.Path.desktopDir;
+		}
+	}
+	
+	// generate file name
+	var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
+	var OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+	
+	(can.toBlobHD || can.toBlob).call(can, function(b) {
+		var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
+		r.onloadend = function() {
+			// r.result contains the ArrayBuffer.
+			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
+			promise_saveToDisk.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_saveToDisk - ', aVal);
+					// start - do stuff here - promise_saveToDisk
+					var trans = Transferable(owin);
+					trans.addDataFlavor('text/unicode');
+					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+					trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
+					
+					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+					
+					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'File Path Copied', 'Screenshot was successfully saved and file path was copied to clipboard', false, null, null, core.addon.id);
+					// end - do stuff here - promise_saveToDisk
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
+					console.error('Rejected - promise_saveToDisk - ', rejObj);
+					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Error', 'Screenshot failed to save to disk, see browser console for more details', false, null, null, core.addon.id);
+					//deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
+					console.error('Caught - promise_saveToDisk - ', rejObj);
+					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'CATCH', 'developer error stupid', false, null, null, core.addon.id);
+					//deferred_createProfile.reject(rejObj);
+				}
+			);
+		};
+		r.readAsArrayBuffer(b);
+	}, 'image/png');
+	
+}
+// end - editor functions
 var _cache_get_gtk_ctypes; // {lib:theLib, declared:theFunc, TYPE:types}
 function get_gtk_ctypes() {
 	if (!_cache_get_gtk_ctypes) {
@@ -431,6 +527,16 @@ function takeShot(aDOMWin) {
 		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,width=1,height=1,screenX=0,screenY=0', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
 		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
 		console.info('aEditorDOMWindow:', aEditorDOMWindow);
+		
+		/*
+		var xulwin = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+						.getInterface(Ci.nsIWebNavigation)
+						.QueryInterface(Ci.nsIDocShellTreeItem)
+						.treeOwner
+						.QueryInterface(Ci.nsIInterfaceRequestor)
+						.getInterface(Ci.nsIXULWindow);
+		Services.appShell.unregisterTopLevelWindow(xulwin);
+		*/
 	};
 	
 	if (core.os.toolkit.indexOf('gtk') == 0) {
@@ -520,7 +626,37 @@ function takeShot(aDOMWin) {
 }
 
 // END - Addon Functionalities
+// start - clipboard boilerplate
+// Create a constructor for the built-in supports-string class.
+const nsSupportsString = CC("@mozilla.org/supports-string;1", "nsISupportsString");
+function SupportsString(str) {
+    // Create an instance of the supports-string class
+    var res = nsSupportsString();
 
+    // Store the JavaScript string that we want to wrap in the new nsISupportsString object
+    res.data = str;
+    return res;
+}
+
+// Create a constructor for the built-in transferable class
+const nsTransferable = CC("@mozilla.org/widget/transferable;1", "nsITransferable");
+
+// Create a wrapper to construct an nsITransferable instance and set its source to the given window, when necessary
+function Transferable(source) {
+    var res = nsTransferable();
+    if ('init' in res) {
+        // When passed a Window object, find a suitable privacy context for it.
+        if (source instanceof Ci.nsIDOMWindow) {
+            // Note: in Gecko versions >16, you can import the PrivateBrowsingUtils.jsm module
+            // and use PrivateBrowsingUtils.privacyContextFromWindow(sourceWindow) instead
+            source = source.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+		}
+		
+        res.init(source);
+    }
+    return res;
+}
+// end - clipboard boilerplate
 /*start - windowlistener*/
 var windowListener = {
 	//DO NOT EDIT HERE
@@ -825,5 +961,22 @@ function jsonToDOM(json, doc, nodes) {
         return elem;
     }
     return tag.apply(null, json);
+}
+var _getSafedForOSPath_pattWIN = /([\\*:?<>|\/\"])/g;
+var _getSafedForOSPath_pattNIXMAC = /\//g;
+const repCharForSafePath = '-';
+function getSafedForOSPath(aStr, useNonDefaultRepChar) {
+	switch (core.os.name) {
+		case 'winnt':
+		case 'winmo':
+		case 'wince':
+		
+				return aStr.replace(_getSafedForOSPath_pattWIN, useNonDefaultRepChar ? useNonDefaultRepChar : repCharForSafePath);
+				
+			break;
+		default:
+		
+				return aStr.replace(_getSafedForOSPath_pattNIXMAC, useNonDefaultRepChar ? useNonDefaultRepChar : repCharForSafePath);
+	}
 }
 // end - common helper functions
