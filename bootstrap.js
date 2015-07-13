@@ -3,7 +3,7 @@ const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
 Cu.import('resource://gre/modules/ctypes.jsm'); // needed for GTK+
-Cu.import('resource://gre/modules/osfile.jsm');
+const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
@@ -322,10 +322,29 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
 						['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
 						['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
-						['xul:menu', {label:'Upload to Image Host (click this for last used host)'},
+						['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
 							['xul:menupopup', {},
+								['xul:menuitem', {label:'Amazon Cloud Drive'}],
+								['xul:menuitem', {label:'Box'}],
+								['xul:menuitem', {label:'Copy by Barracuda Networks'}],
+								['xul:menuitem', {label:'Dropbox'}],
+								['xul:menuitem', {label:'Google Drive'}],
+								['xul:menuitem', {label:'MEGA'}],
+								['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
+							]
+						],
+						['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
+							['xul:menupopup', {},
+								['xul:menuitem', {label:'Flickr'}],
+								['xul:menuitem', {label:'Image Shack'}],
 								['xul:menuitem', {label:'Imgur'}],
 								['xul:menuitem', {label:'Photobucket'}]
+							]
+						],
+						['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)', onclick:function(){ editorUploadToImgurAnon(win) }},
+							['xul:menupopup', {},
+								['xul:menuitem', {label:'FreeImageHosting.net'}],
+								['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
 							]
 						],
 						['xul:menu', {label:'Share to Social Media'},
@@ -334,6 +353,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								['xul:menuitem', {label:'Twitter'}]
 							]
 						],
+						['xul:menuitem', {label:'Print Image'}],
 						['xul:menuseparator', {}],
 						['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
 							['xul:menupopup', {},
@@ -473,8 +493,11 @@ function editorSaveToFile(aEditorDOMWindow, showFilePicker) {
 		var rv = fp.show();
 		if (rv != Ci.nsIFilePicker.returnOK) { return } // user canceled
 		
-		OSPath_save = fp.file.path;
+		OSPath_save = fp.file.path.trim();
 		
+		if (!/^.*\.png/i.test(OSPath_save)) {
+			OSPath_save += '.png';
+		}
 		do_saveCanToDisk();
 	}
 	
@@ -555,8 +578,109 @@ function editorCopyImageToClipboard(aEditorDOMWindow) {
 	*/
 	
 	owin.setTimeout(function() {
-		myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Image Copied', 'Screenshot was successfully copied to clipboard');
+		myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Image Copied', 'Screenshot was successfully copied to the clipboard');
 	}, 100);
+
+}
+function editorUploadToImgurAnon(aEditorDOMWindow) {
+	// start - common to all editor functions
+	var owin = Services.wm.getMostRecentWindow('navigator:browser');
+	/*
+	var ws = Services.wm.getEnumerator(null);
+	while (var w = ws.getNext()) {
+		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
+			owin = w;
+		}
+	}
+	*/
+	if (!owin) { throw new Error('could not find other then this editor window') }
+	var odoc = owin.document;
+
+	var win = aEditorDOMWindow;
+	var doc = win.document;
+	
+	var can = odoc.createElementNS(NS_HTML, 'canvas');
+	var ctx = can.getContext('2d');
+	
+	var divTools = doc.getElementById('divTools');
+	
+	can.width = parseInt(divTools.style.width);
+	can.height = parseInt(divTools.style.height);
+	
+	var baseCan = doc.querySelector('canvas');
+	
+	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
+	win.close();
+	// end - common to all editor functions
+    
+	// based on:
+		// mostly: https://github.com/mxOBS/deb-pkg_icedove/blob/8f8955df7c9db605cf6903711dcbfc6dd7776e50/mozilla/toolkit/devtools/gcli/commands/screenshot.js#L161
+		// somewhat on: https://github.com/dadler/thumbnail-zoom/blob/76a6edded0ca4ef1eb76d4c1b2bc363b433cde63/src/resources/clipboardService.js#L78-L209
+		
+	var data = can.toDataURL('image/png'); // returns `data:image/png;base64,iVBORw.....`
+	console.info('base64 data pre trim:', data);
+	data = data.substr('data:image/png;base64,'.length); // imgur wants without this
+	
+	console.info('base64 data:', data);
+	var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
+		aPostData: {
+			image: data, // this gets encodeURIComponent'ed by my xhr function
+			type: 'base64'
+		},
+		Headers: {
+			Authorization: 'Client-ID fa64a66080ca868',
+			'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
+		},
+		aResponseType: 'json'
+	});
+	
+	promise_uploadAnonImgur.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
+			// start - do stuff here - promise_uploadAnonImgur
+			var imgUrl = aVal.response.data.link;
+			var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
+			var imgId = aVal.response.data.id;
+			
+			var trans = Transferable(owin);
+			trans.addDataFlavor('text/unicode');
+			// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+			trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
+			
+			Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+			
+			// save to upload history - only for anonymous uploads to imgur, so can delete in future
+			var OSPath_history = OS.Path.join(OS.Constants.Path.desktopDir, 'imgur-history.txt'); // creates file if it wasnt there
+			OS.File.open(OSPath_history, {write: true, append: true}).then(valOpen => {
+				var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
+				var txtEncoded = getTxtEncodr().encode(txtToAppend);
+				valOpen.write(txtEncoded).then(valWrite => {
+					console.log('valWrite:', valWrite);
+					valOpen.close().then(valClose => {
+						console.log('valClose:', valClose);
+						console.log('successfully appended');
+					});
+				});
+			});
+			
+			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Image Uploaded', 'Upload to Imgur was successful and image link was copied to the clipboard');
+			
+			// end - do stuff here - promise_uploadAnonImgur
+		},
+		function(aReason) {
+			var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
+			console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
+			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+			//deferred_createProfile.reject(rejObj);
+		}
+	).catch(
+		function(aCaught) {
+			var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
+			console.error('Caught - promise_uploadAnonImgur - ', rejObj);
+			//deferred_createProfile.reject(rejObj);
+			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+		}
+	);
 
 }
 // end - editor functions
@@ -1077,5 +1201,157 @@ function getSafedForOSPath(aStr, useNonDefaultRepChar) {
 		
 				return aStr.replace(_getSafedForOSPath_pattNIXMAC, useNonDefaultRepChar ? useNonDefaultRepChar : repCharForSafePath);
 	}
+}
+function xhr(aStr, aOptions={}) {
+	// currently only setup to support GET and POST
+	// does an async request
+	// aStr is either a string of a FileURI such as `OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'test.png'));` or a URL such as `http://github.com/wet-boew/wet-boew/archive/master.zip`
+	// Returns a promise
+		// resolves with xhr object
+		// rejects with object holding property "xhr" which holds the xhr object
+	
+	/*** aOptions
+	{
+		aLoadFlags: flags, // https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/NsIRequest#Constants
+		aTiemout: integer (ms)
+		isBackgroundReq: boolean, // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest#Non-standard_properties
+		aResponseType: string, // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest#Browser_Compatibility
+		aPostData: string
+	}
+	*/
+	
+	var aOptions_DEFAULT = {
+		aLoadFlags: Ci.nsIRequest.LOAD_ANONYMOUS | Ci.nsIRequest.LOAD_BYPASS_CACHE | Ci.nsIRequest.INHIBIT_PERSISTENT_CACHING,
+		aPostData: null,
+		aResponseType: 'text',
+		isBackgroundReq: true, // If true, no load group is associated with the request, and security dialogs are prevented from being shown to the user
+		aTimeout: 0, // 0 means never timeout, value is in milliseconds
+		Headers: null
+	}
+	
+	for (var opt in aOptions_DEFAULT) {
+		if (!(opt in aOptions)) {
+			aOptions[opt] = aOptions_DEFAULT[opt];
+		}
+	}
+	
+	// Note: When using XMLHttpRequest to access a file:// URL the request.status is not properly set to 200 to indicate success. In such cases, request.readyState == 4, request.status == 0 and request.response will evaluate to true.
+	
+	var deferredMain_xhr = new Deferred();
+	console.log('here222');
+	let xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+
+	let handler = ev => {
+		evf(m => xhr.removeEventListener(m, handler, !1));
+
+		switch (ev.type) {
+			case 'load':
+			
+					if (xhr.readyState == 4) {
+						if (xhr.status == 200) {
+							deferredMain_xhr.resolve(xhr);
+						} else {
+							var rejObj = {
+								name: 'deferredMain_xhr.promise',
+								aReason: 'Load Not Success', // loaded but status is not success status
+								xhr: xhr,
+								message: xhr.statusText + ' [' + ev.type + ':' + xhr.status + ']'
+							};
+							deferredMain_xhr.reject(rejObj);
+						}
+					} else if (xhr.readyState == 0) {
+						var uritest = Services.io.newURI(aStr, null, null);
+						if (uritest.schemeIs('file')) {
+							deferredMain_xhr.resolve(xhr);
+						} else {
+							var rejObj = {
+								name: 'deferredMain_xhr.promise',
+								aReason: 'Load Failed', // didnt even load
+								xhr: xhr,
+								message: xhr.statusText + ' [' + ev.type + ':' + xhr.status + ']'
+							};
+							deferredMain_xhr.reject(rejObj);
+						}
+					}
+					
+				break;
+			case 'abort':
+			case 'error':
+			case 'timeout':
+				
+					var rejObj = {
+						name: 'deferredMain_xhr.promise',
+						aReason: ev.type[0].toUpperCase() + ev.type.substr(1),
+						xhr: xhr,
+						message: xhr.statusText + ' [' + ev.type + ':' + xhr.status + ']'
+					};
+					deferredMain_xhr.reject(rejObj);
+				
+				break;
+			default:
+				var rejObj = {
+					name: 'deferredMain_xhr.promise',
+					aReason: 'Unknown',
+					xhr: xhr,
+					message: xhr.statusText + ' [' + ev.type + ':' + xhr.status + ']'
+				};
+				deferredMain_xhr.reject(rejObj);
+		}
+	};
+
+	let evf = f => ['load', 'error', 'abort'].forEach(f);
+	evf(m => xhr.addEventListener(m, handler, false));
+
+	if (aOptions.isBackgroundReq) {
+		xhr.mozBackgroundRequest = true;
+	}
+	
+	if (aOptions.aTimeout) {
+		xhr.timeout
+	}
+	
+	var do_setHeaders = function() {
+		if (aOptions.Headers) {
+			for (var h in aOptions.Headers) {
+				xhr.setRequestHeader(h, aOptions.Headers[h]);
+			}
+		}
+	};
+	
+	if (aOptions.aPostData) {
+		xhr.open('POST', aStr, true);
+		do_setHeaders();
+		xhr.channel.loadFlags |= aOptions.aLoadFlags;
+		xhr.responseType = aOptions.aResponseType;
+		
+		/*
+		var aFormData = Cc['@mozilla.org/files/formdata;1'].createInstance(Ci.nsIDOMFormData);
+		for (var pd in aOptions.aPostData) {
+			aFormData.append(pd, aOptions.aPostData[pd]);
+		}
+		xhr.send(aFormData);
+		*/
+		var aPostStr = [];
+		for (var pd in aOptions.aPostData) {
+			aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
+		}
+		console.info('aPostStr:', aPostStr.join('&'));
+		xhr.send(aPostStr.join('&'));
+	} else {
+		xhr.open('GET', aStr, true);
+		do_setHeaders();
+		xhr.channel.loadFlags |= aOptions.aLoadFlags;
+		xhr.responseType = aOptions.aResponseType;
+		xhr.send(null);
+	}
+	
+	return deferredMain_xhr.promise;
+}
+var txtEncodr; // holds TextDecoder if created
+function getTxtEncodr() {
+	if (!txtEncodr) {
+		txtEncodr = new TextEncoder();
+	}
+	return txtEncodr;
 }
 // end - common helper functions
