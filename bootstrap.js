@@ -233,14 +233,14 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					console.error('os not supported');
 			}
 			
-			can.style.background = '#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
+			can.style.background = 'display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
 			//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
 
 			var json = 
 			[
 				'xul:stack', {id:'stack'},
-					['html:canvas', {id:'canDim',width:can.width,height:can.height}],
-					['html:div', {id:'divTools',style:'pointer-events:none;border:1px dashed #ccc;width:1px;height:1px;display:block;position:fixed;'}]
+					['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;'}],
+					['xul:box', {id:'divTools',style:'border:1px dashed #ccc;left:0;top:0;width:1px;height:1px;display:block;position:fixed;'}]
 			];
 
 			var el = {};
@@ -274,13 +274,26 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				}
 				el.divTools.style.width =  Math.abs(calc_x) + 'px';
 				el.divTools.style.height = Math.abs(calc_y) + 'px';
+				
+				ctxDim.clearRect(0, 0, can.width, can.height);
+				ctxDim.fillRect(0, 0, can.width, can.height);
+				ctxDim.clearRect(parseInt(el.divTools.style.left)+1, parseInt(el.divTools.style.top)+1, parseInt(el.divTools.style.width)-1, parseInt(el.divTools.style.height)-1);
 			};
 			
+			var inSelecting;
 			win.addEventListener('mousedown', function(e) {
 				if (e.button != 0) {
 					return;
 				}
+				if (e.target.id == 'divTools') {
+					return;
+				}
 				console.info('mousedown', 'e:', e);
+				inSelecting = true;
+				ctxDim.clearRect(0, 0, can.width, can.height);
+				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+				ctxDim.fillRect(0, 0, can.width, can.height);
+				el.divTools.style.pointerEvents = 'none';
 				md_x = e.layerX;
 				md_y = e.layerY;
 				el.divTools.style.left = md_x + 'px';
@@ -291,8 +304,13 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			});
 			
 			win.addEventListener('mouseup', function(e) {
+				if (!inSelecting) {
+					return;
+				}
+				inSelecting = false;
 				console.info('mouseup', 'e:', e);
 				win.removeEventListener('mousemove', mousemove, false);
+				el.divTools.style.pointerEvents = '';
 			});
 			
 			console.timeEnd('mainthread');
