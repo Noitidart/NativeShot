@@ -438,20 +438,20 @@ function editorSaveToFilePre(aEditorDOMWindow) {
 					
 					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 					
-					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'File Path Copied', 'Screenshot was successfully saved and file path was copied to clipboard', false, null, null, core.addon.id);
+					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'File Path Copied', 'Screenshot was successfully saved and file path was copied to clipboard', false, null, null);
 					// end - do stuff here - promise_saveToDisk
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
 					console.error('Rejected - promise_saveToDisk - ', rejObj);
-					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Error', 'Screenshot failed to save to disk, see browser console for more details', false, null, null, core.addon.id);
+					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Error', 'Screenshot failed to save to disk, see browser console for more details', false, null, null);
 					//deferred_createProfile.reject(rejObj);
 				}
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
 					console.error('Caught - promise_saveToDisk - ', rejObj);
-					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'CATCH', 'developer error stupid', false, null, null, core.addon.id);
+					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'CATCH', 'developer error stupid', false, null, null);
 					//deferred_createProfile.reject(rejObj);
 				}
 			);
