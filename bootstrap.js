@@ -319,8 +319,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					['xul:menupopup', {id: 'myMenu1'},
 						['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
 						['xul:menuseparator', {}],
-						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFilePre(win) }}],
-						['xul:menuitem', {label:'Save to File (file picker dir and name)'}],
+						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
+						['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
 						['xul:menuitem', {label:'Copy to Clipboard'}],
 						['xul:menu', {label:'Upload to Image Host (click this for last used host)'},
 							['xul:menupopup', {},
@@ -367,7 +367,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 }
 // end - observer handlers
 // start - editor functions
-function editorSaveToFilePre(aEditorDOMWindow) {
+function editorSaveToFile(aEditorDOMWindow, showFilePicker) {
 	var owin = Services.wm.getMostRecentWindow('navigator:browser');
 	/*
 	var ws = Service.wm.getEnumerator(null);
@@ -403,61 +403,78 @@ function editorSaveToFilePre(aEditorDOMWindow) {
 	
 	doc.documentElement.appendChild(can); // :debug:
 	*/
-	
-	// get save path
-	var OSPath_saveDir;
-	try {
-		OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
-	} catch (ex) {
-		console.warn('ex:', ex);
-		try {
-			OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
-		} catch (ex) {
-			console.warn('ex:', ex);
-			OSPath_saveDir = OS.Constants.Path.desktopDir;
-		}
+	var OSPath_save;
+	var do_saveCanToDisk = function() {
+		(can.toBlobHD || can.toBlob).call(can, function(b) {
+			var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
+			r.onloadend = function() {
+				// r.result contains the ArrayBuffer.
+				var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
+				promise_saveToDisk.then(
+					function(aVal) {
+						console.log('Fullfilled - promise_saveToDisk - ', aVal);
+						// start - do stuff here - promise_saveToDisk
+						var trans = Transferable(owin);
+						trans.addDataFlavor('text/unicode');
+						// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+						trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
+						
+						Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+						
+						myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'File Path Copied', 'Screenshot was successfully saved and file path was copied to clipboard');
+						// end - do stuff here - promise_saveToDisk
+					},
+					function(aReason) {
+						var rejObj = {name:'promise_saveToDisk', aReason:aReason};
+						console.error('Rejected - promise_saveToDisk - ', rejObj);
+						myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Error', 'Screenshot failed to save to disk, see browser console for more details');
+						//deferred_createProfile.reject(rejObj);
+					}
+				).catch(
+					function(aCaught) {
+						var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
+						console.error('Caught - promise_saveToDisk - ', rejObj);
+						myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'CATCH', 'developer error stupid');
+						//deferred_createProfile.reject(rejObj);
+					}
+				);
+			};
+			r.readAsArrayBuffer(b);
+		}, 'image/png');
 	}
 	
-	// generate file name
-	var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
-	var OSPath_save = OS.Path.join(OSPath_saveDir, filename);
-	
-	(can.toBlobHD || can.toBlob).call(can, function(b) {
-		var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
-		r.onloadend = function() {
-			// r.result contains the ArrayBuffer.
-			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
-			promise_saveToDisk.then(
-				function(aVal) {
-					console.log('Fullfilled - promise_saveToDisk - ', aVal);
-					// start - do stuff here - promise_saveToDisk
-					var trans = Transferable(owin);
-					trans.addDataFlavor('text/unicode');
-					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-					trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
-					
-					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-					
-					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'File Path Copied', 'Screenshot was successfully saved and file path was copied to clipboard');
-					// end - do stuff here - promise_saveToDisk
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-					console.error('Rejected - promise_saveToDisk - ', rejObj);
-					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Error', 'Screenshot failed to save to disk, see browser console for more details');
-					//deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-					console.error('Caught - promise_saveToDisk - ', rejObj);
-					myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'CATCH', 'developer error stupid');
-					//deferred_createProfile.reject(rejObj);
-				}
-			);
-		};
-		r.readAsArrayBuffer(b);
-	}, 'image/png');
+	if (!showFilePicker) {
+		// get save path
+		var OSPath_saveDir;
+		try {
+			OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+		} catch (ex) {
+			console.warn('ex:', ex);
+			try {
+				OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
+			} catch (ex) {
+				console.warn('ex:', ex);
+				OSPath_saveDir = OS.Constants.Path.desktopDir;
+			}
+		}
+		
+		// generate file name
+		var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
+		OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+		
+		do_saveCanToDisk();
+	} else {
+		var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+		fp.init(owin, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
+		fp.appendFilter('PNG Image', '*.png');
+		
+		var rv = fp.show();
+		if (rv != Ci.nsIFilePicker.returnOK) { return } // user canceled
+		
+		OSPath_save = fp.file.path;
+		
+		do_saveCanToDisk();
+	}
 	
 }
 // end - editor functions
