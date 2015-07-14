@@ -261,21 +261,33 @@ var macInit = function() {
 					break;
 				case 'libc':
 
-						if (core.os.name == 'darwin') {
-							_lib[path] = ctypes.open('libc.dylib');
-						} else if (core.os.name == 'freebsd') {
-							_lib[path] = ctypes.open('libc.so.7');
-						} else if (core.os.name == 'openbsd') {
-							_lib[path] = ctypes.open('libc.so.61.0');
-						} else if (core.os.name == 'sunos') {
-							_lib[path] = ctypes.open('libc.so');
-						}  else if (core.os.name == 'linux') {
-							_lib[path] = ctypes.open('libc.so.6');
-						} else {
-							throw new Error({
-								name: 'watcher-api-error',
-								message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
-							});
+						switch (core.os.name) {
+							case 'darwin':
+								_lib[path] = ctypes.open('libc.dylib');
+								break;
+							case 'freebsd':
+								_lib[path] = ctypes.open('libc.so.7');
+								break;
+							case 'openbsd':
+								_lib[path] = ctypes.open('libc.so.61.0');
+								break;
+							case 'android':
+							case 'sunos':
+							case 'netbsd': // physically unverified
+							case 'dragonfly': // physcially unverified
+								_lib[path] = ctypes.open('libc.so');
+								break;
+							case 'linux':
+								_lib[path] = ctypes.open('libc.so.6');
+								break;
+							case 'gnu/kfreebsd': // physically unverified
+								lib = ctypes.open('libc.so.0.1');
+								break;
+							default:
+								throw new Error({
+									name: 'watcher-api-error',
+									message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
+								});
 						}
 
 					break;

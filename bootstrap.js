@@ -147,6 +147,159 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			var can = doc.createElementNS(NS_HTML, 'canvas');
 			var ctx = can.getContext('2d');
 			
+			var postStuff = function() {
+				can.style.background = 'display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
+				//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
+
+				var json = 
+				[
+					'xul:stack', {id:'stack'},
+						['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;cursor:crosshair;'}],
+						['xul:box', {id:'divTools',style:'border:1px dashed #ccc;left:0;top:0;width:1px;height:1px;display:block;position:fixed;'}]
+				];
+
+				var el = {};
+				doc.documentElement.appendChild(jsonToDOM(json, doc, el));
+				el.stack.insertBefore(can, el.stack.firstChild);
+				
+				var ctxDim = el.canDim.getContext('2d');
+				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+				ctxDim.fillRect(0, 0, can.width, can.height);
+				
+				// event handlers - the reason i dont do this in the panel.xul file or import a .js file into is because i want the panel and canvas drawing to show asap, then worry about attaching js stuff. otherwise it will wait to load js file then trigger load.
+				var win = aEditorDOMWindow;
+				
+				var md_x; //mousedowned x pos
+				var md_y; //mousedowned y pos
+				var mousemove = function(e) {
+					var mm_x = e.layerX;
+					var mm_y = e.layerY;
+					var calc_x = (mm_x - md_x);
+					var calc_y = (mm_y - md_y);
+					
+					if (calc_x < 0) {
+						el.divTools.style.left = (md_x - Math.abs(calc_x)) + 'px';
+					} else {
+						el.divTools.style.left = md_x + 'px';
+					}
+					if (calc_y < 0) {
+						el.divTools.style.top = (md_y - Math.abs(calc_y)) + 'px';
+					} else {
+						el.divTools.style.top = md_y + 'px';
+					}
+					el.divTools.style.width =  Math.abs(calc_x) + 'px';
+					el.divTools.style.height = Math.abs(calc_y) + 'px';
+					
+					ctxDim.clearRect(0, 0, can.width, can.height);
+					ctxDim.fillRect(0, 0, can.width, can.height);
+					ctxDim.clearRect(parseInt(el.divTools.style.left)+1, parseInt(el.divTools.style.top)+1, parseInt(el.divTools.style.width)-1, parseInt(el.divTools.style.height)-1);
+				};
+				
+				var inSelecting;
+				win.addEventListener('mousedown', function(e) {
+					if (e.button != 0) {
+						return;
+					}
+					if (e.target.id != 'canDim') {
+						return;
+					}
+					console.info('mousedown', 'e:', e);
+					inSelecting = true;
+					ctxDim.clearRect(0, 0, can.width, can.height);
+					ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+					ctxDim.fillRect(0, 0, can.width, can.height);
+					el.divTools.style.pointerEvents = 'none';
+					md_x = e.layerX;
+					md_y = e.layerY;
+					el.divTools.style.left = md_x + 'px';
+					el.divTools.style.top = md_y + 'px';
+					el.divTools.style.width = '1px';
+					el.divTools.style.height = '1px';
+					win.addEventListener('mousemove', mousemove, false);
+				});
+				
+				win.addEventListener('mouseup', function(e) {
+					if (!inSelecting) {
+						return;
+					}
+					inSelecting = false;
+					console.info('mouseup', 'e:', e);
+					win.removeEventListener('mousemove', mousemove, false);
+					el.divTools.style.pointerEvents = '';
+				});
+				
+				var menuJson = 
+					['xul:popupset', {},
+						['xul:menupopup', {id: 'myMenu1'},
+							['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
+							['xul:menuseparator', {}],
+							['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
+							['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
+							['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
+							['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Amazon Cloud Drive'}],
+									['xul:menuitem', {label:'Box'}],
+									['xul:menuitem', {label:'Copy by Barracuda Networks'}],
+									['xul:menuitem', {label:'Dropbox'}],
+									['xul:menuitem', {label:'Google Drive'}],
+									['xul:menuitem', {label:'MEGA'}],
+									['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
+								]
+							],
+							['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Flickr'}],
+									['xul:menuitem', {label:'Image Shack'}],
+									['xul:menuitem', {label:'Imgur'}],
+									['xul:menuitem', {label:'Photobucket'}]
+								]
+							],
+							['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'FreeImageHosting.net'}],
+									['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
+								]
+							],
+							['xul:menu', {label:'Share to Social Media'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Facebook'}],
+									['xul:menuitem', {label:'Twitter'}]
+								]
+							],
+							['xul:menuitem', {label:'Print Image'}],
+							['xul:menuseparator', {}],
+							['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Current Monitor'}],
+									['xul:menuitem', {label:'All Monitors'}],
+									['xul:menuitem', {label:'Monitor 1'}],
+									['xul:menuitem', {label:'Monitor 2'}]
+								]
+							],
+							['xul:menu', {label:'Selection to Application Window'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
+									['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
+										['xul:menupopup', {},
+											['xul:menuitem', {label:'Window 1'}],
+											['xul:menuitem', {label:'Window 2'}],
+											['xul:menuitem', {label:'Window 3'}]
+										]
+									],
+									['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
+								]
+							]
+						]
+					];
+
+				doc.documentElement.appendChild(jsonToDOM(menuJson, doc, el));
+				doc.documentElement.setAttribute('context', 'myMenu1');
+				
+				console.timeEnd('mainthread');
+				console.timeEnd('takeShot');
+			};
+			
 			switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 				case 'winnt':
 				case 'winmo':
@@ -181,6 +334,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						
 						aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
 						aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
+						
+						postStuff();
 						
 					break;
 				case 'gtk':
@@ -217,9 +372,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 									aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
 									aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 									*/
-								aEditorDOMWindow.moveTo(collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
-								aEditorDOMWindow.resizeTo(collCanMonInfos[0].nWidth, collCanMonInfos[0].nHeight);
-
 								
 								can.width = collCanMonInfos[0].nWidth;
 								can.height = collCanMonInfos[0].nHeight;
@@ -227,7 +379,13 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								ctx.putImageData(collCanMonInfos[0].idat, 0, 0);
 								//aEditorDOMWindow.fullScreen = true;
 								
+								
+								aEditorDOMWindow.moveTo(collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
+								aEditorDOMWindow.resizeTo(collCanMonInfos[0].nWidth, collCanMonInfos[0].nHeight);
+								
 								collCanMonInfos = null;
+								
+								postStuff();
 									
 								//}, 1000);
 								// end - do stuff here - promise_makeWinFullAllMon
@@ -256,156 +414,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					console.error('os not supported');
 			}
 			
-			can.style.background = 'display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
-			//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
-
-			var json = 
-			[
-				'xul:stack', {id:'stack'},
-					['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;cursor:crosshair;'}],
-					['xul:box', {id:'divTools',style:'border:1px dashed #ccc;left:0;top:0;width:1px;height:1px;display:block;position:fixed;'}]
-			];
-
-			var el = {};
-			doc.documentElement.appendChild(jsonToDOM(json, doc, el));
-			el.stack.insertBefore(can, el.stack.firstChild);
-			
-			var ctxDim = el.canDim.getContext('2d');
-			ctxDim.fillStyle = 'rgba(0,0,0,.6)';
-			ctxDim.fillRect(0, 0, can.width, can.height);
-			
-			// event handlers - the reason i dont do this in the panel.xul file or import a .js file into is because i want the panel and canvas drawing to show asap, then worry about attaching js stuff. otherwise it will wait to load js file then trigger load.
-			var win = aEditorDOMWindow;
-			
-			var md_x; //mousedowned x pos
-			var md_y; //mousedowned y pos
-			var mousemove = function(e) {
-				var mm_x = e.layerX;
-				var mm_y = e.layerY;
-				var calc_x = (mm_x - md_x);
-				var calc_y = (mm_y - md_y);
-				
-				if (calc_x < 0) {
-					el.divTools.style.left = (md_x - Math.abs(calc_x)) + 'px';
-				} else {
-					el.divTools.style.left = md_x + 'px';
-				}
-				if (calc_y < 0) {
-					el.divTools.style.top = (md_y - Math.abs(calc_y)) + 'px';
-				} else {
-					el.divTools.style.top = md_y + 'px';
-				}
-				el.divTools.style.width =  Math.abs(calc_x) + 'px';
-				el.divTools.style.height = Math.abs(calc_y) + 'px';
-				
-				ctxDim.clearRect(0, 0, can.width, can.height);
-				ctxDim.fillRect(0, 0, can.width, can.height);
-				ctxDim.clearRect(parseInt(el.divTools.style.left)+1, parseInt(el.divTools.style.top)+1, parseInt(el.divTools.style.width)-1, parseInt(el.divTools.style.height)-1);
-			};
-			
-			var inSelecting;
-			win.addEventListener('mousedown', function(e) {
-				if (e.button != 0) {
-					return;
-				}
-				if (e.target.id != 'canDim') {
-					return;
-				}
-				console.info('mousedown', 'e:', e);
-				inSelecting = true;
-				ctxDim.clearRect(0, 0, can.width, can.height);
-				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
-				ctxDim.fillRect(0, 0, can.width, can.height);
-				el.divTools.style.pointerEvents = 'none';
-				md_x = e.layerX;
-				md_y = e.layerY;
-				el.divTools.style.left = md_x + 'px';
-				el.divTools.style.top = md_y + 'px';
-				el.divTools.style.width = '1px';
-				el.divTools.style.height = '1px';
-				win.addEventListener('mousemove', mousemove, false);
-			});
-			
-			win.addEventListener('mouseup', function(e) {
-				if (!inSelecting) {
-					return;
-				}
-				inSelecting = false;
-				console.info('mouseup', 'e:', e);
-				win.removeEventListener('mousemove', mousemove, false);
-				el.divTools.style.pointerEvents = '';
-			});
-			
-			var menuJson = 
-				['xul:popupset', {},
-					['xul:menupopup', {id: 'myMenu1'},
-						['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
-						['xul:menuseparator', {}],
-						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
-						['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
-						['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
-						['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Amazon Cloud Drive'}],
-								['xul:menuitem', {label:'Box'}],
-								['xul:menuitem', {label:'Copy by Barracuda Networks'}],
-								['xul:menuitem', {label:'Dropbox'}],
-								['xul:menuitem', {label:'Google Drive'}],
-								['xul:menuitem', {label:'MEGA'}],
-								['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
-							]
-						],
-						['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Flickr'}],
-								['xul:menuitem', {label:'Image Shack'}],
-								['xul:menuitem', {label:'Imgur'}],
-								['xul:menuitem', {label:'Photobucket'}]
-							]
-						],
-						['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'FreeImageHosting.net'}],
-								['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
-							]
-						],
-						['xul:menu', {label:'Share to Social Media'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Facebook'}],
-								['xul:menuitem', {label:'Twitter'}]
-							]
-						],
-						['xul:menuitem', {label:'Print Image'}],
-						['xul:menuseparator', {}],
-						['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Current Monitor'}],
-								['xul:menuitem', {label:'All Monitors'}],
-								['xul:menuitem', {label:'Monitor 1'}],
-								['xul:menuitem', {label:'Monitor 2'}]
-							]
-						],
-						['xul:menu', {label:'Selection to Application Window'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
-								['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
-									['xul:menupopup', {},
-										['xul:menuitem', {label:'Window 1'}],
-										['xul:menuitem', {label:'Window 2'}],
-										['xul:menuitem', {label:'Window 3'}]
-									]
-								],
-								['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
-							]
-						]
-					]
-				];
-
-			doc.documentElement.appendChild(jsonToDOM(menuJson, doc, el));
-			doc.documentElement.setAttribute('context', 'myMenu1');
-			
-			console.timeEnd('mainthread');
-			console.timeEnd('takeShot');
 }
 // end - observer handlers
 // start - editor functions

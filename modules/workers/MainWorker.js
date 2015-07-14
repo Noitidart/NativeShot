@@ -134,7 +134,7 @@ function makeWinFullAllMon(aHwndStr, aOptions={}) {
 				
 				//var rez_Unconstrain = ostypes.API('gtk_window_set_position')(gtkWinPtr, ostypes.CONST.GTK_WIN_POS_NONE);
 				
-				var rez_focus = ostypes.API('gtk_window_present')(gtkWinPtr);
+				//var rez_focus = ostypes.API('gtk_window_present')(gtkWinPtr);
 				
 				// var geom = ostypes.TYPE.GdkGeometry();
 				// geom.max_width = aOptions.fullWidth;
