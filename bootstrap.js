@@ -332,8 +332,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 
 						collCanMonInfos = null;
 						
-						// aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
-						// aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
+						aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
+						aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 						
 						var aHwndStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
 										.getInterface(Ci.nsIWebNavigation)
