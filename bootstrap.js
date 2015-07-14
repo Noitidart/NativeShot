@@ -196,7 +196,10 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 
 
 						
-						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr]);
+						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr, {
+							fullWidth: collCanMonInfos[0].nWidth,
+							fullHeight: collCanMonInfos[0].nHeight
+						}]);
 						promise_makeWinFullAllMon.then(
 							function(aVal) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
