@@ -112,6 +112,20 @@ function init(objCore) {
 function makeWinFullAllMon(aHwndStr, aOptions={}) {
 	// makes a window full across all monitors (so an extension of fullscreen)
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+			
+				if (!('topLeftMostX' in aOptions) || !('topLeftMostY' in aOptions)) {
+					throw new Error('winnt requries topLeftMostX and topLeftMostY');
+				}
+				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {
+					throw new Error('winnt requries fullWidth and fullHeight');
+				}
+				
+				var aHwnd = ostypes.TYPE.HWND.ptr(ctypes.UInt64(aHwndStr));
+				var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions.topLeftMostX, aOptions.topLeftMostY, aOptions.fullWidth, aOptions.fullHeight, 0/*ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW*/);
+				console.info('rez_setTop:', rez_setTop);
+				
+			break;
 		case 'gtk':
 			
 				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {

@@ -290,7 +290,11 @@ var winInit = function() {
 		MONITOR_DEFAULTTONEAREST: 2,
 		S_OK: 0,
 		SRCCOPY: self.TYPE.DWORD('0x00CC0020'),
-		VERTRES: 10
+		VERTRES: 10,
+		HWND_TOPMOST: self.TYPE.HWND(-1), // toString: "ctypes.voidptr_t(ctypes.UInt64("0xffffffff"))" cannot do self.TYPE.HWND('-1') as that puts out `TypeError: can't convert the string "-1" to the type ctypes.voidptr_t`
+		SWP_NOSIZE: 1,
+		SWP_NOMOVE: 2,
+		SWP_NOREDRAW: 8
 	};
 
 	var _lib = {}; // cache for lib
@@ -672,6 +676,29 @@ var winInit = function() {
 				self.TYPE.HGDIOBJ, //return
 				self.TYPE.HDC, // hdc
 				self.TYPE.HGDIOBJ // hgdiobj
+			);
+		},
+		SetWindowPos: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms633545%28v=vs.85%29.aspx
+			 * BOOL WINAPI SetWindowPos(
+			 *   __in_     HWND hWnd,
+			 *   __in_opt_ HWND hWndInsertAfter,
+			 *   __in_     int  X,
+			 *   __in_     int  Y,
+			 *   __in_     int  cx,
+			 *   __in_     int  cy,
+			 *   __in_     UINT uFlags
+			 *);
+			 */
+			return lib('user32').declare('SetWindowPos', self.TYPE.ABI,
+				self.TYPE.BOOL,				// return
+				self.TYPE.HWND,				// hWnd
+				self.TYPE.HWND,				// hWndInsertAfter
+				self.TYPE.INT,				// X
+				self.TYPE.INT,				// Y
+				self.TYPE.INT,				// cx
+				self.TYPE.INT,				// cy
+				self.TYPE.UINT				// uFlags
 			);
 		}
 	};
