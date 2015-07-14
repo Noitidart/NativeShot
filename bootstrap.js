@@ -383,6 +383,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								aEditorDOMWindow.moveTo(collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
 								aEditorDOMWindow.resizeTo(collCanMonInfos[0].nWidth, collCanMonInfos[0].nHeight);
 								
+								var ctypesGTK = get_gtk_ctypes();
+								
+								ctypesGTK.gtk_window_present(ctypesGTK.gdkWinPtrToGtkWinPtr(ctypesGTK.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr))));
+								console.error('did do gtk_window_present from mainthread succesfully!! from thread this would crash instantly');
+								
 								collCanMonInfos = null;
 								
 								postStuff();
@@ -719,11 +724,16 @@ function get_gtk_ctypes() {
 	if (!_cache_get_gtk_ctypes) {
 		_cache_get_gtk_ctypes = {
 			lib: ctypes.open('libgdk-x11-2.0.so.0'),
+			libGtk2: ctypes.open('libgtk-x11-2.0.so.0'),
 			TYPE: {
-				GdkPixbuf: ctypes.StructType('GdkPixbuf'),
-				GdkDrawable: ctypes.StructType('GdkDrawable'),
 				GdkColormap: ctypes.StructType('GdkColormap'),
-				int: ctypes.int
+				GdkDrawable: ctypes.StructType('GdkDrawable'),
+				GdkWindow: ctypes.StructType('GdkWindow'),
+				GdkPixbuf: ctypes.StructType('GdkPixbuf'),
+				gpointer: ctypes.void_t.ptr,
+				GtkWindow: ctypes.StructType('GtkWindow'),
+				int: ctypes.int,
+				void: ctypes.void_t
 			}
 		};
 		_cache_get_gtk_ctypes.gdk_pixbuf_get_from_drawable = _cache_get_gtk_ctypes.lib.declare('gdk_pixbuf_get_from_drawable', ctypes.default_abi,
@@ -738,6 +748,21 @@ function get_gtk_ctypes() {
 			_cache_get_gtk_ctypes.TYPE.int,				// width
 			_cache_get_gtk_ctypes.TYPE.int				// height
 		);
+		_cache_get_gtk_ctypes.gtk_window_present = _cache_get_gtk_ctypes.libGtk2.declare('gtk_window_present', ctypes.default_abi,
+			_cache_get_gtk_ctypes.TYPE.void.ptr,		// return
+			_cache_get_gtk_ctypes.TYPE.GtkWindow.ptr	// *window
+		);
+		_cache_get_gtk_ctypes.gdk_window_get_user_data = _cache_get_gtk_ctypes.lib.declare('gdk_window_get_user_data', ctypes.default_abi,
+				_cache_get_gtk_ctypes.TYPE.void,				// return
+				_cache_get_gtk_ctypes.TYPE.GdkWindow.ptr,	// *window
+				_cache_get_gtk_ctypes.TYPE.gpointer.ptr		// *data
+		);
+		_cache_get_gtk_ctypes.gdkWinPtrToGtkWinPtr = function(aGDKWindowPtr) {
+			var gptr = _cache_get_gtk_ctypes.TYPE.gpointer();
+			_cache_get_gtk_ctypes.gdk_window_get_user_data(aGDKWindowPtr, gptr.address());
+			var GtkWinPtr = ctypes.cast(gptr, _cache_get_gtk_ctypes.TYPE.GtkWindow.ptr);
+			return GtkWinPtr;
+		};
 	}
 	return _cache_get_gtk_ctypes;
 }
