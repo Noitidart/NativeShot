@@ -42,6 +42,8 @@ var gtkTypes = function() {
 	this.GdkScreen = ctypes.StructType('GdkScreen');
 	this.GtkWidget = ctypes.StructType('GtkWidget');
 	this.GtkWindow = ctypes.StructType('GtkWindow');
+	this.GtkWindowPosition = ctypes.int;
+	this.GdkWindowTypeHint = ctypes.int;
 	this.gint = ctypes.int;
 	this.gpointer = ctypes.void_t.ptr;
 	this.guchar = ctypes.unsigned_char;
@@ -122,7 +124,9 @@ var gtkInit = function() {
 	// CONSTANTS
 	this.CONST = {
 		GDK_FULLSCREEN_ON_CURRENT_MONITOR: 0,
-		GDK_FULLSCREEN_ON_ALL_MONITORS: 1
+		GDK_FULLSCREEN_ON_ALL_MONITORS: 1,
+		WINDOW_TYPE_HINT_SPLASHSCREEN: 4,
+		GTK_WIN_POS_NONE: 0
 	};
 
 	var _lib = {}; // cache for lib
@@ -655,6 +659,67 @@ var gtkInit = function() {
 				self.TYPE.void,				// void
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.GdkFullscreenMode	// mode
+			);
+		},
+		gtk_window_set_keep_above: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-keep-above
+			 * void gtk_window_set_keep_above (
+			 *   GtkWindow *window,
+			 *   gboolean setting
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_keep_above', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.gboolean			// setting
+			);
+		},
+		gdk_window_set_type_hint: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-set-type-hint
+			 * void gdk_window_set_type_hint (
+			 *   GdkWindow *window,
+			 *   GdkWindowTypeHint hint
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_set_type_hint', self.TYPE.ABI,
+				self.TYPE.void,					// return
+				self.TYPE.GdkWindow.ptr,		// *window
+				self.TYPE.GdkWindowTypeHint		// hint
+			);
+		},
+		gtk_window_set_position: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-position
+			 *   void gtk_window_set_position (
+			 *   GtkWindow *window,
+			 *   GtkWindowPosition position
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_position', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.GtkWindowPosition	// position
+			);
+		},
+		gtk_window_present: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-present
+			 * void gtk_window_present (
+			 *   GtkWindow *window
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_present', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.GtkWindow.ptr	// *window
+			);
+		},
+		gtk_window_fullscreen: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-fullscreen
+			 * void gtk_window_fullscreen (
+			 *   GtkWindow *window
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_fullscreen', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.GtkWindow.ptr	// *window
 			);
 		}
 		// libgdk_pixbuf-2.0-0
