@@ -109,11 +109,15 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-function makeWinFullAllMon(aHwndStr) {
+function makeWinFullAllMon(aHwndStr, aOptions={}) {
 	// makes a window full across all monitors (so an extension of fullscreen)
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'gtk':
 			
+				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {
+					throw new Error('gtk requries fullWidth and fullHeight');
+				}
+				
 				console.info('incoming aHwndStr:', aHwndStr);
 				//var aHwnd = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr));
 				//var rez_setMode = ostypes.API('gdk_window_set_fullscreen_mode', aHwnd, ostypes.CONST.GDK_FULLSCREEN_ON_ALL_MONITORS);
@@ -131,6 +135,11 @@ function makeWinFullAllMon(aHwndStr) {
 				//var rez_Unconstrain = ostypes.API('gtk_window_set_position')(gtkWinPtr, ostypes.CONST.GTK_WIN_POS_NONE);
 				
 				var rez_focus = ostypes.API('gtk_window_present')(gtkWinPtr);
+				
+				// var geom = ostypes.TYPE.GdkGeometry();
+				// geom.max_width = aOptions.fullWidth;
+				// geom.max_height = aOptions.fullHeight;
+				// var rez_geo = ostypes.API('gtk_window_set_geometry_hints')(gtkWinPtr, null, geom.address(), ostypes.CONST.GDK_HINT_MAX_SIZE);
 				
 			break;
 		default:
