@@ -35,15 +35,20 @@ var gtkTypes = function() {
 	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
 	this.GdkDrawable = ctypes.StructType('GdkDrawable');
 	this.GdkFullscreenMode = ctypes.int;
+	this.GdkGravity = ctypes.int;
 	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
+	this.GdkScreen = ctypes.StructType('GdkScreen');
 	this.GdkWindow = ctypes.StructType('GdkWindow');
+	this.GdkWindowHints = ctypes.int;
+	this.GdkWindowTypeHint = ctypes.int;
+	this.gdouble = ctypes.double;
 	this.GFile = ctypes.StructType('_GFile');
 	this.GFileMonitor = ctypes.StructType('_GFileMonitor');
-	this.GdkScreen = ctypes.StructType('GdkScreen');
-	this.GtkWidget = ctypes.StructType('GtkWidget');
-	this.GtkWindow = ctypes.StructType('GtkWindow');
 	this.gint = ctypes.int;
 	this.gpointer = ctypes.void_t.ptr;
+	this.GtkWidget = ctypes.StructType('GtkWidget');
+	this.GtkWindow = ctypes.StructType('GtkWindow');
+	this.GtkWindowPosition = ctypes.int;
 	this.guchar = ctypes.unsigned_char;
 	this.guint = ctypes.unsigned_int;
 	this.guint32 = ctypes.unsigned_int;
@@ -100,6 +105,19 @@ var gtkTypes = function() {
 		{ code: this.gint },
 		{ message: this.gchar.ptr }
 	]);
+	this.GdkGeometry = ctypes.StructType('GdkGeometry', [ // https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#GdkGeometry
+		{ min_width: this.gint },
+		{ min_height: this.gint },
+		{ max_width: this.gint },
+		{ max_height: this.gint },
+		{ base_width: this.gint },
+		{ base_height: this.gint },
+		{ width_inc: this.gint },
+		{ height_inc: this.gint },
+		{ min_aspect: this.gdouble },
+		{ max_aspect: this.gdouble },
+		{ win_gravity: this.GdkGravity }
+	]);
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first
 
 	// FURTHER ADVANCED STRUCTS
@@ -122,7 +140,28 @@ var gtkInit = function() {
 	// CONSTANTS
 	this.CONST = {
 		GDK_FULLSCREEN_ON_CURRENT_MONITOR: 0,
-		GDK_FULLSCREEN_ON_ALL_MONITORS: 1
+		GDK_FULLSCREEN_ON_ALL_MONITORS: 1,
+		WINDOW_TYPE_HINT_SPLASHSCREEN: 4,
+		GTK_WIN_POS_NONE: 0,
+		GDK_HINT_POS: 0,
+		GDK_HINT_MIN_SIZE: 1,
+		GDK_HINT_MAX_SIZE: 2,
+		GDK_HINT_BASE_SIZE: 3,
+		GDK_HINT_ASPECT: 4,
+		GDK_HINT_RESIZE_INC: 5,
+		GDK_HINT_WIN_GRAVITY: 6,
+		GDK_HINT_USER_POS: 7,
+		GDK_HINT_USER_SIZE: 8,
+		GDK_GRAVITY_NORTH_WEST: 0,
+		GDK_GRAVITY_NORTH: 1,
+		GDK_GRAVITY_NORTH_EAST: 2,
+		GDK_GRAVITY_WEST: 3,
+		GDK_GRAVITY_CENTER: 4,
+		GDK_GRAVITY_EAST: 5,
+		GDK_GRAVITY_SOUTH_WEST: 6,
+		GDK_GRAVITY_SOUTH: 7,
+		GDK_GRAVITY_SOUTH_EAST: 8,
+		GDK_GRAVITY_STATIC: 9
 	};
 
 	var _lib = {}; // cache for lib
@@ -655,6 +694,84 @@ var gtkInit = function() {
 				self.TYPE.void,				// void
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.GdkFullscreenMode	// mode
+			);
+		},
+		gtk_window_set_keep_above: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-keep-above
+			 * void gtk_window_set_keep_above (
+			 *   GtkWindow *window,
+			 *   gboolean setting
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_keep_above', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.gboolean			// setting
+			);
+		},
+		gdk_window_set_type_hint: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-set-type-hint
+			 * void gdk_window_set_type_hint (
+			 *   GdkWindow *window,
+			 *   GdkWindowTypeHint hint
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_set_type_hint', self.TYPE.ABI,
+				self.TYPE.void,					// return
+				self.TYPE.GdkWindow.ptr,		// *window
+				self.TYPE.GdkWindowTypeHint		// hint
+			);
+		},
+		gtk_window_set_position: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-position
+			 *   void gtk_window_set_position (
+			 *   GtkWindow *window,
+			 *   GtkWindowPosition position
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_position', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.GtkWindowPosition	// position
+			);
+		},
+		gtk_window_present: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-present
+			 * void gtk_window_present (
+			 *   GtkWindow *window
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_present', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.GtkWindow.ptr	// *window
+			);
+		},
+		gtk_window_fullscreen: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-fullscreen
+			 * void gtk_window_fullscreen (
+			 *   GtkWindow *window
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_fullscreen', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.GtkWindow.ptr	// *window
+			);
+		},
+		gtk_window_set_geometry_hints: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-geometry-hints
+			 * void gtk_window_set_geometry_hints (
+			 *   GtkWindow *window,
+			 *   GtkWidget *geometry_widget,
+			 *   GdkGeometry *geometry,
+			 *   GdkWindowHints geom_mask
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_geometry_hints', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.GtkWidget.ptr,	// *geometry_widget
+				self.TYPE.GdkGeometry.ptr,	// *geometry
+				self.TYPE.GdkWindowHints	// geom_mask
 			);
 		}
 		// libgdk_pixbuf-2.0-0

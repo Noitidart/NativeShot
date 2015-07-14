@@ -184,7 +184,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						
 					break;
 				case 'gtk':
-					
+
 						var aHwndStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
 										.getInterface(Ci.nsIWebNavigation)
 										.QueryInterface(Ci.nsIDocShellTreeItem)
@@ -193,13 +193,42 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										.getInterface(Ci.nsIBaseWindow)
 										.nativeHandle;
 
-						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr]);
+
+
+						
+						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr, {
+							fullWidth: collCanMonInfos[0].nWidth,
+							fullHeight: collCanMonInfos[0].nHeight
+						}]);
 						promise_makeWinFullAllMon.then(
 							function(aVal) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
 								// start - do stuff here - promise_makeWinFullAllMon
 								//aEditorDOMWindow.setTimeout(function() {
-									aEditorDOMWindow.fullScreen = true;
+									//aEditorDOMWindow.fullScreen = true;
+									/*
+									can.width = collCanMonInfos[0].nWidth;
+									can.height = collCanMonInfos[0].nHeight;
+									
+									ctx.putImageData(collCanMonInfos[0].idat, collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
+
+									collCanMonInfos = null;
+									
+									aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
+									aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
+									*/
+								aEditorDOMWindow.moveTo(collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
+								aEditorDOMWindow.resizeTo(collCanMonInfos[0].nWidth, collCanMonInfos[0].nHeight);
+
+								
+								can.width = collCanMonInfos[0].nWidth;
+								can.height = collCanMonInfos[0].nHeight;
+								
+								ctx.putImageData(collCanMonInfos[0].idat, 0, 0);
+								//aEditorDOMWindow.fullScreen = true;
+								
+								collCanMonInfos = null;
+									
 								//}, 1000);
 								// end - do stuff here - promise_makeWinFullAllMon
 							},
@@ -215,13 +244,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 								//deferred_createProfile.reject(rejObj);
 							}
 						);
-						
-						can.width = collCanMonInfos[0].nWidth;
-						can.height = collCanMonInfos[0].nHeight;
-						
-						ctx.putImageData(collCanMonInfos[0].idat, collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
-
-						collCanMonInfos = null;
 						
 					break;
 				
