@@ -147,6 +147,159 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			var can = doc.createElementNS(NS_HTML, 'canvas');
 			var ctx = can.getContext('2d');
 			
+			var postStuff = function() {
+				can.style.background = 'display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
+				//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
+
+				var json = 
+				[
+					'xul:stack', {id:'stack'},
+						['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;cursor:crosshair;'}],
+						['xul:box', {id:'divTools',style:'border:1px dashed #ccc;left:0;top:0;width:1px;height:1px;display:block;position:fixed;'}]
+				];
+
+				var el = {};
+				doc.documentElement.appendChild(jsonToDOM(json, doc, el));
+				el.stack.insertBefore(can, el.stack.firstChild);
+				
+				var ctxDim = el.canDim.getContext('2d');
+				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+				ctxDim.fillRect(0, 0, can.width, can.height);
+				
+				// event handlers - the reason i dont do this in the panel.xul file or import a .js file into is because i want the panel and canvas drawing to show asap, then worry about attaching js stuff. otherwise it will wait to load js file then trigger load.
+				var win = aEditorDOMWindow;
+				
+				var md_x; //mousedowned x pos
+				var md_y; //mousedowned y pos
+				var mousemove = function(e) {
+					var mm_x = e.layerX;
+					var mm_y = e.layerY;
+					var calc_x = (mm_x - md_x);
+					var calc_y = (mm_y - md_y);
+					
+					if (calc_x < 0) {
+						el.divTools.style.left = (md_x - Math.abs(calc_x)) + 'px';
+					} else {
+						el.divTools.style.left = md_x + 'px';
+					}
+					if (calc_y < 0) {
+						el.divTools.style.top = (md_y - Math.abs(calc_y)) + 'px';
+					} else {
+						el.divTools.style.top = md_y + 'px';
+					}
+					el.divTools.style.width =  Math.abs(calc_x) + 'px';
+					el.divTools.style.height = Math.abs(calc_y) + 'px';
+					
+					ctxDim.clearRect(0, 0, can.width, can.height);
+					ctxDim.fillRect(0, 0, can.width, can.height);
+					ctxDim.clearRect(parseInt(el.divTools.style.left)+1, parseInt(el.divTools.style.top)+1, parseInt(el.divTools.style.width)-1, parseInt(el.divTools.style.height)-1);
+				};
+				
+				var inSelecting;
+				win.addEventListener('mousedown', function(e) {
+					if (e.button != 0) {
+						return;
+					}
+					if (e.target.id != 'canDim') {
+						return;
+					}
+					console.info('mousedown', 'e:', e);
+					inSelecting = true;
+					ctxDim.clearRect(0, 0, can.width, can.height);
+					ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+					ctxDim.fillRect(0, 0, can.width, can.height);
+					el.divTools.style.pointerEvents = 'none';
+					md_x = e.layerX;
+					md_y = e.layerY;
+					el.divTools.style.left = md_x + 'px';
+					el.divTools.style.top = md_y + 'px';
+					el.divTools.style.width = '1px';
+					el.divTools.style.height = '1px';
+					win.addEventListener('mousemove', mousemove, false);
+				});
+				
+				win.addEventListener('mouseup', function(e) {
+					if (!inSelecting) {
+						return;
+					}
+					inSelecting = false;
+					console.info('mouseup', 'e:', e);
+					win.removeEventListener('mousemove', mousemove, false);
+					el.divTools.style.pointerEvents = '';
+				});
+				
+				var menuJson = 
+					['xul:popupset', {},
+						['xul:menupopup', {id: 'myMenu1'},
+							['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
+							['xul:menuseparator', {}],
+							['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
+							['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
+							['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
+							['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Amazon Cloud Drive'}],
+									['xul:menuitem', {label:'Box'}],
+									['xul:menuitem', {label:'Copy by Barracuda Networks'}],
+									['xul:menuitem', {label:'Dropbox'}],
+									['xul:menuitem', {label:'Google Drive'}],
+									['xul:menuitem', {label:'MEGA'}],
+									['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
+								]
+							],
+							['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Flickr'}],
+									['xul:menuitem', {label:'Image Shack'}],
+									['xul:menuitem', {label:'Imgur'}],
+									['xul:menuitem', {label:'Photobucket'}]
+								]
+							],
+							['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'FreeImageHosting.net'}],
+									['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
+								]
+							],
+							['xul:menu', {label:'Share to Social Media'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Facebook'}],
+									['xul:menuitem', {label:'Twitter'}]
+								]
+							],
+							['xul:menuitem', {label:'Print Image'}],
+							['xul:menuseparator', {}],
+							['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Current Monitor'}],
+									['xul:menuitem', {label:'All Monitors'}],
+									['xul:menuitem', {label:'Monitor 1'}],
+									['xul:menuitem', {label:'Monitor 2'}]
+								]
+							],
+							['xul:menu', {label:'Selection to Application Window'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
+									['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
+										['xul:menupopup', {},
+											['xul:menuitem', {label:'Window 1'}],
+											['xul:menuitem', {label:'Window 2'}],
+											['xul:menuitem', {label:'Window 3'}]
+										]
+									],
+									['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
+								]
+							]
+						]
+					];
+
+				doc.documentElement.appendChild(jsonToDOM(menuJson, doc, el));
+				doc.documentElement.setAttribute('context', 'myMenu1');
+				
+				console.timeEnd('mainthread');
+				console.timeEnd('takeShot');
+			};
+			
 			switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 				case 'winnt':
 				case 'winmo':
@@ -182,6 +335,42 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
 						aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 						
+						var aHwndStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+										.getInterface(Ci.nsIWebNavigation)
+										.QueryInterface(Ci.nsIDocShellTreeItem)
+										.treeOwner
+										.QueryInterface(Ci.nsIInterfaceRequestor)
+										.getInterface(Ci.nsIBaseWindow)
+										.nativeHandle;
+						
+						var promise_makeWinFullAllMon = MainWorker.post('makeWinFullAllMon', [aHwndStr, {
+							fullWidth: fullWidth,
+							fullHeight: fullHeight,
+							topLeftMostX: topLeftMostX,
+							topLeftMostY: topLeftMostY
+						}]);
+						promise_makeWinFullAllMon.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
+								// start - do stuff here - promise_makeWinFullAllMon
+
+								// end - do stuff here - promise_makeWinFullAllMon
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_makeWinFullAllMon', aReason:aReason};
+								console.error('Rejected - promise_makeWinFullAllMon - ', rejObj);
+								//deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_makeWinFullAllMon', aCaught:aCaught};
+								console.error('Caught - promise_makeWinFullAllMon - ', rejObj);
+								//deferred_createProfile.reject(rejObj);
+							}
+						);
+						
+						postStuff();
+						
 					break;
 				case 'gtk':
 
@@ -204,32 +393,25 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 							function(aVal) {
 								console.log('Fullfilled - promise_makeWinFullAllMon - ', aVal);
 								// start - do stuff here - promise_makeWinFullAllMon
-								//aEditorDOMWindow.setTimeout(function() {
-									//aEditorDOMWindow.fullScreen = true;
-									/*
-									can.width = collCanMonInfos[0].nWidth;
-									can.height = collCanMonInfos[0].nHeight;
-									
-									ctx.putImageData(collCanMonInfos[0].idat, collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
-
-									collCanMonInfos = null;
-									
-									aEditorDOMWindow.moveTo(topLeftMostX, topLeftMostY);
-									aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
-									*/
 								aEditorDOMWindow.moveTo(collCanMonInfos[0].xTopLeft, collCanMonInfos[0].yTopLeft);
 								aEditorDOMWindow.resizeTo(collCanMonInfos[0].nWidth, collCanMonInfos[0].nHeight);
 
-								
 								can.width = collCanMonInfos[0].nWidth;
 								can.height = collCanMonInfos[0].nHeight;
 								
 								ctx.putImageData(collCanMonInfos[0].idat, 0, 0);
 								//aEditorDOMWindow.fullScreen = true;
 								
-								collCanMonInfos = null;
-									
-								//}, 1000);
+								var ctypesGTK = get_gtk_ctypes();
+								
+								ctypesGTK.gtk_window_present(ctypesGTK.gdkWinPtrToGtkWinPtr(ctypesGTK.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr))));
+								console.error('did do gtk_window_present from mainthread succesfully!! from thread this would crash instantly');
+								
+
+								//collCanMonInfos = null;
+								
+								postStuff();
+
 								// end - do stuff here - promise_makeWinFullAllMon
 							},
 							function(aReason) {
@@ -256,156 +438,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					console.error('os not supported');
 			}
 			
-			can.style.background = 'display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
-			//doc.documentElement.appendChild(can); // this is larger then set widht and height and it just busts through, interesting, when i had set openWindow feature width and height to 100 each it wouldnt constrain this, weird
-
-			var json = 
-			[
-				'xul:stack', {id:'stack'},
-					['html:canvas', {id:'canDim',width:can.width,height:can.height,style:'display:-moz-box;cursor:crosshair;'}],
-					['xul:box', {id:'divTools',style:'border:1px dashed #ccc;left:0;top:0;width:1px;height:1px;display:block;position:fixed;'}]
-			];
-
-			var el = {};
-			doc.documentElement.appendChild(jsonToDOM(json, doc, el));
-			el.stack.insertBefore(can, el.stack.firstChild);
-			
-			var ctxDim = el.canDim.getContext('2d');
-			ctxDim.fillStyle = 'rgba(0,0,0,.6)';
-			ctxDim.fillRect(0, 0, can.width, can.height);
-			
-			// event handlers - the reason i dont do this in the panel.xul file or import a .js file into is because i want the panel and canvas drawing to show asap, then worry about attaching js stuff. otherwise it will wait to load js file then trigger load.
-			var win = aEditorDOMWindow;
-			
-			var md_x; //mousedowned x pos
-			var md_y; //mousedowned y pos
-			var mousemove = function(e) {
-				var mm_x = e.layerX;
-				var mm_y = e.layerY;
-				var calc_x = (mm_x - md_x);
-				var calc_y = (mm_y - md_y);
-				
-				if (calc_x < 0) {
-					el.divTools.style.left = (md_x - Math.abs(calc_x)) + 'px';
-				} else {
-					el.divTools.style.left = md_x + 'px';
-				}
-				if (calc_y < 0) {
-					el.divTools.style.top = (md_y - Math.abs(calc_y)) + 'px';
-				} else {
-					el.divTools.style.top = md_y + 'px';
-				}
-				el.divTools.style.width =  Math.abs(calc_x) + 'px';
-				el.divTools.style.height = Math.abs(calc_y) + 'px';
-				
-				ctxDim.clearRect(0, 0, can.width, can.height);
-				ctxDim.fillRect(0, 0, can.width, can.height);
-				ctxDim.clearRect(parseInt(el.divTools.style.left)+1, parseInt(el.divTools.style.top)+1, parseInt(el.divTools.style.width)-1, parseInt(el.divTools.style.height)-1);
-			};
-			
-			var inSelecting;
-			win.addEventListener('mousedown', function(e) {
-				if (e.button != 0) {
-					return;
-				}
-				if (e.target.id != 'canDim') {
-					return;
-				}
-				console.info('mousedown', 'e:', e);
-				inSelecting = true;
-				ctxDim.clearRect(0, 0, can.width, can.height);
-				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
-				ctxDim.fillRect(0, 0, can.width, can.height);
-				el.divTools.style.pointerEvents = 'none';
-				md_x = e.layerX;
-				md_y = e.layerY;
-				el.divTools.style.left = md_x + 'px';
-				el.divTools.style.top = md_y + 'px';
-				el.divTools.style.width = '1px';
-				el.divTools.style.height = '1px';
-				win.addEventListener('mousemove', mousemove, false);
-			});
-			
-			win.addEventListener('mouseup', function(e) {
-				if (!inSelecting) {
-					return;
-				}
-				inSelecting = false;
-				console.info('mouseup', 'e:', e);
-				win.removeEventListener('mousemove', mousemove, false);
-				el.divTools.style.pointerEvents = '';
-			});
-			
-			var menuJson = 
-				['xul:popupset', {},
-					['xul:menupopup', {id: 'myMenu1'},
-						['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
-						['xul:menuseparator', {}],
-						['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
-						['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
-						['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
-						['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Amazon Cloud Drive'}],
-								['xul:menuitem', {label:'Box'}],
-								['xul:menuitem', {label:'Copy by Barracuda Networks'}],
-								['xul:menuitem', {label:'Dropbox'}],
-								['xul:menuitem', {label:'Google Drive'}],
-								['xul:menuitem', {label:'MEGA'}],
-								['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
-							]
-						],
-						['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Flickr'}],
-								['xul:menuitem', {label:'Image Shack'}],
-								['xul:menuitem', {label:'Imgur'}],
-								['xul:menuitem', {label:'Photobucket'}]
-							]
-						],
-						['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'FreeImageHosting.net'}],
-								['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
-							]
-						],
-						['xul:menu', {label:'Share to Social Media'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Facebook'}],
-								['xul:menuitem', {label:'Twitter'}]
-							]
-						],
-						['xul:menuitem', {label:'Print Image'}],
-						['xul:menuseparator', {}],
-						['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Current Monitor'}],
-								['xul:menuitem', {label:'All Monitors'}],
-								['xul:menuitem', {label:'Monitor 1'}],
-								['xul:menuitem', {label:'Monitor 2'}]
-							]
-						],
-						['xul:menu', {label:'Selection to Application Window'},
-							['xul:menupopup', {},
-								['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
-								['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
-									['xul:menupopup', {},
-										['xul:menuitem', {label:'Window 1'}],
-										['xul:menuitem', {label:'Window 2'}],
-										['xul:menuitem', {label:'Window 3'}]
-									]
-								],
-								['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
-							]
-						]
-					]
-				];
-
-			doc.documentElement.appendChild(jsonToDOM(menuJson, doc, el));
-			doc.documentElement.setAttribute('context', 'myMenu1');
-			
-			console.timeEnd('mainthread');
-			console.timeEnd('takeShot');
 }
 // end - observer handlers
 // start - editor functions
@@ -711,11 +743,16 @@ function get_gtk_ctypes() {
 	if (!_cache_get_gtk_ctypes) {
 		_cache_get_gtk_ctypes = {
 			lib: ctypes.open('libgdk-x11-2.0.so.0'),
+			libGtk2: ctypes.open('libgtk-x11-2.0.so.0'),
 			TYPE: {
-				GdkPixbuf: ctypes.StructType('GdkPixbuf'),
-				GdkDrawable: ctypes.StructType('GdkDrawable'),
 				GdkColormap: ctypes.StructType('GdkColormap'),
-				int: ctypes.int
+				GdkDrawable: ctypes.StructType('GdkDrawable'),
+				GdkWindow: ctypes.StructType('GdkWindow'),
+				GdkPixbuf: ctypes.StructType('GdkPixbuf'),
+				gpointer: ctypes.void_t.ptr,
+				GtkWindow: ctypes.StructType('GtkWindow'),
+				int: ctypes.int,
+				void: ctypes.void_t
 			}
 		};
 		_cache_get_gtk_ctypes.gdk_pixbuf_get_from_drawable = _cache_get_gtk_ctypes.lib.declare('gdk_pixbuf_get_from_drawable', ctypes.default_abi,
@@ -730,6 +767,21 @@ function get_gtk_ctypes() {
 			_cache_get_gtk_ctypes.TYPE.int,				// width
 			_cache_get_gtk_ctypes.TYPE.int				// height
 		);
+		_cache_get_gtk_ctypes.gtk_window_present = _cache_get_gtk_ctypes.libGtk2.declare('gtk_window_present', ctypes.default_abi,
+			_cache_get_gtk_ctypes.TYPE.void.ptr,		// return
+			_cache_get_gtk_ctypes.TYPE.GtkWindow.ptr	// *window
+		);
+		_cache_get_gtk_ctypes.gdk_window_get_user_data = _cache_get_gtk_ctypes.lib.declare('gdk_window_get_user_data', ctypes.default_abi,
+				_cache_get_gtk_ctypes.TYPE.void,				// return
+				_cache_get_gtk_ctypes.TYPE.GdkWindow.ptr,	// *window
+				_cache_get_gtk_ctypes.TYPE.gpointer.ptr		// *data
+		);
+		_cache_get_gtk_ctypes.gdkWinPtrToGtkWinPtr = function(aGDKWindowPtr) {
+			var gptr = _cache_get_gtk_ctypes.TYPE.gpointer();
+			_cache_get_gtk_ctypes.gdk_window_get_user_data(aGDKWindowPtr, gptr.address());
+			var GtkWinPtr = ctypes.cast(gptr, _cache_get_gtk_ctypes.TYPE.GtkWindow.ptr);
+			return GtkWinPtr;
+		};
 	}
 	return _cache_get_gtk_ctypes;
 }
@@ -756,7 +808,8 @@ function takeShot(aDOMWin) {
 				break;
 			case 'gtk':
 				
-					
+					topLeftMostX = collCanMonInfos[0].xTopLeft;
+					topLeftMostY = collCanMonInfos[0].yTopLeft;
 				
 				break;
 			
@@ -769,7 +822,7 @@ function takeShot(aDOMWin) {
 				console.error('os not supported');
 		}
 		
-		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,width=1,height=1,screenX=0,screenY=0', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
+		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
 		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
 		console.info('aEditorDOMWindow:', aEditorDOMWindow);
 		
