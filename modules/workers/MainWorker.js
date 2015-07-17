@@ -172,8 +172,9 @@ function shootAllMons() {
 			break;
 		case 'gtk':
 			
-				//
 				var collMonInfos = [];
+				/*
+				// method 1 for monitor infos
 				
 				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
 				console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
@@ -205,6 +206,86 @@ function shootAllMons() {
 						h: cutils.jscGetDeepest(rect.height)
 					})
 				}
+				*/
+				
+				// method 2 for monitor infos
+				var rezArr = [];
+				var mgr = ostypes.API('gdk_display_manager_get')();
+				console.info('mgr:', mgr.toString());
+				
+				var gslist = ostypes.API('gdk_display_manager_list_displays')(mgr);
+				console.info('gslist mgr:', gslist.toString());
+				
+				var d = -1;
+				var gfunc_js = function(data, user_data) {
+					d++;
+					//console.log('in gfunc_js, d:', d, 'data:', data.toString(), 'user_data', user_data.toString());
+					
+					var data_gdkDisp = ctypes.cast(data, ostypes.TYPE.GdkDisplay.ptr);
+					
+					var nScreens = cutils.jscGetDeepest(ostypes.API('gdk_display_get_n_screens')(data_gdkDisp));
+					//console.info('nScreens for d=' + d + ':', nScreens.toString());
+					
+					console.info('- display #' + d + ' has ' + nScreens + ' screens');
+					
+					var rezObjPerDisp = {mon:[], pixbuf:[]};
+					for (var s=0; s<nScreens; s++) {
+						var cScreen = ostypes.API('gdk_display_get_screen')(data_gdkDisp, s);
+						//console.info('cScreen:', cScreen.toString());
+						var nMonitors = cutils.jscGetDeepest(ostypes.API('gdk_screen_get_n_monitors')(cScreen));
+						//console.info('nMonitors:', nMonitors.toString());
+						console.info('-- screen #' + s + ' of display #' + d + ' has ' + nMonitors + ' monitors');
+						for (var m=0; m<nMonitors; m++) {
+							var gdkRect = ostypes.TYPE.GdkRectangle();
+							ostypes.API('gdk_screen_get_monitor_geometry')(cScreen, m, gdkRect.address());
+							console.info('mon geo for d=' + d + ' and s=' + s + ' and m=' + m + ':', gdkRect.toString());
+							collMonInfos.push({
+								x: cutils.jscGetDeepest(gdkRect.x),
+								y: cutils.jscGetDeepest(gdkRect.y),
+								w: cutils.jscGetDeepest(gdkRect.width),
+								h: cutils.jscGetDeepest(gdkRect.height)
+							});
+							console.info('--- monitor #' + m + ' of screen #' + s + ' of display #' + d + ' has dimensions:', collMonInfos);
+						}
+						
+						/*
+						
+						var cRootWin = ostypes.API('gdk_screen_get_root_window')(cScreen);
+						console.info('cRootWin for d=' + d + ' and s=' + s + ':', cRootWin.toString());
+						
+						var cWidth = ostypes.API('gdk_screen_get_width')(cScreen);
+						console.info('cWidth for d=' + d + ' and s=' + s + ':', cWidth.toString());
+						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
+						console.info('cHeight for d=' + d + ' and s=' + s + ':', cHeight.toString());
+						
+						var useMethod = 'gdk2'; // or gdk3
+						
+						if (useMethod == 'gdk2') {
+							var cColormap = null; //GdkColormap();
+							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
+							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
+							var cDrawable = ctypes.cast(gtkRootWin, ostypes.TYPE.GdkDrawable.ptr);
+							var dest_x = 0;
+							var dest_y = 0;
+							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
+							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
+							//var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
+						} else if (useMethod == 'gdk3') {						
+							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
+							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
+							//var pixbuf = ostypes.API('gdk_pixbuf_get_from_window')(gtkRootWin, src_x, src_y, cWidth, cHeight);
+						}
+						console.info('pixbuf for d=' + d + ' and s=' + s + ':', pixbuf.toString());
+						rezObjPerDisp.pixbuf.push(pixbuf);
+						*/
+					}
+					//rezArr.push(rezObjPerDisp);
+				};
+				
+				var gfunc_c = ostypes.TYPE.GFunc(gfunc_js);
+				
+				var rez_foreach = ostypes.API('g_slist_foreach')(gslist, gfunc_c, null);
+				console.info('rez_foreach:', rez_foreach);
 				
 				return collMonInfos;
 			
