@@ -160,6 +160,65 @@ function makeWinFullAllMon(aHwndStr, aOptions={}) {
 			console.error('os not supported');
 	}
 }
+
+function shootAllMons() {
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+		case 'winmo':
+		case 'wince':
+		
+				// 
+		
+			break;
+		case 'gtk':
+			
+				//
+				var collMonInfos = [];
+				
+				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
+				console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
+				
+				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(rootGdkWin);
+				
+				// the screen contains all monitors
+				var gdkScreen = ostypes.API('gtk_window_get_screen')(rootGtkWin);
+				console.info('gdkScreen:', gdkScreen.toString());
+				
+				var fullWidth = ostypes.API('gdk_screen_get_width')(gdkScreen);
+				var fullHeight = ostypes.API('gdk_screen_get_height')(gdkScreen);
+				
+				console.info('fullWidth:', fullWidth.toString(), 'fullHeight:', fullHeight.toString());
+				
+				// collect data about each monitor
+				var monitors = [];
+				var nmons = ostypes.API('gdk_screen_get_n_monitors')(gdkScreen);
+				console.info('number of monitors:', nmons);
+				nmons = cutils.jscGetDeepest(nmons);
+				
+				var rect = ostypes.TYPE.GdkRectangle();
+				for (var i=0; i<nmons; i++) {
+					var mg = ostypes.API('gdk_screen_get_monitor_geometry')(gdkScreen, i, rect.address());
+					collMonInfos.push({
+						x: cutils.jscGetDeepest(rect.x),
+						y: cutils.jscGetDeepest(rect.y),
+						w: cutils.jscGetDeepest(rect.width),
+						h: cutils.jscGetDeepest(rect.height)
+					})
+				}
+				
+				return collMonInfos;
+			
+			break;
+		case 'darwin':
+				
+				// 
+			
+			break;
+		default:
+			throw new Error('os not supported ' + core.os.name);
+	}
+}
+
 function shootMon(mons, aOptions={}) {
 	// mons
 		// 0 - primary monitor

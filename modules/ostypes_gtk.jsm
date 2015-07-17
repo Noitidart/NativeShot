@@ -465,6 +465,17 @@ var gtkInit = function() {
 				self.TYPE.gint				// screen_num
 			);
 		},
+		gtk_window_get_screen: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-get-screen
+			 * GdkScreen *gtk_window_get_screen (
+			 *   GtkWindow *window
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_get_screen', self.TYPE.ABI,
+				self.TYPE.GdkScreen.ptr,	// *return
+				self.TYPE.GtkWindow.ptr		// *window
+			);
+		},
 		gdk_screen_get_n_monitors: function() {
 			/* https://developer.gnome.org/gdk3/unstable/GdkScreen.html#gdk-screen-get-n-monitors
 			 * gint gdk_screen_get_n_monitors (
