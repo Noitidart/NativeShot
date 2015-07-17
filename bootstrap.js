@@ -821,10 +821,12 @@ function takeShot(aDOMWin) {
 			default:
 				console.error('os not supported');
 		}
-		
-		var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul', '_blank', 'chrome,width=1,height=1,screenX=0,screenY=0', null);  // tested on ubuntu: in order to use aEditorDOMWindow.fullScreen = true OR ctypes gdk_window_fullscreen must set screenX and screenY (maybe along with width and height) otherwise it wouldnt work took me forever to figure this one out
-		collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
-		console.info('aEditorDOMWindow:', aEditorDOMWindow);
+
+		for (var i=0; i<collCanMonInfos.length; i++) {
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?mon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
+			collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
+			console.info('aEditorDOMWindow:', aEditorDOMWindow);
+		}
 		
 		/*
 		var xulwin = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
