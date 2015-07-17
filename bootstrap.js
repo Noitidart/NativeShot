@@ -925,6 +925,32 @@ function takeShot(aDOMWin) {
 	
 }
 
+var collMonInfos;
+function shootAllMons(aDOMWindow) {
+	
+	var promise_shoot = MainWorker.post('shootAllMons', []);
+	promise_shoot.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_shoot - ', aVal);
+			// start - do stuff here - promise_shoot
+			collMonInfos = aVal;
+			console.info('collMonInfos:', collMonInfos);
+			// end - do stuff here - promise_shoot
+		},
+		function(aReason) {
+			var rejObj = {name:'promise_shoot', aReason:aReason};
+			console.warn('Rejected - promise_shoot - ', rejObj);
+			Services.prompt.alert(aDOMWin, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+		}
+	).catch(
+		function(aCaught) {
+			var rejObj = {name:'promise_shoot', aCaught:aCaught};
+			console.error('Caught - promise_shoot - ', rejObj);
+			Services.prompt.alert(aDOMWin, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
+		}
+	);
+}
+
 // END - Addon Functionalities
 // start - clipboard boilerplate
 // Create a constructor for the built-in supports-string class.
@@ -1066,11 +1092,11 @@ function startup(aData, aReason) {
 			if (aEvent.shiftKey == 1) {
 				// default time delay queue
 				aDOMWin.setTimeout(function() {
-					takeShot(aDOMWin);
+					shootAllMons(aDOMWin);
 				}, 5000);
 			} else {
 				// imemdiate freeze
-				takeShot(aDOMWin);
+				shootAllMons(aDOMWin);
 			}
 		}
 	});
