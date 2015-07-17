@@ -219,22 +219,6 @@ var gtkInit = function() {
 									message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
 								});
 						}
-						if (core.os.name == 'darwin') {
-							_lib[path] = ctypes.open('libc.dylib');
-						} else if (core.os.name == 'freebsd') {
-							_lib[path] = ctypes.open('libc.so.7');
-						} else if (core.os.name == 'openbsd') {
-							_lib[path] = ctypes.open('libc.so.61.0');
-						} else if (core.os.name == 'sunos') {
-							_lib[path] = ctypes.open('libc.so');
-						}  else if (core.os.name == 'linux') {
-							_lib[path] = ctypes.open('libc.so.6');
-						} else {
-							throw new Error({
-								name: 'watcher-api-error',
-								message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
-							});
-						}
 
 					break;
 				case 'x11':
