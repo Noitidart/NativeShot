@@ -208,7 +208,7 @@ var gEMDY = null; // mouse down y
 
 var gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
 
-var gESelectionRes = { // in screenX and screenY, holds dimenstions/resolution of the selected rectangle
+var gESelectionRes = { // in layerX and layerY, holds dimenstions/resolution of the selected rectangle
 	w: 0,
 	h: 0,
 	x: 0,
@@ -229,13 +229,21 @@ var gCanDim = {
 			var aCtxDim = colMon[i].E.ctxDim;
 			
 			// do special replacements in arugments
-			for (var j=0; i<aArrFuncArgs.length; j++) {
-				if (typeof aArrFuncArgs[j] == 'string') {
-					aArrFuncArgs[j].replace(/\{\{H\}\}/g, aCanDim.height); // replaces {{H}} with current canvas height
-					aArrFuncArgs[j].replace(/\{\{W\}\}/g, aCanDim.width); // replaces {{W}} with current canvas width
+			for (var j=0; j<aArrFuncArgs.length; j++) {
+				if (aArrFuncArgs[j] == '{{H}}') {
+					aArrFuncArgs[j] = aCanDim.height;
+				} else if (aArrFuncArgs[j] == '{{W}}') {
+					aArrFuncArgs[j] = aCanDim.width;
 				}
+				/*
+				if (typeof aArrFuncArgs[j] == 'string') {
+					aArrFuncArgs[j] = aArrFuncArgs[j].replace(/\{\{H\}\}/g, aCanDim.height); // replaces {{H}} with current canvas height
+					aArrFuncArgs[j] = aArrFuncArgs[j].replace(/\{\{W\}\}/g, aCanDim.width); // replaces {{W}} with current canvas width
+				}
+				*/
 			}
 			
+			console.log('applying arr:', aArrFuncArgs);
 			aCtxDim[aStrFuncName].apply(aCtxDim, aArrFuncArgs);
 		}
 	},
@@ -249,14 +257,18 @@ var gCanDim = {
 
 function gEMouseMove(e) {
 	if (gESelecting) {
-		var cEMMX = e.screenX;
-		var cEMMY= e.screenY;
+		var cEMMX = e.layerX;
+		var cEMMY= e.layerY;
 		
 		var newW = cEMMX - gEMDX;
 		var newH = cEMMY - gEMDY;
 		
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('clearRect', [gEMDX, gEMDY, cEMMX, cEMMY]);
+		
+		gCanDim.execFunc('clearRect', [gEMDX, gEMDY, newW, newH]);
+		
+		
 	} else if (gEMoving) {
 		// :todo:
 	}
@@ -264,28 +276,36 @@ function gEMouseMove(e) {
 function gEMouseUp(e) {
 	if (gESelecting) {
 		gESelecting = false;
-		gCanDim.execFunc('restore');
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
 		}
+		
+		if (newW && newH) { // :todo:
+			gESelected = true;
+		}
+		
+		gCanDim.execFunc('restore');
+		
 	} else if (gEMoving) {
 		gEMoving = false;
-		gCanDim.execFunc('restore');
+		
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
 		}
+		
+		gCanDim.execFunc('restore');
 	}
 }
 function gEMouseDown(e) {
 	console.info('mousedown, e:', e);
-	var cEMDX = e.screenX;
-	var cEMDY = e.screenY;
+	var cEMDX = e.layerX;
+	var cEMDY = e.layerY;
 	
 	// check if mouse downed on move selection hit box
 	if (e.target.id == 'hitboxMoveSel') {
 		gEMoving = true;
-		gEMDX = e.screenX;
-		gEMDX = e.screenY;
+		gEMDX = e.layerX;
+		gEMDY = e.layerY;
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 		}
@@ -297,17 +317,20 @@ function gEMouseDown(e) {
 			}
 		}
 		
+		gEMDX = e.layerX;
+		gEMDY = e.layerY;
+		
 		gCanDim.execFunc('save'); // save what ever previous styles user applied
 		
 		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
 		
-		gCanDim.execFunc('clear', ['{{W}}', '{{H}}']); // clear out any drawings existing here
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out any drawings existing here
+
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // make it all default fill color
 		
 		gESelecting = true;
 		gESelected = false;
-		gEMDX = e.screenX;
-		gEMDX = e.screenY;
+
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 		}
@@ -743,7 +766,7 @@ function shootAllMons(aDOMWindow) {
 	
 	var openWindowOnEachMon = function() {
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,layerX=1,layerY=1', null);
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow
 			};
