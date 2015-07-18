@@ -2,5 +2,5 @@
 <window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         hidechrome="true"
 		windowtype="nativeshot:editor"
-		onload="Components.utils.import('resource://gre/modules/Services.jsm');Services.obs.notifyObservers(null, 'NativeShot@jetpack_nativeshot-editor-loaded', null);">
+		onload="Components.utils.import('resource://gre/modules/Services.jsm');Services.obs.notifyObservers(null, 'NativeShot@jetpack_nativeshot-editor-loaded', parseInt(window.location.search.substr('?iMon='.length)));">
 </window>
