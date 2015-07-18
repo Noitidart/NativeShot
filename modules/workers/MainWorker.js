@@ -434,6 +434,7 @@ function shootAllMons() {
 				ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
 				console.timeEnd('memcpy');
 				
+				/*
 				console.time('make bgra to rgba');
 				var iref = imagedata.data;
 				for (var i=0; i<fullLen; i=i+4) {
@@ -442,6 +443,7 @@ function shootAllMons() {
 					iref[i+2] = B;
 				}
 				console.timeEnd('make bgra to rgba');
+				*/
 				// end - take shot of all monitors and push to just first element of collMonInfos
 				
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
@@ -456,10 +458,11 @@ function shootAllMons() {
 					var si = 0;
 					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
 						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
-							var pix1 = (2560*y*4) + (x * 4);
-							siref[si] = iref[pix1];
+							var pix1 = (fullWidth*y*4) + (x * 4);
+							var B = iref[pix1];
+							siref[si] = iref[pix1+2];
 							siref[si+1] = iref[pix1+1];
-							siref[si+2] = iref[pix1+2];
+							siref[si+2] = B;
 							siref[si+3] = 255;
 							si += 4;
 						}
