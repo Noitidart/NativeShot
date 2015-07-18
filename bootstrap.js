@@ -184,7 +184,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						break;
 					case 'gtk':
 
-							ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, -500, 0);
+							ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, 0, 0);
 							//ctxBase.putImageData(collMonInfos[0].screenshot, collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
 							
 						break;
