@@ -383,7 +383,7 @@ function shootAllMons() {
 								y: parseInt(cutils.jscGetDeepest(crtc_info.contents.y)),
 								w: parseInt(cutils.jscGetDeepest(crtc_info.contents.width)),
 								h: parseInt(cutils.jscGetDeepest(crtc_info.contents.height)),
-								screenshot: null // for gtk, only collMonInfos[0] will have screenshot data
+								screenshot: null // for gtk, i take the big canvas and protion to each mon
 							});
 
 							ostypes.API('XRRFreeCrtcInfo')(crtc_info);
@@ -447,16 +447,16 @@ function shootAllMons() {
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				console.time('portion out image data');
 				for (var i=0; i<collMonInfos.length; i++) {
-					var screnImagedata = new ImageData(collMonInfos[i].w, collMonInfos[i].h);
-					var siref = screnImagedata.data;
-					
 					var screenUseW = collMonInfos[i].w;
 					var screenUseH = collMonInfos[i].h;
+					
+					var screnImagedata = new ImageData(screenUseW, screenUseH);
+					var siref = screnImagedata.data;
 					
 					var si = 0;
 					for (var y=collMonInfos[i].y; y<screenUseH; y++) {
 						for (var x=collMonInfos[i].x; x<screenUseW; x++) {
-							var pix1 = (fullWidth*y*4) + (x*4);
+							var pix1 = (fullWidth*y*4) + (x*4+(fullWidth-screenUseW));
 							siref[si] = iref[pix1];
 							siref[si+1] = iref[pix1+1];
 							siref[si+2] = iref[pix1+2];
@@ -464,7 +464,7 @@ function shootAllMons() {
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = screnImagedata;
+					collMonInfos[i].screenshot = imagedata; //screnImagedata;
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
