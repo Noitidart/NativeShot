@@ -442,9 +442,32 @@ function shootAllMons() {
 					iref[i+2] = B;
 				}
 				console.timeEnd('make bgra to rgba');
-				
-				collMonInfos[0].screenshot = imagedata;
 				// end - take shot of all monitors and push to just first element of collMonInfos
+				
+				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
+				console.time('portion out image data');
+				for (var i=0; i<collMonInfos.length; i++) {
+					var screnImagedata = new ImageData(collMonInfos[i].w, collMonInfos[i].h);
+					var siref = screnImagedata.data;
+					
+					var screenUseW = collMonInfos[i].w;
+					var screenUseH = collMonInfos[i].h;
+					
+					var si = 0;
+					for (var y=collMonInfos[i].y; y<screenUseH; y++) {
+						for (var x=collMonInfos[i].x; x<screenUseW; x++) {
+							var pix1 = (screenUseW*y*4) + (x*4);
+							siref[si] = iref[pix1];
+							siref[si+1] = iref[pix1+1];
+							siref[si+2] = iref[pix1+2];
+							siref[si+3] = 255;
+							si += 4;
+						}
+					}
+					colMonInfos[i].screenshot = screnImagedata;
+				}
+				console.timeEnd('portion out image data');
+				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				
 				return collMonInfos;
 			
