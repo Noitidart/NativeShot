@@ -243,7 +243,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						aEditorDOMWindow.focus();
 						aEditorDOMWindow.fullScreen = true;
 						
-						aEditorDOMWindow.resizeBy(0, 0) // may need to as after going fullscreen it hides the special ui but it doesnt cover it, this makes it cover, and no animation shows on going fullscren which is excellent ah
+						aEditorDOMWindow.resizeBy(0, 1) // may need to as after going fullscreen it hides the special ui but it doesnt cover it, this makes it cover, and no animation shows on going fullscren which is excellent ah
 						
 						postStuff();
 					
