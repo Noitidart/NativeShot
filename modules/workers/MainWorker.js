@@ -403,10 +403,10 @@ function shootAllMons() {
 				var rez_XGetWinAttr = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), gwa.address());
 				console.info('gwa:', gwa.toString());
 				
-				var fullWidth = cutils.jscGetDeepest(gwa.width);
-				var fullHeight = cutils.jscGetDeepest(gwa.height);
-				var originX = cutils.jscGetDeepest(gwa.x);
-				var originY = cutils.jscGetDeepest(gwa.y);
+				var fullWidth = parseInt(cutils.jscGetDeepest(gwa.width));
+				var fullHeight = parseInt(cutils.jscGetDeepest(gwa.height));
+				var originX = parseInt(cutils.jscGetDeepest(gwa.x));
+				var originY = parseInt(utils.jscGetDeepest(gwa.y));
 				
 				console.info('fullWidth:', fullWidth, 'fullHeight:', fullHeight, 'originX:', originX, 'originY:', originY, '_END_');
 				
