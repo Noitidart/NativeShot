@@ -131,6 +131,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					continue;
 				}
 				if (aEditorDOMWindow.document.readyState == 'complete') {
+					var collMonInfosIndex = parseInt(aEditorDOMWindow.location.search.substr('?collMonInfosIndex='.length));
+					console.log('this path just loaded, collMonInfosIndex:', collMonInfosIndex);
 					collEditorDOMWindows.splice(i, 1);
 					aEditorFound = true;
 					break;
@@ -138,14 +140,60 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			}		
 	
 			if (!aEditorFound) {
-				console.error('WARNNNNING could not found editor dom window');
+				console.error('WARNNNNING could not find editor dom window');
 				return;
 			}
 			
-			aEditorDOMWindow.focus();
-			var doc = aEditorDOMWindow.document;			
-			var can = doc.createElementNS(NS_HTML, 'canvas');
-			var ctx = can.getContext('2d');
+			var aHwndStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+							.getInterface(Ci.nsIWebNavigation)
+							.QueryInterface(Ci.nsIDocShellTreeItem)
+							.treeOwner
+							.QueryInterface(Ci.nsIInterfaceRequestor)
+							.getInterface(Ci.nsIBaseWindow)
+							.nativeHandle;
+			
+			switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+				case 'winnt':
+				case 'winmo':
+				case 'wince':
+						
+						var doc = aEditorDOMWindow.document;			
+						var can = doc.createElementNS(NS_HTML, 'canvas');
+						var ctx = can.getContext('2d');
+						
+						aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
+						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
+						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
+						
+						aEditorDOMWindow.focus();
+						aEditorDOMWindow.fullScreen = true;
+						
+					break;
+				case 'gtk':
+
+						var doc = aEditorDOMWindow.document;			
+						var can = doc.createElementNS(NS_HTML, 'canvas');
+						var ctx = can.getContext('2d');
+						
+						aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
+						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
+						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
+						
+						aEditorDOMWindow.focus();
+						aEditorDOMWindow.fullScreen = true;
+						
+					break;
+				
+				case 'darwin':
+					
+						
+					
+					break;
+				default:
+					console.error('os not supported');
+			}
+			
+			return; // :debug:
 			
 			var postStuff = function() {
 				can.style.background = 'display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'
@@ -928,13 +976,21 @@ function takeShot(aDOMWin) {
 var collMonInfos;
 function shootAllMons(aDOMWindow) {
 	
+	var openWindowOnEachMon = function() {
+		for (var i=0; i<collMonInfos.length; i++) {
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?collMonInfosIndex=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
+			collEditorDOMWindows.push(Cu.getWeakReference(aEditorDOMWindow));
+			console.info('aEditorDOMWindow:', aEditorDOMWindow);
+		}
+	};
+	
 	var promise_shoot = MainWorker.post('shootAllMons', []);
 	promise_shoot.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_shoot - ', aVal);
 			// start - do stuff here - promise_shoot
 			collMonInfos = aVal;
-			console.info('collMonInfos:', collMonInfos);
+			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot
 		},
 		function(aReason) {
