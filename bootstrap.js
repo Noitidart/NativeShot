@@ -152,14 +152,58 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 							.getInterface(Ci.nsIBaseWindow)
 							.nativeHandle;
 			
+			var postStuff = function() {
+				
+				var w = collMonInfos[collMonInfosIndex].w;
+				var h = collMonInfos[collMonInfosIndex].h;
+				var doc = aEditorDOMWindow.document;
+				
+				var json = 
+				[
+					'xul:stack', {id:'stack'},
+						['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'}],
+						['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
+				];
+				
+				var elRef = {};
+				doc.documentElement.appendChild(jsonToDOM(json, doc, elRef));
+				
+				var ctxBase = elRef.canBase.getContext('2d');
+				var ctxDim = elRef.canDim.getContext('2d');
+				
+				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
+				ctxDim.fillRect(0, 0, w, h);
+				
+				switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+					case 'winnt':
+					case 'winmo':
+					case 'wince':
+							
+							ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, 0, 0);
+							
+						break;
+					case 'gtk':
+
+							ctxBase.putImageData(collMonInfos[0].screenshot, 0, 0, collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y, w, h);
+							
+						break;
+					
+					case 'darwin':
+						
+							
+						
+						break;
+					default:
+						console.error('os not supported');
+				}
+				
+				
+			};
+			
 			switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 				case 'winnt':
 				case 'winmo':
 				case 'wince':
-						
-						var doc = aEditorDOMWindow.document;			
-						var can = doc.createElementNS(NS_HTML, 'canvas');
-						var ctx = can.getContext('2d');
 						
 						aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
 						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
@@ -167,6 +211,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						
 						aEditorDOMWindow.focus();
 						aEditorDOMWindow.fullScreen = true;
+						
+						postStuff();
 						
 					break;
 				case 'gtk':
@@ -181,6 +227,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						
 						aEditorDOMWindow.focus();
 						aEditorDOMWindow.fullScreen = true;
+						
+						postStuff();
 						
 					break;
 				

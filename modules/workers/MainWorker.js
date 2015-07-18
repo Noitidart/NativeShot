@@ -203,6 +203,7 @@ function shootAllMons() {
 							y: parseInt(cutils.jscGetDeepest(dm.u.dmPosition.y)),
 							w: parseInt(cutils.jscGetDeepest(dm.dmPelsWidth)),
 							h: parseInt(cutils.jscGetDeepest(dm.dmPelsHeight)),
+							screenshot: null, // for winnt, each collMonInfos entry has screenshot data
 							otherInfo: {
 								nBPP: parseInt(cutils.jscGetDeepest(dm.dmBitsPerPel)),
 								lpszDriver: null,
@@ -212,6 +213,143 @@ function shootAllMons() {
 					}
 				}
 				// end - get all monitor resolutions
+		
+				// start - take shot of each monitor
+				for (var s=0; s<collMonInfos.length; s++) {
+					console.time('shot of screen ' + s);
+					var hdcScreen = ostypes.API('CreateDC')(collMonInfos[s].otherInfo.lpszDriver, collMonInfos[s].otherInfo.lpszDevice, null, null);
+					//console.info('hdcScreen:', hdcScreen.toString(), uneval(hdcScreen), cutils.jscGetDeepest(hdcScreen));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed hdcScreen, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					//delete collMonInfos[s].otherInfo.argsCreateDC; // as we dont want to return CData to mainthread AND no more need for it
+					
+					// var nWidth = 'nWidth' in rezArr[s] ? rezArr[s].nWidth : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
+					// var nHeight = 'nHeight' in rezArr[s] ? rezArr[s].nHeight : parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
+					// var nBPP = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.BITSPIXEL)));
+					// var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
+					// var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
+					// console.error('dpiX:', dpiX, 'dpiY:', dpiY);
+					// rezArr[s].nWidth = nWidth; // in case it didnt have nWidth in rezArr[s]
+					// rezArr[s].nHeight = nHeight; // in case it didnt have nHeight in rezArr[s]
+					// console.info('nWidth:', nWidth, 'nHeight:', nHeight, 'nBPP:', nBPP);
+					
+					var w = collMonInfos[s].w;
+					var h = collMonInfos[s].h;
+					
+					var modW = w % 4;
+					var useW = modW != 0 ? w + (4-modW) : w;
+					console.log('useW:', useW, 'realW:', w);
+					
+					var arrLen = useW * h * 4;
+					var imagedata = new ImageData(useW, h);
+					
+					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
+					//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed hdcMemoryDC, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hdcMemoryDC, winLastError: "' + ctypes.winLastError + '" and hdcMemoryDC: "' + hdcMemoryDC.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+
+					// CreateDIBSection stuff
+					var bmi = ostypes.TYPE.BITMAPINFO();
+					bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
+					bmi.bmiHeader.biWidth = w;
+					bmi.bmiHeader.biHeight = -1 * h; // top-down
+					bmi.bmiHeader.biPlanes = 1;
+					bmi.bmiHeader.biBitCount = collMonInfos[s].otherInfo.nBPP; // 32
+					bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
+					// bmi.bmiHeader.biXPelsPerMeter = dpiX;
+					// bmi.bmiHeader.biYPelsPerMeter = dpiY;
+					
+					// delete collMonInfos[s].nBPP; // mainthread has no more need for this
+					
+					var pixelBuffer = ostypes.TYPE.BYTE.ptr();
+					//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+					// CreateDIBSection stuff
+					
+					var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
+					if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
+						console.error('Failed hbmp, winLastError:', ctypes.winLastError, 'hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hbmp, winLastError: "' + ctypes.winLastError + '" and hbmp: "' + hbmp.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var rez_SO = ostypes.API('SelectObject')(hdcMemoryDC, hbmp);
+					//console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, w, h, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
+					//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					console.timeEnd('shot of screen ' + s);
+					
+					console.time('memcpy');
+					ostypes.API('memcpy')(imagedata.data, pixelBuffer, arrLen);
+					console.timeEnd('memcpy');
+					
+					// swap bytes to go from BRGA to RGBA
+					// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
+					console.time('BGRA -> RGBA');
+					var dataRef = imagedata.data;
+					var pos = 0;
+					while (pos < arrLen) {
+						var B = dataRef[pos];
+
+						dataRef[pos] = dataRef[pos+2];
+						dataRef[pos+2] = B;
+
+						pos += 4;
+					}
+					console.timeEnd('BGRA -> RGBA');
+					
+					collMonInfos[s].screenshot = imagedata;
+					
+					// release memory of screenshot stuff
+					delete collMonInfos[s].otherInfo;
+					// lpDisplayDevice = null;
+					dm = null;
+					// imagedata = null;
+					
+					var rez_DelDc1 = ostypes.API('DeleteDC')(hdcScreen);
+					console.log('rez_DelDc1:', rez_DelDc1);
+					
+					var rez_DelDc2 = ostypes.API('DeleteDC')(hdcMemoryDC);
+					console.log('rez_DelDc2:', rez_DelDc2);
+					
+					var rez_DelObj1 = ostypes.API('DeleteObject')(hbmp);
+					console.log('rez_DelObj1:', rez_DelObj1);
+				}
+				
+				// end - take shot of each monitor
 		
 				for (var i=0; i<collMonInfos.length; i++) {
 					delete collMonInfos[i].otherInfo;
@@ -244,7 +382,8 @@ function shootAllMons() {
 								x: parseInt(cutils.jscGetDeepest(crtc_info.contents.x)),
 								y: parseInt(cutils.jscGetDeepest(crtc_info.contents.y)),
 								w: parseInt(cutils.jscGetDeepest(crtc_info.contents.width)),
-								h: parseInt(cutils.jscGetDeepest(crtc_info.contents.height))
+								h: parseInt(cutils.jscGetDeepest(crtc_info.contents.height)),
+								screenshot: null // for gtk, only collMonInfos[0] will have screenshot data
 							});
 
 							ostypes.API('XRRFreeCrtcInfo')(crtc_info);
