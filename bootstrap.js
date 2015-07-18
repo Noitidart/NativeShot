@@ -174,30 +174,32 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				ctxDim.fillStyle = 'rgba(0,0,0,.6)';
 				ctxDim.fillRect(0, 0, w, h);
 				
+				ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, 0, 0);
+				
+				/*
 				switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 					case 'winnt':
 					case 'winmo':
 					case 'wince':
 							
-							ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, 0, 0);
+							// make window always on top
 							
 						break;
 					case 'gtk':
 
-							ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, 0, 0);
-							//ctxBase.putImageData(collMonInfos[0].screenshot, collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
+							// make window always on top
 							
 						break;
 					
 					case 'darwin':
-						
 							
+							// make window always on top
 						
 						break;
 					default:
 						console.error('os not supported');
 				}
-				
+				*/	
 				
 			};
 			
@@ -206,7 +208,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				case 'winmo':
 				case 'wince':
 						
-						aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
+						//aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
 						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
 						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 						
@@ -217,12 +219,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						
 					break;
 				case 'gtk':
-
-						var doc = aEditorDOMWindow.document;			
-						var can = doc.createElementNS(NS_HTML, 'canvas');
-						var ctx = can.getContext('2d');
 						
-						aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
+						//aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
 						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
 						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 						
@@ -235,7 +233,16 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				
 				case 'darwin':
 					
+						//aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
+						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
+						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
 						
+						aEditorDOMWindow.focus();
+						aEditorDOMWindow.fullScreen = true;
+						
+						//aEditorDOMWindow.resizeBy(0, 0) // may need to as after going fullscreen it hides the special ui but it doesnt cover it, this makes it cover, and no animation shows on going fullscren which is excellent ah
+						
+						postStuff();
 					
 					break;
 				default:
