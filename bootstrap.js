@@ -301,6 +301,10 @@ function gEMouseUp(e) {
 }
 function gEMouseDown(e) {
 	console.info('mousedown, e:', e);
+	
+	if (e.button != 0) { return } // only repsond to primary click
+	if (e.target.id != 'canDim') { return } // only repsond to primary click on canDim so this makes it ignore menu clicks etc
+	
 	var cEMDX = e.layerX;
 	var cEMDY = e.layerY;
 	
