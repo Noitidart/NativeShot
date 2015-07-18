@@ -464,7 +464,7 @@ function shootAllMons() {
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = imagedata; //screnImagedata;
+					collMonInfos[i].screenshot = screnImagedata;
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
