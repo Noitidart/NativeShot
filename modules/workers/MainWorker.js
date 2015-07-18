@@ -394,6 +394,58 @@ function shootAllMons() {
 				ostypes.API('XRRFreeScreenResources')(screen);
 				// end - get all monitor resolutions
 				
+				// start - take shot of all monitors and push to just first element of collMonInfos
+				// https://github.com/BoboTiG/python-mss/blob/a4d40507c492962d59fcb97a509ede1f4b8db634/mss.py#L116
+
+				// enum_display_monitors
+				// this call to XGetWindowAttributes grab one screenshot of all monitors
+				var gwa = ostypes.TYPE.XWindowAttributes();
+				var rez_XGetWinAttr = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), gwa.address());
+				console.info('gwa:', gwa.toString());
+				
+				var fullWidth = cutils.jscGetDeepest(gwa.width);
+				var fullHeight = cutils.jscGetDeepest(gwa.height);
+				var originX = cutils.jscGetDeepest(gwa.x);
+				var originY = cutils.jscGetDeepest(gwa.y);
+				
+				console.info('fullWidth:', fullWidth, 'fullHeight:', fullHeight, 'originX:', originX, 'originY:', originY, '_END_');
+				
+				// get_pixels
+				var allplanes = ostypes.API('XAllPlanes')();
+				console.info('allplanes:', allplanes.toString());
+				
+				var ZPixmap = 2;
+				
+				// Fix for XGetImage:
+				// expected LP_Display instance instead of LP_XWindowAttributes
+				// console.info('ostypes.HELPER.cachedDefaultRootWindow():', ostypes.HELPER.cachedDefaultRootWindow().toString());
+				// var rootAsDisp = ctypes.cast(ostypes.HELPER.cachedDefaultRootWindow(), ostypes.TYPE.Drawable.ptr);
+				
+				var ximage = ostypes.API('XGetImage')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), originX, originY, fullWidth, fullHeight, allplanes, ZPixmap);
+				console.info('width:', ximage.contents.width.toString(), 'height:', ximage.contents.height.toString(), 'xoffset:', ximage.contents.xoffset.toString(), 'format:', ximage.contents.format.toString(), 'data:', ximage.contents.data.toString(), 'byte_order:', ximage.contents.byte_order.toString(), 'bitmap_unit:', ximage.contents.bitmap_unit.toString(), 'bitmap_bit_order:', ximage.contents.bitmap_bit_order.toString(), 'bitmap_pad:', ximage.contents.bitmap_pad.toString(), 'depth:', ximage.contents.depth.toString(), 'bytes_per_line:', ximage.contents.bytes_per_line.toString(), 'bits_per_pixel:', ximage.contents.bits_per_pixel.toString(), 'red_mask:', ximage.contents.red_mask.toString(), 'green_mask:', ximage.contents.green_mask.toString(), 'blue_mask:', ximage.contents.blue_mask.toString(), '_END_');
+
+				var fullLen = 4 * fullWidth * fullHeight;
+				
+				console.time('init imagedata');
+				var imagedata = new ImageData(fullWidth, fullHeight);
+				console.timeEnd('init imagedata');
+
+				console.time('memcpy');
+				ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
+				console.timeEnd('memcpy');
+				
+				console.time('make bgra to rgba');
+				var iref = imagedata.data;
+				for (var i=0; i<fullLen; i=i+4) {
+					var B = iref[i];
+					iref[i] = iref[i+2];
+					iref[i+2] = B;
+				}
+				console.timeEnd('make bgra to rgba');
+				
+				collMonInfos[0].screenshot = imagedata;
+				// end - take shot of all monitors and push to just first element of collMonInfos
+				
 				return collMonInfos;
 			
 			break;
