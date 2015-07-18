@@ -118,7 +118,7 @@ var observers = {
 const gEMenuDomJson = 
 	['xul:popupset', {},
 		['xul:menupopup', {id: 'myMenu1'},
-			['xul:menuitem', {label:'Close', oncommand:function(){win.close()}}],
+			['xul:menuitem', {label:'Close', oncommand:'window.close()'}],
 			['xul:menuseparator', {}],
 			['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
 			['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
@@ -191,6 +191,7 @@ var colMon; // rename of collMonInfos
 	screenshot: ImageData of monitor screenshot
 	E: { editor props
 		DOMWindow: xul dom window
+		DOMWindowMarkedUnloaded: bool used for determining which ones to exec .close on when closing out all editor windows
 		canBase
 		ctxBase
 		canDim
@@ -205,6 +206,8 @@ var gEMoving = false; // user is moving rect
 var gEMDX = null; // mouse down x
 var gEMDY = null; // mouse down y
 
+var gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
+
 var gESelectionRes = { // in screenX and screenY, holds dimenstions/resolution of the selected rectangle
 	w: 0,
 	h: 0,
@@ -216,74 +219,62 @@ var gESelectionRes = { // in screenX and screenY, holds dimenstions/resolution o
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
-	fillStyle: {
-		l: '', // last
-		c: '' // currrent
-	},
-	lineDash: {
-		l: '', // last
-		c: '' // currrent
-	},
-	translate: {
-		l: '',
-		c: ''
-	},
-	clear: function() {
-		this.setFillStyle('rgba(0, 0, 0, 0.5)');
-		
+	execFunc: function(aStrFuncName, aArrFuncArgs=[]) {
+		if (!Array.isArray(aArrFuncArgs)) {
+			throw new Error('aArrFuncArgs must be an array');
+		}
+		// executes the ctx function across all ctx's
 		for (var i=0; i<colMon.length; i++) {
 			var aCanDim = colMon[i].E.canDim;
 			var aCtxDim = colMon[i].E.ctxDim;
-			// if (aEditorDOMWindow && !aEditorDOMWindow.closed) { // no longer test this, as if object exists i will assume that stuff exists, as on close of windows i should destory object for memory purposes
-			aCtxDim.clearRect(aCanDim.width, aCanDim.height);
-			aCtxDim.fillRect(aCanDim.width, aCanDim.height);
+			
+			// do special replacements in arugments
+			for (var j=0; i<aArrFuncArgs.length; j++) {
+				if (typeof aArrFuncArgs[j] == 'string') {
+					aArrFuncArgs[j].replace(/\{\{H\}\}/g, aCanDim.height); // replaces {{H}} with current canvas height
+					aArrFuncArgs[j].replace(/\{\{W\}\}/g, aCanDim.width); // replaces {{W}} with current canvas width
+				}
+			}
+			
+			aCtxDim[aStrFuncName].apply(aCtxDim, aArrFuncArgs);
 		}
-		
-		this.restoreFillStyle();
 	},
-	setFillStyle: function(aFillStyle) {
-		this.fillStyle.l = this.fillStyle.c;
-		this.fillStyle.c = aFillStyle;
-		
+	execProp: function(aStrPropName, aPropVal) {
 		for (var i=0; i<colMon.length; i++) {
-			var aCtxDim = colMon[i].E.ctxDim;
-			aCtxDim.fillStyle(aFillStyle);
+			var aCtxDim = colMon[i].E.ctxDim;			
+			aCtxDim[aStrPropName] = aPropVal;
 		}
-	},
-	setLineDash: function(aLineDash) {
-		this.lineDash.l = this.lineDash.c;
-		this.lineDash.c = aLineDash;
-		
-		for (var i=0; i<colMon.length; i++) {
-			var aCtxDim = colMon[i].E.ctxDim;
-			aCtxDim.setLineDash(aLineDash);
-		}
-	},
-	setTranslate: function(aTranslate) {
-		this.translate.l = this.translate.c;
-		this.translate.c = aTranslate;
-		var aXY = aTranslate.split(',');
-		for (var i=0; i<colMon.length; i++) {
-			var aCtxDim = colMon[i].E.ctxDim;
-			aCtxDim.translate(aXY[0], aXY[1]);
-		}
-	},
-	restoreFillStyle: function() {
-		this.setFillStyle(this.fillStyle.l);
-	},
-	restoreLineDash: function() {
-		this.setLineDash(this.lineDash.l);
-	},
-	restoreTranslate: function() {
-		this.setTranslate(this.translate.l);
 	}
 }
 
 function gEMouseMove(e) {
-	
+	if (gESelecting) {
+		var cEMMX = e.screenX;
+		var cEMMY= e.screenY;
+		
+		var newW = cEMMX - gEMDX;
+		var newH = cEMMY - gEMDY;
+		
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		gCanDim.execFunc('clearRect', [gEMDX, gEMDY, cEMMX, cEMMY]);
+	} else if (gEMoving) {
+		// :todo:
+	}
 }
 function gEMouseUp(e) {
-	
+	if (gESelecting) {
+		gESelecting = false;
+		gCanDim.execFunc('restore');
+		for (var i=0; i<colMon.length; i++) {
+			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+		}
+	} else if (gEMoving) {
+		gEMoving = false;
+		gCanDim.execFunc('restore');
+		for (var i=0; i<colMon.length; i++) {
+			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+		}
+	}
 }
 function gEMouseDown(e) {
 	console.info('mousedown, e:', e);
@@ -292,15 +283,33 @@ function gEMouseDown(e) {
 	
 	// check if mouse downed on move selection hit box
 	if (e.target.id == 'hitboxMoveSel') {
-		
+		gEMoving = true;
+		gEMDX = e.screenX;
+		gEMDX = e.screenY;
+		for (var i=0; i<colMon.length; i++) {
+			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
+		}
 	} else {
 		if (gESelected) {
 			// if user mouses down within selected area, then dont start new selection
 			if (cEMDX > gESelectionRes.x && cEMDX < gESelectionRes.eX && cEMDY > gESelectionRes.y && cEMDY < gESelectionRes.eY) {
-				
-			} else {
-				return;
+				return; // he clicked within it, dont do anything
 			}
+		}
+		
+		gCanDim.execFunc('save'); // save what ever previous styles user applied
+		
+		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
+		
+		gCanDim.execFunc('clear', ['{{W}}', '{{H}}']); // clear out any drawings existing here
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // make it all default fill color
+		
+		gESelecting = true;
+		gESelected = false;
+		gEMDX = e.screenX;
+		gEMDX = e.screenY;
+		for (var i=0; i<colMon.length; i++) {
+			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 		}
 	}
 	// else start selection
@@ -362,7 +371,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			// nothing special
 	}
 	
-	// start postStuff
+	// start - postStuff
+	
 	var w = colMon[iMon].w;
 	var h = colMon[iMon].h;
 	var doc = aEditorDOMWindow.document;
@@ -380,6 +390,13 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	var ctxBase = elRef.canBase.getContext('2d');
 	var ctxDim = elRef.canDim.getContext('2d');
+	
+	// set global E. props
+	colMon[iMon].E.canBase = elRef.canBase;
+	colMon[iMon].E.canDim = elRef.canDim;
+	colMon[iMon].E.ctxBase = ctxBase;
+	colMon[iMon].E.ctxDim = ctxDim;
+	
 	
 	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
 	ctxDim.fillRect(0, 0, w, h);
@@ -419,7 +436,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		default:
 			console.error('os not supported');
 	}
-	// end postStuff
+	
+	// end - postStuff
 }
 // end - observer handlers
 // start - editor functions
