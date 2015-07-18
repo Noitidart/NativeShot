@@ -233,7 +233,7 @@ function shootAllMons() {
 				var screenOutputs = ctypes.cast(screen.contents.outputs, ostypes.TYPE.RROutput.array(noutputs).ptr).contents;
 				for (var i=noutputs-1; i>=0; i--) {
 					var info = ostypes.API('XRRGetOutputInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, screenOutputs[i]);
-					if (cutils.jscEquals(info.connection, ostypes.CONST.RR_Connected)) {
+					if (cutils.jscEqual(info.connection, ostypes.CONST.RR_Connected)) {
 						var ncrtcs = parseInt(cutils.jscGetDeepest(info.contents.ncrtc));
 						var infoCrtcs = ctypes.cast(info.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtcs).ptr).contents;
 						for (var j=ncrtcs-1; j>=0; j--) {
