@@ -171,7 +171,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				var ctxBase = elRef.canBase.getContext('2d');
 				var ctxDim = elRef.canDim.getContext('2d');
 				
-				ctxDim.fillStyle = 'steelblue';
+				ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
 				ctxDim.fillRect(0, 0, w, h);
 				
 				ctxBase.putImageData(collMonInfos[collMonInfosIndex].screenshot, 0, 0);
@@ -205,52 +205,28 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				*/	
 				
 			};
+
+			aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
 			
+			aEditorDOMWindow.focus();
+			aEditorDOMWindow.fullScreen = true;
+			
+			// os specific special stuff
 			switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
-				case 'winnt':
-				case 'winmo':
-				case 'wince':
-						
-						//aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
-						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
-						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
-						
-						aEditorDOMWindow.focus();
-						aEditorDOMWindow.fullScreen = true;
-						
-						postStuff();
-						
-					break;
-				case 'gtk':
-						
-						//aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
-						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
-						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
-						
-						aEditorDOMWindow.focus();
-						aEditorDOMWindow.fullScreen = true;
-						
-						postStuff();
-						
-					break;
-				
 				case 'darwin':
 					
-						//aEditorDOMWindow.document.documentElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
-						aEditorDOMWindow.moveTo(collMonInfos[collMonInfosIndex].x, collMonInfos[collMonInfosIndex].y);
-						//aEditorDOMWindow.resizeTo(fullWidth, fullHeight);
-						
-						aEditorDOMWindow.focus();
-						aEditorDOMWindow.fullScreen = true;
-						
-						aEditorDOMWindow.resizeBy(0, 1) // may need to as after going fullscreen it hides the special ui but it doesnt cover it, this makes it cover, and no animation shows on going fullscren which is excellent ah
-						
-						postStuff();
+						aEditorDOMWindow.setTimeout(function() {
+							//aEditorDOMWindow.focus(); // doesnt work to make take full
+							//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+							aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+						}, 10);
 					
 					break;
 				default:
-					console.error('os not supported');
+					// nothing special
 			}
+			
+			postStuff();
 			
 			return; // :debug:
 			
