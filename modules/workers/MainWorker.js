@@ -406,7 +406,7 @@ function shootAllMons() {
 				var fullWidth = parseInt(cutils.jscGetDeepest(gwa.width));
 				var fullHeight = parseInt(cutils.jscGetDeepest(gwa.height));
 				var originX = parseInt(cutils.jscGetDeepest(gwa.x));
-				var originY = parseInt(utils.jscGetDeepest(gwa.y));
+				var originY = parseInt(cutils.jscGetDeepest(gwa.y));
 				
 				console.info('fullWidth:', fullWidth, 'fullHeight:', fullHeight, 'originX:', originX, 'originY:', originY, '_END_');
 				
