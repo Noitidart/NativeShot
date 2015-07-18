@@ -75,7 +75,7 @@ function init(objCore) {
 			importScripts(core.addon.path.content + 'modules/ostypes_win.jsm');
 			break
 		case 'gtk':
-			importScripts(core.addon.path.content + 'modules/ostypes_gtk.jsm');
+			importScripts(core.addon.path.content + 'modules/ostypes_x11.jsm');
 			break;
 		case 'darwin':
 			importScripts(core.addon.path.content + 'modules/ostypes_mac.jsm');
@@ -167,125 +167,93 @@ function shootAllMons() {
 		case 'winmo':
 		case 'wince':
 		
-				// 
+				// start - get all monitor resolutions
+				var collMonInfos = [];
+				
+				var iDevNum = -1;
+				while (true) {
+					iDevNum++;
+					var lpDisplayDevice = ostypes.TYPE.DISPLAY_DEVICE();
+					lpDisplayDevice.cb = ostypes.TYPE.DISPLAY_DEVICE.size;
+					var rez_EnumDisplayDevices = ostypes.API('EnumDisplayDevices')(null, iDevNum, lpDisplayDevice.address(), 0);
+					//console.info('rez_EnumDisplayDevices:', rez_EnumDisplayDevices.toString(), uneval(rez_EnumDisplayDevices), cutils.jscGetDeepest(rez_EnumDisplayDevices));
+					
+					if (cutils.jscEqual(rez_EnumDisplayDevices, 0)) { // ctypes.winLastError != 0
+						// iDevNum is greater than the largest device index.
+						break;
+					}
+					
+					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					
+					if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+						console.log('is monitor');
+						
+						var dm = ostypes.TYPE.DEVMODE(); // SIZEOF_DEVMODE = 148
+						console.info('dm.size:', ostypes.TYPE.DEVMODE.size);
+						//dm.dmFields = ostypes.CONST.DM_PELSWIDTH;
+						//dm.dmSize = ostypes.TYPE.DEVMODE.size;
+
+						console.log('iDevNum:', iDevNum, lpDisplayDevice.DeviceName.readString());
+						var rez_EnumDisplaySettings = ostypes.API('EnumDisplaySettings')(lpDisplayDevice.DeviceName, ostypes.CONST.ENUM_CURRENT_SETTINGS, dm.address());
+						//console.info('rez_EnumDisplaySettings:', rez_EnumDisplaySettings.toString(), uneval(rez_EnumDisplaySettings), cutils.jscGetDeepest(rez_EnumDisplaySettings));
+						//console.info('dm:', dm.toString());
+						
+						collMonInfos.push({
+							x: parseInt(cutils.jscGetDeepest(dm.u.dmPosition.x)),
+							y: parseInt(cutils.jscGetDeepest(dm.u.dmPosition.y)),
+							w: parseInt(cutils.jscGetDeepest(dm.dmPelsWidth)),
+							h: parseInt(cutils.jscGetDeepest(dm.dmPelsHeight)),
+							otherInfo: {
+								nBPP: parseInt(cutils.jscGetDeepest(dm.dmBitsPerPel)),
+								lpszDriver: null,
+								lpszDevice: lpDisplayDevice.DeviceName
+							}
+						});
+					}
+				}
+				// end - get all monitor resolutions
 		
+				for (var i=0; i<collMonInfos.length; i++) {
+					delete collMonInfos[i].otherInfo;
+				}
+				return collMonInfos;
+				
 			break;
 		case 'gtk':
 			
 				var collMonInfos = [];
-				/*
-				// method 1 for monitor infos
-				
-				var rootGdkWin = ostypes.API('gdk_get_default_root_window')();
-				console.info('rootGdkWin:', rootGdkWin.toString(), uneval(rootGdkWin), cutils.jscGetDeepest(rootGdkWin));
-				
-				var rootGtkWin = ostypes.HELPER.gdkWinPtrToGtkWinPtr(rootGdkWin);
-				
-				// the screen contains all monitors
-				var gdkScreen = ostypes.API('gtk_window_get_screen')(rootGtkWin);
-				console.info('gdkScreen:', gdkScreen.toString());
-				
-				var fullWidth = ostypes.API('gdk_screen_get_width')(gdkScreen);
-				var fullHeight = ostypes.API('gdk_screen_get_height')(gdkScreen);
-				
-				console.info('fullWidth:', fullWidth.toString(), 'fullHeight:', fullHeight.toString());
-				
-				// collect data about each monitor
-				var monitors = [];
-				var nmons = ostypes.API('gdk_screen_get_n_monitors')(gdkScreen);
-				console.info('number of monitors:', nmons);
-				nmons = cutils.jscGetDeepest(nmons);
-				
-				var rect = ostypes.TYPE.GdkRectangle();
-				for (var i=0; i<nmons; i++) {
-					var mg = ostypes.API('gdk_screen_get_monitor_geometry')(gdkScreen, i, rect.address());
-					collMonInfos.push({
-						x: cutils.jscGetDeepest(rect.x),
-						y: cutils.jscGetDeepest(rect.y),
-						w: cutils.jscGetDeepest(rect.width),
-						h: cutils.jscGetDeepest(rect.height)
-					})
-				}
-				*/
-				
-				// method 2 for monitor infos
-				var rezArr = [];
-				var mgr = ostypes.API('gdk_display_manager_get')();
-				console.info('mgr:', mgr.toString());
-				
-				var gslist = ostypes.API('gdk_display_manager_list_displays')(mgr);
-				console.info('gslist mgr:', gslist.toString());
-				
-				var d = -1;
-				var gfunc_js = function(data, user_data) {
-					d++;
-					//console.log('in gfunc_js, d:', d, 'data:', data.toString(), 'user_data', user_data.toString());
-					
-					var data_gdkDisp = ctypes.cast(data, ostypes.TYPE.GdkDisplay.ptr);
-					
-					var nScreens = cutils.jscGetDeepest(ostypes.API('gdk_display_get_n_screens')(data_gdkDisp));
-					//console.info('nScreens for d=' + d + ':', nScreens.toString());
-					
-					console.info('- display #' + d + ' has ' + nScreens + ' screens');
-					
-					var rezObjPerDisp = {mon:[], pixbuf:[]};
-					for (var s=0; s<nScreens; s++) {
-						var cScreen = ostypes.API('gdk_display_get_screen')(data_gdkDisp, s);
-						//console.info('cScreen:', cScreen.toString());
-						var nMonitors = cutils.jscGetDeepest(ostypes.API('gdk_screen_get_n_monitors')(cScreen));
-						//console.info('nMonitors:', nMonitors.toString());
-						console.info('-- screen #' + s + ' of display #' + d + ' has ' + nMonitors + ' monitors');
-						for (var m=0; m<nMonitors; m++) {
-							var gdkRect = ostypes.TYPE.GdkRectangle();
-							ostypes.API('gdk_screen_get_monitor_geometry')(cScreen, m, gdkRect.address());
-							console.info('mon geo for d=' + d + ' and s=' + s + ' and m=' + m + ':', gdkRect.toString());
+
+				// start - get all monitor resolutions
+				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
+				console.info('screen:', screen.contents, screen.contents.toString());
+
+				var noutputs = cutils.jscGetDeepest(screen.contents.noutput);
+				console.info('noutputs:', noutputs);
+
+				var screenOutputs = ctypes.cast(screen.contents.outputs, ostypes.TYPE.RROutput.array(noutputs).ptr).contents;
+				for (var i=noutputs-1; i>=0; i--) {
+					var info = ostypes.API('XRRGetOutputInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, screenOutputs[i]);
+					if (cutils.jscEquals(info.connection, ostypes.CONST.RR_Connected)) {
+						var ncrtcs = cutils.jscGetDeepest(info.contents.ncrtc);
+						var infoCrtcs = ctypes.cast(info.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtcs).ptr).contents;
+						for (var j=ncrtcs-1; j>=0; j--) {
+							var crtc_info = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, infoCrtcs[j]);
+							console.info('screen #' + i + ' mon#' + j + ' details:', crtc_info.contents.x, crtc_info.contents.y, crtc_info.contents.width, crtc_info.contents.height);
+
 							collMonInfos.push({
-								x: cutils.jscGetDeepest(gdkRect.x),
-								y: cutils.jscGetDeepest(gdkRect.y),
-								w: cutils.jscGetDeepest(gdkRect.width),
-								h: cutils.jscGetDeepest(gdkRect.height)
+								x: parseInt(cutils.jscGetDeepest(crtc_info.contents.x)),
+								y: parseInt(cutils.jscGetDeepest(crtc_info.contents.y)),
+								w: parseInt(cutils.jscGetDeepest(crtc_info.contents.width)),
+								h: parseInt(cutils.jscGetDeepest(crtc_info.contents.height))
 							});
-							console.info('--- monitor #' + m + ' of screen #' + s + ' of display #' + d + ' has dimensions:', collMonInfos);
+
+							ostypes.API('XRRFreeCrtcInfo')(crtc_info);
 						}
-						
-						/*
-						
-						var cRootWin = ostypes.API('gdk_screen_get_root_window')(cScreen);
-						console.info('cRootWin for d=' + d + ' and s=' + s + ':', cRootWin.toString());
-						
-						var cWidth = ostypes.API('gdk_screen_get_width')(cScreen);
-						console.info('cWidth for d=' + d + ' and s=' + s + ':', cWidth.toString());
-						var cHeight = ostypes.API('gdk_screen_get_height')(cScreen);
-						console.info('cHeight for d=' + d + ' and s=' + s + ':', cHeight.toString());
-						
-						var useMethod = 'gdk2'; // or gdk3
-						
-						if (useMethod == 'gdk2') {
-							var cColormap = null; //GdkColormap();
-							//ostypes.API('gdk_screen_set_default_colormap')(cScreen, cColormap);
-							//var cPixbuf = ostypes.API('gdk_pixbuf_new')(ostypes.CONST.COLORSPACE_RGB, false, 8, cWidth, cScreen);
-							var cDrawable = ctypes.cast(gtkRootWin, ostypes.TYPE.GdkDrawable.ptr);
-							var dest_x = 0;
-							var dest_y = 0;
-							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							//var pixbuf = ostypes.API('gdk_pixbuf_get_from_drawable')(null, cDrawable, cColormap, src_x, src_y, dest_x, dest_y, cWidth, cHeight);
-						} else if (useMethod == 'gdk3') {						
-							var src_x = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							var src_y = 0; // im guessing, i could not figure out screen geometry, i could only get its width and height
-							//var pixbuf = ostypes.API('gdk_pixbuf_get_from_window')(gtkRootWin, src_x, src_y, cWidth, cHeight);
-						}
-						console.info('pixbuf for d=' + d + ' and s=' + s + ':', pixbuf.toString());
-						rezObjPerDisp.pixbuf.push(pixbuf);
-						*/
 					}
-					//rezArr.push(rezObjPerDisp);
-				};
-				
-				var gfunc_c = ostypes.TYPE.GFunc(gfunc_js);
-				
-				var rez_foreach = ostypes.API('g_slist_foreach')(gslist, gfunc_c, null);
-				console.info('rez_foreach:', rez_foreach);
+					ostypes.API('XRRFreeOutputInfo')(info);
+				}
+				ostypes.API('XRRFreeScreenResources')(screen);
+				// end - get all monitor resolutions
 				
 				return collMonInfos;
 			

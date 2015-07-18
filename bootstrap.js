@@ -940,13 +940,13 @@ function shootAllMons(aDOMWindow) {
 		function(aReason) {
 			var rejObj = {name:'promise_shoot', aReason:aReason};
 			console.warn('Rejected - promise_shoot - ', rejObj);
-			Services.prompt.alert(aDOMWin, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+			Services.prompt.alert(aDOMWindow, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_shoot', aCaught:aCaught};
 			console.error('Caught - promise_shoot - ', rejObj);
-			Services.prompt.alert(aDOMWin, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
+			Services.prompt.alert(aDOMWindow, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
 		}
 	);
 }
