@@ -206,7 +206,10 @@ var gEMoving = false; // user is moving rect
 var gEMDX = null; // mouse down x
 var gEMDY = null; // mouse down y
 
-var gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
+const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
+const gDefLineDash = [3, 2];
+const gDefStrokeStyle = '#ccc';
+const gDefLineWidth = '1';
 
 var gESelectionRes = { // in layerX and layerY, holds dimenstions/resolution of the selected rectangle
 	w: 0,
@@ -215,7 +218,8 @@ var gESelectionRes = { // in layerX and layerY, holds dimenstions/resolution of 
 	y: 0,
 	eX: 0, // ending x, x + w
 	eY: 0 // ending y, y + h
-}
+};
+
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
@@ -235,12 +239,6 @@ var gCanDim = {
 				} else if (aArrFuncArgs[j] == '{{W}}') {
 					aArrFuncArgs[j] = aCanDim.width;
 				}
-				/*
-				if (typeof aArrFuncArgs[j] == 'string') {
-					aArrFuncArgs[j] = aArrFuncArgs[j].replace(/\{\{H\}\}/g, aCanDim.height); // replaces {{H}} with current canvas height
-					aArrFuncArgs[j] = aArrFuncArgs[j].replace(/\{\{W\}\}/g, aCanDim.width); // replaces {{W}} with current canvas width
-				}
-				*/
 			}
 			
 			console.log('applying arr:', aArrFuncArgs);
@@ -265,9 +263,18 @@ function gEMouseMove(e) {
 		
 		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		gCanDim.execFunc('clearRect', [gEMDX, gEMDY, newW, newH]);
-		
+				
+		if (newW && newH) {
+			gESelected = true;
+			gCanDim.execFunc('clearRect', [gEMDX, gEMDY, newW, newH]);
+			
+			// gCanDim.execFunc('translate', [0.5, 0.5]);
+			// gCanDim.execFunc('rect', [gEMDX, gEMDY, newW, newH]); // draw invisible rect for stroke
+			// gCanDim.execFunc('stroke');
+			// gCanDim.execFunc('translate', [0, 0]);
+		} else {
+			gESelected = false;
+		}
 		
 	} else if (gEMoving) {
 		// :todo:
@@ -278,10 +285,6 @@ function gEMouseUp(e) {
 		gESelecting = false;
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
-		}
-		
-		if (newW && newH) { // :todo:
-			gESelected = true;
 		}
 		
 		gCanDim.execFunc('restore');
@@ -317,19 +320,25 @@ function gEMouseDown(e) {
 			}
 		}
 		
+		gESelecting = true;
+		gESelected = false;
+		
 		gEMDX = e.layerX;
 		gEMDY = e.layerY;
 		
-		gCanDim.execFunc('save'); // save what ever previous styles user applied
+		// save what ever previous styles user applied
+		gCanDim.execFunc('save')
 		
+		// set "in selection" styles
 		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
+		gCanDim.execFunc('setLineDash', [gDefLineDash]);
+		gCanDim.execFunc('setLineDash', [gDefLineDash]);
+		gCanDim.execProp('strokeStyle', gDefStrokeStyle);
+		gCanDim.execProp('lineWidth', gDefLineWidth);
 		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out any drawings existing here
-
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // make it all default fill color
-		
-		gESelecting = true;
-		gESelected = false;
+		// clear out any drawings existing here
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
 
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
