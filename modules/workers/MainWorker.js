@@ -225,10 +225,10 @@ function shootAllMons() {
 
 				// start - get all monitor resolutions
 				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
-				console.info('screen:', screen.contents, screen.contents.toString());
+				//console.info('screen:', screen.contents, screen.contents.toString());
 
 				var noutputs = parseInt(cutils.jscGetDeepest(screen.contents.noutput));
-				console.info('noutputs:', noutputs);
+				//console.info('noutputs:', noutputs);
 
 				var screenOutputs = ctypes.cast(screen.contents.outputs, ostypes.TYPE.RROutput.array(noutputs).ptr).contents;
 				for (var i=noutputs-1; i>=0; i--) {
