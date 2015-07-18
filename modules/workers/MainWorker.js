@@ -434,9 +434,10 @@ function shootAllMons() {
 				ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
 				console.timeEnd('memcpy');
 				
+				var iref = imagedata.data;
+				
 				/*
 				console.time('make bgra to rgba');
-				var iref = imagedata.data;
 				for (var i=0; i<fullLen; i=i+4) {
 					var B = iref[i];
 					iref[i] = iref[i+2];
