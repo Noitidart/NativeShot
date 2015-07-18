@@ -456,7 +456,7 @@ function shootAllMons() {
 					var si = 0;
 					for (var y=collMonInfos[i].y; y<screenUseH; y++) {
 						for (var x=collMonInfos[i].x; x<screenUseW; x++) {
-							var pix1 = (screenUseW*y*4) + (x*4);
+							var pix1 = (fullWidth*y*4) + (x*4);
 							siref[si] = iref[pix1];
 							siref[si+1] = iref[pix1+1];
 							siref[si+2] = iref[pix1+2];
