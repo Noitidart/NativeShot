@@ -75,7 +75,7 @@ function init(objCore) {
 			importScripts(core.addon.path.content + 'modules/ostypes_win.jsm');
 			break
 		case 'gtk':
-			importScripts(core.addon.path.content + 'modules/ostypes_gtk.jsm');
+			importScripts(core.addon.path.content + 'modules/ostypes_x11.jsm');
 			break;
 		case 'darwin':
 			importScripts(core.addon.path.content + 'modules/ostypes_mac.jsm');
@@ -109,6 +109,29 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
+function setWinAlwaysOnTop(aArrHwndPtrStr) {
+	// aArrHwndPtrStr is an array of multiple hwnds, each of them will get set to always on top
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+			
+				// 
+				
+			break;
+		case 'gtk':
+			
+				// 
+				
+			break;
+		case 'darwin':
+			
+				//
+
+			break;
+		default:
+			console.error('os not supported');
+	}	
+}
+
 function makeWinFullAllMon(aHwndStr, aOptions={}) {
 	// makes a window full across all monitors (so an extension of fullscreen)
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
@@ -160,6 +183,572 @@ function makeWinFullAllMon(aHwndStr, aOptions={}) {
 			console.error('os not supported');
 	}
 }
+
+function shootAllMons() {
+	
+	var collMonInfos = [];
+	
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+		case 'winmo':
+		case 'wince':
+		
+				// start - get all monitor resolutions
+				var iDevNum = -1;
+				while (true) {
+					iDevNum++;
+					var lpDisplayDevice = ostypes.TYPE.DISPLAY_DEVICE();
+					lpDisplayDevice.cb = ostypes.TYPE.DISPLAY_DEVICE.size;
+					var rez_EnumDisplayDevices = ostypes.API('EnumDisplayDevices')(null, iDevNum, lpDisplayDevice.address(), 0);
+					//console.info('rez_EnumDisplayDevices:', rez_EnumDisplayDevices.toString(), uneval(rez_EnumDisplayDevices), cutils.jscGetDeepest(rez_EnumDisplayDevices));
+					
+					if (cutils.jscEqual(rez_EnumDisplayDevices, 0)) { // ctypes.winLastError != 0
+						// iDevNum is greater than the largest device index.
+						break;
+					}
+					
+					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					
+					if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+						console.log('is monitor');
+						
+						var dm = ostypes.TYPE.DEVMODE(); // SIZEOF_DEVMODE = 148
+						console.info('dm.size:', ostypes.TYPE.DEVMODE.size);
+						//dm.dmFields = ostypes.CONST.DM_PELSWIDTH;
+						//dm.dmSize = ostypes.TYPE.DEVMODE.size;
+
+						console.log('iDevNum:', iDevNum, lpDisplayDevice.DeviceName.readString());
+						var rez_EnumDisplaySettings = ostypes.API('EnumDisplaySettings')(lpDisplayDevice.DeviceName, ostypes.CONST.ENUM_CURRENT_SETTINGS, dm.address());
+						//console.info('rez_EnumDisplaySettings:', rez_EnumDisplaySettings.toString(), uneval(rez_EnumDisplaySettings), cutils.jscGetDeepest(rez_EnumDisplaySettings));
+						//console.info('dm:', dm.toString());
+						
+						collMonInfos.push({
+							x: parseInt(cutils.jscGetDeepest(dm.u.dmPosition.x)),
+							y: parseInt(cutils.jscGetDeepest(dm.u.dmPosition.y)),
+							w: parseInt(cutils.jscGetDeepest(dm.dmPelsWidth)),
+							h: parseInt(cutils.jscGetDeepest(dm.dmPelsHeight)),
+							screenshot: null, // for winnt, each collMonInfos entry has screenshot data
+							otherInfo: {
+								nBPP: parseInt(cutils.jscGetDeepest(dm.dmBitsPerPel)),
+								lpszDriver: null,
+								lpszDevice: lpDisplayDevice.DeviceName
+							}
+						});
+					}
+				}
+				// end - get all monitor resolutions
+		
+				// start - take shot of each monitor
+				for (var s=0; s<collMonInfos.length; s++) {
+					console.time('shot of screen ' + s);
+					var hdcScreen = ostypes.API('CreateDC')(collMonInfos[s].otherInfo.lpszDriver, collMonInfos[s].otherInfo.lpszDevice, null, null);
+					//console.info('hdcScreen:', hdcScreen.toString(), uneval(hdcScreen), cutils.jscGetDeepest(hdcScreen));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed hdcScreen, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var w = collMonInfos[s].w;
+					var h = collMonInfos[s].h;
+					console.error('using w:', w, 'h:', h);
+					var modW = w % 4;
+					var useW = modW != 0 ? w + (4-modW) : w;
+					console.log('useW:', useW, 'realW:', w);
+					
+					var arrLen = useW * h * 4;
+					var imagedata = new ImageData(useW, h);
+					
+					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
+					//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed hdcMemoryDC, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hdcMemoryDC, winLastError: "' + ctypes.winLastError + '" and hdcMemoryDC: "' + hdcMemoryDC.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+
+					console.error('using nBPP:', collMonInfos[s].otherInfo.nBPP);
+					// CreateDIBSection stuff
+					var bmi = ostypes.TYPE.BITMAPINFO();
+					bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
+					bmi.bmiHeader.biWidth = w;
+					bmi.bmiHeader.biHeight = -1 * h; // top-down
+					bmi.bmiHeader.biPlanes = 1;
+					bmi.bmiHeader.biBitCount = collMonInfos[s].otherInfo.nBPP; // 32
+					bmi.bmiHeader.biCompression = ostypes.CONST.BI_RGB;
+					// bmi.bmiHeader.biXPelsPerMeter = dpiX;
+					// bmi.bmiHeader.biYPelsPerMeter = dpiY;
+					
+					// delete collMonInfos[s].nBPP; // mainthread has no more need for this
+					
+					var pixelBuffer = ostypes.TYPE.BYTE.ptr();
+					//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
+					// CreateDIBSection stuff
+					
+					var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
+					if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
+						console.error('Failed hbmp, winLastError:', ctypes.winLastError, 'hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed hbmp, winLastError: "' + ctypes.winLastError + '" and hbmp: "' + hbmp.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var rez_SO = ostypes.API('SelectObject')(hdcMemoryDC, hbmp);
+					//console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, w, h, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
+					//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
+					if (ctypes.winLastError != 0) {
+						//console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
+							winLastError: ctypes.winLastError
+						});
+					}
+					
+					console.timeEnd('shot of screen ' + s);
+					
+					console.time('memcpy');
+					ostypes.API('memcpy')(imagedata.data, pixelBuffer, arrLen);
+					console.timeEnd('memcpy');
+					
+					// swap bytes to go from BRGA to RGBA
+					// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
+					console.time('BGRA -> RGBA');
+					var dataRef = imagedata.data;
+					var pos = 0;
+					while (pos < arrLen) {
+						var B = dataRef[pos];
+
+						dataRef[pos] = dataRef[pos+2];
+						dataRef[pos+2] = B;
+
+						pos += 4;
+					}
+					console.timeEnd('BGRA -> RGBA');
+					
+					collMonInfos[s].screenshot = imagedata;
+					
+					// release memory of screenshot stuff
+					delete collMonInfos[s].otherInfo;
+					// lpDisplayDevice = null;
+					dm = null;
+					// imagedata = null;
+					
+					var rez_DelDc1 = ostypes.API('DeleteDC')(hdcScreen);
+					console.log('rez_DelDc1:', rez_DelDc1);
+					
+					var rez_DelDc2 = ostypes.API('DeleteDC')(hdcMemoryDC);
+					console.log('rez_DelDc2:', rez_DelDc2);
+					
+					var rez_DelObj1 = ostypes.API('DeleteObject')(hbmp);
+					console.log('rez_DelObj1:', rez_DelObj1);
+				}
+				
+				// end - take shot of each monitor
+		
+				for (var i=0; i<collMonInfos.length; i++) {
+					delete collMonInfos[i].otherInfo;
+				}
+				
+			break;
+		case 'gtk':
+
+				// start - get all monitor resolutions
+				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
+				//console.info('screen:', screen.contents, screen.contents.toString());
+
+				var noutputs = parseInt(cutils.jscGetDeepest(screen.contents.noutput));
+				//console.info('noutputs:', noutputs);
+
+				var screenOutputs = ctypes.cast(screen.contents.outputs, ostypes.TYPE.RROutput.array(noutputs).ptr).contents;
+				for (var i=noutputs-1; i>=0; i--) {
+					var info = ostypes.API('XRRGetOutputInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, screenOutputs[i]);
+					if (cutils.jscEqual(info.connection, ostypes.CONST.RR_Connected)) {
+						var ncrtcs = parseInt(cutils.jscGetDeepest(info.contents.ncrtc));
+						var infoCrtcs = ctypes.cast(info.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtcs).ptr).contents;
+						for (var j=ncrtcs-1; j>=0; j--) {
+							var crtc_info = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, infoCrtcs[j]);
+							console.info('screen #' + i + ' mon#' + j + ' details:', crtc_info.contents.x, crtc_info.contents.y, crtc_info.contents.width, crtc_info.contents.height);
+
+							collMonInfos.push({
+								x: parseInt(cutils.jscGetDeepest(crtc_info.contents.x)),
+								y: parseInt(cutils.jscGetDeepest(crtc_info.contents.y)),
+								w: parseInt(cutils.jscGetDeepest(crtc_info.contents.width)),
+								h: parseInt(cutils.jscGetDeepest(crtc_info.contents.height)),
+								screenshot: null // for gtk, i take the big canvas and protion to each mon
+							});
+
+							ostypes.API('XRRFreeCrtcInfo')(crtc_info);
+						}
+					}
+					ostypes.API('XRRFreeOutputInfo')(info);
+				}
+				ostypes.API('XRRFreeScreenResources')(screen);
+				// end - get all monitor resolutions
+				
+				// start - take shot of all monitors and push to just first element of collMonInfos
+				// https://github.com/BoboTiG/python-mss/blob/a4d40507c492962d59fcb97a509ede1f4b8db634/mss.py#L116
+
+				// enum_display_monitors
+				// this call to XGetWindowAttributes grab one screenshot of all monitors
+				var gwa = ostypes.TYPE.XWindowAttributes();
+				var rez_XGetWinAttr = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), gwa.address());
+				console.info('gwa:', gwa.toString());
+				
+				var fullWidth = parseInt(cutils.jscGetDeepest(gwa.width));
+				var fullHeight = parseInt(cutils.jscGetDeepest(gwa.height));
+				var originX = parseInt(cutils.jscGetDeepest(gwa.x));
+				var originY = parseInt(cutils.jscGetDeepest(gwa.y));
+				
+				console.info('fullWidth:', fullWidth, 'fullHeight:', fullHeight, 'originX:', originX, 'originY:', originY, '_END_');
+				
+				// get_pixels
+				var allplanes = ostypes.API('XAllPlanes')();
+				console.info('allplanes:', allplanes.toString());
+				
+				var ZPixmap = 2;
+
+				var ximage = ostypes.API('XGetImage')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), originX, originY, fullWidth, fullHeight, allplanes, ZPixmap);
+				console.info('width:', ximage.contents.width.toString(), 'height:', ximage.contents.height.toString(), 'xoffset:', ximage.contents.xoffset.toString(), 'format:', ximage.contents.format.toString(), 'data:', ximage.contents.data.toString(), 'byte_order:', ximage.contents.byte_order.toString(), 'bitmap_unit:', ximage.contents.bitmap_unit.toString(), 'bitmap_bit_order:', ximage.contents.bitmap_bit_order.toString(), 'bitmap_pad:', ximage.contents.bitmap_pad.toString(), 'depth:', ximage.contents.depth.toString(), 'bytes_per_line:', ximage.contents.bytes_per_line.toString(), 'bits_per_pixel:', ximage.contents.bits_per_pixel.toString(), 'red_mask:', ximage.contents.red_mask.toString(), 'green_mask:', ximage.contents.green_mask.toString(), 'blue_mask:', ximage.contents.blue_mask.toString(), '_END_');
+
+				var fullLen = 4 * fullWidth * fullHeight;
+				
+				console.time('init imagedata');
+				var imagedata = new ImageData(fullWidth, fullHeight);
+				console.timeEnd('init imagedata');
+
+				console.time('memcpy');
+				ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
+				console.timeEnd('memcpy');
+				
+				var iref = imagedata.data;
+				
+				/*
+				console.time('make bgra to rgba');
+				for (var i=0; i<fullLen; i=i+4) {
+					var B = iref[i];
+					iref[i] = iref[i+2];
+					iref[i+2] = B;
+				}
+				console.timeEnd('make bgra to rgba');
+				*/
+				// end - take shot of all monitors and push to just first element of collMonInfos
+				
+				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
+				console.time('portion out image data');
+				for (var i=0; i<collMonInfos.length; i++) {
+					var screenUseW = collMonInfos[i].w;
+					var screenUseH = collMonInfos[i].h;
+					
+					var screnImagedata = new ImageData(screenUseW, screenUseH);
+					var siref = screnImagedata.data;
+					
+					var si = 0;
+					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
+						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
+							var pix1 = (fullWidth*y*4) + (x * 4);
+							var B = iref[pix1];
+							siref[si] = iref[pix1+2];
+							siref[si+1] = iref[pix1+1];
+							siref[si+2] = B;
+							siref[si+3] = 255;
+							si += 4;
+						}
+					}
+					collMonInfos[i].screenshot = screnImagedata;
+				}
+				console.timeEnd('portion out image data');
+				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
+			
+			break;
+		case 'darwin':
+				
+				// start - get monitor resolutions
+				var displays = ostypes.TYPE.CGDirectDisplayID.array(32)(); // i guess max possible monitors is 32
+				var count = ostypes.TYPE.uint32_t();
+				console.info('displays.constructor.size:', displays.constructor.size);
+				console.info('ostypes.TYPE.CGDirectDisplayID.size:', ostypes.TYPE.CGDirectDisplayID.size);
+				
+				var maxDisplays = displays.constructor.size / ostypes.TYPE.CGDirectDisplayID.size;
+				var activeDspys = displays; // displays.address() didnt work it threw `expected type pointer, got ctypes.uint32_t.array(32).ptr(ctypes.UInt64("0x11e978080"))` // the arg in declare is `self.TYPE.CGDirectDisplayID.ptr,	// *activeDisplays` // without .address() worked
+				var dspyCnt = count.address();
+				console.info('maxDisplays:', maxDisplays);
+				
+				var rez_CGGetActiveDisplayList = ostypes.API('CGGetActiveDisplayList')(maxDisplays, activeDspys, dspyCnt);
+				console.info('rez_CGGetActiveDisplayList:', rez_CGGetActiveDisplayList.toString(), uneval(rez_CGGetActiveDisplayList), cutils.jscGetDeepest(rez_CGGetActiveDisplayList));
+				if (!cutils.jscEqual(rez_CGGetActiveDisplayList, ostypes.CONST.kCGErrorSuccess)) {
+					console.error('Failed , errno:', ctypes.errno);
+					throw new Error({
+						name: 'os-api-error',
+						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rez_CGGetActiveDisplayList.toString(),
+						errno: ctypes.errno
+					});
+				}
+				
+				count = parseInt(cutils.jscGetDeepest(count));
+				console.info('count:', count);
+				var i_nonMirror = {};
+				
+				var rect = ostypes.CONST.CGRectNull;
+				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
+				for (var i=0; i<count; i++) {
+					// if display is secondary mirror of another display, skip it
+					console.info('displays[i]:', displays[i]);
+					
+					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
+					console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
+
+					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
+						continue;
+					}
+					i_nonMirror[i] = null;
+					
+					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
+					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds)/*, cutils.jscGetDeepest(rez_CGDisplayBounds)*/); // :todo: fix cutils.jscEqual because its throwing `Error: cannot convert to primitive value` for ctypes.float64_t and ctypes.double ACTUALLY its a struct, so no duhhh so no :todo:
+					
+					collMonInfos.push({
+						x: parseInt(cutils.jscGetDeepest(rez_CGDisplayBounds.origin.x)),
+						y: parseInt(cutils.jscGetDeepest(rez_CGDisplayBounds.origin.y)),
+						w: parseInt(cutils.jscGetDeepest(rez_CGDisplayBounds.size.width)),
+						h: parseInt(cutils.jscGetDeepest(rez_CGDisplayBounds.size.height)),
+						screenshot: null // for darwin, i take the big canvas and protion to each mon
+					});
+					
+					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
+					console.info('rect post loop ' + i + ':', rect.toString());
+				}
+				// start - get monitor resolutions
+				
+				// start - take one big screenshot of all monitors
+				if (Object.keys(i_nonMirror).length == 0) {
+					// what on earth, no monitors that arent mirrors?
+					return []; // as there is nothing to screenshot
+				}
+				
+				/*
+				NSBitmapImageRep* imageRep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                                         pixelsWide:CGRectGetWidth(rect)
+                                                                         pixelsHigh:CGRectGetHeight(rect)
+                                                                      bitsPerSample:8
+                                                                    samplesPerPixel:4
+                                                                           hasAlpha:YES
+                                                                           isPlanar:NO
+                                                                     colorSpaceName:NSCalibratedRGBColorSpace
+                                                                       bitmapFormat:0
+                                                                        bytesPerRow:0
+                                                                       bitsPerPixel:32];
+				*/
+				var myNSStrings;
+				var allocNSBIP;
+				try {
+					myNSStrings = new ostypes.HELPER.nsstringColl();
+					
+					var rez_width = ostypes.API('CGRectGetWidth')(rect);
+					console.info('rez_width:', rez_width.toString(), uneval(rez_width), cutils.jscGetDeepest(rez_width));
+					
+					var rez_height = ostypes.API('CGRectGetHeight')(rect);
+					console.info('rez_height:', rez_height.toString(), uneval(rez_height), cutils.jscGetDeepest(rez_height));
+					
+					var NSBitmapImageRep = ostypes.HELPER.class('NSBitmapImageRep');
+					allocNSBIP = ostypes.API('objc_msgSend')(NSBitmapImageRep, ostypes.HELPER.sel('alloc'));
+					console.info('allocNSBIP:', allocNSBIP.toString(), uneval(allocNSBIP));
+		
+					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
+						ostypes.TYPE.unsigned_char.ptr.ptr(null),								// planes
+						ostypes.TYPE.NSInteger(rez_width),										// pixelsWide
+						ostypes.TYPE.NSInteger(rez_height),										// pixelsHigh
+						ostypes.TYPE.NSInteger(8),												// bitsPerSample
+						ostypes.TYPE.NSInteger(4),												// samplesPerPixel
+						ostypes.CONST.YES,														// hasAlpha
+						ostypes.CONST.NO,														// isPlanar
+						myNSStrings.get('NSCalibratedRGBColorSpace'),							// colorSpaceName
+						ostypes.TYPE.NSBitmapFormat(0),											// bitmapFormat
+						ostypes.TYPE.NSInteger(4 * rez_width),												// bytesPerRow
+						ostypes.TYPE.NSInteger(32)												// bitsPerPixel
+					);
+					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));
+					if (imageRep.isNull()) { // im guessing this is how to error check it
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed imageRep, errno: "' + ctypes.errno + '" and : "' + imageRep.toString(),
+							errno: ctypes.errno
+						});
+					}
+					
+					// NSGraphicsContext* context = [NSGraphicsContext graphicsContextWithBitmapImageRep:imageRep];
+					var NSGraphicsContext = ostypes.HELPER.class('NSGraphicsContext');
+					var context = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('graphicsContextWithBitmapImageRep:'), imageRep);
+					console.info('context:', context.toString(), uneval(context), cutils.jscGetDeepest(context));
+					if (context.isNull()) { // im guessing this is how to error check it
+						throw new Error({
+							name: 'os-api-error',
+							message: 'Failed context, errno: "' + ctypes.errno + '" and : "' + context.toString(),
+							errno: ctypes.errno
+						});
+					}
+					
+					// [NSGraphicsContext saveGraphicsState];
+					var rez_saveGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('saveGraphicsState'));
+					console.info('rez_saveGraphicsState:', rez_saveGraphicsState.toString(), uneval(rez_saveGraphicsState), cutils.jscGetDeepest(rez_saveGraphicsState));
+					
+					// [NSGraphicsContext setCurrentContext:context];
+					var rez_setCurrentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('setCurrentContext:'), context);
+					console.info('rez_setCurrentContext:', rez_setCurrentContext.toString(), uneval(rez_setCurrentContext), cutils.jscGetDeepest(rez_setCurrentContext));
+					
+					// CGContextRef cgcontext = [context graphicsPort];
+					var cgcontext = ostypes.API('objc_msgSend')(context, ostypes.HELPER.sel('graphicsPort'));
+					console.info('cgcontext:', cgcontext.toString(), uneval(cgcontext), cutils.jscGetDeepest(cgcontext));
+					
+					// CGContextClearRect(cgcontext, CGRectMake(0, 0, CGRectGetWidth(rect), CGRectGetHeight(rect)));
+					var rez_width2 = ostypes.API('CGRectGetWidth')(rect);
+					console.info('rez_width2:', rez_width2.toString(), uneval(rez_width2), cutils.jscGetDeepest(rez_width2));
+					
+					var rez_height2 = ostypes.API('CGRectGetHeight')(rect);
+					console.info('rez_height2:', rez_height2.toString(), uneval(rez_height2), cutils.jscGetDeepest(rez_height2));
+					
+					var rez_CGRectMake = ostypes.API('CGRectMake')(0, 0, rez_width2, rez_height2);
+					console.info('rez_CGRectMake:', rez_CGRectMake.toString(), uneval(rez_CGRectMake)/*, cutils.jscGetDeepest(rez_CGRectMake)*/);
+					
+					var casted_cgcontext = ctypes.cast(cgcontext, ostypes.TYPE.CGContextRef);
+					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(casted_cgcontext, rez_CGRectMake); // returns void
+					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
+					console.log('did CGContextClearRect');
+					
+					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
+						console.log('entering nonMirror');
+						// CGRect displayRect = CGDisplayBounds(displays[i]);
+						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
+						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
+						
+						console.warn('pre CGDisplayCreateImage');
+						// CGImageRef image = CGDisplayCreateImage(displays[i]);
+						var image = ostypes.API('CGDisplayCreateImage')(displays[i]);
+						console.info('image:', image.toString(), uneval(image));
+						if (image.isNull()) {
+							console.warn('no image so continuing');
+							continue;
+						}
+						
+						// CGRect dest = CGRectMake(displayRect.origin.x - rect.origin.x,
+						//               displayRect.origin.y - rect.origin.y,
+						//               displayRect.size.width,
+						//               displayRect.size.height);
+						var dest = ostypes.API('CGRectMake')(
+							displayRect.origin.x - rect.origin.x,
+							displayRect.origin.y - rect.origin.y,
+							displayRect.size.width,
+							displayRect.size.height
+						);
+						console.info('dest:', dest.toString(), uneval(dest));
+						
+						// CGContextDrawImage(cgcontext, dest, image);
+						ostypes.API('CGContextDrawImage')(casted_cgcontext, dest, image); // reutrns void
+						console.info('did CGContextDrawImage');
+						
+						// CGImageRelease(image);
+						ostypes.API('CGImageRelease')(image); // returns void
+						console.info('did CGImageRelease');
+						
+					}
+					
+					// [[NSGraphicsContext currentContext] flushGraphics];
+					var rez_currentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('currentContext'));
+					console.info('rez_currentContext:', rez_currentContext.toString(), uneval(rez_currentContext));
+					
+					var rez_flushGraphics = ostypes.API('objc_msgSend')(rez_currentContext, ostypes.HELPER.sel('flushGraphics'));
+					console.info('rez_flushGraphics:', rez_flushGraphics.toString(), uneval(rez_flushGraphics));
+					
+					// [NSGraphicsContext restoreGraphicsState];
+					var rez_restoreGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('restoreGraphicsState'));
+					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState));
+					// end - take one big screenshot of all monitors
+					
+					// start - try to get byte array
+					// [imageRep bitmapData]
+					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
+					console.info('rgba_buf:', rgba_buf.toString());
+					
+					var bitmapBytesPerRow = rez_width * 4;
+					var bitmapByteCount = bitmapBytesPerRow * rez_height;
+					
+					// var rgba_arr = ctypes.cast(rgba_buf, ostypes.TYPE.unsigned_char.array(bitmapByteCount).ptr).contents;
+					// console.info('rgba_arr:', rgba_arr.toString());
+					
+					console.time('init imagedata');
+					var imagedata = new ImageData(rez_width, rez_height);
+					console.timeEnd('init imagedata');
+
+					console.time('memcpy');
+					ostypes.API('memcpy')(imagedata.data.buffer, rgba_buf, bitmapByteCount);
+					console.timeEnd('memcpy');
+					// end - try to get byte array
+				} finally {
+					console.error('starting finally block');
+					if (allocNSBIP) {
+						var rez_relNSBPI = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
+						console.info('rez_relNSBPI:', rez_relNSBPI.toString());
+					}
+					if (myNSStrings) {
+						myNSStrings.releaseAll()
+					}
+					console.info('released things, i want to know if it gets here even if return was called within the try block');
+				}
+				// end - take one big screenshot of all monitors
+				
+				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
+				console.time('portion out image data');
+				var iref = imagedata.data;
+				var fullWidth = rez_width;
+				for (var i=0; i<collMonInfos.length; i++) {
+					var screenUseW = collMonInfos[i].w;
+					var screenUseH = collMonInfos[i].h;
+					
+					var screnImagedata = new ImageData(screenUseW, screenUseH);
+					var siref = screnImagedata.data;
+					
+					var si = 0;
+					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
+						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
+							var pix1 = (fullWidth*y*4) + (x * 4);
+							//var B = iref[pix1];
+							siref[si] = iref[pix1];
+							siref[si+1] = iref[pix1+1];
+							siref[si+2] = iref[pix1+2];
+							siref[si+3] = 255;
+							si += 4;
+						}
+					}
+					collMonInfos[i].screenshot = screnImagedata;
+				}
+				console.timeEnd('portion out image data');
+				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
+				
+			break;
+		default:
+			throw new Error('os not supported ' + core.os.name);
+	}
+	
+	return collMonInfos;
+}
+
 function shootMon(mons, aOptions={}) {
 	// mons
 		// 0 - primary monitor

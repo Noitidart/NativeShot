@@ -219,22 +219,6 @@ var gtkInit = function() {
 									message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
 								});
 						}
-						if (core.os.name == 'darwin') {
-							_lib[path] = ctypes.open('libc.dylib');
-						} else if (core.os.name == 'freebsd') {
-							_lib[path] = ctypes.open('libc.so.7');
-						} else if (core.os.name == 'openbsd') {
-							_lib[path] = ctypes.open('libc.so.61.0');
-						} else if (core.os.name == 'sunos') {
-							_lib[path] = ctypes.open('libc.so');
-						}  else if (core.os.name == 'linux') {
-							_lib[path] = ctypes.open('libc.so.6');
-						} else {
-							throw new Error({
-								name: 'watcher-api-error',
-								message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported for kqueue'
-							});
-						}
 
 					break;
 				case 'x11':
@@ -463,6 +447,17 @@ var gtkInit = function() {
 				self.TYPE.GdkScreen.ptr,	// *return
 				self.TYPE.GdkDisplay.ptr,	// *display // self.TYPE.gpointer, //
 				self.TYPE.gint				// screen_num
+			);
+		},
+		gtk_window_get_screen: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-get-screen
+			 * GdkScreen *gtk_window_get_screen (
+			 *   GtkWindow *window
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_get_screen', self.TYPE.ABI,
+				self.TYPE.GdkScreen.ptr,	// *return
+				self.TYPE.GtkWindow.ptr		// *window
 			);
 		},
 		gdk_screen_get_n_monitors: function() {
