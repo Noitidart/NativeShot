@@ -241,7 +241,7 @@ var gCanDim = {
 				}
 			}
 			
-			console.log('applying arr:', aArrFuncArgs);
+			//console.log('applying arr:', aArrFuncArgs);
 			aCtxDim[aStrFuncName].apply(aCtxDim, aArrFuncArgs);
 		}
 	},
@@ -437,6 +437,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
 	ctxDim.fillRect(0, 0, w, h);
 	
+	//console.error('colMon[iMon].screenshot:', colMon[iMon].screenshot)
 	ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
 
 	var menuElRef = {};
@@ -987,10 +988,6 @@ function shutdown(aData, aReason) {
 	//end observers stuff more
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
-	
-	if (_cache_get_gtk_ctypes) { // for GTK+
-		_cache_get_gtk_ctypes.lib.close();
-	}
 }
 
 // start - common helper functions

@@ -109,6 +109,29 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
+function setWinAlwaysOnTop(aArrHwndPtrStr) {
+	// aArrHwndPtrStr is an array of multiple hwnds, each of them will get set to always on top
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+			
+				// 
+				
+			break;
+		case 'gtk':
+			
+				// 
+				
+			break;
+		case 'darwin':
+			
+				//
+
+			break;
+		default:
+			console.error('os not supported');
+	}	
+}
+
 function makeWinFullAllMon(aHwndStr, aOptions={}) {
 	// makes a window full across all monitors (so an extension of fullscreen)
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
@@ -231,7 +254,7 @@ function shootAllMons() {
 					
 					var w = collMonInfos[s].w;
 					var h = collMonInfos[s].h;
-					
+					console.error('using w:', w, 'h:', h);
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
 					console.log('useW:', useW, 'realW:', w);
@@ -250,6 +273,7 @@ function shootAllMons() {
 						});
 					}
 
+					console.error('using nBPP:', collMonInfos[s].otherInfo.nBPP);
 					// CreateDIBSection stuff
 					var bmi = ostypes.TYPE.BITMAPINFO();
 					bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
