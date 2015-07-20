@@ -36,6 +36,7 @@ const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'global.properties?' + Math.random()); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sm', function () { return Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager) });
 
 function extendCore() {
 	// adds some properties i use to core
@@ -283,7 +284,7 @@ function gEMouseUp(e) {
 	if (gESelecting) {
 		gESelecting = false;
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.cont.removeEventListener('mousemove', gEMouseMove, false);
 		}
 		
 		gCanDim.execFunc('restore');
@@ -292,7 +293,7 @@ function gEMouseUp(e) {
 		gEMoving = false;
 		
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.cont.removeEventListener('mousemove', gEMouseMove, false);
 		}
 		
 		gCanDim.execFunc('restore');
@@ -313,7 +314,7 @@ function gEMouseDown(e) {
 		gEMDX = e.layerX;
 		gEMDY = e.layerY;
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.cont.addEventListener('mousemove', gEMouseMove, false);
 		}
 	} else {
 		if (gESelected) {
@@ -344,7 +345,7 @@ function gEMouseDown(e) {
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
 
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.cont.addEventListener('mousemove', gEMouseMove, false);
 		}
 	}
 	// else start selection
@@ -400,8 +401,44 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.focus();
 	aEditorDOMWindow.fullScreen = true;
 	
+	var w = colMon[iMon].w;
+	var h = colMon[iMon].h;
+	
+	var json = 
+	[
+		'xul:stack', {},
+			['xul:box', {id:'cont'}, // contianer short for "container of canvases"
+				['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
+				['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
+			]
+	];
+	
 	// os specific special stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+				
+				if (core.os.version >= 6.3) { // win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
+					/*
+					if (iMon == 1) {
+						var scaleFactorX = 1.5;
+						var scaleFactorY = 1.5;
+						w = Math.ceil(scaleFactorX / scaleFactorX);
+						h = Math.ceil(scaleFactorY / scaleFactorY);
+					}
+					*/
+					
+					var isPrimary = false;
+					if (!isPrimary) { // i only have to do this so the dpi of my nativeshot:editor window on non-primary monitor matches that of primary. right now only testing if primary or not though, should test dpi in future (can get the dpi from ctypes)
+						json[2][2][1].style += 'position:fixed;'; // so canvas doenst strech when i position winntSizeDummy to stretch window till primary monitor
+						json[2][3][1].style += 'position:fixed;'; // so canvas doenst strech when i position winntSizeDummy to stretch window till primary monitor
+						//json.splice(3, 0, ['xul:box', {id:'winntSizeDummy',left:4000,top:4000,width:100,height:100,style:'background-color:steelblue;'}]);
+						
+						aEditorDOMWindow.resizeTo(colMon[iMon].w+8000, colMon[iMon].h+8000);
+					}
+					
+				}
+			
+			break;
 		case 'darwin':
 			
 				aEditorDOMWindow.setTimeout(function() {
@@ -417,17 +454,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	// start - postStuff
 	
-	var w = colMon[iMon].w;
-	var h = colMon[iMon].h;
 	var doc = aEditorDOMWindow.document;
 	
 	// insert canvases and menu
-	var json = 
-	[
-		'xul:stack', {id:'stack'},
-			['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'}],
-			['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
-	];
 	
 	var elRef = {};
 	doc.documentElement.appendChild(jsonToDOM(json, doc, elRef));
@@ -436,6 +465,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var ctxDim = elRef.canDim.getContext('2d');
 	
 	// set global E. props
+	colMon[iMon].E.cont = elRef.cont;
 	colMon[iMon].E.canBase = elRef.canBase;
 	colMon[iMon].E.canDim = elRef.canDim;
 	colMon[iMon].E.ctxBase = ctxBase;
@@ -446,7 +476,12 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	ctxDim.fillRect(0, 0, w, h);
 	
 	//console.error('colMon[iMon].screenshot:', colMon[iMon].screenshot)
-	ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
+	if (w != colMon[iMon].w || h != colMon[iMon].h) {
+		// rescaled for Win81 DPI non aware bug
+		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0, 0, 0, w, h);
+	} else {
+		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
+	}
 
 	var menuElRef = {};
 	doc.documentElement.appendChild(jsonToDOM(gEMenuDomJson, doc, menuElRef));
@@ -455,8 +490,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// set up up event listeners
 	
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
-	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
-	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
+	elRef.cont.addEventListener('mousedown', gEMouseDown, false);
+	elRef.cont.addEventListener('mouseup', gEMouseUp, false);
 	
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
