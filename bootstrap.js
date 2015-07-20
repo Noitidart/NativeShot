@@ -395,10 +395,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
 	
-	//aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+	//aEditorDOMWindow.moveTo(colMon[1].x, colMon[1].y);
+	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	
-	//aEditorDOMWindow.focus();
-	//aEditorDOMWindow.fullScreen = true;
+	aEditorDOMWindow.focus();
+	aEditorDOMWindow.fullScreen = true;
 	
 	// os specific special stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
@@ -425,8 +426,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var json = 
 	[
 		'xul:stack', {id:'stack'},
-			['html:canvas', {id:'canBase',style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'}],
-			['html:canvas', {id:'canDim',style:'display:-moz-box;cursor:crosshair;'}]
+			['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'}],
+			['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
 	];
 	
 	var elRef = {};
@@ -441,23 +442,24 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	colMon[iMon].E.ctxBase = ctxBase;
 	colMon[iMon].E.ctxDim = ctxDim;
 
-	
-	// ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
-	// ctxDim.fillRect(0, 0, colMon[0].w + colMon[1].w, colMon[0].h + colMon[1].h);
-
-	ctxBase.putImageData(colMon[0].screenshot, 0, 0); //, colMon[0].x+colMon[1].w, colMon[0].y+colMon[1].h);
-	ctxBase.putImageData(colMon[1].screenshot, 0, 0); //, 0, 0);
-	
 	elRef.canBase.width = colMon[0].w + colMon[1].w;
 	elRef.canBase.height = colMon[0].h + colMon[1].h;
 	elRef.canDim.width = colMon[0].w + colMon[1].w;
 	elRef.canDim.height = colMon[0].h + colMon[1].h;
+	
+	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
+	ctxDim.fillRect(0, 0, colMon[0].w + colMon[1].w, colMon[0].h + colMon[1].h);
+	console.error('these:', 0, 0, colMon[0].w + colMon[1].w, colMon[0].h + colMon[1].h)
+
+	ctxBase.putImageData(colMon[0].screenshot, colMon[0].x+colMon[1].w, colMon[0].y+colMon[1].h);
+	ctxBase.putImageData(colMon[1].screenshot, 0, 0); //, 0, 0);
 	
 	console.error('elRef.canBase.width', elRef.canBase.width);
 	console.error('elRef.canBase.height', elRef.canBase.height);
 	
 	
 	//aEditorDOMWindow.resizeTo(elRef.canBase.width, elRef.canBase.height);
+	aEditorDOMWindow.resizeTo(elRef.canBase.width, elRef.canBase.height);
 	//aEditorDOMWindow.moveTo(colMon[1].x, colMon[1].y);
 	
 	var menuElRef = {};
