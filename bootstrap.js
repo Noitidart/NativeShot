@@ -235,9 +235,9 @@ var gCanDim = {
 			// do special replacements in arugments
 			for (var j=0; j<aArrFuncArgs.length; j++) {
 				if (aArrFuncArgs[j] == '{{H}}') {
-					aArrFuncArgs[j] = aCanDim.height;
+					aArrFuncArgs[j] = colMon[i].h; //aCanDim.height; // have to use colMon due to scaling for win81
 				} else if (aArrFuncArgs[j] == '{{W}}') {
-					aArrFuncArgs[j] = aCanDim.width;
+					aArrFuncArgs[j] = colMon[i].w; //aCanDim.width; // have to use colMon due to scaling for win81
 				}
 			}
 			
@@ -254,9 +254,12 @@ var gCanDim = {
 }
 
 function gEMouseMove(e) {
+	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 	if (gESelecting) {
-		var cEMMX = e.layerX;
-		var cEMMY= e.layerY;
+		var cEMMX = colMon[iMon].win81ScaleX ? e.layerX * colMon[iMon].win81ScaleX : e.layerX;
+		var cEMMY = colMon[iMon].win81ScaleY ? e.layerY * colMon[iMon].win81ScaleY : e.layerY;
+		// var cEMMX = e.layerX;
+		// var cEMMY = e.layerY;
 		
 		var newW = cEMMX - gEMDX;
 		var newH = cEMMY - gEMDY;
@@ -281,10 +284,11 @@ function gEMouseMove(e) {
 	}
 }
 function gEMouseUp(e) {
+	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 	if (gESelecting) {
 		gESelecting = false;
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.cont.removeEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
 		}
 		
 		gCanDim.execFunc('restore');
@@ -293,28 +297,33 @@ function gEMouseUp(e) {
 		gEMoving = false;
 		
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.cont.removeEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
 		}
 		
 		gCanDim.execFunc('restore');
 	}
 }
 function gEMouseDown(e) {
+	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 	console.info('mousedown, e:', e);
 	
 	if (e.button != 0) { return } // only repsond to primary click
 	if (e.target.id != 'canDim') { return } // only repsond to primary click on canDim so this makes it ignore menu clicks etc
 	
-	var cEMDX = e.layerX;
-	var cEMDY = e.layerY;
+	var cEMDX = colMon[iMon].win81ScaleX ? e.layerX * colMon[iMon].win81ScaleX : e.layerX;
+	var cEMDY = colMon[iMon].win81ScaleY ? e.layerY * colMon[iMon].win81ScaleY : e.layerY;
+	// var cEMDX = e.layerX;
+	// var cEMDY = e.layerY;
+	
+	console.info('pre mod', e.layerX, 'post mod:', cEMDX);
 	
 	// check if mouse downed on move selection hit box
 	if (e.target.id == 'hitboxMoveSel') {
 		gEMoving = true;
-		gEMDX = e.layerX;
-		gEMDY = e.layerY;
+		gEMDX = cEMDX;
+		gEMDY = cEMDY;
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.cont.addEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 		}
 	} else {
 		if (gESelected) {
@@ -327,8 +336,8 @@ function gEMouseDown(e) {
 		gESelecting = true;
 		gESelected = false;
 		
-		gEMDX = e.layerX;
-		gEMDY = e.layerY;
+		gEMDX = cEMDX;
+		gEMDY = cEMDY;
 		
 		// save what ever previous styles user applied
 		gCanDim.execFunc('save')
@@ -345,7 +354,7 @@ function gEMouseDown(e) {
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
 
 		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.cont.addEventListener('mousemove', gEMouseMove, false);
+			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 		}
 	}
 	// else start selection
@@ -400,17 +409,15 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	aEditorDOMWindow.focus();
 	aEditorDOMWindow.fullScreen = true;
-	
+	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
 	var w = colMon[iMon].w;
 	var h = colMon[iMon].h;
 	
 	var json = 
 	[
-		'xul:stack', {},
-			['xul:box', {id:'cont'}, // contianer short for "container of canvases"
-				['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
+		'xul:stack', {id:'contOfCans'},
+				['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
 				['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
-			]
 	];
 	
 	// os specific special stuff
@@ -418,24 +425,30 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		case 'winnt':
 				
 				if (core.os.version >= 6.3) { // win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
-					/*
+					// start - temp as the worker should do this from ctypes
 					if (iMon == 1) {
-						var scaleFactorX = 1.5;
-						var scaleFactorY = 1.5;
-						w = Math.ceil(scaleFactorX / scaleFactorX);
-						h = Math.ceil(scaleFactorY / scaleFactorY);
+						colMon[iMon].win81ScaleX = 1.5;
+						colMon[iMon].win81ScaleY = 1.5;
 					}
-					*/
-					
-					var isPrimary = false;
-					if (!isPrimary) { // i only have to do this so the dpi of my nativeshot:editor window on non-primary monitor matches that of primary. right now only testing if primary or not though, should test dpi in future (can get the dpi from ctypes)
-						json[2][2][1].style += 'position:fixed;'; // so canvas doenst strech when i position winntSizeDummy to stretch window till primary monitor
-						json[2][3][1].style += 'position:fixed;'; // so canvas doenst strech when i position winntSizeDummy to stretch window till primary monitor
-						//json.splice(3, 0, ['xul:box', {id:'winntSizeDummy',left:4000,top:4000,width:100,height:100,style:'background-color:steelblue;'}]);
+					// end - temp as the worker should do this from ctypes
+					var win81ScaleX = colMon[iMon].win81ScaleX;
+					var win81ScaleY = colMon[iMon].win81ScaleY;
+					if (win81ScaleX || win81ScaleY) {
+						json.push(['html:canvas', {id:'canDum',style:'display:none;',width:w,height:h}]);
+						w = Math.ceil(w / win81ScaleX);
+						h = Math.ceil(h / win81ScaleY);
+						console.warn('modified w and h:', w, h);
 						
-						aEditorDOMWindow.resizeTo(colMon[iMon].w+8000, colMon[iMon].h+8000);
-					}
-					
+						json[2][1].width = w;
+						json[2][1].height = h;
+						json[2][1].style += 'position:fixed;';
+						
+						json[3][1].width = w;
+						json[3][1].height = h;
+						json[3][1].style += 'position:fixed;';
+						
+						console.warn('scale moded:', json);
+					}				
 				}
 			
 			break;
@@ -453,11 +466,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	}
 	
 	// start - postStuff
-	
+		
+	// insert canvases and menu	
 	var doc = aEditorDOMWindow.document;
-	
-	// insert canvases and menu
-	
 	var elRef = {};
 	doc.documentElement.appendChild(jsonToDOM(json, doc, elRef));
 	
@@ -465,23 +476,30 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var ctxDim = elRef.canDim.getContext('2d');
 	
 	// set global E. props
-	colMon[iMon].E.cont = elRef.cont;
 	colMon[iMon].E.canBase = elRef.canBase;
 	colMon[iMon].E.canDim = elRef.canDim;
 	colMon[iMon].E.ctxBase = ctxBase;
 	colMon[iMon].E.ctxDim = ctxDim;
 	
-	
-	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
-	ctxDim.fillRect(0, 0, w, h);
-	
 	//console.error('colMon[iMon].screenshot:', colMon[iMon].screenshot)
-	if (w != colMon[iMon].w || h != colMon[iMon].h) {
+	if (win81ScaleX || win81ScaleY) {
 		// rescaled for Win81 DPI non aware bug
-		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0, 0, 0, w, h);
+		console.warn('drawing rescaled');
+		var ctxDum = elRef.canDum.getContext('2d');
+		ctxDum.putImageData(colMon[iMon].screenshot, 0, 0);
+		ctxBase.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
+		ctxBase.drawImage(elRef.canDum, 0, 0);
+		elRef.canDum.parentNode.removeChild(elRef.canDum);
+		//ctxDim.clearRect(elRef.canDim.width, elRef.canDim.height);
+		//ctxBase.scale(1/colMon[iMon].win81ScaleX,1/colMon[iMon].win81ScaleY);
+		
+		ctxDim.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
 	} else {
 		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
 	}
+	
+	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
+	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 
 	var menuElRef = {};
 	doc.documentElement.appendChild(jsonToDOM(gEMenuDomJson, doc, menuElRef));
@@ -490,8 +508,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// set up up event listeners
 	
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
-	elRef.cont.addEventListener('mousedown', gEMouseDown, false);
-	elRef.cont.addEventListener('mouseup', gEMouseUp, false);
+	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
+	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
 	
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
