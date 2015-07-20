@@ -395,10 +395,10 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
 	
-	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+	//aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	
-	aEditorDOMWindow.focus();
-	aEditorDOMWindow.fullScreen = true;
+	//aEditorDOMWindow.focus();
+	//aEditorDOMWindow.fullScreen = true;
 	
 	// os specific special stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
@@ -425,8 +425,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var json = 
 	[
 		'xul:stack', {id:'stack'},
-			['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'}],
-			['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
+			['html:canvas', {id:'canBase',style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left'}],
+			['html:canvas', {id:'canDim',style:'display:-moz-box;cursor:crosshair;'}]
 	];
 	
 	var elRef = {};
@@ -440,14 +440,26 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	colMon[iMon].E.canDim = elRef.canDim;
 	colMon[iMon].E.ctxBase = ctxBase;
 	colMon[iMon].E.ctxDim = ctxDim;
-	
-	
-	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
-	ctxDim.fillRect(0, 0, w, h);
-	
-	//console.error('colMon[iMon].screenshot:', colMon[iMon].screenshot)
-	ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
 
+	
+	// ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
+	// ctxDim.fillRect(0, 0, colMon[0].w + colMon[1].w, colMon[0].h + colMon[1].h);
+
+	ctxBase.putImageData(colMon[0].screenshot, 0, 0); //, colMon[0].x+colMon[1].w, colMon[0].y+colMon[1].h);
+	ctxBase.putImageData(colMon[1].screenshot, 0, 0); //, 0, 0);
+	
+	elRef.canBase.width = colMon[0].w + colMon[1].w;
+	elRef.canBase.height = colMon[0].h + colMon[1].h;
+	elRef.canDim.width = colMon[0].w + colMon[1].w;
+	elRef.canDim.height = colMon[0].h + colMon[1].h;
+	
+	console.error('elRef.canBase.width', elRef.canBase.width);
+	console.error('elRef.canBase.height', elRef.canBase.height);
+	
+	
+	//aEditorDOMWindow.resizeTo(elRef.canBase.width, elRef.canBase.height);
+	//aEditorDOMWindow.moveTo(colMon[1].x, colMon[1].y);
+	
 	var menuElRef = {};
 	doc.documentElement.appendChild(jsonToDOM(gEMenuDomJson, doc, menuElRef));
 	doc.documentElement.setAttribute('context', 'myMenu1');
@@ -788,7 +800,7 @@ function shootAllMons(aDOMWindow) {
 	
 	var openWindowOnEachMon = function() {
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,layerX=1,layerY=1', null);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow
 			};
