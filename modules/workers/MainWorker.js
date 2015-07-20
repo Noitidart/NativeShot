@@ -210,9 +210,12 @@ function shootAllMons() {
 						break;
 					}
 					
-					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					var StateFlags = parseInt(cutils.jscGetDeepest(lpDisplayDevice.StateFlags));
 					
-					if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_MIRRORING_DRIVER) {
+						// skip this one, its a mirror monitor (like vnc or webex)
+					} else if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
 						console.log('is monitor');
 						
 						var dm = ostypes.TYPE.DEVMODE(); // SIZEOF_DEVMODE = 220 on 32bit fx Win8.1 64bit when I do insepction though dm.size is set to 188
@@ -240,6 +243,10 @@ function shootAllMons() {
 								lpszDevice: lpDisplayDevice.DeviceName
 							}
 						});
+						
+						if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_PRIMARY_DEVICE) {
+							collMonInfos[collMonInfos.length-1].primary = true;
+						}
 					}
 				}
 				// end - get all monitor resolutions
@@ -256,6 +263,19 @@ function shootAllMons() {
 							message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
 							winLastError: ctypes.winLastError
 						});
+					}
+					
+					if (core.os.version >= 6.3) { // for scale purposes for non dpi aware process due to bug 890156
+						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
+						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
+						var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
+						var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
+						if (win81ScaleX != 1) {
+							collMonInfos[s].win81ScaleX = win81ScaleX;
+						}
+						if (win81ScaleY != 1) {
+							collMonInfos[s].win81ScaleY = win81ScaleY;
+						}
 					}
 					
 					var w = collMonInfos[s].w;
