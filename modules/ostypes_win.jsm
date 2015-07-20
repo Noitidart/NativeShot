@@ -283,7 +283,8 @@ var winInit = function() {
 		DM_DISPLAYFREQUENCY: 0x00400000,
 		DM_PELSHEIGHT: 0x00100000,
 		DM_PELSWIDTH: 0x00080000,
-		ENUM_CURRENT_SETTINGS: self.TYPE.DWORD('0xFFFFFFFF'),
+		ENUM_CURRENT_SETTINGS: self.TYPE.DWORD.size == 4 ? /*use 8 letters for size 4*/ self.TYPE.DWORD('0xFFFFFFFF') : /*size is 8 so use 16 letters*/ self.TYPE.DWORD('0xFFFFFFFFFFFFFFFF'),
+		ENUM_REGISTRY_SETTINGS: self.TYPE.DWORD.size == 4 ? self.TYPE.DWORD('0xFFFFFFFE') : self.TYPE.DWORD('0xFFFFFFFFFFFFFFFE'),
 		HORZRES: 8,
 		LOGPIXELSX: 88,
 		LOGPIXELSY: 90,
@@ -294,7 +295,11 @@ var winInit = function() {
 		HWND_TOPMOST: self.TYPE.HWND(-1), // toString: "ctypes.voidptr_t(ctypes.UInt64("0xffffffff"))" cannot do self.TYPE.HWND('-1') as that puts out `TypeError: can't convert the string "-1" to the type ctypes.voidptr_t`
 		SWP_NOSIZE: 1,
 		SWP_NOMOVE: 2,
-		SWP_NOREDRAW: 8
+		SWP_NOREDRAW: 8,
+		MDT_Effective_DPI: 0,
+		MDT_Angular_DPI: 1,
+		MDT_Raw_DPI: 2,
+		MDT_Default: 0 // MDT_Effective_DPI
 	};
 
 	var _lib = {}; // cache for lib

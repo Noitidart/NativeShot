@@ -28,10 +28,8 @@ const core = {
 
 var PromiseWorker;
 var bootstrap = this;
-var OSStuff = {};
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
-var collCanMonInfos;
 
 // Lazy Imports
 const myServices = {};
@@ -220,6 +218,7 @@ var gESelectionRes = { // in layerX and layerY, holds dimenstions/resolution of 
 	eY: 0 // ending y, y + h
 };
 
+var gCleanTimer;
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
@@ -364,6 +363,15 @@ function gEUnload(e) {
 			colMon[i].E.DOMWindow.close();
 		}
 	}
+	
+	if (!gCleanTimer) {
+		gCleanTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
+	}
+	gCleanTimer.initWithCallback({
+		notify: function() {
+			colMon = null;
+		}
+	}, 3000, Ci.nsITimer.TYPE_ONE_SHOT);
 }
 // end - canvas functions to act across all canvases
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
@@ -949,6 +957,9 @@ function startup(aData, aReason) {
 		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
 		onCommand: function(aEvent) {
 			var aDOMWin = aEvent.target.ownerDocument.defaultView;
+			if (gCleanTimer) {
+				gCleanTimer.cancel();
+			}
 			if (aEvent.shiftKey == 1) {
 				// default time delay queue
 				aDOMWin.setTimeout(function() {
