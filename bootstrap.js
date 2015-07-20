@@ -228,19 +228,45 @@ var gCanDim = {
 			throw new Error('aArrFuncArgs must be an array');
 		}
 		// executes the ctx function across all ctx's
+		
+		// identify replace indiices and its val
+		var specials = {
+			'{{W}}': '{{W}}', // can dependent
+			'{{H}}': '{{H}}' // can depdnent
+		}
+		var specialIndexes = {};
+		var somethingSpecial = false;
+		for (var j=0; j<aArrFuncArgs.length; j++) {
+			if (aArrFuncArgs[j] in specials) {
+				specialIndexes[j] = specials[aArrFuncArgs[j]];
+				somethingSpecial = true;
+			}
+		}
+		
+		if (!somethingSpecial) {
+			specialIndexes = null;
+		}
+
 		for (var i=0; i<colMon.length; i++) {
 			var aCanDim = colMon[i].E.canDim;
 			var aCtxDim = colMon[i].E.ctxDim;
 			
 			// do special replacements in arugments
-			for (var j=0; j<aArrFuncArgs.length; j++) {
-				if (aArrFuncArgs[j] == '{{H}}') {
-					aArrFuncArgs[j] = colMon[i].h; //aCanDim.height; // have to use colMon due to scaling for win81
-				} else if (aArrFuncArgs[j] == '{{W}}') {
-					aArrFuncArgs[j] = colMon[i].w; //aCanDim.width; // have to use colMon due to scaling for win81
-				}
+			
+			if (specialIndexes) {
+				var canDepSpecials = {
+					'{{W}}': colMon[i].w,
+					'{{H}}': colMon[i].h
+				};
 			}
 			
+			for (var j in specialIndexes) {
+				aArrFuncArgs[j] = canDepSpecials[specialIndexes[j]];
+			}
+			// if (aStrFuncName == 'clearRect') {
+				// console.info('clearing with args:', aArrFuncArgs, aCanDim.ownerDocument.defaultView.location.search.substr('?iMon='.length), colMon[i].w); // works outside the `for j` loop but not inside it, needs hoisted i					}
+			// }
+
 			//console.log('applying arr:', aArrFuncArgs);
 			aCtxDim[aStrFuncName].apply(aCtxDim, aArrFuncArgs);
 		}
