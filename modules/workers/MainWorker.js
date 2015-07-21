@@ -119,7 +119,28 @@ function setWinAlwaysOnTop(aArrHwndPtrStr) {
 			break;
 		case 'gtk':
 			
-				// 
+				// http://stackoverflow.com/a/4347486/5062337
+				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
+				var atom_wmNetWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					
+					var xclient = ostypes.TYPE.XClientMessageEvent();
+					xclient.type = ostypes.CONST.ClientMessage;
+					xclient.window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					xclient.message_type = atom_wmNetWmState;
+					xclient.format = 32; // because xclient.data is long, i defined that in the struct union
+					xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
+					xclient.send_event = ostypes.CONST.False;
+					
+					var xevent = ostypes.TYPE.XEvent();
+					xevent.xclient = xclient;
+					
+					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address());
+					console.log('rez_SendEv:', rez_SendEv, rez_SendEv.toString());
+				}
 				
 			break;
 		case 'darwin':
@@ -484,6 +505,23 @@ function shootAllMons() {
 					ostypes.API('XRRFreeOutputInfo')(info);
 				}
 				ostypes.API('XRRFreeScreenResources')(screen);
+				console.info('json.stringify pre clean:', JSON.stringify(collMonInfos));
+				var monStrs = [];
+				for (var i=0; i<collMonInfos.length; i++) {
+					if (!collMonInfos[i].w || !collMonInfos[i].h)  {// test if 0 width height
+						collMonInfos.splice(i, 1);
+						i--;
+					} else {
+						var monStr = collMonInfos[i].w + 'x' + collMonInfos[i].h + '+' + collMonInfos[i].x + '+' + collMonInfos[i].y;
+						if (monStrs.indexOf(monStr) == -1) {
+							monStrs.push(monStr);
+						} else {
+							collMonInfos.splice(i, 1);
+							i--;
+						}
+					}
+				}
+				console.info('json.stringify post clean:', JSON.stringify(collMonInfos), collMonInfos);
 				// end - get all monitor resolutions
 				
 				// start - take shot of all monitors and push to just first element of collMonInfos
@@ -540,6 +578,7 @@ function shootAllMons() {
 					var screenUseW = collMonInfos[i].w;
 					var screenUseH = collMonInfos[i].h;
 					
+					console.info('screenUseW:', screenUseW, 'screenUseH:', screenUseH, '_END_');
 					var screnImagedata = new ImageData(screenUseW, screenUseH);
 					var siref = screnImagedata.data;
 					

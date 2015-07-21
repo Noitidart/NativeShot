@@ -435,6 +435,29 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	aEditorDOMWindow.focus();
 	aEditorDOMWindow.fullScreen = true;
+	
+	// set window on top:
+	console.error('sending:', aHwndPtrStr);
+	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aHwndPtrStr]);
+	promise_setWinAlwaysTop.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
+			// start - do stuff here - promise_setWinAlwaysTop
+			// end - do stuff here - promise_setWinAlwaysTop
+		},
+		function(aReason) {
+			var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
+			console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
+			//deferred_createProfile.reject(rejObj);
+		}
+	).catch(
+		function(aCaught) {
+			var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
+			console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
+			//deferred_createProfile.reject(rejObj);
+		}
+	);
+	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
 	var w = colMon[iMon].w;
 	var h = colMon[iMon].h;
@@ -486,7 +509,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	}
 	
 	// start - postStuff
-		
+	// aEditorDOMWindow.setTimeout(function() {
 	// insert canvases and menu	
 	var doc = aEditorDOMWindow.document;
 	var elRef = {};
@@ -522,7 +545,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 
 	var menuElRef = {};
+	console.error('ok going to append');
 	doc.documentElement.appendChild(jsonToDOM(gEMenuDomJson, doc, menuElRef));
+	console.error('ok APPENDED??');
 	doc.documentElement.setAttribute('context', 'myMenu1');
 	
 	// set up up event listeners
@@ -554,7 +579,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		default:
 			console.error('os not supported');
 	}
-	
+	// }, 1000);
 	// end - postStuff
 }
 // end - observer handlers
