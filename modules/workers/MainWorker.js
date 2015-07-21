@@ -122,6 +122,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr) {
 				// http://stackoverflow.com/a/4347486/5062337
 				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
 				var atom_wmNetWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
+				console.log('aArrHwndPtrStr:', aArrHwndPtrStr);
 				
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
 					console.error('info:', aArrHwndPtrStr[i]);

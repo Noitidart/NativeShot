@@ -438,7 +438,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	// set window on top:
 	console.error('sending:', aHwndPtrStr);
-	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aHwndPtrStr]);
+	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [[aHwndPtrStr]]);
 	promise_setWinAlwaysTop.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
