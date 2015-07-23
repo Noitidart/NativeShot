@@ -280,9 +280,8 @@ var gCanDim = {
 					continue;
 				} else {
 					// convert screen xy of rect to layer xy
-					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = colMon[i].win81ScaleX ? Math.floor(colMon[i].x + ((rectIntersecting.left - colMon[i].x) * colMon[i].win81ScaleX)) : rectIntersecting.left;
-					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = colMon[i].win81ScaleY ? Math.floor(colMon[i].y + ((rectIntersecting.top - colMon[i].y) * colMon[i].win81ScaleY)) : rectIntersecting.top;
-					
+					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = rectIntersecting.left - colMon[i].x;
+					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = rectIntersecting.top - colMon[i].y;
 					console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
 				}
 			}
@@ -406,17 +405,16 @@ var gEWinMouseDownedIn; // holds index of monitor moused down in this will help 
 function gEMouseDown(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 	//console.info('mousedown, e:', e);
-	var postModX = colMon[iMon].win81ScaleX ? colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX) : e.screenX;
-	var postModY = colMon[iMon].win81ScaleY ? colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY) : e.screenY;
-	console.info('MOUSEDOWN', 'PREmod:', e.screenX, e.screenY, 'POSTmod:', postModX, postModY);
-	
+
 	// console.info('you moved on x:', (e.screenX - colMon[iMon].x))
 	// console.info('add this to e.screenX:', ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX));
 	if (e.button != 0) { return } // only repsond to primary click
 	if (e.target.id != 'canDim') { return } // only repsond to primary click on canDim so this makes it ignore menu clicks etc
 	
-	var cEMDX = colMon[iMon].win81ScaleX ? e.screenX * colMon[iMon].win81ScaleX : e.screenX;
-	var cEMDY = colMon[iMon].win81ScaleY ? e.screenY * colMon[iMon].win81ScaleY : e.screenY;
+	var cEMDX = colMon[iMon].win81ScaleX ? colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX) : e.screenX;
+	var cEMDY = colMon[iMon].win81ScaleY ? colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY) : e.screenY;
+	console.info('MOUSEDOWN', 'PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMDX, cEMDY);
+	
 	// var cEMDX = e.screenX;
 	// var cEMDY = e.screenY;
 	
@@ -433,8 +431,9 @@ function gEMouseDown(e) {
 	} else {
 		if (gESelected) {
 			// if user mouses down within selected area, then dont start new selection
-			if (cEMDX >= gESelectedRect.left && cEMDX <= gESelectedRect.right && cEMDY >= gESelectedRect.top && cEMDY <= gESelectedRect.bottom) {
-				console.error('clicked within selected so dont do anything');
+			var cPoint = new Rect(cEMDX, cEMDY, 1, 1);
+			if (gESelectedRect.contains(cPoint)) {
+				console.error('clicked within selected so dont do anything', 'point:', cPoint, 'gESelectedRect', JSON.parse(JSON.stringify(gESelectedRect)));
 				return; // he clicked within it, dont do anything
 			}
 		}
