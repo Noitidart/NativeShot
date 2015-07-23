@@ -109,8 +109,16 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-function setWinAlwaysOnTop(aArrHwndPtrStr) {
+function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 	// aArrHwndPtrStr is an array of multiple hwnds, each of them will get set to always on top
+	// aOptions holds keys that are hwndPtrStr in aArr and hold params like, left, right, top, left needed for x11 strut partial stuff OR for SetWindowPos for winapi
+	/* example:
+		aArrHwndPtrStr = ['0x1234', '0x999'];
+		aOptions = {
+			'0x1234': {left:0, top:0, ...},
+			'0x999': {left:0, top:0, ...}
+		}
+	*/
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
@@ -118,7 +126,8 @@ function setWinAlwaysOnTop(aArrHwndPtrStr) {
 				
 			break;
 		case 'gtk':
-			
+				
+				/*
 				// http://stackoverflow.com/a/4347486/5062337
 				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
 				var atom_wmNetWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
@@ -142,7 +151,80 @@ function setWinAlwaysOnTop(aArrHwndPtrStr) {
 					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address());
 					console.log('rez_SendEv:', rez_SendEv, rez_SendEv.toString());
 				}
+				*/
+				/*
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var gdkWinPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var gtkWinPtr = ostypes.HELPER.gdkWinPtrToGtkWinPtr(gdkWinPtr);
+					ostypes.API('gtk_window_set_keep_above')(gtkWinPtr, 1);
+				}
+				*/
 				
+				/*
+				// try changing STRUT and STRUT_PARTIAL
+				var atom_wmStrut = ostypes.HELPER.cachedAtom('_NET_WM_STRUT_PARTIAL');
+				var atom_wmStrutPartial = ostypes.HELPER.cachedAtom('_NET_WM_STRUT_PARTIAL');
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					var dataJS = [
+						0,
+						0,
+						0,
+						0
+					];
+					var dataC = ostypes.TYPE.unsigned_long.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmStrut, ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+				}
+				*/
+				/*
+				// try changing WM_WINDOW_TYPE properties
+				var atom_wmWindowType = ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE');
+				var atom_wmWindowTypeDock = ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK');
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					var dataJS = [
+						atom_wmWindowTypeDock
+					];
+					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmWindowType, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+				}
+				*/
+				/*
+				// try changing WM_STATE properties
+				var atom_wmWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
+				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
+				var atom_wmStateFullscreen = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
+				var atom_wmStateAttn = ostypes.HELPER.cachedAtom('_NET_WM_STATE_DEMANDS_ATTENTION');;
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					var dataJS = [
+						atom_wmStateAbove,
+						atom_wmStateFullscreen,
+						atom_wmStateAttn
+					];
+					var dataC = ostypes.TYPE.unsigned_long.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmState, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+				}
+				*/
 			break;
 		case 'darwin':
 			

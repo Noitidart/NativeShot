@@ -44,6 +44,12 @@ var xlibTypes = function() {
 	this.Rotation = ctypes.uint16_t; // not exactly sure about this one but its working
 	this.GdkDrawable = ctypes.StructType('GdkDrawable');
 	this.GdkWindow = ctypes.StructType('GdkWindow');
+	this.GtkWindow = ctypes.StructType('GtkWindow');
+	
+	// gtk types temp
+	this.gint = ctypes.int;
+	this.gboolean = this.gint;
+	this.gpointer = ctypes.voidptr_t;
 	
 	// ADVANCED TYPES
 	this.Colormap = this.XID;
@@ -451,16 +457,16 @@ var x11Init = function() {
 			 *   int nelements
 			 * );
 			 */
-			return _lib('x11').declare('XChangeProperty', self.TYPE.ABI,
-				self.TYPE.INT,				// return
-				self.TYPE.DISPLAY.ptr,		// *display
-				self.TYPE.WINDOW,				// w
-				self.TYPE.ATOM,				// property
-				self.TYPE.ATOM,				// type
-				self.TYPE.INT,				// format
-				self.TYPE.INT,				// mode
-				self.TYPE.UNSIGNED_CHAR.ptr,	// *data
-				self.TYPE.INT					// nelements
+			return lib('x11').declare('XChangeProperty', self.TYPE.ABI,
+				self.TYPE.int,				// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.Window,				// w
+				self.TYPE.Atom,				// property
+				self.TYPE.Atom,				// type
+				self.TYPE.int,				// format
+				self.TYPE.int,				// mode
+				self.TYPE.unsigned_char.ptr,	// *data
+				self.TYPE.int					// nelements
 			);
 		},
 		XDefaultRootWindow: function() {
@@ -840,8 +846,21 @@ var x11Init = function() {
 				self.TYPE.void,						// return
 				self.TYPE.XRRScreenResources.ptr	// *resources
 			);
-		}		
+		},
 		// end - XRANDR
+		gtk_window_set_keep_above: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-keep-above
+			 * void gtk_window_set_keep_above (
+			 *   GtkWindow *window,
+			 *   gboolean setting
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_keep_above', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.gboolean			// setting
+			);
+		},
 	};
 	// end - predefine your declares here
 	// end - function declares

@@ -437,8 +437,15 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.fullScreen = true;
 	
 	// set window on top:
-	console.error('sending:', aHwndPtrStr);
-	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [[aHwndPtrStr]]);
+	var aArrHwndPtr = [aHwndPtrStr];
+	var aArrHwndPtrOsParams = {};
+	aArrHwndPtrOsParams[aHwndPtrStr] = {
+		left: colMon[iMon].x,
+		top: colMon[iMon].y,
+		right: colMon[iMon].x + colMon[iMon].w,
+		bottom: colMon[iMon].y + colMon[iMon].h
+	};
+	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
 	promise_setWinAlwaysTop.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
