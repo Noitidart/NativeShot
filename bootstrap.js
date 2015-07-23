@@ -277,10 +277,25 @@ var gCanDim = {
 			aCtxDim[aStrPropName] = aPropVal;
 		}
 	}
-}
+};
+
+var gEditor = {
+	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
+		for (var i=0; i<colMon.length; i++) {
+			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
+			console.log('added ', evName, 'to iMon:', i);
+		}
+	},
+	removeEventListener: function(keyNameInColMonE, evName, func, aBool) {
+		for (var i=0; i<colMon.length; i++) {
+			colMon[i].E[keyNameInColMonE].removeEventListener(evName, func, aBool);
+		}
+	}
+};
 
 function gEMouseMove(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
+	console.log('mousemove imon:', iMon, e.layerX, e.layerY);
 	if (gESelecting) {
 		var cEMMX = colMon[iMon].win81ScaleX ? e.layerX * colMon[iMon].win81ScaleX : e.layerX;
 		var cEMMY = colMon[iMon].win81ScaleY ? e.layerY * colMon[iMon].win81ScaleY : e.layerY;
@@ -295,7 +310,7 @@ function gEMouseMove(e) {
 				
 		if (newW && newH) {
 			gESelected = true;
-			gCanDim.execFunc('clearRect', [gEMDX, gEMDY, newW, newH]);
+			//gCanDim.execFunc('clearRect', [gEMDX, gEMDY, newW, newH]);
 			
 			// gCanDim.execFunc('translate', [0.5, 0.5]);
 			// gCanDim.execFunc('rect', [gEMDX, gEMDY, newW, newH]); // draw invisible rect for stroke
@@ -308,26 +323,40 @@ function gEMouseMove(e) {
 	} else if (gEMoving) {
 		// :todo:
 	}
+	
+	// e.preventDefault();
+	// e.stopPropagation();
+	// e.returnValue = false;
+	// return false;
 }
 function gEMouseUp(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
+	if (simdMouseUp) {
+		console.warn('simd so do nothing');
+		e.stopPropagation();
+		e.preventDefault();
+		e.returnValue = false;
+		return false;
+	}
 	if (gESelecting) {
+		console.error('MOUSED UP iMon:', iMon);
 		gESelecting = false;
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
-		}
+		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
 		
 		gCanDim.execFunc('restore');
 		
 	} else if (gEMoving) {
 		gEMoving = false;
 		
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
-		}
+		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
 		
 		gCanDim.execFunc('restore');
 	}
+	
+	// e.preventDefault();
+	// e.stopPropagation();
+	// e.returnValue = false;
+	// return false;
 }
 function gEMouseDown(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
@@ -341,16 +370,14 @@ function gEMouseDown(e) {
 	// var cEMDX = e.layerX;
 	// var cEMDY = e.layerY;
 	
-	console.info('pre mod', e.layerX, 'post mod:', cEMDX);
+	//console.info('pre mod', e.layerX, 'post mod:', cEMDX);
 	
 	// check if mouse downed on move selection hit box
 	if (e.target.id == 'hitboxMoveSel') {
 		gEMoving = true;
 		gEMDX = cEMDX;
 		gEMDY = cEMDY;
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
-		}
+		// gEditor.addEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
 	} else {
 		if (gESelected) {
 			// if user mouses down within selected area, then dont start new selection
@@ -379,17 +406,22 @@ function gEMouseDown(e) {
 		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
 
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
-		}
+		// gEditor.addEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
+
 	}
 	// else start selection
 		// reset canvases
+		
+	// e.preventDefault();
+	// e.stopPropagation();
+	// e.returnValue = false;
+	// return false;
 }
+var simdMouseUp = false;
 function gEUnload(e) {
 	//console.info('unload e:', e);
 	var iMon = parseInt(e.currentTarget.location.search.substr('?iMon='.length));
-	console.error('editor window unloading iMon:', iMon);
+	//console.error('editor window unloading iMon:', iMon);
 	colMon[iMon].E.DOMWindowMarkedUnloaded = true;
 	
 	// close all other windows
@@ -409,11 +441,24 @@ function gEUnload(e) {
 		}
 	}, 3000, Ci.nsITimer.TYPE_ONE_SHOT);
 }
+var lastIMon;
+function gEMouseEnter(e) {
+	var aDOMWindow = e.view;
+	var iMon = parseInt(aDOMWindow.location.search.substr('?iMon='.length));
+	if (lastIMon != iMon) {
+		console.error('entered, iMon:', iMon)
+		lastIMon = iMon;
+		aDOMWindow.focus();
+		e.stopPropagation();
+		e.preventDefault();
+		//console.error('focused')		
+	}
+}
 // end - canvas functions to act across all canvases
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	var iMon = aData; //parseInt(aEditorDOMWindow.location.search.substr('?iMon='.length)); // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-	console.error('loaded window for iMon:', iMon);
+	//console.error('loaded window for iMon:', iMon);
 	
 	var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
 	
@@ -472,8 +517,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var json = 
 	[
 		'xul:stack', {id:'contOfCans'},
-				['html:canvas', {id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
-				['html:canvas', {id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
+				['html:canvas', {draggable:'false',id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
+				['html:canvas', {draggable:'false',id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
 	];
 	
 	// os specific special stuff
@@ -552,17 +597,18 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 
 	var menuElRef = {};
-	console.error('ok going to append');
+	//console.error('ok going to append');
 	doc.documentElement.appendChild(jsonToDOM(gEMenuDomJson, doc, menuElRef));
-	console.error('ok APPENDED??');
+	//console.error('ok APPENDED??');
 	doc.documentElement.setAttribute('context', 'myMenu1');
 	
 	// set up up event listeners
 	
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
+	//aEditorDOMWindow.document.documentElement.addEventListener('mouseenter', gEMouseEnter, false);
 	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
 	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
-	
+	aEditorDOMWindow.addEventListener('mousemove', gEMouseMove, false)
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
@@ -892,10 +938,13 @@ function editorUploadToImgurAnon(aEditorDOMWindow) {
 function shootAllMons(aDOMWindow) {
 	
 	var openWindowOnEachMon = function() {
+		lastIMon = null;
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,layerX=1,layerY=1', null);
 			colMon[i].E = {
-				DOMWindow: aEditorDOMWindow
+				DOMWindow: aEditorDOMWindow,
+				docEl: aEditorDOMWindow.document.documentElement,
+				doc: aEditorDOMWindow.document,
 			};
 			//console.info('aEditorDOMWindow:', aEditorDOMWindow);
 		}
