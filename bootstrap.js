@@ -2,6 +2,7 @@
 const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
+Cu.import('resource://gre/modules/Geometry.jsm');
 const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
@@ -198,6 +199,10 @@ var colMon; // rename of collMonInfos
 	}
 }
 */
+var gIMonMouseDownedIn;
+
+var gETopLeftMostX;
+var gETopLeftMostY;
 
 var gESelected = false;
 var gESelecting = false; // users is drawing rect
@@ -210,23 +215,19 @@ const gDefLineDash = [3, 2];
 const gDefStrokeStyle = '#ccc';
 const gDefLineWidth = '1';
 
-var gESelectionRes = { // in layerX and layerY, holds dimenstions/resolution of the selected rectangle
-	w: 0,
-	h: 0,
-	x: 0,
-	y: 0,
-	eX: 0, // ending x, x + w
-	eY: 0 // ending y, y + h
-};
+var gESelectedRect = new Rect(0, 0, 0, 0);
 
 var gCleanTimer;
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
-	execFunc: function(aStrFuncName, aArrFuncArgs=[]) {
-		if (!Array.isArray(aArrFuncArgs)) {
-			throw new Error('aArrFuncArgs must be an array');
-		}
+	execFunc: function(aStrFuncName, aArrFuncArgs=[], aObjConvertScreenToLayer) {
+		/* aObjConvertScreenToLayer is an object holding keys of `x` and `y` and it tells the index in aArrFuncArgs it is found, it will then convert that to layerX
+		if provide this arg MUST provide x and y
+		*/
+		// if (!Array.isArray(aArrFuncArgs)) {
+			// throw new Error('aArrFuncArgs must be an array');
+		// }
 		// executes the ctx function across all ctx's
 		
 		// identify replace indiices and its val
@@ -246,29 +247,50 @@ var gCanDim = {
 		if (!somethingSpecial) {
 			specialIndexes = null;
 		}
-
+		
+		var clone_aArrFuncArgs = [];
 		for (var i=0; i<colMon.length; i++) {
-			var aCanDim = colMon[i].E.canDim;
-			var aCtxDim = colMon[i].E.ctxDim;
+			// clone aArrFuncArgs (instead of aArrFuncArgs.slice() i think it might be better to do it this way)
+			for (var j=0; j<aArrFuncArgs.length; j++) {
+				clone_aArrFuncArgs[j] = aArrFuncArgs[j];
+			}
+			
+			var orig = JSON.stringify(clone_aArrFuncArgs); // :debug:
 			
 			// do special replacements in arugments
-			
-			if (specialIndexes) {
-				var canDepSpecials = {
-					'{{W}}': colMon[i].w,
-					'{{H}}': colMon[i].h
-				};
+			for (var j=0; j<clone_aArrFuncArgs.length; j++) {
+				// special replacements
+				if (clone_aArrFuncArgs[j] == '{{W}}') {
+					clone_aArrFuncArgs[j] = colMon[i].w;
+				} else if (clone_aArrFuncArgs[j] == '{{H}}') {
+					clone_aArrFuncArgs[j] = colMon[i].h;
+				}
 			}
 			
-			for (var j in specialIndexes) {
-				aArrFuncArgs[j] = canDepSpecials[specialIndexes[j]];
+			// modify screenX and screenY to layerX and layerY based on monitor
+			if (aObjConvertScreenToLayer) {
+				var cRect = new Rect(clone_aArrFuncArgs[aObjConvertScreenToLayer.x], clone_aArrFuncArgs[aObjConvertScreenToLayer.y], clone_aArrFuncArgs[aObjConvertScreenToLayer.w], clone_aArrFuncArgs[aObjConvertScreenToLayer.h]);
+				
+				// check if intersection
+				var rectIntersecting = colMon[i].rect.intersect(cRect);
+				console.info('rectIntersecting:', rectIntersecting)
+				if (!rectIntersecting.width && !rectIntersecting.height) { // if width and height are 0 it means no intersection between the two rect's
+					// does not intersect, continue to next monitor
+					console.warn('no intersect, contin to next mon', cRect, colMon[i].rect);
+					continue;
+				} else {
+					// convert screen xy of rect to layer xy
+					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = colMon[i].win81ScaleX ? Math.floor(colMon[i].x + ((rectIntersecting.left - colMon[i].x) * colMon[i].win81ScaleX)) : rectIntersecting.left;
+					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = colMon[i].win81ScaleY ? Math.floor(colMon[i].y + ((rectIntersecting.top - colMon[i].y) * colMon[i].win81ScaleY)) : rectIntersecting.top;
+					
+					console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
+				}
 			}
-			// if (aStrFuncName == 'clearRect') {
-				// console.info('clearing with args:', aArrFuncArgs, aCanDim.ownerDocument.defaultView.location.search.substr('?iMon='.length), colMon[i].w); // works outside the `for j` loop but not inside it, needs hoisted i					}
-			// }
+			
+			var aCtxDim = colMon[i].E.ctxDim;
 
-			//console.log('applying arr:', aArrFuncArgs);
-			aCtxDim[aStrFuncName].apply(aCtxDim, aArrFuncArgs);
+			//console.log('applying arr:', clone_aArrFuncArgs);
+			aCtxDim[aStrFuncName].apply(aCtxDim, clone_aArrFuncArgs);
 		}
 	},
 	execProp: function(aStrPropName, aPropVal) {
@@ -294,14 +316,16 @@ var gEditor = {
 };
 
 function gEMouseMove(e) {
-	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-	console.log('mousemove imon:', iMon, e.layerX, e.layerY);
+	var iMon = gIMonMouseDownedIn; //parseInt(e.view.location.search.substr('?iMon='.length)); // cant do this as on mouse move, user may not be over iMon they started in, so have to calc it
+	
+	//console.log('mousemove imon:', iMon, e.screenX, e.screenY);
 	if (gESelecting) {
-		var cEMMX = colMon[iMon].win81ScaleX ? e.layerX * colMon[iMon].win81ScaleX : e.layerX;
-		var cEMMY = colMon[iMon].win81ScaleY ? e.layerY * colMon[iMon].win81ScaleY : e.layerY;
-		// var cEMMX = e.layerX;
-		// var cEMMY = e.layerY;
+		var cEMMX = colMon[iMon].win81ScaleX ? Math.floor(colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX)) : e.screenX;
+		var cEMMY = colMon[iMon].win81ScaleY ? Math.floor(colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY)) : e.screenY;
+		// var cEMMX = e.screenX;
+		// var cEMMY = e.screenY;
 		
+		console.info('PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMMX, cEMMY);
 		var newW = cEMMX - gEMDX;
 		var newH = cEMMY - gEMDY;
 		
@@ -310,7 +334,23 @@ function gEMouseMove(e) {
 				
 		if (newW && newH) {
 			gESelected = true;
-			//gCanDim.execFunc('clearRect', [gEMDX, gEMDY, newW, newH]);
+			if (newW < 0) {
+				gESelectedRect.left = gEMDX + newW;
+				gESelectedRect.width = Math.abs(newW);
+			} else {
+				gESelectedRect.left = gEMDX;
+				gESelectedRect.width = newW;
+			}
+			if (newH < 0) {
+				gESelectedRect.top = gEMDY + newH;
+				gESelectedRect.height = Math.abs(newH);
+			} else {
+				gESelectedRect.top = gEMDY;
+				gESelectedRect.height = newH;
+			}
+			//gESelectedRect.setRect(gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height); // no need
+			//console.error('x y w h:', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+			gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 			
 			// gCanDim.execFunc('translate', [0.5, 0.5]);
 			// gCanDim.execFunc('rect', [gEMDX, gEMDY, newW, newH]); // draw invisible rect for stroke
@@ -342,6 +382,8 @@ function gEMouseUp(e) {
 		console.error('MOUSED UP iMon:', iMon);
 		gESelecting = false;
 		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
+		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+		gIMonMouseDownedIn = null;
 		
 		gCanDim.execFunc('restore');
 		
@@ -349,6 +391,8 @@ function gEMouseUp(e) {
 		gEMoving = false;
 		
 		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
+		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+		gIMonMouseDownedIn = null;
 		
 		gCanDim.execFunc('restore');
 	}
@@ -358,19 +402,25 @@ function gEMouseUp(e) {
 	// e.returnValue = false;
 	// return false;
 }
+var gEWinMouseDownedIn; // holds index of monitor moused down in this will help me identify what monitor the user is over as they mousemove outside of that window, as mousemove doesnt trigger on the window they are over if they mousedown in another window
 function gEMouseDown(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-	console.info('mousedown, e:', e);
+	//console.info('mousedown, e:', e);
+	var postModX = colMon[iMon].win81ScaleX ? colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX) : e.screenX;
+	var postModY = colMon[iMon].win81ScaleY ? colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY) : e.screenY;
+	console.info('MOUSEDOWN', 'PREmod:', e.screenX, e.screenY, 'POSTmod:', postModX, postModY);
 	
+	// console.info('you moved on x:', (e.screenX - colMon[iMon].x))
+	// console.info('add this to e.screenX:', ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX));
 	if (e.button != 0) { return } // only repsond to primary click
 	if (e.target.id != 'canDim') { return } // only repsond to primary click on canDim so this makes it ignore menu clicks etc
 	
-	var cEMDX = colMon[iMon].win81ScaleX ? e.layerX * colMon[iMon].win81ScaleX : e.layerX;
-	var cEMDY = colMon[iMon].win81ScaleY ? e.layerY * colMon[iMon].win81ScaleY : e.layerY;
-	// var cEMDX = e.layerX;
-	// var cEMDY = e.layerY;
+	var cEMDX = colMon[iMon].win81ScaleX ? e.screenX * colMon[iMon].win81ScaleX : e.screenX;
+	var cEMDY = colMon[iMon].win81ScaleY ? e.screenY * colMon[iMon].win81ScaleY : e.screenY;
+	// var cEMDX = e.screenX;
+	// var cEMDY = e.screenY;
 	
-	//console.info('pre mod', e.layerX, 'post mod:', cEMDX);
+	//console.info('pre mod', e.screenX, 'post mod:', cEMDX);
 	
 	// check if mouse downed on move selection hit box
 	if (e.target.id == 'hitboxMoveSel') {
@@ -378,13 +428,18 @@ function gEMouseDown(e) {
 		gEMDX = cEMDX;
 		gEMDY = cEMDY;
 		// gEditor.addEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
+		gIMonMouseDownedIn = iMon;
+		colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 	} else {
 		if (gESelected) {
 			// if user mouses down within selected area, then dont start new selection
-			if (cEMDX > gESelectionRes.x && cEMDX < gESelectionRes.eX && cEMDY > gESelectionRes.y && cEMDY < gESelectionRes.eY) {
+			if (cEMDX >= gESelectedRect.left && cEMDX <= gESelectedRect.right && cEMDY >= gESelectedRect.top && cEMDY <= gESelectedRect.bottom) {
+				console.error('clicked within selected so dont do anything');
 				return; // he clicked within it, dont do anything
 			}
 		}
+		
+		gESelectedRect.setRect(0, 0, 0, 0);
 		
 		gESelecting = true;
 		gESelected = false;
@@ -407,6 +462,8 @@ function gEMouseDown(e) {
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
 
 		// gEditor.addEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
+		gIMonMouseDownedIn = iMon;
+		colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 
 	}
 	// else start selection
@@ -440,19 +497,6 @@ function gEUnload(e) {
 			colMon = null;
 		}
 	}, 3000, Ci.nsITimer.TYPE_ONE_SHOT);
-}
-var lastIMon;
-function gEMouseEnter(e) {
-	var aDOMWindow = e.view;
-	var iMon = parseInt(aDOMWindow.location.search.substr('?iMon='.length));
-	if (lastIMon != iMon) {
-		console.error('entered, iMon:', iMon)
-		lastIMon = iMon;
-		aDOMWindow.focus();
-		e.stopPropagation();
-		e.preventDefault();
-		//console.error('focused')		
-	}
 }
 // end - canvas functions to act across all canvases
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
@@ -605,10 +649,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// set up up event listeners
 	
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
-	//aEditorDOMWindow.document.documentElement.addEventListener('mouseenter', gEMouseEnter, false);
 	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
 	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
-	aEditorDOMWindow.addEventListener('mousemove', gEMouseMove, false)
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
@@ -938,9 +980,8 @@ function editorUploadToImgurAnon(aEditorDOMWindow) {
 function shootAllMons(aDOMWindow) {
 	
 	var openWindowOnEachMon = function() {
-		lastIMon = null;
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,layerX=1,layerY=1', null);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,
@@ -956,6 +997,21 @@ function shootAllMons(aDOMWindow) {
 			console.log('Fullfilled - promise_shoot - ', aVal);
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
+			// set gETopLeftMostX and gETopLeftMostY
+			for (var i=0; i<colMon.length; i++) {
+				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
+				if (i == 0) {
+					gETopLeftMostX = colMon[i].x;
+					gETopLeftMostY = colMon[i].y;
+				} else {
+					if (colMon[i].x < gETopLeftMostX) {
+						gETopLeftMostX = colMon[i].x;
+					}
+					if (colMon[i].y < gETopLeftMostY) {
+						gETopLeftMostY = colMon[i].y;
+					}
+				}
+			}
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot
 		},
