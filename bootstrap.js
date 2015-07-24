@@ -120,8 +120,8 @@ const gEMenuDomJson =
 		['xul:menupopup', {id: 'myMenu1'},
 			['xul:menuitem', {label:'Close', oncommand:'window.close()'}],
 			['xul:menuseparator', {}],
-			['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(e){ gEditor.saveToFile(e) }}],
-			['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(e){ gEditor.saveToFile(e, true) }}],
+			['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(e){ gEditor.saveToFile(e, true) }}],
+			['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(e){ gEditor.saveToFile(e) }}],
 			['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(e){ gEditor.copyToClipboard(e) }}],
 			['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
 				['xul:menupopup', {},
@@ -309,12 +309,14 @@ var gEditor = {
 	canComp: null, // holds canvas element
 	ctxComp: null, // holds ctx element
 	compDOMWindow: null, // i use colMon[i].DOMWindow for this
+	gBrowserDOMWindow: null, // used for clipboard context
 	cleanUp: function() {
 		// reset all globals
 		colMon = null;
 		this.lastCompositedRect = null;
 		this.canComp = null;
 		this.compDOMWindow = null;
+		this.gBrowserDOMWindow = null;
 		
 		gIMonMouseDownedIn = null;
 
@@ -389,32 +391,230 @@ var gEditor = {
 			this.canComp.style.position = 'fixed'; // :debug:
 			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			
-			this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
+			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
 			
 			console.error('composited');
 		}
 	},
 	closeOutEditor: function(e) {
 		// if e.shiftKey then it doesnt do anything, else it closes it out and cleans up (in future maybe possibility to cache? maybe... so in this case would just hide window, but im thinking no dont do this)
-		colMon[0].E.DOMWindow.close();
+		console.error('in close out editor, e.shiftKey:', e.shiftKey);
+		if (e.shiftKey) {
+			console.log('will not close out editor as shift key was held, user wants to do more actions')
+		} else {
+			colMon[0].E.DOMWindow.close();
+		}
+	},
+	showNotif: function(aTitle, aMsg) {
+		gEditor.gBrowserDOMWindow.setTimeout(function() {
+			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + aTitle, aMsg);
+		}, 1000);
 	},
 	saveToFile: function(e, aBoolPreset) {
 		// aBoolPreset true if want to use preset folder and file name
 		this.compositeSelection();
-		// this.closeOutEditor(e);
+		
+		var OSPath_save;
+		var do_saveCanToDisk = function() {
+			(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
+				gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+				var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
+				r.onloadend = function() {
+					// r.result contains the ArrayBuffer.
+					var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
+					promise_saveToDisk.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_saveToDisk - ', aVal);
+							// start - do stuff here - promise_saveToDisk
+							var trans = Transferable(gEditor.gBrowserDOMWindow);
+							trans.addDataFlavor('text/unicode');
+							// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+							trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
+							
+							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+							
+							gEditor.showNotif('Save Completed', 'Screenshot was successfully saved to disk and file path was copied to clipboard');
+							// end - do stuff here - promise_saveToDisk
+						},
+						function(aReason) {
+							var rejObj = {name:'promise_saveToDisk', aReason:aReason};
+							console.error('Rejected - promise_saveToDisk - ', rejObj);
+							gEditor.showNotif('Save Failed', 'Screenshot failed to save to disk, see browser console for more details');
+							//deferred_createProfile.reject(rejObj);
+						}
+					).catch(
+						function(aCaught) {
+							var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
+							console.error('Caught - promise_saveToDisk - ', rejObj);
+							Services.prompt.alert(aDOMWindow, 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+							//deferred_createProfile.reject(rejObj);
+						}
+					);
+				};
+				r.readAsArrayBuffer(b);
+			}, 'image/png');
+		}
+		
+		if (aBoolPreset) {
+			// get save path
+			var OSPath_saveDir;
+			try {
+				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+			} catch (ex) {
+				console.warn('ex:', ex);
+				try {
+					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
+				} catch (ex) {
+					console.warn('ex:', ex);
+					OSPath_saveDir = OS.Constants.Path.desktopDir;
+				}
+			}
+			
+			// generate file name
+			var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
+			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+			
+			do_saveCanToDisk();
+		} else {
+			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+			fp.init(this.compDOMWindow, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
+			fp.appendFilter('PNG Image', '*.png');
+			
+			var rv = fp.show();
+			if (rv != Ci.nsIFilePicker.returnOK) { return } // user canceled
+			
+			OSPath_save = fp.file.path.trim();
+			
+			if (!/^.*\.png/i.test(OSPath_save)) {
+				OSPath_save += '.png';
+			}
+			do_saveCanToDisk();
+		}
 	},
 	copyToClipboard: function(e) {
 		this.compositeSelection();
-		// this.closeOutEditor(e);
+			
+		// based on:
+			// mostly: https://github.com/mxOBS/deb-pkg_icedove/blob/8f8955df7c9db605cf6903711dcbfc6dd7776e50/mozilla/toolkit/devtools/gcli/commands/screenshot.js#L161
+			// somewhat on: https://github.com/dadler/thumbnail-zoom/blob/76a6edded0ca4ef1eb76d4c1b2bc363b433cde63/src/resources/clipboardService.js#L78-L209
+			
+		var data = this.canComp.toDataURL('image/png', '');
+		var channel = Services.io.newChannel(data, null, null);
+		var input = channel.open();
+		var imgTools = Cc['@mozilla.org/image/tools;1'].getService(Ci.imgITools);
+		
+		var container = {};
+		imgTools.decodeImageData(input, channel.contentType, container);
+
+		var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
+		wrapped.data = container.value;
+		
+		var trans = Transferable(this.gBrowserDOMWindow);
+		console.info('channel.contentType:', channel.contentType);
+		trans.addDataFlavor(channel.contentType);
+		
+		trans.setTransferData(channel.contentType, wrapped, -1);
+		
+		Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+		
+		/* to consider
+			// have to first set imageURL = createBlob
+		  
+		   // Also put the image's html <img> tag on the clipboard.  This is 
+		   // important (at least on OSX): if we copy just jpg image data,
+		   // programs like Photoshop and Thunderbird seem to receive it as
+		   // uncompressed png data, which is very large, bloating emails and
+		   // causing randomly truncated data.  But if we also include a
+		   // text/html flavor referring to the jpg image on the Internet, 
+		   // those programs retrieve the image directly as the original jpg
+		   // data, so there is no data bloat.
+		  
+		  var str = Components.classes['@mozilla.org/supports-string;1'].createInstance(Ci.nsISupportsString);
+		  if (str) {
+			str.data = '<img src="' + imageURL + '" />';
+			trans.addDataFlavor('text/html');
+			trans.setTransferData('text/html', str, str.data.length * 2);
+		  }    
+		*/
+		
+		gEditor.showNotif('Image Copied', 'Screenshot was successfully copied to the clipboard');
+		
+		this.closeOutEditor(e);
 	},
 	sendToPrinter: function(e) {
 		this.compositeSelection();
-		// this.closeOutEditor(e);
+		this.closeOutEditor(e);
 	},
 	uploadToImgur: function(e, aBoolAnon) {
 		// aBoolAnon true if want anonymous upload
 		this.compositeSelection();
-		// this.closeOutEditor(e);
+		
+		var data = this.canComp.toDataURL('image/png'); // returns `data:image/png;base64,iVBORw.....`
+		console.info('base64 data pre trim:', data);
+		data = data.substr('data:image/png;base64,'.length); // imgur wants without this
+		
+		console.info('base64 data:', data);
+		var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
+			aPostData: {
+				image: data, // this gets encodeURIComponent'ed by my xhr function
+				type: 'base64'
+			},
+			Headers: {
+				Authorization: 'Client-ID fa64a66080ca868',
+				'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
+			},
+			aResponseType: 'json'
+		});
+		
+		promise_uploadAnonImgur.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
+				// start - do stuff here - promise_uploadAnonImgur
+				var imgUrl = aVal.response.data.link;
+				var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
+				var imgId = aVal.response.data.id;
+				
+				var trans = Transferable(this.gBrowserDOMWindow);
+				trans.addDataFlavor('text/unicode');
+				// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+				trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
+				
+				Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+				
+				// save to upload history - only for anonymous uploads to imgur, so can delete in future
+				var OSPath_history = OS.Path.join(OS.Constants.Path.desktopDir, 'imgur-history.txt'); // creates file if it wasnt there
+				OS.File.open(OSPath_history, {write: true, append: true}).then(valOpen => {
+					var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
+					var txtEncoded = getTxtEncodr().encode(txtToAppend);
+					valOpen.write(txtEncoded).then(valWrite => {
+						console.log('valWrite:', valWrite);
+						valOpen.close().then(valClose => {
+							console.log('valClose:', valClose);
+							console.log('successfully appended');
+						});
+					});
+				});
+				
+				gEditor.showNotif('Image Uploaded', 'Upload to Imgur was successful and image link was copied to the clipboard');
+				// end - do stuff here - promise_uploadAnonImgur
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
+				console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
+				gEditor.showNotif('Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+				//deferred_createProfile.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
+				console.error('Caught - promise_uploadAnonImgur - ', rejObj);
+				//deferred_createProfile.reject(rejObj);
+				//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+				Services.prompt.alert(aDOMWindow, 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+			}
+		);
+		
+		this.closeOutEditor(e);
 	}
 };
 
@@ -774,304 +974,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// end - postStuff
 }
 // end - observer handlers
-// start - editor functions
-function editorSaveToFile(aEditorDOMWindow, showFilePicker) {
-	// start - common to all editor functions
-	var owin = Services.wm.getMostRecentWindow('navigator:browser');
-	/*
-	var ws = Services.wm.getEnumerator(null);
-	while (var w = ws.getNext()) {
-		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
-			owin = w;
-		}
-	}
-	*/
-	if (!owin) { throw new Error('could not find other then this editor window') }
-	var odoc = owin.document;
-
-	var win = aEditorDOMWindow;
-	var doc = win.document;
-	
-	var can = odoc.createElementNS(NS_HTML, 'canvas');
-	var ctx = can.getContext('2d');
-	
-	var divTools = doc.getElementById('divTools');
-	
-	can.width = parseInt(divTools.style.width);
-	can.height = parseInt(divTools.style.height);
-	
-	var baseCan = doc.querySelector('canvas');
-	
-	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
-	win.close();
-	// end - common to all editor functions
-	
-	/*
-	can.style.position = 'fixed'; // :debug:
-	can.style.left = '2000px'; // :debug:
-	can.style.top = '1300px'; // :debug:
-	
-	doc.documentElement.appendChild(can); // :debug:
-	*/
-	var OSPath_save;
-	var do_saveCanToDisk = function() {
-		(can.toBlobHD || can.toBlob).call(can, function(b) {
-			var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
-			r.onloadend = function() {
-				// r.result contains the ArrayBuffer.
-				var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
-				promise_saveToDisk.then(
-					function(aVal) {
-						console.log('Fullfilled - promise_saveToDisk - ', aVal);
-						// start - do stuff here - promise_saveToDisk
-						var trans = Transferable(owin);
-						trans.addDataFlavor('text/unicode');
-						// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-						trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
-						
-						Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-						
-						myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'File Path Copied', 'Screenshot was successfully saved and file path was copied to clipboard');
-						// end - do stuff here - promise_saveToDisk
-					},
-					function(aReason) {
-						var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-						console.error('Rejected - promise_saveToDisk - ', rejObj);
-						myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Error', 'Screenshot failed to save to disk, see browser console for more details');
-						//deferred_createProfile.reject(rejObj);
-					}
-				).catch(
-					function(aCaught) {
-						var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-						console.error('Caught - promise_saveToDisk - ', rejObj);
-						myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'CATCH', 'developer error stupid');
-						//deferred_createProfile.reject(rejObj);
-					}
-				);
-			};
-			r.readAsArrayBuffer(b);
-		}, 'image/png');
-	}
-	
-	if (!showFilePicker) {
-		// get save path
-		var OSPath_saveDir;
-		try {
-			OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
-		} catch (ex) {
-			console.warn('ex:', ex);
-			try {
-				OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
-			} catch (ex) {
-				console.warn('ex:', ex);
-				OSPath_saveDir = OS.Constants.Path.desktopDir;
-			}
-		}
-		
-		// generate file name
-		var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
-		OSPath_save = OS.Path.join(OSPath_saveDir, filename);
-		
-		do_saveCanToDisk();
-	} else {
-		var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-		fp.init(owin, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
-		fp.appendFilter('PNG Image', '*.png');
-		
-		var rv = fp.show();
-		if (rv != Ci.nsIFilePicker.returnOK) { return } // user canceled
-		
-		OSPath_save = fp.file.path.trim();
-		
-		if (!/^.*\.png/i.test(OSPath_save)) {
-			OSPath_save += '.png';
-		}
-		do_saveCanToDisk();
-	}
-	
-}
-
-function editorCopyImageToClipboard(aEditorDOMWindow) {
-	// start - common to all editor functions
-	var owin = Services.wm.getMostRecentWindow('navigator:browser');
-	/*
-	var ws = Services.wm.getEnumerator(null);
-	while (var w = ws.getNext()) {
-		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
-			owin = w;
-		}
-	}
-	*/
-	if (!owin) { throw new Error('could not find other then this editor window') }
-	var odoc = owin.document;
-
-	var win = aEditorDOMWindow;
-	var doc = win.document;
-	
-	var can = odoc.createElementNS(NS_HTML, 'canvas');
-	var ctx = can.getContext('2d');
-	
-	var divTools = doc.getElementById('divTools');
-	
-	can.width = parseInt(divTools.style.width);
-	can.height = parseInt(divTools.style.height);
-	
-	var baseCan = doc.querySelector('canvas');
-	
-	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
-	win.close();
-	// end - common to all editor functions
-    
-	// based on:
-		// mostly: https://github.com/mxOBS/deb-pkg_icedove/blob/8f8955df7c9db605cf6903711dcbfc6dd7776e50/mozilla/toolkit/devtools/gcli/commands/screenshot.js#L161
-		// somewhat on: https://github.com/dadler/thumbnail-zoom/blob/76a6edded0ca4ef1eb76d4c1b2bc363b433cde63/src/resources/clipboardService.js#L78-L209
-		
-	var data = can.toDataURL('image/png', '')
-	var channel = Services.io.newChannel(data, null, null);
-	var input = channel.open();
-	var imgTools = Cc['@mozilla.org/image/tools;1'].getService(Ci.imgITools);
-	
-	var container = {};
-	imgTools.decodeImageData(input, channel.contentType, container);
-
-	var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
-	wrapped.data = container.value;
-	
-	var trans = Transferable(owin);
-	console.info('channel.contentType:', channel.contentType);
-	trans.addDataFlavor(channel.contentType);
-	
-	trans.setTransferData(channel.contentType, wrapped, -1);
-	
-	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-	
-	/* to consider
-		// have to first set imageURL = createBlob
-      
-       // Also put the image's html <img> tag on the clipboard.  This is 
-       // important (at least on OSX): if we copy just jpg image data,
-       // programs like Photoshop and Thunderbird seem to receive it as
-       // uncompressed png data, which is very large, bloating emails and
-       // causing randomly truncated data.  But if we also include a
-       // text/html flavor referring to the jpg image on the Internet, 
-       // those programs retrieve the image directly as the original jpg
-       // data, so there is no data bloat.
-      
-      var str = Components.classes['@mozilla.org/supports-string;1'].createInstance(Ci.nsISupportsString);
-      if (str) {
-        str.data = '<img src="' + imageURL + '" />';
-        trans.addDataFlavor('text/html');
-        trans.setTransferData('text/html', str, str.data.length * 2);
-      }    
-	*/
-	
-	owin.setTimeout(function() {
-		myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Image Copied', 'Screenshot was successfully copied to the clipboard');
-	}, 100);
-
-}
-function editorUploadToImgurAnon(aEditorDOMWindow) {
-	// start - common to all editor functions
-	var owin = Services.wm.getMostRecentWindow('navigator:browser');
-	/*
-	var ws = Services.wm.getEnumerator(null);
-	while (var w = ws.getNext()) {
-		if (w.documentElement.getAttribute('windowtype') != 'nativeshot:editor') {
-			owin = w;
-		}
-	}
-	*/
-	if (!owin) { throw new Error('could not find other then this editor window') }
-	var odoc = owin.document;
-
-	var win = aEditorDOMWindow;
-	var doc = win.document;
-	
-	var can = odoc.createElementNS(NS_HTML, 'canvas');
-	var ctx = can.getContext('2d');
-	
-	var divTools = doc.getElementById('divTools');
-	
-	can.width = parseInt(divTools.style.width);
-	can.height = parseInt(divTools.style.height);
-	
-	var baseCan = doc.querySelector('canvas');
-	
-	ctx.drawImage(baseCan, parseInt(divTools.style.left), parseInt(divTools.style.top), can.width, can.height, 0, 0, can.width, can.height);
-	win.close();
-	// end - common to all editor functions
-    
-	// based on:
-		// mostly: https://github.com/mxOBS/deb-pkg_icedove/blob/8f8955df7c9db605cf6903711dcbfc6dd7776e50/mozilla/toolkit/devtools/gcli/commands/screenshot.js#L161
-		// somewhat on: https://github.com/dadler/thumbnail-zoom/blob/76a6edded0ca4ef1eb76d4c1b2bc363b433cde63/src/resources/clipboardService.js#L78-L209
-		
-	var data = can.toDataURL('image/png'); // returns `data:image/png;base64,iVBORw.....`
-	console.info('base64 data pre trim:', data);
-	data = data.substr('data:image/png;base64,'.length); // imgur wants without this
-	
-	console.info('base64 data:', data);
-	var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
-		aPostData: {
-			image: data, // this gets encodeURIComponent'ed by my xhr function
-			type: 'base64'
-		},
-		Headers: {
-			Authorization: 'Client-ID fa64a66080ca868',
-			'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
-		},
-		aResponseType: 'json'
-	});
-	
-	promise_uploadAnonImgur.then(
-		function(aVal) {
-			console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
-			// start - do stuff here - promise_uploadAnonImgur
-			var imgUrl = aVal.response.data.link;
-			var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
-			var imgId = aVal.response.data.id;
-			
-			var trans = Transferable(owin);
-			trans.addDataFlavor('text/unicode');
-			// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-			trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
-			
-			Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-			
-			// save to upload history - only for anonymous uploads to imgur, so can delete in future
-			var OSPath_history = OS.Path.join(OS.Constants.Path.desktopDir, 'imgur-history.txt'); // creates file if it wasnt there
-			OS.File.open(OSPath_history, {write: true, append: true}).then(valOpen => {
-				var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
-				var txtEncoded = getTxtEncodr().encode(txtToAppend);
-				valOpen.write(txtEncoded).then(valWrite => {
-					console.log('valWrite:', valWrite);
-					valOpen.close().then(valClose => {
-						console.log('valClose:', valClose);
-						console.log('successfully appended');
-					});
-				});
-			});
-			
-			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Image Uploaded', 'Upload to Imgur was successful and image link was copied to the clipboard');
-			
-			// end - do stuff here - promise_uploadAnonImgur
-		},
-		function(aReason) {
-			var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
-			console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
-			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
-			//deferred_createProfile.reject(rejObj);
-		}
-	).catch(
-		function(aCaught) {
-			var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
-			console.error('Caught - promise_uploadAnonImgur - ', rejObj);
-			//deferred_createProfile.reject(rejObj);
-			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
-		}
-	);
-
-}
-// end - editor functions
 
 function shootAllMons(aDOMWindow) {
 	
@@ -1264,9 +1166,7 @@ function startup(aData, aReason) {
 		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
 		onCommand: function(aEvent) {
 			var aDOMWin = aEvent.target.ownerDocument.defaultView;
-			if (gCleanTimer) {
-				gCleanTimer.cancel();
-			}
+			gEditor.gBrowserDOMWindow = aDOMWin;
 			if (aEvent.shiftKey == 1) {
 				// default time delay queue
 				aDOMWin.setTimeout(function() {
