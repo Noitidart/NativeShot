@@ -209,15 +209,13 @@ var gESelecting = false; // users is drawing rect
 var gEMoving = false; // user is moving rect
 var gEMDX = null; // mouse down x
 var gEMDY = null; // mouse down y
+var gESelectedRect = new Rect(0, 0, 0, 0);
 
 const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
 const gDefLineDash = [3, 2];
 const gDefStrokeStyle = '#ccc';
 const gDefLineWidth = '1';
 
-var gESelectedRect = new Rect(0, 0, 0, 0);
-
-var gCleanTimer;
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
@@ -310,7 +308,27 @@ var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
 	ctxComp: null, // holds ctx element
-	DOMWindow: null, // i use colMon[i].DOMWindow for this
+	compDOMWindow: null, // i use colMon[i].DOMWindow for this
+	cleanUp: function() {
+		// reset all globals
+		colMon = null;
+		this.lastCompositedRect = null;
+		this.canComp = null;
+		this.compDOMWindow = null;
+		
+		gIMonMouseDownedIn = null;
+
+		gETopLeftMostX = null;
+		gETopLeftMostY = null;
+
+		gESelected = false;
+		gESelecting = false; // users is drawing rect
+		gEMoving = false; // user is moving rect
+		gEMDX = null; // mouse down x
+		gEMDY = null; // mouse down y
+
+		gESelectedRect = new Rect(0, 0, 0, 0);
+	},
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
@@ -324,11 +342,12 @@ var gEditor = {
 	},
 	compositeSelection: function() {
 		// creates a canvas holding a composite of the current selection
+		console.error('starting compositing');
 		if (!gESelected) {
 			throw new Error('no selection to composite!');
 		}
 		
-		if (lastCompositedRect && lastCompositedRect.equals(gESelectedRect)) {
+		if (this.lastCompositedRect && this.lastCompositedRect.equals(gESelectedRect)) {
 			console.log('no need to composite as compositing was already done so is cached');
 			return;
 		}
@@ -337,10 +356,10 @@ var gEditor = {
 		
 		// create a canvas
 		// i use colMon[0] for the composite canvas
-		if (this.DOMWindow) {
+		if (!this.compDOMWindow) {
 			// need to initalize it
-			this.DOMWindow = colMon[0].E.DOMWindow;
-			this.canComp = this.DOMWindow.document.createElementNS(NS_HTML, 'canvas');
+			this.compDOMWindow = colMon[0].E.DOMWindow;
+			this.canComp = this.compDOMWindow.document.createElementNS(NS_HTML, 'canvas');
 			this.ctxComp = this.canComp.getContext('2d');
 		}
 		
@@ -350,10 +369,10 @@ var gEditor = {
 		for (var i=0; i<colMon.length; i++) {			
 			// start - mod of copied block link6587436215
 			// check if intersection
-			var rectIntersecting = colMon[i].rect.intersect(cRect);
+			var rectIntersecting = colMon[i].rect.intersect(this.lastCompositedRect);
 			if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 				// does not intersect, continue to next monitor
-				console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
+				console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', this.lastCompositedRect, 'colMon[i].rect:', colMon[i].rect);
 				continue;
 			} else {
 				//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
@@ -367,9 +386,12 @@ var gEditor = {
 			}
 			// end - mod of copied block link6587436215
 			
-			this.canComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
+			this.canComp.style.position = 'fixed'; // :debug:
+			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			
-			this.DOMWindow.documentElement.querySelector('stack').insertBefore(this.DOMWindow.documentElement.querySelector('stack').firstChild); // :debug:
+			this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
+			
+			console.error('composited');
 		}
 	},
 	closeOutEditor: function(e) {
@@ -458,13 +480,7 @@ function gEMouseMove(e) {
 }
 function gEMouseUp(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-	if (simdMouseUp) {
-		console.warn('simd so do nothing');
-		e.stopPropagation();
-		e.preventDefault();
-		e.returnValue = false;
-		return false;
-	}
+
 	if (gESelecting) {
 		console.error('MOUSED UP iMon:', iMon);
 		gESelecting = false;
@@ -489,7 +505,6 @@ function gEMouseUp(e) {
 	// e.returnValue = false;
 	// return false;
 }
-var gEWinMouseDownedIn; // holds index of monitor moused down in this will help me identify what monitor the user is over as they mousemove outside of that window, as mousemove doesnt trigger on the window they are over if they mousedown in another window
 function gEMouseDown(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 	//console.info('mousedown, e:', e);
@@ -561,29 +576,20 @@ function gEMouseDown(e) {
 	// e.returnValue = false;
 	// return false;
 }
-var simdMouseUp = false;
+
 function gEUnload(e) {
 	//console.info('unload e:', e);
 	var iMon = parseInt(e.currentTarget.location.search.substr('?iMon='.length));
 	//console.error('editor window unloading iMon:', iMon);
-	colMon[iMon].E.DOMWindowMarkedUnloaded = true;
+
 	
 	// close all other windows
 	for (var i=0; i<colMon.length; i++) {
-		if (!colMon[i].E.DOMWindowMarkedUnloaded) {
-			colMon[i].E.DOMWindowMarkedUnloaded = true;
-			colMon[i].E.DOMWindow.close();
-		}
+		colMon[i].E.DOMWindow.removeEventListener('unload', gEUnload, false);
+		colMon[i].E.DOMWindow.close();
 	}
 	
-	if (!gCleanTimer) {
-		gCleanTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-	}
-	gCleanTimer.initWithCallback({
-		notify: function() {
-			colMon = null;
-		}
-	}, 3000, Ci.nsITimer.TYPE_ONE_SHOT);
+	gEditor.cleanUp();
 }
 // end - canvas functions to act across all canvases
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
