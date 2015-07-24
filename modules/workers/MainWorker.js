@@ -127,31 +127,37 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 			break;
 		case 'gtk':
 				
-				/*
 				// http://stackoverflow.com/a/4347486/5062337
+				// do this stuff up here as if it doesnt exist it will throw now, rather then go through set allocate xevent then find out when setting xevent.xclient data that its not available
 				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
-				var atom_wmNetWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
+				var atom_wmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
 				console.log('aArrHwndPtrStr:', aArrHwndPtrStr);
 				
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
 					console.error('info:', aArrHwndPtrStr[i]);
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					
-					var xclient = ostypes.TYPE.XClientMessageEvent();
-					xclient.type = ostypes.CONST.ClientMessage;
-					xclient.window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-					xclient.message_type = atom_wmNetWmState;
-					xclient.format = 32; // because xclient.data is long, i defined that in the struct union
-					xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
-					xclient.send_event = ostypes.CONST.False;
-					
 					var xevent = ostypes.TYPE.XEvent();
-					xevent.xclient = xclient;
+					console.info('xevent:', uneval(xevent));
 					
-					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address());
+					xevent.xclient.type = ostypes.CONST.ClientMessage;
+					xevent.xclient.serial = 0;
+					xevent.xclient.send_event = ostypes.CONST.True;
+					xevent.xclient.display = ostypes.HELPER.cachedXOpenDisplay();
+					xevent.xclient.window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					xevent.xclient.message_type = atom_wmState;
+					xevent.xclient.format = 32; // because xclient.data is long, i defined that in the struct union
+					xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
+					
+					console.info('xevent.xclient.addressOfField(data):', xevent.xclient.addressOfField('data'));
+					console.info('xevent.xclient.addressOfField(data).addressOfElement(0):', xevent.xclient.data.addressOfElement(0));
+					
+					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
 					console.log('rez_SendEv:', rez_SendEv, rez_SendEv.toString());
 				}
-				*/
+				
+				ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay()); // will not set on top if you dont do this
+				
 				/*
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
 					console.error('info:', aArrHwndPtrStr[i]);

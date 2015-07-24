@@ -120,9 +120,9 @@ const gEMenuDomJson =
 		['xul:menupopup', {id: 'myMenu1'},
 			['xul:menuitem', {label:'Close', oncommand:'window.close()'}],
 			['xul:menuseparator', {}],
-			['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(){ editorSaveToFile(win) }}],
-			['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(){ editorSaveToFile(win, true) }}],
-			['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(){ editorCopyImageToClipboard(win) }}],
+			['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(e){ gEditor.saveToFile(e) }}],
+			['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(e){ gEditor.saveToFile(e, true) }}],
+			['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(e){ gEditor.copyToClipboard(e) }}],
 			['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
 				['xul:menupopup', {},
 					['xul:menuitem', {label:'Amazon Cloud Drive'}],
@@ -145,7 +145,7 @@ const gEMenuDomJson =
 			['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
 				['xul:menupopup', {},
 					['xul:menuitem', {label:'FreeImageHosting.net'}],
-					['xul:menuitem', {label:'Imgur', oncommand:function(){ editorUploadToImgurAnon(win) }}],
+					['xul:menuitem', {label:'Imgur', oncommand:function(e){ gEditor.uploadToImgur(e, false) }}],
 				]
 			],
 			['xul:menu', {label:'Share to Social Media'},
@@ -154,7 +154,7 @@ const gEMenuDomJson =
 					['xul:menuitem', {label:'Twitter'}]
 				]
 			],
-			['xul:menuitem', {label:'Print Image'}],
+			['xul:menuitem', {label:'Print Image', oncommand:function(e){ gEditor.sendToPrinter(e) }}],
 			['xul:menuseparator', {}],
 			['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
 				['xul:menupopup', {},
@@ -229,7 +229,7 @@ var gCanDim = {
 			// throw new Error('aArrFuncArgs must be an array');
 		// }
 		// executes the ctx function across all ctx's
-		
+		if (aObjConvertScreenToLayer) { console.error('start exec'); } // :debug:
 		// identify replace indiices and its val
 		var specials = {
 			'{{W}}': '{{W}}', // can dependent
@@ -270,20 +270,26 @@ var gCanDim = {
 			// modify screenX and screenY to layerX and layerY based on monitor
 			if (aObjConvertScreenToLayer) {
 				var cRect = new Rect(clone_aArrFuncArgs[aObjConvertScreenToLayer.x], clone_aArrFuncArgs[aObjConvertScreenToLayer.y], clone_aArrFuncArgs[aObjConvertScreenToLayer.w], clone_aArrFuncArgs[aObjConvertScreenToLayer.h]);
-				
+				// start - block link6587436215
 				// check if intersection
 				var rectIntersecting = colMon[i].rect.intersect(cRect);
-				console.info('rectIntersecting:', rectIntersecting)
-				if (!rectIntersecting.width && !rectIntersecting.height) { // if width and height are 0 it means no intersection between the two rect's
+				console.info('iMon:', i, 'rectIntersecting:', rectIntersecting, 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect)
+				if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 					// does not intersect, continue to next monitor
-					console.warn('no intersect, contin to next mon', cRect, colMon[i].rect);
+					console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
 					continue;
 				} else {
+					//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
 					// convert screen xy of rect to layer xy
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = rectIntersecting.left - colMon[i].x;
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = rectIntersecting.top - colMon[i].y;
+					
+					// adjust width and height, needed for multi monitor selection correction
+					clone_aArrFuncArgs[aObjConvertScreenToLayer.w] = rectIntersecting.width;
+					clone_aArrFuncArgs[aObjConvertScreenToLayer.h] = rectIntersecting.height;
 					console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
 				}
+				// end - block link6587436215
 			}
 			
 			var aCtxDim = colMon[i].E.ctxDim;
@@ -301,6 +307,10 @@ var gCanDim = {
 };
 
 var gEditor = {
+	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
+	canComp: null, // holds canvas element
+	ctxComp: null, // holds ctx element
+	DOMWindow: null, // i use colMon[i].DOMWindow for this
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
@@ -311,6 +321,78 @@ var gEditor = {
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E[keyNameInColMonE].removeEventListener(evName, func, aBool);
 		}
+	},
+	compositeSelection: function() {
+		// creates a canvas holding a composite of the current selection
+		if (!gESelected) {
+			throw new Error('no selection to composite!');
+		}
+		
+		if (lastCompositedRect && lastCompositedRect.equals(gESelectedRect)) {
+			console.log('no need to composite as compositing was already done so is cached');
+			return;
+		}
+		
+		this.lastCompositedRect = gESelectedRect.clone();
+		
+		// create a canvas
+		// i use colMon[0] for the composite canvas
+		if (this.DOMWindow) {
+			// need to initalize it
+			this.DOMWindow = colMon[0].E.DOMWindow;
+			this.canComp = this.DOMWindow.document.createElementNS(NS_HTML, 'canvas');
+			this.ctxComp = this.canComp.getContext('2d');
+		}
+		
+		this.canComp.width = this.lastCompositedRect.width;
+		this.canComp.height = this.lastCompositedRect.height;
+		
+		for (var i=0; i<colMon.length; i++) {			
+			// start - mod of copied block link6587436215
+			// check if intersection
+			var rectIntersecting = colMon[i].rect.intersect(cRect);
+			if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
+				// does not intersect, continue to next monitor
+				console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
+				continue;
+			} else {
+				//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
+				// convert screen xy of rect to layer xy
+				rectIntersecting.left -= colMon[i].x;
+				rectIntersecting.top -= colMon[i].y;
+
+				// adjust width and height, needed for multi monitor selection correction
+				rectIntersecting.right -= colMon[i].x;
+				rectIntersecting.bottom -= colMon[i].y;
+			}
+			// end - mod of copied block link6587436215
+			
+			this.canComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
+			
+			this.DOMWindow.documentElement.querySelector('stack').insertBefore(this.DOMWindow.documentElement.querySelector('stack').firstChild); // :debug:
+		}
+	},
+	closeOutEditor: function(e) {
+		// if e.shiftKey then it doesnt do anything, else it closes it out and cleans up (in future maybe possibility to cache? maybe... so in this case would just hide window, but im thinking no dont do this)
+		colMon[0].E.DOMWindow.close();
+	},
+	saveToFile: function(e, aBoolPreset) {
+		// aBoolPreset true if want to use preset folder and file name
+		this.compositeSelection();
+		// this.closeOutEditor(e);
+	},
+	copyToClipboard: function(e) {
+		this.compositeSelection();
+		// this.closeOutEditor(e);
+	},
+	sendToPrinter: function(e) {
+		this.compositeSelection();
+		// this.closeOutEditor(e);
+	},
+	uploadToImgur: function(e, aBoolAnon) {
+		// aBoolAnon true if want anonymous upload
+		this.compositeSelection();
+		// this.closeOutEditor(e);
 	}
 };
 
@@ -524,6 +606,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.focus();
 	aEditorDOMWindow.fullScreen = true;
 	
+	/*
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
 	var aArrHwndPtrOsParams = {};
@@ -552,6 +635,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			//deferred_createProfile.reject(rejObj);
 		}
 	);
+	*/
 	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
 	var w = colMon[iMon].w;
@@ -978,6 +1062,7 @@ function editorUploadToImgurAnon(aEditorDOMWindow) {
 
 function shootAllMons(aDOMWindow) {
 	
+	gESelected = false;
 	var openWindowOnEachMon = function() {
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
