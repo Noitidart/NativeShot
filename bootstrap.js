@@ -397,8 +397,14 @@ var gEditor = {
 };
 
 function gEMouseMove(e) {
-	var iMon = gIMonMouseDownedIn; //parseInt(e.view.location.search.substr('?iMon='.length)); // cant do this as on mouse move, user may not be over iMon they started in, so have to calc it
-	
+	var iMon; //var iMon = gIMonMouseDownedIn; //parseInt(e.view.location.search.substr('?iMon='.length)); // cant do this as on mouse move, user may not be over iMon they started in, so have to calc it
+	var screenPoint = new Rect(e.screenX, e.screenY, 1, 1);
+	for (var i=0; i<colMon.length; i++) {
+		if (colMon[i].rect.contains(screenPoint)) {
+			iMon = i;
+			break;
+		}
+	}
 	//console.log('mousemove imon:', iMon, e.screenX, e.screenY);
 	if (gESelecting) {
 		var cEMMX = colMon[iMon].win81ScaleX ? Math.floor(colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX)) : e.screenX;
@@ -734,6 +740,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
 	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
 	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
+
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
