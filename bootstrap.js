@@ -216,6 +216,8 @@ const gDefLineDash = [3, 2];
 const gDefStrokeStyle = '#ccc';
 const gDefLineWidth = '1';
 
+var gNotifTimer;
+
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
@@ -410,9 +412,15 @@ var gEditor = {
 		}
 	},
 	showNotif: function(aTitle, aMsg) {
-		Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer).initWithCallback({
+		if (!gNotifTimer) {
+			gNotifTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
+		} else {
+			gNotifTimer.cancel();
+		}
+		gNotifTimer.initWithCallback({
 			notify: function() {
 				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + aTitle, aMsg);
+				gNotifTimer = null;
 			}
 		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
 	},
