@@ -368,6 +368,10 @@ var gEditor = {
 		this.canComp.width = this.lastCompositedRect.width;
 		this.canComp.height = this.lastCompositedRect.height;
 		
+		// do the base file for areas where there is no image (in case of multi mon selection where there is gaps)
+		// this.ctxComp.fillStyle = 'rgba(0, 0, 0, 0)';
+		// this.ctxComp.fillRect(0, 0, this.lastCompositedRect.width, this.lastCompositedRect.height);
+		
 		for (var i=0; i<colMon.length; i++) {			
 			// start - mod of copied block link6587436215
 			// check if intersection
@@ -406,9 +410,11 @@ var gEditor = {
 		}
 	},
 	showNotif: function(aTitle, aMsg) {
-		gEditor.gBrowserDOMWindow.setTimeout(function() {
-			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + aTitle, aMsg);
-		}, 1000);
+		Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer).initWithCallback({
+			notify: function() {
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + aTitle, aMsg);
+			}
+		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
 	},
 	saveToFile: function(e, aBoolPreset) {
 		// aBoolPreset true if want to use preset folder and file name
@@ -446,7 +452,7 @@ var gEditor = {
 						function(aCaught) {
 							var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
 							console.error('Caught - promise_saveToDisk - ', rejObj);
-							Services.prompt.alert(aDOMWindow, 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 							//deferred_createProfile.reject(rejObj);
 						}
 					);
@@ -481,14 +487,18 @@ var gEditor = {
 			fp.appendFilter('PNG Image', '*.png');
 			
 			var rv = fp.show();
-			if (rv != Ci.nsIFilePicker.returnOK) { return } // user canceled
-			
-			OSPath_save = fp.file.path.trim();
-			
-			if (!/^.*\.png/i.test(OSPath_save)) {
-				OSPath_save += '.png';
+			if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
+				OSPath_save = fp.file.path.trim();
+				
+				if (!/^.*\.png/i.test(OSPath_save)) {
+					OSPath_save += '.png';
+				}
+				do_saveCanToDisk();
+			} else {
+				 // user canceled
+				console.error('rv was:', rv);
+				gEditor.closeOutEditor(e);
 			}
-			do_saveCanToDisk();
 		}
 	},
 	copyToClipboard: function(e) {
@@ -610,7 +620,7 @@ var gEditor = {
 				console.error('Caught - promise_uploadAnonImgur - ', rejObj);
 				//deferred_createProfile.reject(rejObj);
 				//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
-				Services.prompt.alert(aDOMWindow, 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 			}
 		);
 		
@@ -1017,13 +1027,13 @@ function shootAllMons(aDOMWindow) {
 		function(aReason) {
 			var rejObj = {name:'promise_shoot', aReason:aReason};
 			console.warn('Rejected - promise_shoot - ', rejObj);
-			Services.prompt.alert(aDOMWindow, 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_shoot', aCaught:aCaught};
 			console.error('Caught - promise_shoot - ', rejObj);
-			Services.prompt.alert(aDOMWindow, 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
 		}
 	);
 }
