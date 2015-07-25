@@ -623,7 +623,7 @@ var gEditor = {
 		iframe.addEventListener('load', function() {
 			console.error('iframe loaded, print it', iframe.contentWindow.print);
 			iframe.contentWindow.addEventListener('afterprint', function() {
-				iframe.parentNode.removeChild(iframe);
+				//iframe.parentNode.removeChild(iframe);
 				console.error('ok removed iframe that i added to hiddenDOMWindow')
 			}, false);
 			iframe.contentWindow.print();
@@ -1352,7 +1352,7 @@ var windowListener = {
 				// as whenever i print from my hidden frame on link678321212 it opens the print dialog with opener set to null, and then it tries opener.focus() and it then leaves the window open
 				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
 				console.error('going to set opener to wm! as it was null');
-				aDOMWindow.opener = Services.wm.getMostRecentWindow('navigator:browser'); // { focus: function() { } };
+				aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
 				console.error('ok set opener! it is:', aDOMWindow.opener);
 			}
 		}
