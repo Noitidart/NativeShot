@@ -1344,7 +1344,7 @@ var windowListener = {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
 		} else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
-			console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
+			//console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
 			if (!aDOMWindow.opener) {
 				// this is my print window so lets set opener
 				// for some reason whenever i do print() from hiddenDOMWindow iframe it doesnt get an opener
@@ -1353,7 +1353,7 @@ var windowListener = {
 				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
 				console.error('going to set opener to wm! as it was null');
 				aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
-				console.error('ok set opener! it is:', aDOMWindow.opener);
+				//console.error('ok set opener! it is:', aDOMWindow.opener);
 			}
 		}
 	},
