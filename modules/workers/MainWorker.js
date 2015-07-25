@@ -243,12 +243,14 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 		case 'darwin':
 							
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
-					console.error('info:', aArrHwndPtrStr[i]);
-					var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
-					console.error('att 6');
-					var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
-					var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
-					 console.info('rez_orderFront:', rez_orderFront);
+					setTimeout(function() {
+						console.error('info:', aArrHwndPtrStr[i]);
+						var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
+						console.error('att 6');
+						var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
+						var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
+						 console.info('rez_orderFront:', rez_orderFront);
+					}, 2000);
 				}
 
 			break;
