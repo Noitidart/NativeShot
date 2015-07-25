@@ -863,11 +863,31 @@ function gEUnload(e) {
 	gEditor.cleanUp();
 }
 
+var gPanelWasNotOpenDuringEsc = false;
 function gEKeyUp(e) {
 	if (e.keyCode == 27) {
-		// hit escape, close it out
-		colMon[0].E.DOMWindow.close();
+		if (gPanelWasNotOpenDuringEsc) {
+			gPanelWasNotOpenDuringEsc = false; // ok user didnt hit esc to close out menu. they inteded to close out editor
+			colMon[0].E.DOMWindow.close();
+		}
 	}
+}
+function gEKeyDown(e) {
+	if (e.keyCode == 27) {
+		// this key down does not trigger if menu was open (at least on win81, need to test on other platforms)
+		gPanelWasNotOpenDuringEsc = true; // tell key up to close window on up
+	}
+}
+
+function gEPopupHiding(e) {
+	// e.view.setTimeout(function() {
+		// e.view.addEventListener('keyup', gEKeyUp, false);
+	// }, 1000);
+}
+
+function gEPopupShowing(e) {
+	//e.view.removeEventListener('keyup', gEKeyUp, false); // so if user hits escape while menu is open, esc will close out menu instead of editor. its ok to only do to current window, as if user clicks else where window it will close menu and the popuphiding adds the window close esc listener back
+	
 }
 // end - canvas functions to act across all canvases
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
@@ -1018,13 +1038,15 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	doc.documentElement.appendChild(jsonToDOM(get_gEMenuDomJson(), doc, menuElRef));
 	//console.error('ok APPENDED??');
 	doc.documentElement.setAttribute('context', 'myMenu1');
-	
+	menuElRef.myMenu1.addEventListener('popupshowing', gEPopupShowing, false);
+	menuElRef.myMenu1.addEventListener('popuphiding', gEPopupHiding, false);
 	// set up up event listeners
 	
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
 	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
 	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
 	aEditorDOMWindow.addEventListener('keyup', gEKeyUp, false);
+	aEditorDOMWindow.addEventListener('keydown', gEKeyDown, false);
 	
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
