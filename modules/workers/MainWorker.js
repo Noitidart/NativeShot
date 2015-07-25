@@ -109,8 +109,16 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-function setWinAlwaysOnTop(aArrHwndPtrStr) {
+function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 	// aArrHwndPtrStr is an array of multiple hwnds, each of them will get set to always on top
+	// aOptions holds keys that are hwndPtrStr in aArr and hold params like, left, right, top, left needed for x11 strut partial stuff OR for SetWindowPos for winapi
+	/* example:
+		aArrHwndPtrStr = ['0x1234', '0x999'];
+		aOptions = {
+			'0x1234': {left:0, top:0, ...},
+			'0x999': {left:0, top:0, ...}
+		}
+	*/
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
@@ -118,9 +126,111 @@ function setWinAlwaysOnTop(aArrHwndPtrStr) {
 				
 			break;
 		case 'gtk':
-			
-				// 
 				
+				// http://stackoverflow.com/a/4347486/5062337
+				// do this stuff up here as if it doesnt exist it will throw now, rather then go through set allocate xevent then find out when setting xevent.xclient data that its not available
+				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
+				var atom_wmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
+				console.log('aArrHwndPtrStr:', aArrHwndPtrStr);
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					
+					var xevent = ostypes.TYPE.XEvent();
+					console.info('xevent:', uneval(xevent));
+					
+					xevent.xclient.type = ostypes.CONST.ClientMessage;
+					xevent.xclient.serial = 0;
+					xevent.xclient.send_event = ostypes.CONST.True;
+					xevent.xclient.display = ostypes.HELPER.cachedXOpenDisplay();
+					xevent.xclient.window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					xevent.xclient.message_type = atom_wmState;
+					xevent.xclient.format = 32; // because xclient.data is long, i defined that in the struct union
+					xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
+					
+					console.info('xevent.xclient.addressOfField(data):', xevent.xclient.addressOfField('data'));
+					console.info('xevent.xclient.addressOfField(data).addressOfElement(0):', xevent.xclient.data.addressOfElement(0));
+					
+					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
+					console.log('rez_SendEv:', rez_SendEv, rez_SendEv.toString());
+				}
+				
+				ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay()); // will not set on top if you dont do this
+				
+				/*
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var gdkWinPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var gtkWinPtr = ostypes.HELPER.gdkWinPtrToGtkWinPtr(gdkWinPtr);
+					ostypes.API('gtk_window_set_keep_above')(gtkWinPtr, 1);
+				}
+				*/
+				
+				/*
+				// try changing STRUT and STRUT_PARTIAL
+				var atom_wmStrut = ostypes.HELPER.cachedAtom('_NET_WM_STRUT_PARTIAL');
+				var atom_wmStrutPartial = ostypes.HELPER.cachedAtom('_NET_WM_STRUT_PARTIAL');
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					var dataJS = [
+						0,
+						0,
+						0,
+						0
+					];
+					var dataC = ostypes.TYPE.unsigned_long.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmStrut, ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+				}
+				*/
+				/*
+				// try changing WM_WINDOW_TYPE properties
+				var atom_wmWindowType = ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE');
+				var atom_wmWindowTypeDock = ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK');
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					var dataJS = [
+						atom_wmWindowTypeDock
+					];
+					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmWindowType, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+				}
+				*/
+				/*
+				// try changing WM_STATE properties
+				var atom_wmWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
+				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
+				var atom_wmStateFullscreen = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
+				var atom_wmStateAttn = ostypes.HELPER.cachedAtom('_NET_WM_STATE_DEMANDS_ATTENTION');;
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					var dataJS = [
+						atom_wmStateAbove,
+						atom_wmStateFullscreen,
+						atom_wmStateAttn
+					];
+					var dataC = ostypes.TYPE.unsigned_long.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmState, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+				}
+				*/
 			break;
 		case 'darwin':
 			
@@ -210,9 +320,12 @@ function shootAllMons() {
 						break;
 					}
 					
-					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					var StateFlags = parseInt(cutils.jscGetDeepest(lpDisplayDevice.StateFlags));
 					
-					if (lpDisplayDevice.StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
+					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
+					if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_MIRRORING_DRIVER) {
+						// skip this one, its a mirror monitor (like vnc or webex)
+					} else if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
 						console.log('is monitor');
 						
 						var dm = ostypes.TYPE.DEVMODE(); // SIZEOF_DEVMODE = 220 on 32bit fx Win8.1 64bit when I do insepction though dm.size is set to 188
@@ -240,6 +353,10 @@ function shootAllMons() {
 								lpszDevice: lpDisplayDevice.DeviceName
 							}
 						});
+						
+						if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_PRIMARY_DEVICE) {
+							collMonInfos[collMonInfos.length-1].primary = true;
+						}
 					}
 				}
 				// end - get all monitor resolutions
@@ -256,6 +373,19 @@ function shootAllMons() {
 							message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
 							winLastError: ctypes.winLastError
 						});
+					}
+					
+					if (core.os.version >= 6.3) { // for scale purposes for non dpi aware process due to bug 890156
+						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
+						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
+						var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
+						var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
+						if (win81ScaleX != 1) {
+							collMonInfos[s].win81ScaleX = win81ScaleX;
+						}
+						if (win81ScaleY != 1) {
+							collMonInfos[s].win81ScaleY = win81ScaleY;
+						}
 					}
 					
 					var w = collMonInfos[s].w;
@@ -464,6 +594,23 @@ function shootAllMons() {
 					ostypes.API('XRRFreeOutputInfo')(info);
 				}
 				ostypes.API('XRRFreeScreenResources')(screen);
+				console.info('json.stringify pre clean:', JSON.stringify(collMonInfos));
+				var monStrs = [];
+				for (var i=0; i<collMonInfos.length; i++) {
+					if (!collMonInfos[i].w || !collMonInfos[i].h)  {// test if 0 width height
+						collMonInfos.splice(i, 1);
+						i--;
+					} else {
+						var monStr = collMonInfos[i].w + 'x' + collMonInfos[i].h + '+' + collMonInfos[i].x + '+' + collMonInfos[i].y;
+						if (monStrs.indexOf(monStr) == -1) {
+							monStrs.push(monStr);
+						} else {
+							collMonInfos.splice(i, 1);
+							i--;
+						}
+					}
+				}
+				console.info('json.stringify post clean:', JSON.stringify(collMonInfos), collMonInfos);
 				// end - get all monitor resolutions
 				
 				// start - take shot of all monitors and push to just first element of collMonInfos
@@ -520,6 +667,7 @@ function shootAllMons() {
 					var screenUseW = collMonInfos[i].w;
 					var screenUseH = collMonInfos[i].h;
 					
+					console.info('screenUseW:', screenUseW, 'screenUseH:', screenUseH, '_END_');
 					var screnImagedata = new ImageData(screenUseW, screenUseH);
 					var siref = screnImagedata.data;
 					

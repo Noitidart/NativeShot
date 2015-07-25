@@ -42,6 +42,14 @@ var xlibTypes = function() {
 	this.RRMode = this.XID;
 	this.XRRModeFlags = ctypes.unsigned_long;
 	this.Rotation = ctypes.uint16_t; // not exactly sure about this one but its working
+	this.GdkDrawable = ctypes.StructType('GdkDrawable');
+	this.GdkWindow = ctypes.StructType('GdkWindow');
+	this.GtkWindow = ctypes.StructType('GtkWindow');
+	
+	// gtk types temp
+	this.gint = ctypes.int;
+	this.gboolean = this.gint;
+	this.gpointer = ctypes.voidptr_t;
 	
 	// ADVANCED TYPES
 	this.Colormap = this.XID;
@@ -186,6 +194,22 @@ var xlibTypes = function() {
 		{ npossible: this.int },
 		{ possible: this.RROutput.ptr }
 	]);
+	
+	this.XClientMessageEvent = ctypes.StructType('XClientMessageEvent', [ // http://www.man-online.org/page/3-XClientMessageEvent/
+		{ type: this.int },				// ClientMessage
+		{ serial: this.unsigned_long },	// # of last request processed by server
+		{ send_event: this.Bool },		// true if this came from a SendEvent request
+		{ display: this.Display.ptr },	// Display the event was read from
+		{ window: this.Window },
+		{ message_type: this.Atom },
+		{ format: this.int },
+		{ data: this.long.array(5) }	// union of either this.char.array(20), this.short.array(10), or this.long.array(5) // if go with long format must be set to 32, if short then 16 else if char then 8
+	]);
+	
+	// XEvent is one huge union, js-ctypes doesnt have union so i just set it to what I use for my addon
+	this.XEvent = ctypes.StructType('_XEvent', [ // http://tronche.com/gui/x/xlib/events/structures.html
+		{ xclient: this.XClientMessageEvent }
+	])
 };
 
 var x11Init = function() {
@@ -213,7 +237,14 @@ var x11Init = function() {
 		XA_ATOM: 4,
 		XA_CARDINAL: 6,
 		XA_WINDOW: 33,
-		RR_CONNECTED: 0
+		RR_CONNECTED: 0,
+		PropModeReplace: 0,
+		ClientMessage: 33,
+		_NET_WM_STATE_REMOVE: 0,
+		_NET_WM_STATE_ADD: 1,
+		_NET_WM_STATE_TOGGLE: 2,
+		SubstructureRedirectMask: 1048576,
+		SubstructureNotifyMask: 524288
 	};
 	
 	var _lib = {}; // cache for lib
@@ -411,6 +442,31 @@ var x11Init = function() {
 				self.TYPE.void.ptr,	// *dest
 				self.TYPE.void.ptr,	// *src
 				self.TYPE.size_t	// count
+			);
+		},
+		XChangeProperty: function() {
+			/* http://www.xfree86.org/4.4.0/XChangeProperty.3.html
+			 * int XChangeProperty(
+			 *   Display *display,
+			 *   Window w,
+			 *   Atom property,
+			 *   Atom type,
+			 *   int format,
+			 *   int mode,
+			 *   unsigned char *data,
+			 *   int nelements
+			 * );
+			 */
+			return lib('x11').declare('XChangeProperty', self.TYPE.ABI,
+				self.TYPE.int,				// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.Window,				// w
+				self.TYPE.Atom,				// property
+				self.TYPE.Atom,				// type
+				self.TYPE.int,				// format
+				self.TYPE.int,				// mode
+				self.TYPE.unsigned_char.ptr,	// *data
+				self.TYPE.int					// nelements
 			);
 		},
 		XDefaultRootWindow: function() {
@@ -695,6 +751,25 @@ var x11Init = function() {
 				self.TYPE.int				// format
 			);
 		},
+		XSendEvent: function() {
+			/* http://www.xfree86.org/4.4.0/XSendEvent.3.html
+			 * Status XSendEvent(
+			 *   Display *display,
+			 *   Window w,
+			 *   Bool propagate,
+			 *   long event_mask,
+			 *   XEvent *event_send
+			 * ); 
+			 */
+			return lib('x11').declare('XSendEvent', self.TYPE.ABI,
+				self.TYPE.Status,		// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window,		// w
+				self.TYPE.Bool,			// propagate
+				self.TYPE.long,			// event_mask
+				self.TYPE.XEvent.ptr	// *event_sent
+			); 
+		},
 		// start - XRANDR
 		XRRGetScreenResources: function() {
 			/* http://cgit.freedesktop.org/xorg/lib/libXrandr/tree/src/XrrScreen.c
@@ -771,8 +846,21 @@ var x11Init = function() {
 				self.TYPE.void,						// return
 				self.TYPE.XRRScreenResources.ptr	// *resources
 			);
-		}		
+		},
 		// end - XRANDR
+		gtk_window_set_keep_above: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-keep-above
+			 * void gtk_window_set_keep_above (
+			 *   GtkWindow *window,
+			 *   gboolean setting
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_window_set_keep_above', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GtkWindow.ptr,	// *window
+				self.TYPE.gboolean			// setting
+			);
+		},
 	};
 	// end - predefine your declares here
 	// end - function declares
@@ -827,6 +915,7 @@ var x11Init = function() {
 	};
 	
 	this._cache = {};
+	this._cacheAtoms = {};
 	
 	this.HELPER = {
 		gdkWinPtrToXID: function(aGDKWindowPtr) {
@@ -908,6 +997,25 @@ var x11Init = function() {
 			if (self._cache.XOpenDisplay) {
 				self.API('XCloseDisplay')(self._cache.XOpenDisplay);
 			}
+		},
+		cachedAtom: function(aAtomName, createAtomIfDne, refreshCache) {
+			// createAtomIfDne is jsBool, true or false. if set to true/1 then the atom is creatd if it doesnt exist. if set to false/0, then an error is thrown when atom does not exist
+			// default behavior is throw when atom doesnt exist
+			
+			// aAtomName is self.TYPE.char.ptr but im pretty sure you can just pass in a jsStr
+			// returns self.TYPE.Atom
+
+			if (!(aAtomName in self._cacheAtoms)) {		
+				var atom = self.API('XInternAtom')(self.HELPER.cachedXOpenDisplay(), aAtomName, createAtomIfDne ? self.CONST.False : self.CONST.True); //passing 3rd arg of false, means even if atom doesnt exist it returns a created atom, this can be used with GetProperty to see if its supported etc, this is how Chromium does it
+				if (!createAtomIfDne) {
+					if (atom == self.CONST.None) { // if i pass 3rd arg as False, it will will never equal self.CONST.None it gets creatd if it didnt exist on line before
+						console.warn('No atom with name:', aAtomName, 'return val of atom:', atom.toString());
+						throw new Error('No atom with name "' + aAtomName + '"), return val of atom:"' +  atom.toString() + '"');
+					}
+				}
+				self._cacheAtoms[aAtomName] = atom;
+			}
+			return self._cacheAtoms[aAtomName];
 		}
 	};
 };
