@@ -623,8 +623,9 @@ var gEditor = {
 		iframe.addEventListener('load', function() {
 			console.error('iframe loaded, print it', iframe.contentWindow.print);
 			gPostPrintRemIframe = function() {
-				iframe.parentNode.removeChild(iframe);
-				console.error('ok removed iframe that i added to hiddenDOMWindow')
+				//iframe.parentNode.removeChild(iframe);
+				//console.error('ok removed iframe that i added to hiddenDOMWindow')
+				iframe.setAttribute('src', 'about:blank');
 			};
 			iframe.contentWindow.addEventListener('afterprint', gPostPrintRemIframe, false);
 			iframe.contentWindow.print();
