@@ -615,6 +615,22 @@ var gEditor = {
 	},
 	sendToPrinter: function(e) {
 		this.compositeSelection();
+		
+		// print method link678321212
+		var win = Services.appShell.hiddenDOMWindow;
+		var doc = win.document;
+		var iframe = doc.createElementNS(NS_HTML, 'iframe');
+		iframe.addEventListener('load', function() {
+			console.error('iframe loaded, print it', iframe.contentWindow.print);
+			iframe.contentWindow.addEventListener('afterprint', function() {
+				iframe.parentNode.removeChild(iframe);
+				console.error('ok removed iframe that i added to hiddenDOMWindow')
+			}, false);
+			iframe.contentWindow.print();
+		}, true);
+		iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
+		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
+
 		this.closeOutEditor(e);
 	},
 	uploadToImgur: function(e, aBoolAnon) {
@@ -1327,6 +1343,18 @@ var windowListener = {
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
+		} else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
+			console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
+			if (!aDOMWindow.opener) {
+				// this is my print window so lets set opener
+				// for some reason whenever i do print() from hiddenDOMWindow iframe it doesnt get an opener
+				// i have set opener this cuz window.opener is null so it doesnt close: `TypeError: opener is null printProgress.js:83:10`
+				// as whenever i print from my hidden frame on link678321212 it opens the print dialog with opener set to null, and then it tries opener.focus() and it then leaves the window open
+				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
+				console.error('going to set opener to wm! as it was null');
+				aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
+				console.error('ok set opener! it is:', aDOMWindow.opener);
+			}
 		}
 	},
 	unloadFromWindow: function (aDOMWindow) {
