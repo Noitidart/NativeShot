@@ -317,7 +317,7 @@ var gCanDim = {
 		}
 	}
 };
-
+var gPostPrintRemIframe;
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -622,10 +622,11 @@ var gEditor = {
 		var iframe = doc.createElementNS(NS_HTML, 'iframe');
 		iframe.addEventListener('load', function() {
 			console.error('iframe loaded, print it', iframe.contentWindow.print);
-			iframe.contentWindow.addEventListener('afterprint', function() {
+			gPostPrintRemIframe = function() {
 				iframe.parentNode.removeChild(iframe);
 				console.error('ok removed iframe that i added to hiddenDOMWindow')
-			}, false);
+			};
+			iframe.contentWindow.addEventListener('afterprint', gPostPrintRemIframe, false);
 			iframe.contentWindow.print();
 		}, true);
 		iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
@@ -1191,6 +1192,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 function shootAllMons(aDOMWindow) {
 	
 	gESelected = false;
+	if (gPostPrintRemIframe) {
+		gPostPrintRemIframe();
+	}
 	var openWindowOnEachMon = function() {
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
@@ -1352,6 +1356,7 @@ var windowListener = {
 				// as whenever i print from my hidden frame on link678321212 it opens the print dialog with opener set to null, and then it tries opener.focus() and it then leaves the window open
 				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
 				console.error('going to set opener to wm! as it was null');
+				aDOMWindow.addEventListener('unload', gPostPrintRemIframe, false);
 				aDOMWindow.opener = Services.wm.getMostRecentWindow('navigator:browser'); // { focus: function() { } };
 				//console.error('ok set opener! it is:', aDOMWindow.opener);
 			}
