@@ -629,6 +629,7 @@ var gEditor = {
 			iframe.contentWindow.print();
 		}, true);
 		iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
+		iframe.setAttribute('style', 'display:none');
 		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 
 		this.closeOutEditor(e);
@@ -1028,7 +1029,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.focus();
 	aEditorDOMWindow.fullScreen = true;
 	
-	/*
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
 	var aArrHwndPtrOsParams = {};
@@ -1036,7 +1036,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		left: colMon[iMon].x,
 		top: colMon[iMon].y,
 		right: colMon[iMon].x + colMon[iMon].w,
-		bottom: colMon[iMon].y + colMon[iMon].h
+		bottom: colMon[iMon].y + colMon[iMon].h,
+		width: colMon[iMon].w,
+		height: colMon[iMon].h
 	};
 	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
 	promise_setWinAlwaysTop.then(
@@ -1057,7 +1059,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			//deferred_createProfile.reject(rejObj);
 		}
 	);
-	*/
 	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
 	var w = colMon[iMon].w;

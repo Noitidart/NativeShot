@@ -122,7 +122,15 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
-				// 
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var hwndPtr = ostypes.TYPE.HWND.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					
+					//var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
+					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, 0, 0, 0, 0, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
+					console.info('rez_setTop:', rez_setTop);
+				}
 				
 			break;
 		case 'gtk':
@@ -233,61 +241,16 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				*/
 			break;
 		case 'darwin':
-			
-				//
-
-			break;
-		default:
-			console.error('os not supported');
-	}	
-}
-
-function makeWinFullAllMon(aHwndStr, aOptions={}) {
-	// makes a window full across all monitors (so an extension of fullscreen)
-	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
-		case 'winnt':
-			
-				if (!('topLeftMostX' in aOptions) || !('topLeftMostY' in aOptions)) {
-					throw new Error('winnt requries topLeftMostX and topLeftMostY');
+							
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
+					console.error('att 6');
+					var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
+					var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
+					 console.info('rez_orderFront:', rez_orderFront);
 				}
-				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {
-					throw new Error('winnt requries fullWidth and fullHeight');
-				}
-				
-				var aHwnd = ostypes.TYPE.HWND.ptr(ctypes.UInt64(aHwndStr));
-				var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions.topLeftMostX, aOptions.topLeftMostY, aOptions.fullWidth, aOptions.fullHeight, 0/*ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW*/);
-				console.info('rez_setTop:', rez_setTop);
-				
-			break;
-		case 'gtk':
-			
-				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {
-					throw new Error('gtk requries fullWidth and fullHeight');
-				}
-				
-				console.info('incoming aHwndStr:', aHwndStr);
-				//var aHwnd = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr));
-				//var rez_setMode = ostypes.API('gdk_window_set_fullscreen_mode', aHwnd, ostypes.CONST.GDK_FULLSCREEN_ON_ALL_MONITORS);
 
-				
-				var gdkWinPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr));
-				var gtkWinPtr = ostypes.HELPER.gdkWinPtrToGtkWinPtr(gdkWinPtr);
-
-				//var rez_makeFull = ostypes.API('gtk_window_fullscreen', gtkWinPtr); // it seems this cannot run from another thread... as its not making it fullscreen
-				
-				var rez_topIt = ostypes.API('gtk_window_set_keep_above')(gtkWinPtr, true);
-				
-				//var rez_splashIt = ostypes.API('gdk_window_set_type_hint')(gdkWinPtr, ostypes.CONST.WINDOW_TYPE_HINT_SPLASHSCREEN);
-				
-				//var rez_Unconstrain = ostypes.API('gtk_window_set_position')(gtkWinPtr, ostypes.CONST.GTK_WIN_POS_NONE);
-				
-				//var rez_focus = ostypes.API('gtk_window_present')(gtkWinPtr);
-				
-				// var geom = ostypes.TYPE.GdkGeometry();
-				// geom.max_width = aOptions.fullWidth;
-				// geom.max_height = aOptions.fullHeight;
-				// var rez_geo = ostypes.API('gtk_window_set_geometry_hints')(gtkWinPtr, null, geom.address(), ostypes.CONST.GDK_HINT_MAX_SIZE);
-				
 			break;
 		default:
 			console.error('os not supported');

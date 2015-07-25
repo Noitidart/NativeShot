@@ -189,6 +189,7 @@ var macTypes = function() {
 	this.IMP = ctypes.voidptr_t;
 	this.SEL = ctypes.voidptr_t;
 	this.Class = ctypes.voidptr_t;
+	this.NSWindow = ctypes.voidptr_t;
 	
 	// NULL CONSTs that i use for vaiadic args
 	
