@@ -114,72 +114,7 @@ var observers = {
 };
 //end obs stuff
 
-// START - Addon Functionalities
-const gEMenuDomJson = 
-	['xul:popupset', {},
-		['xul:menupopup', {id: 'myMenu1'},
-			['xul:menuitem', {label:'Close', oncommand:'window.close()'}],
-			['xul:menuseparator', {}],
-			['xul:menuitem', {label:'Save to File (preset dir & name pattern)', oncommand:function(e){ gEditor.saveToFile(e, true) }}],
-			['xul:menuitem', {label:'Save to File (file picker dir and name)', oncommand:function(e){ gEditor.saveToFile(e) }}],
-			['xul:menuitem', {label:'Copy to Clipboard', oncommand:function(e){ gEditor.copyToClipboard(e) }}],
-			['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
-				['xul:menupopup', {},
-					['xul:menuitem', {label:'Amazon Cloud Drive'}],
-					['xul:menuitem', {label:'Box'}],
-					['xul:menuitem', {label:'Copy by Barracuda Networks'}],
-					['xul:menuitem', {label:'Dropbox'}],
-					['xul:menuitem', {label:'Google Drive'}],
-					['xul:menuitem', {label:'MEGA'}],
-					['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
-				]
-			],
-			['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
-				['xul:menupopup', {},
-					['xul:menuitem', {label:'Flickr'}],
-					['xul:menuitem', {label:'Image Shack'}],
-					['xul:menuitem', {label:'Imgur'}],
-					['xul:menuitem', {label:'Photobucket'}]
-				]
-			],
-			['xul:menu', {label:'Upload to Image Host as Anonymous (click this for last used host)'},
-				['xul:menupopup', {},
-					['xul:menuitem', {label:'FreeImageHosting.net'}],
-					['xul:menuitem', {label:'Imgur', oncommand:function(e){ gEditor.uploadToImgur(e, false) }}],
-				]
-			],
-			['xul:menu', {label:'Share to Social Media'},
-				['xul:menupopup', {},
-					['xul:menuitem', {label:'Facebook'}],
-					['xul:menuitem', {label:'Twitter'}]
-				]
-			],
-			['xul:menuitem', {label:'Print Image', oncommand:function(e){ gEditor.sendToPrinter(e) }}],
-			['xul:menuseparator', {}],
-			['xul:menu', {label:'Selection to Monitor', onclick:'alert(\'clicked main level menu item so will select current monitor\')'},
-				['xul:menupopup', {},
-					['xul:menuitem', {label:'Current Monitor'}],
-					['xul:menuitem', {label:'All Monitors'}],
-					['xul:menuitem', {label:'Monitor 1'}],
-					['xul:menuitem', {label:'Monitor 2'}]
-				]
-			],
-			['xul:menu', {label:'Selection to Application Window'},
-				['xul:menupopup', {},
-					['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
-					['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:'Window 1'}],
-							['xul:menuitem', {label:'Window 2'}],
-							['xul:menuitem', {label:'Window 3'}]
-						]
-					],
-					['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
-				]
-			]
-		]
-	];
-					
+// START - Addon Functionalities					
 // global editor values
 var colMon; // rename of collMonInfos
 /* holds
@@ -218,6 +153,82 @@ const gDefLineWidth = '1';
 
 var gNotifTimer;
 
+var gEMenuDomJson;
+var gEMenuArrRefs = {
+	select_fullscreen: null
+};
+function get_gEMenuDomJson() {
+	if (!gEMenuDomJson) {
+		gEMenuDomJson =
+			['xul:popupset', {},
+				['xul:menupopup', {id: 'myMenu1'},
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-quick'), oncommand:function(e){ gEditor.saveToFile(e, true) }}],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-browse'), oncommand:function(e){ gEditor.saveToFile(e) }}],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_copy'), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
+					/*
+					['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:'Amazon Cloud Drive'}],
+							['xul:menuitem', {label:'Box'}],
+							['xul:menuitem', {label:'Copy by Barracuda Networks'}],
+							['xul:menuitem', {label:'Dropbox'}],
+							['xul:menuitem', {label:'Google Drive'}],
+							['xul:menuitem', {label:'MEGA'}],
+							['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
+						]
+					],
+					['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:'Flickr'}],
+							['xul:menuitem', {label:'Image Shack'}],
+							['xul:menuitem', {label:'Imgur'}],
+							['xul:menuitem', {label:'Photobucket'}]
+						]
+					],
+					*/
+					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-img-host-anon')},
+						['xul:menupopup', {},
+							/*['xul:menuitem', {label:'FreeImageHosting.net'}],*/
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_imgur'), oncommand:function(e){ gEditor.uploadToImgur(e, false) }}]
+						]
+					],
+					/*
+					['xul:menu', {label:'Share to Social Media'},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:'Facebook'}],
+							['xul:menuitem', {label:'Twitter'}]
+						]
+					],
+					*/
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
+					['xul:menuseparator', {}],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-clear'), oncommand:function(e){ gEditor.clearSelection(e) }}],
+					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_select-fullscreen')},
+						gEMenuArrRefs.select_fullscreen
+					],
+					/*
+					['xul:menu', {label:'Select Window'},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
+							['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
+								['xul:menupopup', {},
+									['xul:menuitem', {label:'Window 1'}],
+									['xul:menuitem', {label:'Window 2'}],
+									['xul:menuitem', {label:'Window 3'}]
+								]
+							],
+							['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
+						]
+					]
+					*/
+					['xul:menuseparator', {}],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_close'), oncommand:'window.close()'}]
+				]
+			];
+	}
+	
+	return gEMenuDomJson;
+}
 // start - observer handlers
 // start - canvas functions to act across all canvases
 var gCanDim = {
@@ -344,6 +355,33 @@ var gEditor = {
 			colMon[i].E[keyNameInColMonE].removeEventListener(evName, func, aBool);
 		}
 	},
+	clearSelection: function(e) {
+		if (!gESelected) {
+			throw new Error('no selection to clear!');
+		}
+		
+		gCanDim.execFunc('save');
+		
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		
+		gCanDim.execFunc('restore');
+		
+		gESelected = false;
+		gESelectedRect.setRect(0, 0, 0, 0);
+	},
+	selectMonitor: function(iMon, e) {
+		// iMon -1 for current monitor
+		// iMon -2 for all monitors
+		if (iMon == -1) {
+			iMon = parseInt(e.view.location.search.substr('?iMon='.length));
+			console.error('selecting current monitor which is:', iMon);
+		} else if (iMon == -2) {
+			console.error('selecting all monitors');
+		} else {
+			console.error('ok selecting user specified monitor of:', iMon);
+		}
+	},
 	compositeSelection: function() {
 		// creates a canvas holding a composite of the current selection
 		console.error('starting compositing');
@@ -419,7 +457,7 @@ var gEditor = {
 		}
 		gNotifTimer.initWithCallback({
 			notify: function() {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + aTitle, aMsg);
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + aTitle, aMsg);
 				gNotifTimer = null;
 			}
 		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
@@ -447,13 +485,13 @@ var gEditor = {
 							
 							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 							
-							gEditor.showNotif('Save Completed', 'Screenshot was successfully saved to disk and file path was copied to clipboard');
+							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'));
 							// end - do stuff here - promise_saveToDisk
 						},
 						function(aReason) {
 							var rejObj = {name:'promise_saveToDisk', aReason:aReason};
 							console.error('Rejected - promise_saveToDisk - ', rejObj);
-							gEditor.showNotif('Save Failed', 'Screenshot failed to save to disk, see browser console for more details');
+							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
 							//deferred_createProfile.reject(rejObj);
 						}
 					).catch(
@@ -555,7 +593,7 @@ var gEditor = {
 		  }    
 		*/
 		
-		gEditor.showNotif('Image Copied', 'Screenshot was successfully copied to the clipboard');
+		gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_clipboard-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
 		
 		this.closeOutEditor(e);
 	},
@@ -613,13 +651,13 @@ var gEditor = {
 					});
 				});
 				
-				gEditor.showNotif('Image Uploaded', 'Upload to Imgur was successful and image link was copied to the clipboard');
+				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
 				// end - do stuff here - promise_uploadAnonImgur
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
 				console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
-				gEditor.showNotif('Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-fail'), myServices.sb.GetStringFromName('notif-body_clipboard-fail'));
 				//deferred_createProfile.reject(rejObj);
 			}
 		).catch(
@@ -768,7 +806,7 @@ function gEMouseDown(e) {
 		gEMDY = cEMDY;
 		
 		// save what ever previous styles user applied
-		gCanDim.execFunc('save')
+		gCanDim.execFunc('save');
 		
 		// set "in selection" styles
 		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
@@ -808,6 +846,13 @@ function gEUnload(e) {
 	}
 	
 	gEditor.cleanUp();
+}
+
+function gEKeyUp(e) {
+	if (e.keyCode == 27) {
+		// hit escape, close it out
+		colMon[0].E.DOMWindow.close();
+	}
 }
 // end - canvas functions to act across all canvases
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
@@ -955,7 +1000,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 
 	var menuElRef = {};
 	//console.error('ok going to append');
-	doc.documentElement.appendChild(jsonToDOM(gEMenuDomJson, doc, menuElRef));
+	doc.documentElement.appendChild(jsonToDOM(get_gEMenuDomJson(), doc, menuElRef));
 	//console.error('ok APPENDED??');
 	doc.documentElement.setAttribute('context', 'myMenu1');
 	
@@ -964,7 +1009,8 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
 	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
 	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
-
+	aEditorDOMWindow.addEventListener('keyup', gEKeyUp, false);
+	
 	// special per os stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
@@ -1029,19 +1075,34 @@ function shootAllMons(aDOMWindow) {
 					}
 				}
 			}
+			
+			// update monitor menu domJson
+			
+			gEMenuArrRefs.select_fullscreen = 
+				['xul:menupopup', {},
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-current-mon'), oncommand:gEditor.selectMonitor.bind(null, -1)}],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-all-mon'), oncommand:gEditor.selectMonitor.bind(null, -2)}]
+				]
+			;
+			for (var i=0; i<colMon.length; i++) {
+				gEMenuArrRefs.select_fullscreen.push(
+					['xul:menuitem', {label:myServices.sb.formatStringFromName('editor-menu_select-mon-n', [i], 1), oncommand:gEditor.selectMonitor.bind(null, i)}]
+				);
+			}
+			
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot
 		},
 		function(aReason) {
 			var rejObj = {name:'promise_shoot', aReason:aReason};
 			console.warn('Rejected - promise_shoot - ', rejObj);
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Exception', 'An exception occured while taking screenshot, see Browser Console for more information');
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), myServices.sb.GetStringFromName('addon_name') + ' - ' + myServices.sb.GetStringFromName('error-title_screenshot-internal'), myServices.sb.GetStringFromName('error-body_screenshot-internal'));
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_shoot', aCaught:aCaught};
 			console.error('Caught - promise_shoot - ', rejObj);
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Error', 'An error occured while taking screenshot, see Browser Console for more information');
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 		}
 	);
 }
@@ -1144,6 +1205,10 @@ var windowListener = {
 };
 /*end - windowlistener*/
 
+var gColInterval = {};
+var gLastIntervalId = -1;
+const delayedShotTimePerClick = 5; // sec
+
 function install() {}
 function uninstall() {}
 
@@ -1187,9 +1252,35 @@ function startup(aData, aReason) {
 			gEditor.gBrowserDOMWindow = aDOMWin;
 			if (aEvent.shiftKey == 1) {
 				// default time delay queue
-				aDOMWin.setTimeout(function() {
-					shootAllMons(aDOMWin);
-				}, 5000);
+				var cui_btn = aDOMWin.document.getElementById('cui_nativeshot');
+				if (cui_btn.classList.contains('badged-button')) {
+					// user wants to add 5 more sec to time left
+					var aIntervalId = cui_btn.getAttribute('nativeshot_interval-id');
+					gColInterval[aIntervalId].time_left += delayedShotTimePerClick;
+					cui_btn.setAttribute('badge', gColInterval[gLastIntervalId].time_left);
+				} else {
+					// users first click telling  want to do delayed shot
+					cui_btn.classList.add('badged-button');
+					gLastIntervalId++;
+					cui_btn.setAttribute('nativeshot_interval-id', gLastIntervalId);
+					gColInterval[gLastIntervalId] = {};
+					gColInterval[gLastIntervalId].DOMWindow = Cu.getWeakReference(aDOMWin);
+					gColInterval[gLastIntervalId].time_left = delayedShotTimePerClick;
+					
+					cui_btn.setAttribute('badge', gColInterval[gLastIntervalId].time_left);
+					gColInterval[gLastIntervalId].interval = aDOMWin.setInterval(function(aIntervalId) {
+						gColInterval[aIntervalId].time_left--;
+						if (gColInterval[aIntervalId].time_left == 0) {
+							cui_btn.classList.remove('badged-button');
+							cui_btn.removeAttribute('badge');
+							gColInterval[aIntervalId].DOMWindow.get().clearInterval(gColInterval[aIntervalId].interval);
+							delete gColInterval[aIntervalId];
+							shootAllMons(aDOMWin);
+						} else {
+							cui_btn.setAttribute('badge', gColInterval[aIntervalId].time_left);
+						}
+					}.bind(null, gLastIntervalId), 1000);
+				}
 			} else {
 				// imemdiate freeze
 				shootAllMons(aDOMWin);
@@ -1222,6 +1313,15 @@ function shutdown(aData, aReason) {
 		observers[o].unreg();
 	}
 	//end observers stuff more
+	
+	// clear intervals if any are pending
+	for (var intervalId in gColInterval) {
+		var aDOMWindow = gColInterval[intervalId].DOMWindow.get();
+		if (aDOMWindow && !aDOMWindow.closed/* && gColInterval[intervalId].time_left > 0*/) {
+			aDOMWindow.clearInterval(gColInterval[intervalId].interval);
+			delete gColInterval[intervalId];
+		}
+	}
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
 }

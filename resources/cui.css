@@ -4,6 +4,9 @@
 		/*filter: grayscale(1);
 		transition: filter 200ms;*/
 	}
+	#cui_nativeshot .toolbarbutton-badge {
+		background-color: #00A8EC;
+	}
 	#cui_nativeshot:hover {
 		filter: grayscale(0);
 	}

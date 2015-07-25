@@ -13,32 +13,23 @@
 		<em:targetApplication>
 			<Description>
 				<em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
-				<em:minVersion>25.0</em:minVersion> <!-- due to ImageData use in ChromeWorker -->
-				<em:maxVersion>38.0</em:maxVersion>
+				<em:minVersion>29.0</em:minVersion> <!-- due to CUI.jsm (badging of countdown only works 36+) -->
+				<em:maxVersion>40.0</em:maxVersion> <!-- the latest version i tested it in -->
 			</Description>
 		</em:targetApplication>
 		
 		<!-- Front End MetaData -->
 		<!-- must provide default non-localized because It's used as a default on AMO. It's used as a default by the add-on manager, with the possibility of other locales overriding it. Failure to provide a non-localized name will lead to failed upload on AMO. -->
 		<em:name>NativeShot</em:name>
-		<em:description>Uses the operating systems native methods to bring screenshot functionality to not just within Firefox, but outside of it as well.</em:description>
+		<em:description>Capture and edit screenshots of anything on any monitor.</em:description>
 		<em:creator>Noitidart</em:creator>
 		<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 		<!-- start localizing - For each entry in default data MUST have equivalent in each localized block -->
 		<em:localized>
 			<Description>
-				<em:locale>en-GB</em:locale>
-				<em:name>NativeShot</em:name>
-				<em:description>Uses the operating systems native methods to bring screenshot functionality to not just within Firefox, but outside of it as well.</em:description>
-				<em:creator>Noitidart</em:creator>
-				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
-			</Description>
-		</em:localized>
-		<em:localized>
-			<Description>
 				<em:locale>en-US</em:locale>
 				<em:name>NativeShot</em:name>
-				<em:description>Uses the operating systems native methods to bring screenshot functionality to not just within Firefox, but outside of it as well.</em:description>
+				<em:description>Capture and edit screenshots of anything on any monitor.</em:description>
 				<em:creator>Noitidart</em:creator>
 				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 			</Description>
