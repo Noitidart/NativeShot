@@ -373,14 +373,29 @@ var gEditor = {
 	selectMonitor: function(iMon, e) {
 		// iMon -1 for current monitor
 		// iMon -2 for all monitors
-		if (iMon == -1) {
-			iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-			console.error('selecting current monitor which is:', iMon);
-		} else if (iMon == -2) {
-			console.error('selecting all monitors');
-		} else {
-			console.error('ok selecting user specified monitor of:', iMon);
+		switch (iMon) {
+			case -2:
+			
+					console.error('selecting all monitors');
+					for (var i=0; i<colMon.length; i++) {
+						gESelectedRect = gESelectedRect.union(colMon[i].rect);
+					}
+					gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
+					
+				break;
+			case -1:
+					iMon = parseInt(e.view.location.search.substr('?iMon='.length));
+					console.error('selecting current monitor which is:', iMon);
+					// intionally no break here so iMon is set to current monitor and it goes on to the default selection part
+			default:
+					try {
+						gEditor.clearSelection(e);
+					} catch(ignore) {}
+					gESelectedRect = colMon[iMon].rect.clone();
+					colMon[iMon].E.ctxDim.clearRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 		}
+		gESelected = true;
+		
 	},
 	compositeSelection: function() {
 		// creates a canvas holding a composite of the current selection
@@ -1078,16 +1093,18 @@ function shootAllMons(aDOMWindow) {
 			
 			// update monitor menu domJson
 			
-			gEMenuArrRefs.select_fullscreen = 
-				['xul:menupopup', {},
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-current-mon'), oncommand:gEditor.selectMonitor.bind(null, -1)}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-all-mon'), oncommand:gEditor.selectMonitor.bind(null, -2)}]
-				]
-			;
-			for (var i=0; i<colMon.length; i++) {
-				gEMenuArrRefs.select_fullscreen.push(
-					['xul:menuitem', {label:myServices.sb.formatStringFromName('editor-menu_select-mon-n', [i], 1), oncommand:gEditor.selectMonitor.bind(null, i)}]
-				);
+			if (!gEMenuArrRefs.select_fullscreen || gEMenuArrRefs.select_fullscreen.length != 2 + colMon.length) {
+				gEMenuArrRefs.select_fullscreen = 
+					['xul:menupopup', {},
+						['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-current-mon'), oncommand:gEditor.selectMonitor.bind(null, -1)}],
+						['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-all-mon'), oncommand:gEditor.selectMonitor.bind(null, -2)}]
+					]
+				;
+				for (var i=0; i<colMon.length; i++) {
+					gEMenuArrRefs.select_fullscreen.push(
+						['xul:menuitem', {label:myServices.sb.formatStringFromName('editor-menu_select-mon-n', [i+1], 1), oncommand:gEditor.selectMonitor.bind(null, i)}]
+					);
+				}
 			}
 			
 			openWindowOnEachMon();
