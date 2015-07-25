@@ -23,7 +23,13 @@ const core = {
 		}
 	},
 	os: {
-		name: OS.Constants.Sys.Name.toLowerCase()
+		name: OS.Constants.Sys.Name.toLowerCase(),
+		toolkit: Services.appinfo.widgetToolkit.toLowerCase(),
+		xpcomabi: Services.appinfo.XPCOMABI
+	},
+	firefox: {
+		pid: Services.appinfo.processID,
+		version: Services.appinfo.version
 	}
 };
 
@@ -41,7 +47,7 @@ XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.stri
 XPCOMUtils.defineLazyGetter(myServices, 'sm', function () { return Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager) });
 
 function extendCore() {
-	// adds some properties i use to core
+	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
 	switch (core.os.name) {
 		case 'winnt':
 		case 'winmo':
@@ -89,12 +95,6 @@ function extendCore() {
 		default:
 			// nothing special
 	}
-	
-	core.os.toolkit = Services.appinfo.widgetToolkit.toLowerCase();
-	core.os.xpcomabi = Services.appinfo.XPCOMABI;
-	
-	core.firefox = {};
-	core.firefox.version = Services.appinfo.version;
 	
 	console.log('done adding to core, it is now:', core);
 }

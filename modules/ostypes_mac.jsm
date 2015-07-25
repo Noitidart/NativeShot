@@ -93,13 +93,17 @@ var macTypes = function() {
 		{ x: this.CGFloat },
 		{ y: this.CGFloat }
 	]);
+	this.CGSize = ctypes.StructType('CGSize', [
+		{ width: this.CGFloat },
+		{ height: this.CGFloat }
+	]);
 	this.Point = ctypes.StructType('Point', [
 		{ v: this.short },
 		{ h: this.short }
 	]);
-	this.CGSize = ctypes.StructType('CGSize', [
-		{ width: this.CGFloat },
-		{ height: this.CGFloat }
+	this.ProcessSerialNumber = new ctypes.StructType('ProcessSerialNumber', [
+		{ highLongOfPSN: this.UInt32 },
+		{ lowLongOfPSN: this.UInt32 }
 	]);
 	this.timespec = ctypes.StructType('timespec', [ // http://www.opensource.apple.com/source/text_cmds/text_cmds-69/sort/timespec.h
 		{ tv_sec: this.time_t },

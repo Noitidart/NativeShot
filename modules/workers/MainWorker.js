@@ -243,16 +243,24 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 		case 'darwin':
 							
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
-					setTimeout(function() {
-						console.error('info:', aArrHwndPtrStr[i]);
-						var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
-						console.error('att 6');
-						var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
-						var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
-						 console.info('rez_orderFront:', rez_orderFront);
-					}, 2000);
+					/*
+					console.error('info:', aArrHwndPtrStr[i]);
+					var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
+					console.error('att 6');
+					var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
+					var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
+					console.info('rez_orderFront:', rez_orderFront);
+					*/
 				}
-
+				
+				var NSApplication = ostypes.API('objc_msgSend')('NSApplication');
+				var sharedApplication = ostypes.HELPER.sel('sharedApplication');
+				var NSApp = ostypes.API('objc_msgSend')(NSApplication, sharedApplication);
+				
+				// [NSApp activateIgnoringOtherApps:YES];
+				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps'), ostypes.CONST.YES);
+				console.info('rez_actIgOthrApps:', rez_actIgOthrApps);
+				
 			break;
 		default:
 			console.error('os not supported');
