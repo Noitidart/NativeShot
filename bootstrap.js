@@ -617,7 +617,7 @@ var gEditor = {
 		this.compositeSelection();
 		
 		// print method link678321212
-		var win = Services.appShell.hiddenDOMWindow;
+		var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
 		var doc = win.document;
 		var iframe = doc.createElementNS(NS_HTML, 'iframe');
 		iframe.addEventListener('load', function() {
