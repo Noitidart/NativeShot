@@ -45,6 +45,8 @@ var macTypes = function() {
 	this.CGDirectDisplayID = ctypes.uint32_t;
 	this.CGError = ctypes.int32_t;
 	this.CGFloat = is64bit ? ctypes.double : ctypes.float; // ctypes.float is 32bit deosntw ork as of May 10th 2015 see this bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1163406 this would cause crash on CGDisplayGetBounds http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac#comment48414568_28247749
+	this.CGWindowLevel = ctypes.int32_t;
+	this.CGWindowLevelKey = ctypes.int32_t;
 	this.ConstStr255Param = ctypes.unsigned_char.ptr;
 	this.ConstStringPtr = ctypes.unsigned_char.ptr;
 	this.OpaqueDialogPtr = ctypes.StructType("OpaqueDialogPtr");
@@ -203,6 +205,9 @@ var macTypes = function() {
 	// ADV OBJC STRUCTS
 	
 
+	// dispatch stuff
+	this.dispatch_block_t = 
+	this.dispatch_queue_t = 
 }
 
 var macInit = function() {
@@ -417,6 +422,12 @@ var macInit = function() {
 				self.TYPE.uint32_t.ptr				// *displayCount
 			);
 		},
+		CGWindowLevelForKey: function() {
+			return lib('CoreGraphics').declare('CGWindowLevelForKey', self.TYPE.ABI,
+				self.TYPE.CGWindowLevel,
+				self.TYPE.CGWindowLevelKey
+			);
+		},
 		CGImageRelease: function() {
 			return lib('CoreGraphics').declare('CGImageRelease', self.TYPE.ABI,
 				self.TYPE.void,
@@ -465,6 +476,29 @@ var macInit = function() {
 				self.TYPE.CGRect,
 				self.TYPE.CGRect,
 				self.TYPE.CGRect
+			);
+		},
+		dispatch_get_main_queue: function() {
+			/* https://developer.apple.com/library/prerelease/mac/documentation/Performance/Reference/GCD_libdispatch_Ref/#//apple_ref/c/func/dispatch_get_main_queue
+			 *  dispatch_queue_t dispatch_get_main_queue (
+			 *   void
+			 * ); 
+			 */
+			return lib('libc').declare('dispatch_get_main_queue', self.TYPE.ABI,
+				self.TYPE.dispatch_queue_t	// return
+			);		
+		},
+		dispatch_sync: function() {
+			/* https://developer.apple.com/library/prerelease/mac/documentation/Performance/Reference/GCD_libdispatch_Ref/#//apple_ref/c/func/dispatch_sync
+			 * void dispatch_sync (
+			 *   dispatch_queue_t queue,
+			 *   dispatch_block_t block
+			 * ); 
+			 */
+			return lib('libc').declare('dispatch_sync', self.TYPE.ABI,
+				self.TYPE.void,					// return
+				self.TYPE.dispatch_queue_t,		// queue
+				self.TYPE.dispatch_block_t		// block
 			);
 		},
 		//////////// OBJC

@@ -253,12 +253,66 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					*/
 				}
 				
-				var NSApplication = ostypes.API('objc_msgSend')('NSApplication');
+				var NSApplication = ostypes.HELPER.class('NSApplication');
 				var sharedApplication = ostypes.HELPER.sel('sharedApplication');
 				var NSApp = ostypes.API('objc_msgSend')(NSApplication, sharedApplication);
 				
 				// [NSApp activateIgnoringOtherApps:YES];
-				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps'), ostypes.CONST.YES);
+				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps:'), ostypes.CONST.YES);
+				console.info('rez_actIgOthrApps:', rez_actIgOthrApps);
+				
+			break;
+		default:
+			console.error('os not supported');
+	}
+}
+
+function focusWindows(aArrHwndPtrStr) {
+	// aArrHwndPtrStr is an array of hwnd's and the windows in it will be focused in order
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+			
+				
+				
+				
+			break;
+		case 'gtk':
+				
+				
+				
+			break;
+		case 'darwin':
+				
+				
+				
+			break;
+		default:
+			console.error('os not supported');
+	}
+}
+
+function focusSelfApp() {
+	// makes the firefox you run this code from the active app, like brings it forward
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+			
+				
+				
+				
+			break;
+		case 'gtk':
+				
+				
+				
+			break;
+		case 'darwin':
+				
+				var NSApplication = ostypes.HELPER.class('NSApplication');
+				var sharedApplication = ostypes.HELPER.sel('sharedApplication');
+				var NSApp = ostypes.API('objc_msgSend')(NSApplication, sharedApplication);
+				
+				// [NSApp activateIgnoringOtherApps:YES];
+				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps:'), ostypes.CONST.YES);
 				console.info('rez_actIgOthrApps:', rez_actIgOthrApps);
 				
 			break;

@@ -1045,6 +1045,14 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		function(aVal) {
 			console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
 			// start - do stuff here - promise_setWinAlwaysTop
+			if (core.os.name == 'darwin') {
+				aEditorDOMWindow.setTimeout(function() {
+					//aEditorDOMWindow.focus(); // doesnt work to make take full
+					//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+					aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+					console.log('ok resized by');
+				}, 10);
+			}
 			// end - do stuff here - promise_setWinAlwaysTop
 		},
 		function(aReason) {
