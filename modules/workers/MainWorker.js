@@ -256,6 +256,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				// make a class to hold my methods:
 				var needsRegistration; // meaning registerClassPair, alloc, and init will be called and stored
 				// unregister, unalloc, etc all `OSSTuff.setWinAlwaysOnTop_****` and delete js key pairs from OSStuff if you want it re-registered later on
+				
+				var NSObject = ostypes.HELPER.class('NSObject');
+				
 				if (!OSStuff.setWinAlwaysOnTop_class) {
 					needsRegistration = true;
 					OSStuff.setWinAlwaysOnTop_class = ostypes.API('objc_allocateClassPair')(NSObject, 'setWinAlwaysOnTop_class', 0);
@@ -270,7 +273,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 								
 				OSStuff.setWinAlwaysOnTop_jsMethods = {}; // holds key of aArrHwndPtrStr and value is js method
 				
-				var IMP_for_mainThreadSelector = ctypes.FunctionType(ctypes.default_abi, ctypes.void_t, []).ptr
+				var IMP_for_mainThreadSelector = ctypes.FunctionType(ctypes.default_abi, ctypes.void_t, []);
 				
 				OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]] = function() {
 					console.log('setWinAlwaysOnTop_jsMethods ' + 0 + ' called');
@@ -278,12 +281,13 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// delete OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
 				};
 				
+				OSStuff.setWinAlwaysOnTop_cMethods = {};
 				OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]] = IMP_for_mainThreadSelector.ptr(OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]]);
 				
 				OSStuff.setWinAlwaysOnTop_methodSelectors = {};
 				OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]] = ostypes.API('sel_registerName')(aArrHwndPtrStr[0]);
 				
-				var rez_class_addMethod = ostypes.API('class_addMethod')(OSStuff.setWinAlwaysOnTop_class, OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]], callback_onScreenSaverStarted, 'v');
+				var rez_class_addMethod = ostypes.API('class_addMethod')(OSStuff.setWinAlwaysOnTop_class, OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]], OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]], 'v');
 				
 				if (needsRegistration) {
 					ostypes.API('objc_registerClassPair')(OSStuff.setWinAlwaysOnTop_class);				
@@ -291,7 +295,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					OSStuff.setWinAlwaysOnTop_instance = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_allocation, ostypes.HELPER.sel('init'));
 				}
 				
-				var rez_perform = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), aArrHwndPtrStr[0], ostypes.CONST.NIL, ostypes.CONST.YES);
+				var rez_perform = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel(aArrHwndPtrStr[0]), ostypes.CONST.NIL, ostypes.CONST.YES);
 				console.error('perform done!!');
 				
 			break;
