@@ -418,6 +418,8 @@ var gEditor = {
 	gBrowserDOMWindow: null, // used for clipboard context
 	cleanUp: function() {
 		// reset all globals
+		console.error('doing cleanup');
+		
 		colMon = null;
 		this.lastCompositedRect = null;
 		this.canComp = null;
@@ -642,7 +644,7 @@ var gEditor = {
 			do_saveCanToDisk();
 		} else {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(this.compDOMWindow, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
+			fp.init(e.view, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
 			fp.appendFilter('PNG Image', '*.png');
 			
 			var rv = fp.show();
@@ -655,8 +657,8 @@ var gEditor = {
 				do_saveCanToDisk();
 			} else {
 				 // user canceled
-				console.error('rv was:', rv);
-				gEditor.closeOutEditor(e);
+				console.error('rv was not ok or replace:', rv);
+				//gEditor.closeOutEditor(e);
 			}
 		}
 	},
