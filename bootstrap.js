@@ -1756,6 +1756,7 @@ function getSafedForOSPath(aStr, useNonDefaultRepChar) {
 	}
 }
 function xhr(aStr, aOptions={}) {
+	// update 072615 - added support for aOptions.aMethod
 	// currently only setup to support GET and POST
 	// does an async request
 	// aStr is either a string of a FileURI such as `OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'test.png'));` or a URL such as `http://github.com/wet-boew/wet-boew/archive/master.zip`
@@ -1792,9 +1793,9 @@ function xhr(aStr, aOptions={}) {
 	
 	var deferredMain_xhr = new Deferred();
 	console.log('here222');
-	let xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
 
-	let handler = ev => {
+	var handler = ev => {
 		evf(m => xhr.removeEventListener(m, handler, !1));
 
 		switch (ev.type) {
@@ -1852,7 +1853,7 @@ function xhr(aStr, aOptions={}) {
 		}
 	};
 
-	let evf = f => ['load', 'error', 'abort'].forEach(f);
+	var evf = f => ['load', 'error', 'abort'].forEach(f);
 	evf(m => xhr.addEventListener(m, handler, false));
 
 	if (aOptions.isBackgroundReq) {
@@ -1891,7 +1892,7 @@ function xhr(aStr, aOptions={}) {
 		console.info('aPostStr:', aPostStr.join('&'));
 		xhr.send(aPostStr.join('&'));
 	} else {
-		xhr.open('GET', aStr, true);
+		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'GET', aStr, true);
 		do_setHeaders();
 		xhr.channel.loadFlags |= aOptions.aLoadFlags;
 		xhr.responseType = aOptions.aResponseType;

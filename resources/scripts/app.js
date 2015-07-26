@@ -367,6 +367,7 @@ function Deferred() {
 }
 
 function xhr(aStr, aOptions={}) {
+	// update 072615 - added support for aOptions.aMethod
 	// currently only setup to support GET and POST
 	// does an async request
 	// aStr is either a string of a FileURI such as `OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'test.png'));` or a URL such as `http://github.com/wet-boew/wet-boew/archive/master.zip`
