@@ -260,16 +260,19 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				var NSObject = ostypes.HELPER.class('NSObject');
 				
 				if (!OSStuff.setWinAlwaysOnTop_class) {
-					needsRegistration = true;
+					throw new Error('setWinAlwaysOnTop_class was not previously cleaned up!!')
+				}
+				// if (!OSStuff.setWinAlwaysOnTop_class) {
+					var needsRegistration = true;
 					OSStuff.setWinAlwaysOnTop_class = ostypes.API('objc_allocateClassPair')(NSObject, 'setWinAlwaysOnTop_class', 0);
 					if (OSStuff.setWinAlwaysOnTop_class.isNull()) {
 						console.info('setWinAlwaysOnTop_class:', class_NoitOnScrnSvrDelgt.toString());
 						throw new Error('setWinAlwaysOnTop_class is null, so objc_allocateClassPair failed');
 					}
-				} else {
-					console.log('setWinAlwaysOnTop_class already exists');
-					needsRegistration = false;
-				}
+				// } else {
+					// console.log('setWinAlwaysOnTop_class already exists');
+					// needsRegistration = false;
+				// }
 								
 				OSStuff.setWinAlwaysOnTop_jsMethods = {}; // holds key of aArrHwndPtrStr and value is js method
 				
@@ -297,6 +300,15 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 				var rez_perform = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel(aArrHwndPtrStr[0]), ostypes.CONST.NIL, ostypes.CONST.YES);
 				console.error('perform done!!');
+				
+				// after all callbacks done then clean up class
+				// ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('release'));
+				// ostypes.API('objc_disposeClassPair')(OSStuff.setWinAlwaysOnTop_class);
+				// delete OSStuff.setWinAlwaysOnTop_cMethods
+				// delete OSStuff.setWinAlwaysOnTop_jsMethods
+				// delete OSStuff.setWinAlwaysOnTop_allocation
+				// delete OSStuff.setWinAlwaysOnTop_instance
+				// delete OSStuff.setWinAlwaysOnTop_class
 				
 			break;
 		default:

@@ -1377,9 +1377,50 @@ var windowListener = {
 };
 /*end - windowlistener*/
 
-var gColInterval = {};
+var gDelayedShotObj;
 var gLastIntervalId = -1;
 const delayedShotTimePerClick = 5; // sec
+
+function delayedShotUpdateBadges() {
+	var widgetInstances = CustomizableUI.getWidget('cui_nativeshot').instances;
+	for (var i=0; i<widgetInstances.length; i++) {
+		if (gDelayedShotObj.time_left > 0 && !widgetInstances[i].node.hasAttribute('badge')) {
+			widgetInstances[i].node.classList.add('badged-button');
+		}
+		if (gDelayedShotObj.time_left > 0) {
+			widgetInstances[i].node.setAttribute('badge', gDelayedShotObj.time_left);
+		} else {
+			widgetInstances[i].node.classList.remove('badged-button');
+			widgetInstances[i].node.removeAttribute('badge');
+		}
+	}
+}
+
+var delayedShotTimerCallback = {
+	notify: function() {
+		gDelayedShotObj.time_left--;
+		delayedShotUpdateBadges();
+		if (!gDelayedShotObj.time_left) {
+			cancelAndCleanupDelayedShot();
+			var aDOMWin = Services.wm.getMostRecentWindow('navigator:browser');
+			if (!aDOMWin) {
+				throw new Error('no navigator:browser type window open, this is required in order to take screenshot')
+			}
+			shootAllMons(aDOMWin);
+		} else {
+			gDelayedShotObj.timer.initWithCallback(delayedShotTimerCallback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+		}
+	}
+};
+
+function cancelAndCleanupDelayedShot() {
+	if (gDelayedShotObj) {
+		gDelayedShotObj.timer.cancel();
+		gDelayedShotObj.time_left = 0; // needed for delayedShotUpdateBadges
+		delayedShotUpdateBadges();
+		gDelayedShotObj = null;
+	}
+}
 
 function install() {}
 function uninstall() {
@@ -1426,36 +1467,24 @@ function startup(aData, aReason) {
 			gEditor.gBrowserDOMWindow = aDOMWin;
 			if (aEvent.shiftKey == 1) {
 				// default time delay queue
-				var cui_btn = aDOMWin.document.getElementById('cui_nativeshot');
-				if (cui_btn.classList.contains('badged-button')) {
-					// user wants to add 5 more sec to time left
-					var aIntervalId = cui_btn.getAttribute('nativeshot_interval-id');
-					gColInterval[aIntervalId].time_left += delayedShotTimePerClick;
-					cui_btn.setAttribute('badge', gColInterval[gLastIntervalId].time_left);
+				if (gDelayedShotObj) {
+					// there is a count down currently running
+					gDelayedShotObj.time_left += delayedShotTimePerClick;
+					// gDelayedShotObj.timer.cancel();
+					delayedShotUpdateBadges();
+					// so user wants to add 5 mroe sec to countdown
 				} else {
-					// users first click telling  want to do delayed shot
-					cui_btn.classList.add('badged-button');
-					gLastIntervalId++;
-					cui_btn.setAttribute('nativeshot_interval-id', gLastIntervalId);
-					gColInterval[gLastIntervalId] = {};
-					gColInterval[gLastIntervalId].DOMWindow = Cu.getWeakReference(aDOMWin);
-					gColInterval[gLastIntervalId].time_left = delayedShotTimePerClick;
-					
-					cui_btn.setAttribute('badge', gColInterval[gLastIntervalId].time_left);
-					gColInterval[gLastIntervalId].interval = aDOMWin.setInterval(function(aIntervalId) {
-						gColInterval[aIntervalId].time_left--;
-						if (gColInterval[aIntervalId].time_left == 0) {
-							cui_btn.classList.remove('badged-button');
-							cui_btn.removeAttribute('badge');
-							gColInterval[aIntervalId].DOMWindow.get().clearInterval(gColInterval[aIntervalId].interval);
-							delete gColInterval[aIntervalId];
-							shootAllMons(aDOMWin);
-						} else {
-							cui_btn.setAttribute('badge', gColInterval[aIntervalId].time_left);
-						}
-					}.bind(null, gLastIntervalId), 1000);
+					gDelayedShotObj = {
+						time_left: delayedShotTimePerClick,
+						timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer)
+					};
+					delayedShotUpdateBadges();
+					gDelayedShotObj.timer.initWithCallback(delayedShotTimerCallback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
 				}
 			} else {
+				if (gDelayedShotObj) {
+					cancelAndCleanupDelayedShot();
+				}
 				// imemdiate freeze
 				shootAllMons(aDOMWin);
 			}
@@ -1489,12 +1518,8 @@ function shutdown(aData, aReason) {
 	//end observers stuff more
 	
 	// clear intervals if any are pending
-	for (var intervalId in gColInterval) {
-		var aDOMWindow = gColInterval[intervalId].DOMWindow.get();
-		if (aDOMWindow && !aDOMWindow.closed/* && gColInterval[intervalId].time_left > 0*/) {
-			aDOMWindow.clearInterval(gColInterval[intervalId].interval);
-			delete gColInterval[intervalId];
-		}
+	if (gDelayedShotObj) {
+		cancelAndCleanupDelayedShot();
 	}
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
