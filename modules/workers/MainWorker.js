@@ -291,6 +291,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					OSStuff.setWinAlwaysOnTop_instance = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_allocation, ostypes.HELPER.sel('init'));
 				}
 				
+				var rez_perform = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), aArrHwndPtrStr[0], ostypes.CONST.NIL, ostypes.CONST.YES);
+				console.error('perform done!!');
+				
 			break;
 		default:
 			console.error('os not supported');
