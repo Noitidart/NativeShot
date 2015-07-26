@@ -4,6 +4,7 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
+Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
 const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
 Cu.import('resource://gre/modules/Promise.jsm');
@@ -359,7 +360,56 @@ var gCanDim = {
 	}
 };
 
+var gENotifListener = {
+	observe: function(aSubject, aTopic, aData) {
+		// aSubject is always null
+		// aData is the aClickCookie, i set aClickCookie to notif id. if its not clickable aClickCookie is not set
+		// aTopic is: alertfinished, alertclickcallback, alertshow
+		if (aTopic == 'alertclickcallback')	{
+			if (gNotifClickCallback[aData]) {
+				gNotifClickCallback[aData]();
+				delete gNotifClickCallback[aData];
+			}
+		} else if (aTopic == 'alertshow') {
+			//gENotifPending[0].shown = true;
+			gENotifPending.splice(0, 1);
+		} else if (aTopic == 'alertfinished') {
+			if (gNotifClickCallback[aData]) {
+				// user didnt click it
+				delete gNotifClickCallback[aData];
+			}
+		}
+	}
+};
+var gNotifClickCallback = {};
+var gNotifLastId = 0;  //minimum gNotifLastId is 1 link687412
+var gENotifPending = []; // contains array of objs like: {shown:false, aTitle:'', aMsg:'', aClickCookie:''}
+var gNotifTimerRunning = false;
+// ensures to show notifications in order
+const gNotifTimerInterval = 2000; //ms
+var gENotifCallback = {
+	notify: function() {
+		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
+		if (gENotifPending.length > 0) {
+			if (gENotifPending[0].aClickCookie) {
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
+			} else {
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
+			}
+			gNotifTimer.initWithCallback(gENotifCallback, gNotifTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
+		} else {
+			gNotifTimerRunning = false;
+			gNotifTimer = null;
+		}
+	}
+};
 var gPostPrintRemovalFunc;
+
+function notifCB_saveToFile(aOSPath_savedFile) {
+	var nsifile = FileUtils.File(aOSPath_savedFile);
+	showFileInOSExplorer(nsifile);
+}
+
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -507,18 +557,23 @@ var gEditor = {
 			colMon[0].E.DOMWindow.close();
 		}
 	},
-	showNotif: function(aTitle, aMsg) {
+	showNotif: function(aTitle, aMsg, aClickCallback) {
 		if (!gNotifTimer) {
 			gNotifTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-		} else {
-			gNotifTimer.cancel();
 		}
-		gNotifTimer.initWithCallback({
-			notify: function() {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + aTitle, aMsg);
-				gNotifTimer = null;
-			}
-		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+		gNotifLastId++; //minimum gNotifLastId is 1 link687412
+		gENotifPending.push({
+			//shown: false, //no need as as long as it doesnt show its element will be first in the array
+			aTitle: aTitle,
+			aMsg: aMsg,
+			aClickCookie: aClickCallback ? gNotifLastId : null
+		});
+		if (aClickCallback) {
+			gNotifClickCallback[gNotifLastId] = aClickCallback;
+		}
+		if (!gNotifTimerRunning) {
+			gENotifCallback.notify(gNotifTimer);
+		}
 	},
 	saveToFile: function(e, aBoolPreset) {
 		// aBoolPreset true if want to use preset folder and file name
@@ -543,7 +598,7 @@ var gEditor = {
 							
 							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 							
-							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'));
+							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
 							// end - do stuff here - promise_saveToDisk
 						},
 						function(aReason) {
@@ -2130,5 +2185,15 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 	
 	
 	return deferred_tryOsFile_ifDirsNoExistMakeThenRetry.promise;
+}
+function showFileInOSExplorer(aNsiFile) {
+	//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
+	// opens the directory of the aNsiFile
+	
+	if (aNsiFile.isDirectory()) {
+		aNsiFile.launch();
+	} else {
+		aNsiFile.reveal();
+	}
 }
 // end - common helper functions
