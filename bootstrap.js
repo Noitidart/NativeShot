@@ -830,7 +830,8 @@ var gEditor = {
 			function(aReason) {
 				var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
 				console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
-				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-fail'), myServices.sb.GetStringFromName('notif-body_clipboard-fail'));
+				// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
+				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-fail'), myServices.sb.GetStringFromName('notif-body_anon-upload-fail'));
 				//deferred_createProfile.reject(rejObj);
 			}
 		).catch(
