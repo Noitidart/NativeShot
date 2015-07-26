@@ -372,7 +372,8 @@ var gENotifListener = {
 			}
 		} else if (aTopic == 'alertshow') {
 			//gENotifPending[0].shown = true;
-			gENotifPending.splice(0, 1);
+			var shown = gENotifPending.splice(0, 1);
+			console.log('just showed:', shown);
 		} else if (aTopic == 'alertfinished') {
 			if (gNotifClickCallback[aData]) {
 				// user didnt click it
@@ -386,7 +387,7 @@ var gNotifLastId = 0;  //minimum gNotifLastId is 1 link687412
 var gENotifPending = []; // contains array of objs like: {shown:false, aTitle:'', aMsg:'', aClickCookie:''}
 var gNotifTimerRunning = false;
 // ensures to show notifications in order
-const gNotifTimerInterval = 200; //ms
+const gNotifTimerInterval = 1000; //ms
 var gENotifCallback = {
 	notify: function() {
 		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
