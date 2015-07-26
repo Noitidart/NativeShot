@@ -19,9 +19,11 @@ const core = {
 		path: {
 			name: 'nativeshot',
 			content: 'chrome://nativeshot/content/',
+			images: 'chrome://nativeshot/content/resources/images/',
 			locale: 'chrome://nativeshot/locale/',
 			resources: 'chrome://nativeshot/content/resources/',
-			images: 'chrome://nativeshot/content/resources/images/'
+			scripts: 'chrome://nativeshot/content/resources/scripts/',
+			styles: 'chrome://nativeshot/content/resources/styles/'
 		}
 	},
 	os: {
@@ -38,7 +40,7 @@ const core = {
 var PromiseWorker;
 var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
-const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
+const cui_cssUri = Services.io.newURI(core.addon.path.styles + 'cui.css', null, null);
 const JETPACK_DIR_BASENAME = 'jetpack';
 const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
 
