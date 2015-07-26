@@ -136,12 +136,14 @@ var historyImgHostAnonImgur = {
 				}
 			}
 			
+			var trHeader = table.querySelector('tr');
+			
 			for (var imgur_img_id in historyImgHostAnonImgur.json) {
 				if (colImgurImgId.indexOf(imgur_img_id) == -1) {
 					// insert it in right place, for now just insert it
 					historyImgHostAnonImgur.rowTemplate_references.imgur_img_id = imgur_img_id;
 					historyImgHostAnonImgur.rowTemplate_references.imgur_del_hash = historyImgHostAnonImgur.json[imgur_img_id];
-					table.appendChild(jsonToDOM(historyImgHostAnonImgur.rowTemplate_domJson(), document, {}));
+					table.insertBefore(jsonToDOM(historyImgHostAnonImgur.rowTemplate_domJson(), document, {}), trHeader.nextSibling);
 				} // else its already there dont worry about it
 			}
 		}
