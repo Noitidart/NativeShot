@@ -318,6 +318,7 @@ var gCanDim = {
 	}
 };
 
+var gPostPrintRemovalFunc;
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -621,13 +622,22 @@ var gEditor = {
 		var doc = win.document;
 		var iframe = doc.createElementNS(NS_HTML, 'iframe');
 		iframe.addEventListener('load', function() {
+			iframe.removeEventListener('load', arguments.callee, true);
+			console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
 			console.error('iframe loaded, print it', iframe.contentWindow.print);
-			iframe.contentWindow.addEventListener('afterprint', function() {
+			gPostPrintRemovalFunc = function() {
 				iframe.parentNode.removeChild(iframe);
 				console.error('ok removed iframe that i added to hiddenDOMWindow')
+				gPostPrintRemovalFunc = null;
+			};
+			iframe.contentWindow.addEventListener('afterprint', function() {
+				// iframe.parentNode.removeChild(iframe);
+				// console.error('ok removed iframe that i added to hiddenDOMWindow')
+				//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
+				iframe.setAttribute('src', 'about:blank');
 			}, false);
 			iframe.contentWindow.print();
-		}, true);
+		}, true); // if i use false here it doesnt work
 		iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
 		iframe.setAttribute('style', 'display:none');
 		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
@@ -1218,6 +1228,11 @@ function shootAllMons(aDOMWindow) {
 			console.log('Fullfilled - promise_shoot - ', aVal);
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
+			
+			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
+				gPostPrintRemovalFunc();
+			}
+			
 			// set gETopLeftMostX and gETopLeftMostY
 			for (var i=0; i<colMon.length; i++) {
 				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
@@ -1352,7 +1367,7 @@ var windowListener = {
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
-		} else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
+		}/* else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
 			//console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
 			if (!aDOMWindow.opener) {
 				// this is my print window so lets set opener
@@ -1364,7 +1379,7 @@ var windowListener = {
 				//aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
 				//console.error('ok set opener! it is:', aDOMWindow.opener);
 			}
-		}
+		}*/
 	},
 	unloadFromWindow: function (aDOMWindow) {
 		if (!aDOMWindow) { return }
