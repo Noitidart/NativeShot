@@ -360,6 +360,7 @@ var gCanDim = {
 	}
 };
 
+var gNotifierStrRandomizer = ' '; // because on ubuntu if back to back same exact title and/or msg (not sure the combintation) the native alert wont show the second time but alertshown triggers as if it had shown but didnt, but probably triggered cuz the one before it was the same
 var gENotifListener = {
 	observe: function(aSubject, aTopic, aData) {
 		// aSubject is always null
@@ -374,6 +375,7 @@ var gENotifListener = {
 			//gENotifPending[0].shown = true;
 			var shown = gENotifPending.splice(0, 1);
 			console.log('just showed:', shown);
+			gNotifierStrRandomizer = gNotifierStrRandomizer == ' ' ? '' : ' ';
 		} else if (aTopic == 'alertfinished') {
 			if (gNotifClickCallback[aData]) {
 				// user didnt click it
@@ -393,9 +395,9 @@ var gENotifCallback = {
 		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
 		if (gENotifPending.length > 0) {
 			if (gENotifPending[0].aClickCookie) {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
 			} else {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
 			}
 			gNotifTimer.initWithCallback(gENotifCallback, gNotifTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
 		} else {
