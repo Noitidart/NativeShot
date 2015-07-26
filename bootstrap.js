@@ -386,7 +386,7 @@ var gNotifLastId = 0;  //minimum gNotifLastId is 1 link687412
 var gENotifPending = []; // contains array of objs like: {shown:false, aTitle:'', aMsg:'', aClickCookie:''}
 var gNotifTimerRunning = false;
 // ensures to show notifications in order
-const gNotifTimerInterval = 2000; //ms
+const gNotifTimerInterval = 200; //ms
 var gENotifCallback = {
 	notify: function() {
 		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
