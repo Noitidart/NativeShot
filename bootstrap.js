@@ -1,5 +1,7 @@
 // Imports
-const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
+const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
+Cm.QueryInterface(Ci.nsIComponentRegistrar);
+
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
@@ -38,13 +40,13 @@ var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
 const JETPACK_DIR_BASENAME = 'jetpack';
+const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
 
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'global.properties?' + Math.random()); /* Randomize URI to work around bug 719376 */ });
-XPCOMUtils.defineLazyGetter(myServices, 'sm', function () { return Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager) });
+XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + Math.random()); /* Randomize URI to work around bug 719376 */ });
 
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
@@ -114,6 +116,43 @@ var observers = {
 	}
 };
 //end obs stuff
+
+// about module
+var aboutFactory_nativeshot;
+function AboutNativeShot() {}
+AboutNativeShot.prototype = Object.freeze({
+	classDescription: 'NativeShot History Application',
+	contractID: '@mozilla.org/network/protocol/about;1?what=nativeshot',
+	classID: Components.ID('{2079bd20-3369-11e5-a2cb-0800200c9a66}'),
+	QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
+
+	getURIFlags: function(aURI) {
+		return Ci.nsIAboutModule.ALLOW_SCRIPT;
+	},
+
+	newChannel: function(aURI) {
+		let channel = Services.io.newChannel(core.addon.path.content + 'app.xhtml', null, null);
+		channel.originalURI = aURI;
+		return channel;
+	}
+});
+
+function AboutFactory(component) {
+	this.createInstance = function(outer, iid) {
+		if (outer) {
+			throw Cr.NS_ERROR_NO_AGGREGATION;
+		}
+		return new component();
+	};
+	this.register = function() {
+		Cm.registerFactory(component.prototype.classID, component.prototype.classDescription, component.prototype.contractID, this);
+	};
+	this.unregister = function() {
+		Cm.unregisterFactory(component.prototype.classID, this);
+	}
+	Object.freeze(this);
+	this.register();
+}
 
 // START - Addon Functionalities					
 // global editor values
@@ -681,9 +720,6 @@ var gEditor = {
 				Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 				
 				// save to upload history - only for anonymous uploads to imgur, so can delete in future
-				var promise_appendImgurHistory = tryOsFile_ifDirsNoExistMakeThenRetry();
-				var OSPath_history = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.txt'); //OS.Path.join(OS.Constants.Path.profileDir, 'extensions', 'NativeShot@jetpack_imgur-history.txt'); // creates file if it wasnt there
-				
 				
 				var do_closeHistory = function(hOpen) {
 					var promise_closeHistory = hOpen.close();
@@ -733,7 +769,7 @@ var gEditor = {
 				};
 				
 				var do_makeDirsToHistory = function() {
-					var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_history), {from:OS.Constants.Path.profileDir})
+					var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyImgHostAnonImgur), {from:OS.Constants.Path.profileDir})
 					promise_makeDirsToHistory.then(
 						function(aVal) {
 							console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
@@ -757,7 +793,7 @@ var gEditor = {
 				
 				var openHistoryAttempt = 1;
 				var do_openHistory = function() {
-					var promise_openHistory = OS.File.open(OSPath_history, {write: true, append: true});
+					var promise_openHistory = OS.File.open(OSPath_historyImgHostAnonImgur, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
 					promise_openHistory.then(
 						function(aVal) {
 							console.log('Fullfilled - promise_openHistory - ', aVal);
@@ -1515,6 +1551,8 @@ function startup(aData, aReason) {
 		observers[o].reg();
 	}
 	//end observers stuff more
+	
+	aboutFactory_nativeshot = new AboutFactory(AboutNativeShot);
 }
 
 function shutdown(aData, aReason) {
@@ -1536,6 +1574,12 @@ function shutdown(aData, aReason) {
 	if (gDelayedShotObj) {
 		cancelAndCleanupDelayedShot();
 	}
+	
+	if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
+		gPostPrintRemovalFunc();
+	}
+	
+	aboutFactory_nativeshot.unregister();
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
 }
