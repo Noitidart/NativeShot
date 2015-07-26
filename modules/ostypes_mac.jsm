@@ -206,8 +206,8 @@ var macTypes = function() {
 	
 
 	// dispatch stuff
-	this.dispatch_block_t = 
-	this.dispatch_queue_t = 
+	// this.dispatch_block_t = 
+	// this.dispatch_queue_t = 
 }
 
 var macInit = function() {
@@ -537,6 +537,60 @@ var macInit = function() {
 			return lib('objc').declare('sel_registerName', self.TYPE.ABI,
 				self.TYPE.SEL,		// return
 				self.TYPE.char.ptr	// *str
+			);
+		},
+		objc_registerClassPair: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_registerClassPair
+			 * void objc_registerClassPair (
+			 *   Class cls
+			 * ); 
+			 */
+			return lib('objc').declare('objc_registerClassPair', self.TYPE.ABI,
+				self.TYPE.void,	// return
+				self.TYPE.Class	// cls
+			);
+		},
+		objc_allocateClassPair: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_allocateClassPair
+			 *  Class objc_allocateClassPair (
+			 *   Class superclass,
+			 *   const char *name,
+			 *   size_t extraBytes
+			 * );
+			 */
+			return lib('objc').declare('objc_allocateClassPair', self.TYPE.ABI,
+				self.TYPE.Class,		// return
+				self.TYPE.Class,		// superclass
+				self.TYPE.char.ptr,		// *name
+				self.TYPE.size_t		// extraBytes
+			);
+		},
+		class_addMethod: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/class_addMethod
+			 * BOOL class_addMethod (
+			 *   Class cls,
+			 *   SEL name,
+			 *   IMP imp,
+			 *   const char *types
+			 * ); 
+			 */
+			return lib('objc').declare('class_addMethod', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.Class,	// cls
+				self.TYPE.SEL,		// name
+				self.TYPE.IMP,		// imp
+				self.TYPE.char.ptr	// *types
+			);
+		},
+		objc_disposeClassPair: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_disposeClassPair
+			 * void objc_disposeClassPair (
+			 *   Class cls
+			 * ); 
+			 */
+			return lib('objc').declare('objc_disposeClassPair', self.TYPE.ABI,
+				self.TYPE.void,	// return
+				self.TYPE.Class	// cls
 			);
 		},
 		///////////// LIBC

@@ -253,13 +253,43 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					*/
 				}
 				
-				var NSApplication = ostypes.HELPER.class('NSApplication');
-				var sharedApplication = ostypes.HELPER.sel('sharedApplication');
-				var NSApp = ostypes.API('objc_msgSend')(NSApplication, sharedApplication);
+				// make a class to hold my methods:
+				var needsRegistration; // meaning registerClassPair, alloc, and init will be called and stored
+				// unregister, unalloc, etc all `OSSTuff.setWinAlwaysOnTop_****` and delete js key pairs from OSStuff if you want it re-registered later on
+				if (!OSStuff.setWinAlwaysOnTop_class) {
+					needsRegistration = true;
+					OSStuff.setWinAlwaysOnTop_class = ostypes.API('objc_allocateClassPair')(NSObject, 'setWinAlwaysOnTop_class', 0);
+					if (OSStuff.setWinAlwaysOnTop_class.isNull()) {
+						console.info('setWinAlwaysOnTop_class:', class_NoitOnScrnSvrDelgt.toString());
+						throw new Error('setWinAlwaysOnTop_class is null, so objc_allocateClassPair failed');
+					}
+				} else {
+					console.log('setWinAlwaysOnTop_class already exists');
+					needsRegistration = false;
+				}
+								
+				OSStuff.setWinAlwaysOnTop_jsMethods = {}; // holds key of aArrHwndPtrStr and value is js method
 				
-				// [NSApp activateIgnoringOtherApps:YES];
-				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps:'), ostypes.CONST.YES);
-				console.info('rez_actIgOthrApps:', rez_actIgOthrApps);
+				var IMP_for_mainThreadSelector = ctypes.FunctionType(ctypes.default_abi, ctypes.void_t, []).ptr
+				
+				OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]] = function() {
+					console.log('setWinAlwaysOnTop_jsMethods ' + 0 + ' called');
+					// delete OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
+					// delete OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
+				};
+				
+				OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]] = IMP_for_mainThreadSelector.ptr(OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]]);
+				
+				OSStuff.setWinAlwaysOnTop_methodSelectors = {};
+				OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]] = ostypes.API('sel_registerName')(aArrHwndPtrStr[0]);
+				
+				var rez_class_addMethod = ostypes.API('class_addMethod')(OSStuff.setWinAlwaysOnTop_class, OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]], callback_onScreenSaverStarted, 'v');
+				
+				if (needsRegistration) {
+					ostypes.API('objc_registerClassPair')(OSStuff.setWinAlwaysOnTop_class);				
+					OSStuff.setWinAlwaysOnTop_allocation = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_class, ostypes.HELPER.sel('alloc'));
+					OSStuff.setWinAlwaysOnTop_instance = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_allocation, ostypes.HELPER.sel('init'));
+				}
 				
 			break;
 		default:
