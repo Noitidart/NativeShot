@@ -4,6 +4,7 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
+Cu.import('resource://gre/modules/ctypes.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
 const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
@@ -414,6 +415,33 @@ const reuploadTimerInterval = 10000;
 function notifCB_saveToFile(aOSPath_savedFile) {
 	var nsifile = FileUtils.File(aOSPath_savedFile);
 	showFileInOSExplorer(nsifile);
+}
+
+var gMacTypes;
+function initMacTypes() {
+	gMacTypes = {};
+	gMacTypes.NIL = ctypes.voidptr_t(ctypes.UInt64('0x0'));
+	gMacTypes.objc = ctypes.open(ctypes.libraryName("objc"));
+	gMacTypes.id = ctypes.voidptr_t;
+	gMacTypes.SEL = ctypes.voidptr_t;
+	
+gMacTypes.objc_getClass = gMacTypes.objc.declare("objc_getClass",
+ctypes.default_abi,
+gMacTypes.id,
+ctypes.char.ptr);
+
+gMacTypes.sel_registerName = gMacTypes.objc.declare("sel_registerName",
+ctypes.default_abi,
+gMacTypes.SEL,
+ctypes.char.ptr);
+
+gMacTypes.objc_msgSend = gMacTypes.objc.declare("objc_msgSend",
+ctypes.default_abi,
+gMacTypes.id,
+gMacTypes.id,
+gMacTypes.SEL,
+"...");
+
 }
 
 var gEditor = {
@@ -1240,7 +1268,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										.nativeHandle;
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
-	
+	console.info('1st:', aHwndPtrStr);
 	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	
 	aEditorDOMWindow.focus();
@@ -1257,33 +1285,105 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		width: colMon[iMon].w,
 		height: colMon[iMon].h
 	};
-	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
-	promise_setWinAlwaysTop.then(
-		function(aVal) {
-			console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
-			// start - do stuff here - promise_setWinAlwaysTop
-			if (core.os.name == 'darwin') {
-				aEditorDOMWindow.setTimeout(function() {
-					//aEditorDOMWindow.focus(); // doesnt work to make take full
-					//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
-					aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-					console.log('ok resized by');
-				}, 10);
+	
+	// if (core.os.name != 'darwinAAAA') {
+		var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
+		promise_setWinAlwaysTop.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
+				// start - do stuff here - promise_setWinAlwaysTop
+				if (core.os.name == 'darwin') {
+					/*
+					if (!gMacTypes) {
+						initMacTypes();
+					}
+					var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+														.getInterface(Ci.nsIWebNavigation)
+														.QueryInterface(Ci.nsIDocShellTreeItem)
+														.treeOwner
+														.QueryInterface(Ci.nsIInterfaceRequestor)
+														.getInterface(Ci.nsIBaseWindow)
+														.nativeHandle;
+
+					var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+					console.info('NSWindowString:', NSWindowString);
+												
+					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+					
+					var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
+					var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
+					console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+					
+					aEditorDOMWindow.setTimeout(function() {
+						var setLevel = gMacTypes.sel_registerName('setLevel:');
+						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, ctypes.long(aVal));
+						console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());
+					}, 2000);
+					*/
+					
+					// aEditorDOMWindow.setTimeout(function() {
+						//aEditorDOMWindow.focus(); // doesnt work to make take full
+						//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+						aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+						console.log('ok resized by');
+					// }, 10);
+					
+				}
+				// end - do stuff here - promise_setWinAlwaysTop
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
+				console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
+				//deferred_createProfile.reject(rejObj);
 			}
-			// end - do stuff here - promise_setWinAlwaysTop
-		},
-		function(aReason) {
-			var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
-			console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
-			//deferred_createProfile.reject(rejObj);
-		}
-	).catch(
-		function(aCaught) {
-			var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
-			console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
-			//deferred_createProfile.reject(rejObj);
-		}
-	);
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
+				console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
+				//deferred_createProfile.reject(rejObj);
+			}
+		);
+	// } else {
+		/*
+		// main thread ctypes
+		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(function() {
+			if (!gMacTypes) {
+				initMacTypes();
+			}
+			// var NSWindow = ctypes.voidptr_t(ctypes.UInt64(aHwndPtrStr));
+			// // var rez_setLevel = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('setLevel:'), ctypes.long(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
+			// // console.info('rez_setLevel:', rez_setLevel.toString());
+			// var rez_orderFront = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('orderFrontRegardless'));
+			// console.info('rez_orderFront:', rez_orderFront.toString());
+	
+			var baseWindow = Services.wm.getMostRecentWindow('navigator:browser').QueryInterface(Ci.nsIInterfaceRequestor)
+										  .getInterface(Ci.nsIWebNavigation)
+										  .QueryInterface(Ci.nsIDocShellTreeItem)
+										  .treeOwner
+										  .QueryInterface(Ci.nsIInterfaceRequestor)
+										  .getInterface(Ci.nsIBaseWindow);
+
+			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+			console.info('NSWindowString:', NSWindowString);
+			
+			var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+												.getInterface(Ci.nsIWebNavigation)
+												.QueryInterface(Ci.nsIDocShellTreeItem)
+												.treeOwner
+												.QueryInterface(Ci.nsIInterfaceRequestor)
+												.getInterface(Ci.nsIBaseWindow)
+												.nativeHandle;
+
+			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+			console.info('NSWindowString:', NSWindowString);
+										
+			var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+			var orderFront = gMacTypes.sel_registerName('setLevel:');
+			var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFront, ctypes.long(3));
+			console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+		}, 5000);
+		*/
+	// }
 	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
 	var w = colMon[iMon].w;
@@ -1324,11 +1424,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			break;
 		case 'darwin':
 			
-				aEditorDOMWindow.setTimeout(function() {
-					//aEditorDOMWindow.focus(); // doesnt work to make take full
-					//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
-					aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-				}, 10);
+				// aEditorDOMWindow.setTimeout(function() {
+				// 	//aEditorDOMWindow.focus(); // doesnt work to make take full
+				// 	//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+				// 	aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+				// }, 10);
 			
 			break;
 		default:

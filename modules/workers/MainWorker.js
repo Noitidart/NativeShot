@@ -313,6 +313,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 				*/
 				
+				/*
 				// METHOD: dispatch_async( dispatch_get_main_queue(), ^(void)
 				var rez_mainQ = ostypes.API('dispatch_get_main_queue'); // do not do () on this one
 				console.info('rez_mainQ:', rez_mainQ.toString());
@@ -325,6 +326,22 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				OSStuff.c_cb = ostypes.TYPE.dispatch_block_t(OSStuff.js_cb);
 				
 				ostypes.API('dispatch_sync')(rez_mainQ, OSStuff.c_cb);
+				*/
+				/*
+				// METHOD: perform no js method
+				var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[0]));
+				var rez_perform = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel('orderFront:'), ostypes.CONST.NIL, ostypes.CONST.YES);
+				*/
+				
+				/*
+				// METHOD: do on main thread with this key
+				var rez_getKey = ostypes.API('CGWindowLevelForKey')(ostypes.CONST.kCGDockWindowLevelKey);
+				console.info('got key:', cutils.jscGetDeepest(rez_getKey));
+				return parseInt(cutils.jscGetDeepest(rez_getKey));
+				*/
+				
+				// METHOD: dont set on top just focus app, this has that ugly scroll side affect if user is focused on another desktop on that monitor due to full screen app or something
+				focusSelfApp();
 				
 			break;
 		default:
