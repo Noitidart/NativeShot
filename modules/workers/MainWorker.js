@@ -241,17 +241,18 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				*/
 			break;
 		case 'darwin':
-							
-				for (var i=0; i<aArrHwndPtrStr.length; i++) {
-					/*
-					console.error('info:', aArrHwndPtrStr[i]);
-					var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
-					console.error('att 6');
-					var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
-					var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
-					console.info('rez_orderFront:', rez_orderFront);
-					*/
-				}
+				
+				/*
+				// for (var i=0; i<aArrHwndPtrStr.length; i++) {
+				// 	console.error('info:', aArrHwndPtrStr[i]);
+				// 	var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
+				// 	console.error('att 6');
+				// 	var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
+				// 	var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
+				// 	console.info('rez_orderFront:', rez_orderFront);
+				// }
+				
+				// METHOD: performSelectorOnMainThread:withObject:waitUntilDone:
 				
 				// make a class to hold my methods:
 				var needsRegistration; // meaning registerClassPair, alloc, and init will be called and stored
@@ -309,6 +310,21 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				// delete OSStuff.setWinAlwaysOnTop_allocation
 				// delete OSStuff.setWinAlwaysOnTop_instance
 				// delete OSStuff.setWinAlwaysOnTop_class
+				
+				*/
+				
+				// METHOD: dispatch_async( dispatch_get_main_queue(), ^(void)
+				var rez_mainQ = ostypes.API('dispatch_get_main_queue'); // do not do () on this one
+				console.info('rez_mainQ:', rez_mainQ.toString());
+				
+				OSStuff.js_cb = function() {
+					console.error('in js_cb');
+					return undefined;
+				};
+				
+				OSStuff.c_cb = ostypes.TYPE.dispatch_block_t(OSStuff.js_cb);
+				
+				ostypes.API('dispatch_sync')(rez_mainQ, OSStuff.c_cb);
 				
 			break;
 		default:

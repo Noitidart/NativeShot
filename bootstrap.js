@@ -10,7 +10,7 @@ const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
-Cu.importGlobalProperties(['btoa']);
+Cu.importGlobalProperties(['btoa', 'atob']);
 
 // Globals
 const core = {
@@ -273,6 +273,8 @@ function get_gEMenuDomJson() {
 	return gEMenuDomJson;
 }
 // start - observer handlers
+var gColReuploadTimers = {};
+var gLastReuploadTimerId = 0;
 // start - canvas functions to act across all canvases
 var gCanDim = {
 	execFunc: function(aStrFuncName, aArrFuncArgs=[], aObjConvertScreenToLayer) {
@@ -407,6 +409,7 @@ var gENotifCallback = {
 	}
 };
 var gPostPrintRemovalFunc;
+const reuploadTimerInterval = 10000;
 
 function notifCB_saveToFile(aOSPath_savedFile) {
 	var nsifile = FileUtils.File(aOSPath_savedFile);
@@ -591,6 +594,7 @@ var gEditor = {
 				var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
 				r.onloadend = function() {
 					// r.result contains the ArrayBuffer.
+					// start - copy block link49842300
 					var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
 					promise_saveToDisk.then(
 						function(aVal) {
@@ -620,12 +624,14 @@ var gEditor = {
 							//deferred_createProfile.reject(rejObj);
 						}
 					);
+					// end - copy block link49842300
 				};
 				r.readAsArrayBuffer(b);
 			}, 'image/png');
 		}
 		
 		if (aBoolPreset) {
+			// start - copy block link7984654
 			// get save path
 			var OSPath_saveDir;
 			try {
@@ -641,13 +647,14 @@ var gEditor = {
 			}
 			
 			// generate file name
-			var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
+			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
 			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+			// end - copy block link7984654
 			
 			do_saveCanToDisk();
 		} else {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(e.view, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
+			fp.init(e.view, myServices.sb.GetStringFromName('filepicker-title-save-screenshot'), Ci.nsIFilePicker.modeSave);
 			fp.appendFilter('PNG Image', '*.png');
 			
 			var rv = fp.show();
@@ -754,157 +761,258 @@ var gEditor = {
 		data = data.substr('data:image/png;base64,'.length); // imgur wants without this
 		
 		console.info('base64 data:', data);
-		var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
-			aPostData: {
-				image: data, // this gets encodeURIComponent'ed by my xhr function
-				type: 'base64'
-			},
-			Headers: {
-				Authorization: 'Client-ID fa64a66080ca868',
-				'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
-			},
-			aResponseType: 'json'
-		});
 		
-		promise_uploadAnonImgur.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
-				// start - do stuff here - promise_uploadAnonImgur
-				var imgUrl = aVal.response.data.link;
-				var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
-				var imgId = aVal.response.data.id;
-				
-				var trans = Transferable(gEditor.gBrowserDOMWindow);
-				trans.addDataFlavor('text/unicode');
-				// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-				trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
-				
-				Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-				
-				// save to upload history - only for anonymous uploads to imgur, so can delete in future
-				
-				var do_closeHistory = function(hOpen) {
-					var promise_closeHistory = hOpen.close();
-					promise_closeHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_closeHistory - ', aVal);
-							// start - do stuff here - promise_closeHistory
-							// end - do stuff here - promise_closeHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_closeHistory', aReason:aReason};
-							console.warn('Rejected - promise_closeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
+		var abortReuploadAndToFile = function() {
+			// turn data url to file and do quick save
+			gColReuploadTimers[reuploadTimerId].timer.cancel();
+			delete gColReuploadTimers[reuploadTimerId];
+
+			// save data url to file
+			// http://stackoverflow.com/questions/25145792/write-a-data-uri-to-a-file-in-a-firefox-extension/25148685#25148685
+			console.time('charCodeAt method');
+			var dataAtob = atob(data);
+			// Decode to an Uint8Array, because OS.File.writeAtomic expects an ArrayBuffer(View).
+			var byteArr = new Uint8Array(dataAtob.length);
+			for (var i = 0, e = dataAtob.length; i < e; ++i) {
+			  byteArr[i] = dataAtob.charCodeAt(i);
+			}
+			console.timeEnd('charCodeAt method');
+			
+			// start - copy block link7984654 - slight modificaiton
+			// get save path
+			var OSPath_saveDir;
+			try {
+				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+			} catch (ex) {
+				console.warn('ex:', ex);
+				try {
+					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
+				} catch (ex) {
+					console.warn('ex:', ex);
+					OSPath_saveDir = OS.Constants.Path.desktopDir;
+				}
+			}
+			
+			// generate file name
+			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + ' - ' + myServices.sb.GetStringFromName('failed-upload') + '.png';
+			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+			// end - copy block link7984654 - slight modificaiton
+			
+			// start - copy block link49842300 - slight mod
+			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, byteArr, { tmpPath: OSPath_save + '.tmp' });
+			promise_saveToDisk.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_saveToDisk - ', aVal);
+					// start - do stuff here - promise_saveToDisk
+					var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
+					trans.addDataFlavor('text/unicode');
+					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+					trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
+					
+					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+					
+					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
+					// end - do stuff here - promise_saveToDisk
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
+					console.error('Rejected - promise_saveToDisk - ', rejObj);
+					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
+					//deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
+					console.error('Caught - promise_saveToDisk - ', rejObj);
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+					//deferred_createProfile.reject(rejObj);
+				}
+			);
+			// end - copy block link49842300 - slight mod
+		};
+		
+		var reuploadTimerId = gLastReuploadTimerId++;
+		var reuploadFunc = function() {
+			if (!gColReuploadTimers[reuploadTimerId]) {
+				gColReuploadTimers[reuploadTimerId] = {
+					timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer),
+					callback: {
+						notify: function() {
+							do_xhrToImgur();
 						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
-							console.error('Caught - promise_closeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					);
+					},
+					attempt: 0
 				};
-				
-				var do_writeHistory = function(hOpen) {
-					var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
-					var txtEncoded = getTxtEncodr().encode(txtToAppend);
-					var promise_writeHistory = hOpen.write(txtEncoded);
-					promise_writeHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_writeHistory - ', aVal);
-							// start - do stuff here - promise_writeHistory
-							do_closeHistory(hOpen);
-							// end - do stuff here - promise_writeHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_writeHistory', aReason:aReason};
-							console.warn('Rejected - promise_writeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
-							console.error('Caught - promise_writeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					);
-				};
-				
-				var do_makeDirsToHistory = function() {
-					var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyImgHostAnonImgur), {from:OS.Constants.Path.profileDir})
-					promise_makeDirsToHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
-							// start - do stuff here - promise_makeDirsToHistory
-							do_openHistory();
-							// end - do stuff here - promise_makeDirsToHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
-							console.warn('Rejected - promise_makeDirsToHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
-							console.error('Caught - promise_makeDirsToHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					);
-				};
-				
-				var openHistoryAttempt = 1;
-				var do_openHistory = function() {
-					var promise_openHistory = OS.File.open(OSPath_historyImgHostAnonImgur, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
-					promise_openHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_openHistory - ', aVal);
-							// start - do stuff here - promise_openHistory
-							do_writeHistory(aVal);
-							// end - do stuff here - promise_openHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_openHistory', aReason:aReason};
-							if (aReason.becauseNoSuchFile && openHistoryAttempt == 1) {
-								// first attempt, and i have only ever gotten here with os.file.open when write append are true if folder doesnt exist, so make it per https://gist.github.com/Noitidart/0401e9a7de716de7de45
-								openHistoryAttempt++;
-								do_makeDirsToHistory();
-								rejObj.openHistoryAttempt = openHistoryAttempt;
-							} else {
-								console.warn('Rejected - promise_openHistory - ', rejObj);
+			}
+			gColReuploadTimers[reuploadTimerId].attempt++;
+			gColReuploadTimers[reuploadTimerId].timer.initWithCallback(gColReuploadTimers[reuploadTimerId].callback, reuploadTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
+			gEditor.showNotif(myServices.sb.formatStringFromName('notif-title_anon-upload-fail', [gColReuploadTimers[reuploadTimerId].attempt], 1), myServices.sb.GetStringFromName('notif-body_anon-upload-fail'), abortReuploadAndToFile);
+		};
+		
+		var do_xhrToImgur = function() {
+			var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
+				aPostData: {
+					image: data, // this gets encodeURIComponent'ed by my xhr function
+					type: 'base64'
+				},
+				Headers: {
+					Authorization: 'Client-ID fa64a66080ca868',
+					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
+				},
+				aResponseType: 'json'
+			});
+			
+			promise_uploadAnonImgur.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
+					// start - do stuff here - promise_uploadAnonImgur
+					if (!aVal.response.success) {
+						reuploadFunc();
+						return;
+					}
+					if (gColReuploadTimers[reuploadTimerId]) {
+						delete gColReuploadTimers[reuploadTimerId];
+					}
+					
+					var imgUrl = aVal.response.data.link;
+					var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
+					var imgId = aVal.response.data.id;
+					
+					var trans = Transferable(gEditor.gBrowserDOMWindow);
+					trans.addDataFlavor('text/unicode');
+					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+					trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
+					
+					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+					
+					// save to upload history - only for anonymous uploads to imgur, so can delete in future
+					
+					var do_closeHistory = function(hOpen) {
+						var promise_closeHistory = hOpen.close();
+						promise_closeHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_closeHistory - ', aVal);
+								// start - do stuff here - promise_closeHistory
+								// end - do stuff here - promise_closeHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_closeHistory', aReason:aReason};
+								console.warn('Rejected - promise_closeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
+								console.error('Caught - promise_closeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						);
+					};
+					
+					var do_writeHistory = function(hOpen) {
+						var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
+						var txtEncoded = getTxtEncodr().encode(txtToAppend);
+						var promise_writeHistory = hOpen.write(txtEncoded);
+						promise_writeHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_writeHistory - ', aVal);
+								// start - do stuff here - promise_writeHistory
+								do_closeHistory(hOpen);
+								// end - do stuff here - promise_writeHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_writeHistory', aReason:aReason};
+								console.warn('Rejected - promise_writeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
+								console.error('Caught - promise_writeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						);
+					};
+					
+					var do_makeDirsToHistory = function() {
+						var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyImgHostAnonImgur), {from:OS.Constants.Path.profileDir})
+						promise_makeDirsToHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
+								// start - do stuff here - promise_makeDirsToHistory
+								do_openHistory();
+								// end - do stuff here - promise_makeDirsToHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
+								console.warn('Rejected - promise_makeDirsToHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
+								console.error('Caught - promise_makeDirsToHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						);
+					};
+					
+					var openHistoryAttempt = 1;
+					var do_openHistory = function() {
+						var promise_openHistory = OS.File.open(OSPath_historyImgHostAnonImgur, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
+						promise_openHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_openHistory - ', aVal);
+								// start - do stuff here - promise_openHistory
+								do_writeHistory(aVal);
+								// end - do stuff here - promise_openHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_openHistory', aReason:aReason};
+								if (aReason.becauseNoSuchFile && openHistoryAttempt == 1) {
+									// first attempt, and i have only ever gotten here with os.file.open when write append are true if folder doesnt exist, so make it per https://gist.github.com/Noitidart/0401e9a7de716de7de45
+									openHistoryAttempt++;
+									do_makeDirsToHistory();
+									rejObj.openHistoryAttempt = openHistoryAttempt;
+								} else {
+									console.warn('Rejected - promise_openHistory - ', rejObj);
+									//deferred_createProfile.reject(rejObj);
+								}
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_openHistory', aCaught:aCaught};
+								console.error('Caught - promise_openHistory - ', rejObj);
 								//deferred_createProfile.reject(rejObj);
 							}
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_openHistory', aCaught:aCaught};
-							console.error('Caught - promise_openHistory - ', rejObj);
-							//deferred_createProfile.reject(rejObj);
-						}
-					);
-				};
-				
-				do_openHistory(); // starts the papend to history process
-				
-				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
-				// end - do stuff here - promise_uploadAnonImgur
-			},
-			function(aReason) {
-				var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
-				console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
-				// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
-				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-fail'), myServices.sb.GetStringFromName('notif-body_anon-upload-fail'));
-				//deferred_createProfile.reject(rejObj);
-			}
-		).catch(
-			function(aCaught) {
-				var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
-				console.error('Caught - promise_uploadAnonImgur - ', rejObj);
-				//deferred_createProfile.reject(rejObj);
-				//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
-			}
-		);
+						);
+					};
+					
+					do_openHistory(); // starts the papend to history process
+					
+					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
+					// end - do stuff here - promise_uploadAnonImgur
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
+					console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
+					// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
+					reuploadFunc();
+					//deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
+					console.error('Caught - promise_uploadAnonImgur - ', rejObj);
+					//deferred_createProfile.reject(rejObj);
+					//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+				}
+			);
+		};
+		
+		
+		do_xhrToImgur();
 		
 		this.closeOutEditor(e);
 	}
@@ -1640,6 +1748,11 @@ function shutdown(aData, aReason) {
 	
 	if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 		gPostPrintRemovalFunc();
+	}
+	
+	for (var id in gColReuploadTimers) {
+		gColReuploadTimers[id].timer.cancel();
+		delete gColReuploadTimers[id];
 	}
 	
 	aboutFactory_nativeshot.unregister();

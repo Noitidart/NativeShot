@@ -206,8 +206,8 @@ var macTypes = function() {
 	
 
 	// dispatch stuff
-	// this.dispatch_block_t = 
-	// this.dispatch_queue_t = 
+	this.dispatch_block_t = ctypes.FunctionType(this.CALLBACK_ABI, this.void, []).ptr;
+	this.dispatch_queue_t = ctypes.voidptr_t; // guess
 }
 
 var macInit = function() {
@@ -485,9 +485,12 @@ var macInit = function() {
 			 *   void
 			 * ); 
 			 */
-			return lib('libc').declare('dispatch_get_main_queue', self.TYPE.ABI,
-				self.TYPE.dispatch_queue_t	// return
-			);		
+			// return lib('/usr/lib/system/libdispatch.dylib').declare('_dispatch_main_q', self.TYPE.ABI,
+			// 	self.TYPE.dispatch_queue_t	// return
+			// );
+			// do not do ostypes.API('dispatch_get_main_queue')() the () will give error not FuncitonType.ptr somhting like that, must just use ostypes.API('dispatch_get_main_queue')
+			// http://stackoverflow.com/questions/31637321/standard-library-containing-dispatch-get-main-queue-gcd
+			return lib('/usr/lib/system/libdispatch.dylib').declare('_dispatch_main_q', self.TYPE.dispatch_queue_t);
 		},
 		dispatch_sync: function() {
 			/* https://developer.apple.com/library/prerelease/mac/documentation/Performance/Reference/GCD_libdispatch_Ref/#//apple_ref/c/func/dispatch_sync
@@ -496,7 +499,7 @@ var macInit = function() {
 			 *   dispatch_block_t block
 			 * ); 
 			 */
-			return lib('libc').declare('dispatch_sync', self.TYPE.ABI,
+			return lib('/usr/lib/system/libdispatch.dylib').declare('dispatch_sync', self.TYPE.ABI,
 				self.TYPE.void,					// return
 				self.TYPE.dispatch_queue_t,		// queue
 				self.TYPE.dispatch_block_t		// block
