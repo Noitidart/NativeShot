@@ -73,9 +73,9 @@ function extendCore() {
 			
 		case 'darwin':
 			var userAgent = myServices.hph.userAgent;
-			//console.info('userAgent:', userAgent);
+
 			var version_osx = userAgent.match(/Mac OS X 10\.([\d\.]+)/);
-			//console.info('version_osx matched:', version_osx);
+
 			
 			if (!version_osx) {
 				throw new Error('Could not identify Mac OS X version.');
@@ -102,7 +102,7 @@ function extendCore() {
 			// nothing special
 	}
 	
-	console.log('done adding to core, it is now:', core);
+
 }
 
 //start obs stuff
@@ -286,7 +286,7 @@ var gCanDim = {
 			// throw new Error('aArrFuncArgs must be an array');
 		// }
 		// executes the ctx function across all ctx's
-		if (aObjConvertScreenToLayer) { console.error('start exec'); } // :debug:
+
 		// identify replace indiices and its val
 		var specials = {
 			'{{W}}': '{{W}}', // can dependent
@@ -312,7 +312,6 @@ var gCanDim = {
 				clone_aArrFuncArgs[j] = aArrFuncArgs[j];
 			}
 			
-			var orig = JSON.stringify(clone_aArrFuncArgs); // :debug:
 			
 			// do special replacements in arugments
 			for (var j=0; j<clone_aArrFuncArgs.length; j++) {
@@ -330,13 +329,13 @@ var gCanDim = {
 				// start - block link6587436215
 				// check if intersection
 				var rectIntersecting = colMon[i].rect.intersect(cRect);
-				console.info('iMon:', i, 'rectIntersecting:', rectIntersecting, 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect)
+
 				if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 					// does not intersect, continue to next monitor
-					console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
+
 					continue;
 				} else {
-					//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
+
 					// convert screen xy of rect to layer xy
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = rectIntersecting.left - colMon[i].x;
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = rectIntersecting.top - colMon[i].y;
@@ -344,14 +343,14 @@ var gCanDim = {
 					// adjust width and height, needed for multi monitor selection correction
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.w] = rectIntersecting.width;
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.h] = rectIntersecting.height;
-					console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
+
 				}
 				// end - block link6587436215
 			}
 			
 			var aCtxDim = colMon[i].E.ctxDim;
 
-			//console.log('applying arr:', clone_aArrFuncArgs);
+
 			aCtxDim[aStrFuncName].apply(aCtxDim, clone_aArrFuncArgs);
 		}
 	},
@@ -377,7 +376,7 @@ var gENotifListener = {
 		} else if (aTopic == 'alertshow') {
 			//gENotifPending[0].shown = true;
 			var shown = gENotifPending.splice(0, 1);
-			console.log('just showed:', shown);
+
 			gNotifierStrRandomizer = gNotifierStrRandomizer == ' ' ? '' : ' ';
 		} else if (aTopic == 'alertfinished') {
 			if (gNotifClickCallback[aData]) {
@@ -395,7 +394,7 @@ var gNotifTimerRunning = false;
 const gNotifTimerInterval = 1000; //ms
 var gENotifCallback = {
 	notify: function() {
-		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
+
 		if (gENotifPending.length > 0) {
 			if (gENotifPending[0].aClickCookie) {
 				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
@@ -452,7 +451,7 @@ var gEditor = {
 	gBrowserDOMWindow: null, // used for clipboard context
 	cleanUp: function() {
 		// reset all globals
-		console.error('doing cleanup');
+
 		
 		colMon = null;
 		this.lastCompositedRect = null;
@@ -476,7 +475,7 @@ var gEditor = {
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
-			console.log('added ', evName, 'to iMon:', i);
+
 		}
 	},
 	removeEventListener: function(keyNameInColMonE, evName, func, aBool) {
@@ -505,7 +504,7 @@ var gEditor = {
 		switch (iMon) {
 			case -2:
 			
-					console.error('selecting all monitors');
+
 					for (var i=0; i<colMon.length; i++) {
 						gESelectedRect = gESelectedRect.union(colMon[i].rect);
 					}
@@ -514,7 +513,7 @@ var gEditor = {
 				break;
 			case -1:
 					iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-					console.error('selecting current monitor which is:', iMon);
+
 					// intionally no break here so iMon is set to current monitor and it goes on to the default selection part
 			default:
 					try {
@@ -528,13 +527,13 @@ var gEditor = {
 	},
 	compositeSelection: function() {
 		// creates a canvas holding a composite of the current selection
-		console.error('starting compositing');
+
 		if (!gESelected) {
 			throw new Error('no selection to composite!');
 		}
 		
 		if (this.lastCompositedRect && this.lastCompositedRect.equals(gESelectedRect)) {
-			console.log('no need to composite as compositing was already done so is cached');
+
 			return;
 		}
 		
@@ -562,10 +561,10 @@ var gEditor = {
 			var rectIntersecting = colMon[i].rect.intersect(this.lastCompositedRect);
 			if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 				// does not intersect, continue to next monitor
-				console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', this.lastCompositedRect, 'colMon[i].rect:', colMon[i].rect);
+
 				continue;
 			} else {
-				//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
+
 				// convert screen xy of rect to layer xy
 				rectIntersecting.left -= colMon[i].x;
 				rectIntersecting.top -= colMon[i].y;
@@ -576,19 +575,17 @@ var gEditor = {
 			}
 			// end - mod of copied block link6587436215
 			
-			this.canComp.style.position = 'fixed'; // :debug:
 			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			
-			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
 			
-			console.error('composited');
+
 		}
 	},
 	closeOutEditor: function(e) {
 		// if e.shiftKey then it doesnt do anything, else it closes it out and cleans up (in future maybe possibility to cache? maybe... so in this case would just hide window, but im thinking no dont do this)
-		console.error('in close out editor, e.shiftKey:', e.shiftKey);
+
 		if (e.shiftKey) {
-			console.log('will not close out editor as shift key was held, user wants to do more actions')
+
 		} else {
 			colMon[0].E.DOMWindow.close();
 		}
@@ -626,7 +623,7 @@ var gEditor = {
 					var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
 					promise_saveToDisk.then(
 						function(aVal) {
-							console.log('Fullfilled - promise_saveToDisk - ', aVal);
+
 							// start - do stuff here - promise_saveToDisk
 							var trans = Transferable(gEditor.gBrowserDOMWindow);
 							trans.addDataFlavor('text/unicode');
@@ -640,14 +637,14 @@ var gEditor = {
 						},
 						function(aReason) {
 							var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-							console.error('Rejected - promise_saveToDisk - ', rejObj);
+
 							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
 							//deferred_createProfile.reject(rejObj);
 						}
 					).catch(
 						function(aCaught) {
 							var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-							console.error('Caught - promise_saveToDisk - ', rejObj);
+
 							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 							//deferred_createProfile.reject(rejObj);
 						}
@@ -665,11 +662,11 @@ var gEditor = {
 			try {
 				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
 			} catch (ex) {
-				console.warn('ex:', ex);
+
 				try {
 					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
 				} catch (ex) {
-					console.warn('ex:', ex);
+
 					OSPath_saveDir = OS.Constants.Path.desktopDir;
 				}
 			}
@@ -695,7 +692,7 @@ var gEditor = {
 				do_saveCanToDisk();
 			} else {
 				 // user canceled
-				console.error('rv was not ok or replace:', rv);
+
 				//gEditor.closeOutEditor(e);
 			}
 		}
@@ -719,7 +716,7 @@ var gEditor = {
 		wrapped.data = container.value;
 		
 		var trans = Transferable(this.gBrowserDOMWindow);
-		console.info('channel.contentType:', channel.contentType);
+
 		trans.addDataFlavor(channel.contentType);
 		
 		trans.setTransferData(channel.contentType, wrapped, -1);
@@ -759,16 +756,16 @@ var gEditor = {
 		var iframe = doc.createElementNS(NS_HTML, 'iframe');
 		iframe.addEventListener('load', function() {
 			iframe.removeEventListener('load', arguments.callee, true);
-			console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
-			console.error('iframe loaded, print it', iframe.contentWindow.print);
+
+
 			gPostPrintRemovalFunc = function() {
 				iframe.parentNode.removeChild(iframe);
-				console.error('ok removed iframe that i added to hiddenDOMWindow')
+
 				gPostPrintRemovalFunc = null;
 			};
 			iframe.contentWindow.addEventListener('afterprint', function() {
 				// iframe.parentNode.removeChild(iframe);
-				// console.error('ok removed iframe that i added to hiddenDOMWindow')
+
 				//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
 				iframe.setAttribute('src', 'about:blank');
 			}, false);
@@ -785,10 +782,10 @@ var gEditor = {
 		this.compositeSelection();
 		
 		var data = this.canComp.toDataURL('image/png'); // returns `data:image/png;base64,iVBORw.....`
-		console.info('base64 data pre trim:', data);
+
 		data = data.substr('data:image/png;base64,'.length); // imgur wants without this
 		
-		console.info('base64 data:', data);
+
 		
 		var abortReuploadAndToFile = function() {
 			// turn data url to file and do quick save
@@ -797,14 +794,14 @@ var gEditor = {
 
 			// save data url to file
 			// http://stackoverflow.com/questions/25145792/write-a-data-uri-to-a-file-in-a-firefox-extension/25148685#25148685
-			console.time('charCodeAt method');
+
 			var dataAtob = atob(data);
 			// Decode to an Uint8Array, because OS.File.writeAtomic expects an ArrayBuffer(View).
 			var byteArr = new Uint8Array(dataAtob.length);
 			for (var i = 0, e = dataAtob.length; i < e; ++i) {
 			  byteArr[i] = dataAtob.charCodeAt(i);
 			}
-			console.timeEnd('charCodeAt method');
+
 			
 			// start - copy block link7984654 - slight modificaiton
 			// get save path
@@ -812,11 +809,11 @@ var gEditor = {
 			try {
 				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
 			} catch (ex) {
-				console.warn('ex:', ex);
+
 				try {
 					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
 				} catch (ex) {
-					console.warn('ex:', ex);
+
 					OSPath_saveDir = OS.Constants.Path.desktopDir;
 				}
 			}
@@ -830,7 +827,7 @@ var gEditor = {
 			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, byteArr, { tmpPath: OSPath_save + '.tmp' });
 			promise_saveToDisk.then(
 				function(aVal) {
-					console.log('Fullfilled - promise_saveToDisk - ', aVal);
+
 					// start - do stuff here - promise_saveToDisk
 					var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
 					trans.addDataFlavor('text/unicode');
@@ -844,14 +841,14 @@ var gEditor = {
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-					console.error('Rejected - promise_saveToDisk - ', rejObj);
+
 					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
 					//deferred_createProfile.reject(rejObj);
 				}
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-					console.error('Caught - promise_saveToDisk - ', rejObj);
+
 					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 					//deferred_createProfile.reject(rejObj);
 				}
@@ -892,7 +889,7 @@ var gEditor = {
 			
 			promise_uploadAnonImgur.then(
 				function(aVal) {
-					console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
+
 					// start - do stuff here - promise_uploadAnonImgur
 					if (!aVal.response.success) {
 						reuploadFunc();
@@ -919,19 +916,19 @@ var gEditor = {
 						var promise_closeHistory = hOpen.close();
 						promise_closeHistory.then(
 							function(aVal) {
-								console.log('Fullfilled - promise_closeHistory - ', aVal);
+
 								// start - do stuff here - promise_closeHistory
 								// end - do stuff here - promise_closeHistory
 							},
 							function(aReason) {
 								var rejObj = {name:'promise_closeHistory', aReason:aReason};
-								console.warn('Rejected - promise_closeHistory - ', rejObj);
+
 								// deferred_createProfile.reject(rejObj);
 							}
 						).catch(
 							function(aCaught) {
 								var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
-								console.error('Caught - promise_closeHistory - ', rejObj);
+
 								// deferred_createProfile.reject(rejObj);
 							}
 						);
@@ -943,20 +940,20 @@ var gEditor = {
 						var promise_writeHistory = hOpen.write(txtEncoded);
 						promise_writeHistory.then(
 							function(aVal) {
-								console.log('Fullfilled - promise_writeHistory - ', aVal);
+
 								// start - do stuff here - promise_writeHistory
 								do_closeHistory(hOpen);
 								// end - do stuff here - promise_writeHistory
 							},
 							function(aReason) {
 								var rejObj = {name:'promise_writeHistory', aReason:aReason};
-								console.warn('Rejected - promise_writeHistory - ', rejObj);
+
 								// deferred_createProfile.reject(rejObj);
 							}
 						).catch(
 							function(aCaught) {
 								var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
-								console.error('Caught - promise_writeHistory - ', rejObj);
+
 								// deferred_createProfile.reject(rejObj);
 							}
 						);
@@ -966,20 +963,20 @@ var gEditor = {
 						var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyImgHostAnonImgur), {from:OS.Constants.Path.profileDir})
 						promise_makeDirsToHistory.then(
 							function(aVal) {
-								console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
+
 								// start - do stuff here - promise_makeDirsToHistory
 								do_openHistory();
 								// end - do stuff here - promise_makeDirsToHistory
 							},
 							function(aReason) {
 								var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
-								console.warn('Rejected - promise_makeDirsToHistory - ', rejObj);
+
 								// deferred_createProfile.reject(rejObj);
 							}
 						).catch(
 							function(aCaught) {
 								var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
-								console.error('Caught - promise_makeDirsToHistory - ', rejObj);
+
 								// deferred_createProfile.reject(rejObj);
 							}
 						);
@@ -990,7 +987,7 @@ var gEditor = {
 						var promise_openHistory = OS.File.open(OSPath_historyImgHostAnonImgur, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
 						promise_openHistory.then(
 							function(aVal) {
-								console.log('Fullfilled - promise_openHistory - ', aVal);
+
 								// start - do stuff here - promise_openHistory
 								do_writeHistory(aVal);
 								// end - do stuff here - promise_openHistory
@@ -1003,14 +1000,14 @@ var gEditor = {
 									do_makeDirsToHistory();
 									rejObj.openHistoryAttempt = openHistoryAttempt;
 								} else {
-									console.warn('Rejected - promise_openHistory - ', rejObj);
+
 									//deferred_createProfile.reject(rejObj);
 								}
 							}
 						).catch(
 							function(aCaught) {
 								var rejObj = {name:'promise_openHistory', aCaught:aCaught};
-								console.error('Caught - promise_openHistory - ', rejObj);
+
 								//deferred_createProfile.reject(rejObj);
 							}
 						);
@@ -1023,7 +1020,7 @@ var gEditor = {
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
-					console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
+
 					// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
 					reuploadFunc();
 					//deferred_createProfile.reject(rejObj);
@@ -1031,7 +1028,7 @@ var gEditor = {
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
-					console.error('Caught - promise_uploadAnonImgur - ', rejObj);
+
 					//deferred_createProfile.reject(rejObj);
 					//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
 					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
@@ -1055,14 +1052,14 @@ function gEMouseMove(e) {
 			break;
 		}
 	}
-	//console.log('mousemove imon:', iMon, e.screenX, e.screenY);
+
 	if (gESelecting) {
 		var cEMMX = colMon[iMon].win81ScaleX ? Math.floor(colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX)) : e.screenX;
 		var cEMMY = colMon[iMon].win81ScaleY ? Math.floor(colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY)) : e.screenY;
 		// var cEMMX = e.screenX;
 		// var cEMMY = e.screenY;
 		
-		console.info('PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMMX, cEMMY);
+
 		var newW = cEMMX - gEMDX;
 		var newH = cEMMY - gEMDY;
 		
@@ -1086,7 +1083,7 @@ function gEMouseMove(e) {
 				gESelectedRect.height = newH;
 			}
 			//gESelectedRect.setRect(gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height); // no need
-			//console.error('x y w h:', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+
 			gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 			
 			// gCanDim.execFunc('translate', [0.5, 0.5]);
@@ -1110,7 +1107,7 @@ function gEMouseUp(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 
 	if (gESelecting) {
-		console.error('MOUSED UP iMon:', iMon);
+
 		gESelecting = false;
 		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
 		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
@@ -1135,21 +1132,21 @@ function gEMouseUp(e) {
 }
 function gEMouseDown(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-	//console.info('mousedown, e:', e);
 
-	// console.info('you moved on x:', (e.screenX - colMon[iMon].x))
-	// console.info('add this to e.screenX:', ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX));
+
+
+
 	if (e.button != 0) { return } // only repsond to primary click
 	if (e.target.id != 'canDim') { return } // only repsond to primary click on canDim so this makes it ignore menu clicks etc
 	
 	var cEMDX = colMon[iMon].win81ScaleX ? colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX) : e.screenX;
 	var cEMDY = colMon[iMon].win81ScaleY ? colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY) : e.screenY;
-	console.info('MOUSEDOWN', 'PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMDX, cEMDY);
+
 	
 	// var cEMDX = e.screenX;
 	// var cEMDY = e.screenY;
 	
-	//console.info('pre mod', e.screenX, 'post mod:', cEMDX);
+
 	
 	// check if mouse downed on move selection hit box
 	if (e.target.id == 'hitboxMoveSel') {
@@ -1164,7 +1161,7 @@ function gEMouseDown(e) {
 			// if user mouses down within selected area, then dont start new selection
 			var cPoint = new Rect(cEMDX, cEMDY, 1, 1);
 			if (gESelectedRect.contains(cPoint)) {
-				console.error('clicked within selected so dont do anything', 'point:', cPoint, 'gESelectedRect', JSON.parse(JSON.stringify(gESelectedRect)));
+
 				return; // he clicked within it, dont do anything
 			}
 		}
@@ -1206,9 +1203,9 @@ function gEMouseDown(e) {
 }
 
 function gEUnload(e) {
-	//console.info('unload e:', e);
+
 	var iMon = parseInt(e.currentTarget.location.search.substr('?iMon='.length));
-	//console.error('editor window unloading iMon:', iMon);
+
 
 	
 	// close all other windows
@@ -1240,7 +1237,7 @@ function gEPopupHiding(e) {
 	// e.view.setTimeout(function() {
 		// e.view.addEventListener('keyup', gEKeyUp, false);
 	// }, 1000);
-	console.error('e:', e);
+
 }
 
 function gEPopupShowing(e) {
@@ -1251,7 +1248,7 @@ function gEPopupShowing(e) {
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	var iMon = aData; //parseInt(aEditorDOMWindow.location.search.substr('?iMon='.length)); // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-	//console.error('loaded window for iMon:', iMon);
+
 	
 	var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
 	
@@ -1268,7 +1265,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										.nativeHandle;
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
-	console.info('1st:', aHwndPtrStr);
+
 	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	
 	aEditorDOMWindow.focus();
@@ -1290,7 +1287,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
 		promise_setWinAlwaysTop.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
+
 				// start - do stuff here - promise_setWinAlwaysTop
 				if (core.os.name == 'darwin') {
 					/*
@@ -1306,18 +1303,18 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 														.nativeHandle;
 
 					var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-					console.info('NSWindowString:', NSWindowString);
+
 												
 					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
 					
 					var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
 					var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
-					console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+
 					
 					aEditorDOMWindow.setTimeout(function() {
 						var setLevel = gMacTypes.sel_registerName('setLevel:');
 						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, ctypes.long(aVal));
-						console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());
+
 					}, 2000);
 					*/
 					
@@ -1325,7 +1322,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						//aEditorDOMWindow.focus(); // doesnt work to make take full
 						//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
 						aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-						console.log('ok resized by');
+
 					// }, 10);
 					
 				}
@@ -1333,13 +1330,13 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
-				console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
+
 				//deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
-				console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
+
 				//deferred_createProfile.reject(rejObj);
 			}
 		);
@@ -1352,9 +1349,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			}
 			// var NSWindow = ctypes.voidptr_t(ctypes.UInt64(aHwndPtrStr));
 			// // var rez_setLevel = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('setLevel:'), ctypes.long(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
-			// // console.info('rez_setLevel:', rez_setLevel.toString());
+
 			// var rez_orderFront = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('orderFrontRegardless'));
-			// console.info('rez_orderFront:', rez_orderFront.toString());
+
 	
 			var baseWindow = Services.wm.getMostRecentWindow('navigator:browser').QueryInterface(Ci.nsIInterfaceRequestor)
 										  .getInterface(Ci.nsIWebNavigation)
@@ -1364,7 +1361,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										  .getInterface(Ci.nsIBaseWindow);
 
 			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-			console.info('NSWindowString:', NSWindowString);
+
 			
 			var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
 												.getInterface(Ci.nsIWebNavigation)
@@ -1375,12 +1372,12 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 												.nativeHandle;
 
 			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-			console.info('NSWindowString:', NSWindowString);
+
 										
 			var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
 			var orderFront = gMacTypes.sel_registerName('setLevel:');
 			var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFront, ctypes.long(3));
-			console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+
 		}, 5000);
 		*/
 	// }
@@ -1407,7 +1404,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						json.push(['html:canvas', {id:'canDum',style:'display:none;',width:w,height:h}]);
 						w = Math.ceil(w / win81ScaleX);
 						h = Math.ceil(h / win81ScaleY);
-						console.warn('modified w and h:', w, h);
+
 						
 						json[2][1].width = w;
 						json[2][1].height = h;
@@ -1417,7 +1414,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						json[3][1].height = h;
 						json[3][1].style += 'position:fixed;';
 						
-						console.warn('scale moded:', json);
+
 					}				
 				}
 			
@@ -1451,10 +1448,10 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	colMon[iMon].E.ctxBase = ctxBase;
 	colMon[iMon].E.ctxDim = ctxDim;
 	
-	//console.error('colMon[iMon].screenshot:', colMon[iMon].screenshot)
+
 	if (win81ScaleX || win81ScaleY) {
 		// rescaled for Win81 DPI non aware bug
-		console.warn('drawing rescaled');
+
 		var ctxDum = elRef.canDum.getContext('2d');
 		ctxDum.putImageData(colMon[iMon].screenshot, 0, 0);
 		ctxBase.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
@@ -1472,9 +1469,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 
 	var menuElRef = {};
-	//console.error('ok going to append');
+
 	doc.documentElement.appendChild(jsonToDOM(get_gEMenuDomJson(), doc, menuElRef));
-	//console.error('ok APPENDED??');
+
 	doc.documentElement.setAttribute('context', 'myMenu1');
 	menuElRef.myMenu1.addEventListener('popupshowing', gEPopupShowing, false);
 	menuElRef.myMenu1.addEventListener('popuphiding', gEPopupHiding, false);
@@ -1507,7 +1504,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			
 			break;
 		default:
-			console.error('os not supported');
+
 	}
 	// }, 1000);
 	// end - postStuff
@@ -1525,14 +1522,14 @@ function shootAllMons(aDOMWindow) {
 				docEl: aEditorDOMWindow.document.documentElement,
 				doc: aEditorDOMWindow.document,
 			};
-			//console.info('aEditorDOMWindow:', aEditorDOMWindow);
+
 		}
 	};
 	
 	var promise_shoot = MainWorker.post('shootAllMons', []);
 	promise_shoot.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_shoot - ', aVal);
+
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
 			
@@ -1577,13 +1574,13 @@ function shootAllMons(aDOMWindow) {
 		},
 		function(aReason) {
 			var rejObj = {name:'promise_shoot', aReason:aReason};
-			console.warn('Rejected - promise_shoot - ', rejObj);
+
 			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), myServices.sb.GetStringFromName('addon_name') + ' - ' + myServices.sb.GetStringFromName('error-title_screenshot-internal'), myServices.sb.GetStringFromName('error-body_screenshot-internal'));
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_shoot', aCaught:aCaught};
-			console.error('Caught - promise_shoot - ', rejObj);
+
 			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 		}
 	);
@@ -1675,16 +1672,16 @@ var windowListener = {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
 		}/* else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
-			//console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
+
 			if (!aDOMWindow.opener) {
 				// this is my print window so lets set opener
 				// for some reason whenever i do print() from hiddenDOMWindow iframe it doesnt get an opener
 				// i have set opener this cuz window.opener is null so it doesnt close: `TypeError: opener is null printProgress.js:83:10`
 				// as whenever i print from my hidden frame on link678321212 it opens the print dialog with opener set to null, and then it tries opener.focus() and it then leaves the window open
 				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
-				console.error('going to set opener to wm! as it was null');
+
 				//aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
-				//console.error('ok set opener! it is:', aDOMWindow.opener);
+
 			}
 		}*/
 	},
@@ -1758,7 +1755,7 @@ function startup(aData, aReason) {
 	var promise_getMainWorker = SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js');
 	promise_getMainWorker.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_getMainWorker - ', aVal);
+
 			// start - do stuff here - promise_getMainWorker
 			// end - do stuff here - promise_getMainWorker
 		},
@@ -1767,7 +1764,7 @@ function startup(aData, aReason) {
 				name: 'promise_getMainWorker',
 				aReason: aReason
 			};
-			console.warn('Rejected - promise_getMainWorker - ', rejObj);
+
 		}
 	).catch(
 		function(aCaught) {
@@ -1775,7 +1772,7 @@ function startup(aData, aReason) {
 				name: 'promise_getMainWorker',
 				aCaught: aCaught
 			};
-			console.error('Caught - promise_getMainWorker - ', rejObj);
+
 		}
 	);
 	
@@ -1897,7 +1894,7 @@ function Deferred() {
 			}.bind(this));
 			Object.freeze(this);
 		} catch (ex) {
-			console.error('Promise not available!', ex);
+
 			throw new Error('Promise not available!');
 		}
 	} else {
@@ -1926,20 +1923,20 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 		var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
 		promise_initWorker.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_initWorker - ', aVal);
+
 				// start - do stuff here - promise_initWorker
 				deferredMain_SIPWorker.resolve(true);
 				// end - do stuff here - promise_initWorker
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_initWorker', aReason:aReason};
-				console.warn('Rejected - promise_initWorker - ', rejObj);
+
 				deferredMain_SIPWorker.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_initWorker', aCaught:aCaught};
-				console.error('Caught - promise_initWorker - ', rejObj);
+
 				deferredMain_SIPWorker.reject(rejObj);
 			}
 		);
@@ -2068,7 +2065,7 @@ function xhr(aStr, aOptions={}) {
 	// Note: When using XMLHttpRequest to access a file:// URL the request.status is not properly set to 200 to indicate success. In such cases, request.readyState == 4, request.status == 0 and request.response will evaluate to true.
 	
 	var deferredMain_xhr = new Deferred();
-	console.log('here222');
+
 	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
 
 	var handler = ev => {
@@ -2165,7 +2162,7 @@ function xhr(aStr, aOptions={}) {
 		for (var pd in aOptions.aPostData) {
 			aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
 		}
-		console.info('aPostStr:', aPostStr.join('&'));
+
 		xhr.send(aPostStr.join('&'));
 	} else {
 		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'GET', aStr, true);
@@ -2191,12 +2188,12 @@ function makeDir_Bug934283(path, options) {
 	// options of like ignoreExisting is exercised on final dir
 	
 	if (!options || !('from' in options)) {
-		console.error('you have no need to use this, as this is meant to allow creation from a folder that you know for sure exists, you must provide options arg and the from key');
+
 		throw new Error('you have no need to use this, as this is meant to allow creation from a folder that you know for sure exists, you must provide options arg and the from key');
 	}
 
 	if (path.toLowerCase().indexOf(options.from.toLowerCase()) == -1) {
-		console.error('The `from` string was not found in `path` string');
+
 		throw new Error('The `from` string was not found in `path` string');
 	}
 
@@ -2204,7 +2201,7 @@ function makeDir_Bug934283(path, options) {
 	delete options.from;
 
 	var dirsToMake = OS.Path.split(path).components.slice(OS.Path.split(options_from).components.length);
-	console.log('dirsToMake:', dirsToMake);
+
 
 	var deferred_makeDir_Bug934283 = new Deferred();
 	var promise_makeDir_Bug934283 = deferred_makeDir_Bug934283.promise;
@@ -2216,7 +2213,7 @@ function makeDir_Bug934283(path, options) {
 		var promise_makeDir = OS.File.makeDir(pathExistsForCertain, options);
 		promise_makeDir.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_makeDir - ', 'ensured/just made:', pathExistsForCertain, aVal);
+
 				if (dirsToMake.length > 0) {
 					makeDirRecurse();
 				} else {
@@ -2229,13 +2226,13 @@ function makeDir_Bug934283(path, options) {
 					aReason: aReason,
 					curPath: pathExistsForCertain
 				};
-				console.error('Rejected - ' + rejObj.promiseName + ' - ', rejObj);
+
 				deferred_makeDir_Bug934283.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_makeDir', aCaught:aCaught};
-				console.error('Caught - promise_makeDir - ', rejObj);
+
 				deferred_makeDir_Bug934283.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -2265,22 +2262,22 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 	
 	// setup retry
 	var retryIt = function() {
-		console.info('tryosFile_ retryIt', 'nameOfOsFileFunc:', nameOfOsFileFunc, 'argsOfOsFileFunc:', argsOfOsFileFunc);
+
 		var promise_retryAttempt = OS.File[nameOfOsFileFunc].apply(OS.File, argsOfOsFileFunc);
 		promise_retryAttempt.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_retryAttempt - ', aVal);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.resolve('retryAttempt succeeded');
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_retryAttempt', aReason:aReason};
-				console.error('Rejected - promise_retryAttempt - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); //throw rejObj;
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_retryAttempt', aCaught:aCaught};
-				console.error('Caught - promise_retryAttempt - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -2316,15 +2313,15 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		var promise_makeDirsRecurse = makeDir_Bug934283(toDir, {from: fromDir});
 		promise_makeDirsRecurse.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_makeDirsRecurse - ', aVal);
+
 				retryIt();
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_makeDirsRecurse', aReason:aReason};
-				console.error('Rejected - promise_makeDirsRecurse - ', rejObj);
+
 				/*
 				if (aReason.becauseNoSuchFile) {
-					console.log('make dirs then do retryAttempt');
+
 					makeDirs();
 				} else {
 					// did not get becauseNoSuchFile, which means the dirs exist (from my testing), so reject with this error
@@ -2337,7 +2334,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_makeDirsRecurse', aCaught:aCaught};
-				console.error('Caught - promise_makeDirsRecurse - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -2345,17 +2342,17 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 
 	var doInitialAttempt = function() {
 		var promise_initialAttempt = OS.File[nameOfOsFileFunc].apply(OS.File, argsOfOsFileFunc);
-		console.info('tryosFile_ initial', 'nameOfOsFileFunc:', nameOfOsFileFunc, 'argsOfOsFileFunc:', argsOfOsFileFunc);
+
 		promise_initialAttempt.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_initialAttempt - ', aVal);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.resolve('initialAttempt succeeded');
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_initialAttempt', aReason:aReason};
-				console.error('Rejected - promise_initialAttempt - ', rejObj);
+
 				if (aReason.becauseNoSuchFile) { // this is the flag that gets set to true if parent dir(s) dont exist, i saw this from experience
-					console.log('make dirs then do secondAttempt');
+
 					makeDirs();
 				} else {
 					deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); //throw rejObj;
@@ -2364,7 +2361,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_initialAttempt', aCaught:aCaught};
-				console.error('Caught - promise_initialAttempt - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -2378,7 +2375,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		var promise_checkDirExistsFirstAsCausesNeutering = OS.File.exists(toDir);
 		promise_checkDirExistsFirstAsCausesNeutering.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_checkDirExistsFirstAsCausesNeutering - ', aVal);
+
 				// start - do stuff here - promise_checkDirExistsFirstAsCausesNeutering
 				if (!aVal) {
 					makeDirs();
@@ -2389,13 +2386,13 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_checkDirExistsFirstAsCausesNeutering', aReason:aReason};
-				console.warn('Rejected - promise_checkDirExistsFirstAsCausesNeutering - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_checkDirExistsFirstAsCausesNeutering', aCaught:aCaught};
-				console.error('Caught - promise_checkDirExistsFirstAsCausesNeutering - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj);
 			}
 		);
