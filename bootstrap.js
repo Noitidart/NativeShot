@@ -95,7 +95,6 @@ function extendCore() {
 				// 10.10.1 => 10.101
 				// so can compare numerically, as 10.100 is less then 10.101
 				
-				//core.os.version = 6.9; // note: debug: temporarily forcing mac to be 10.6 so we can test kqueue
 			}
 			break;
 		default:
