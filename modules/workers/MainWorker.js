@@ -122,7 +122,15 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
-				// 
+				
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.error('info:', aArrHwndPtrStr[i]);
+					var hwndPtr = ostypes.TYPE.HWND.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					
+					//var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
+					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, 0, 0, 0, 0, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
+					console.info('rez_setTop:', rez_setTop);
+				}
 				
 			break;
 		case 'gtk':
@@ -233,60 +241,161 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				*/
 			break;
 		case 'darwin':
-			
-				//
-
+				
+				/*
+				// for (var i=0; i<aArrHwndPtrStr.length; i++) {
+				// 	console.error('info:', aArrHwndPtrStr[i]);
+				// 	var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
+				// 	console.error('att 6');
+				// 	var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
+				// 	var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
+				// 	console.info('rez_orderFront:', rez_orderFront);
+				// }
+				
+				// METHOD: performSelectorOnMainThread:withObject:waitUntilDone:
+				
+				// make a class to hold my methods:
+				var needsRegistration; // meaning registerClassPair, alloc, and init will be called and stored
+				// unregister, unalloc, etc all `OSSTuff.setWinAlwaysOnTop_****` and delete js key pairs from OSStuff if you want it re-registered later on
+				
+				var NSObject = ostypes.HELPER.class('NSObject');
+				
+				if (!OSStuff.setWinAlwaysOnTop_class) {
+					throw new Error('setWinAlwaysOnTop_class was not previously cleaned up!!')
+				}
+				// if (!OSStuff.setWinAlwaysOnTop_class) {
+					var needsRegistration = true;
+					OSStuff.setWinAlwaysOnTop_class = ostypes.API('objc_allocateClassPair')(NSObject, 'setWinAlwaysOnTop_class', 0);
+					if (OSStuff.setWinAlwaysOnTop_class.isNull()) {
+						console.info('setWinAlwaysOnTop_class:', class_NoitOnScrnSvrDelgt.toString());
+						throw new Error('setWinAlwaysOnTop_class is null, so objc_allocateClassPair failed');
+					}
+				// } else {
+					// console.log('setWinAlwaysOnTop_class already exists');
+					// needsRegistration = false;
+				// }
+								
+				OSStuff.setWinAlwaysOnTop_jsMethods = {}; // holds key of aArrHwndPtrStr and value is js method
+				
+				var IMP_for_mainThreadSelector = ctypes.FunctionType(ctypes.default_abi, ctypes.void_t, []);
+				
+				OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]] = function() {
+					console.log('setWinAlwaysOnTop_jsMethods ' + 0 + ' called');
+					// delete OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
+					// delete OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
+				};
+				
+				OSStuff.setWinAlwaysOnTop_cMethods = {};
+				OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]] = IMP_for_mainThreadSelector.ptr(OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]]);
+				
+				OSStuff.setWinAlwaysOnTop_methodSelectors = {};
+				OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]] = ostypes.API('sel_registerName')(aArrHwndPtrStr[0]);
+				
+				var rez_class_addMethod = ostypes.API('class_addMethod')(OSStuff.setWinAlwaysOnTop_class, OSStuff.setWinAlwaysOnTop_methodSelectors[aArrHwndPtrStr[0]], OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]], 'v');
+				
+				if (needsRegistration) {
+					ostypes.API('objc_registerClassPair')(OSStuff.setWinAlwaysOnTop_class);				
+					OSStuff.setWinAlwaysOnTop_allocation = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_class, ostypes.HELPER.sel('alloc'));
+					OSStuff.setWinAlwaysOnTop_instance = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_allocation, ostypes.HELPER.sel('init'));
+				}
+				
+				var rez_perform = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel(aArrHwndPtrStr[0]), ostypes.CONST.NIL, ostypes.CONST.YES);
+				console.error('perform done!!');
+				
+				// after all callbacks done then clean up class
+				// ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('release'));
+				// ostypes.API('objc_disposeClassPair')(OSStuff.setWinAlwaysOnTop_class);
+				// delete OSStuff.setWinAlwaysOnTop_cMethods
+				// delete OSStuff.setWinAlwaysOnTop_jsMethods
+				// delete OSStuff.setWinAlwaysOnTop_allocation
+				// delete OSStuff.setWinAlwaysOnTop_instance
+				// delete OSStuff.setWinAlwaysOnTop_class
+				
+				*/
+				
+				/*
+				// METHOD: dispatch_async( dispatch_get_main_queue(), ^(void)
+				var rez_mainQ = ostypes.API('dispatch_get_main_queue'); // do not do () on this one
+				console.info('rez_mainQ:', rez_mainQ.toString());
+				
+				OSStuff.js_cb = function() {
+					console.error('in js_cb');
+					return undefined;
+				};
+				
+				OSStuff.c_cb = ostypes.TYPE.dispatch_block_t(OSStuff.js_cb);
+				
+				ostypes.API('dispatch_sync')(rez_mainQ, OSStuff.c_cb);
+				*/
+				/*
+				// METHOD: perform no js method
+				var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[0]));
+				var rez_perform = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel('orderFront:'), ostypes.CONST.NIL, ostypes.CONST.YES);
+				*/
+				
+				/*
+				// METHOD: do on main thread with this key
+				var rez_getKey = ostypes.API('CGWindowLevelForKey')(ostypes.CONST.kCGDockWindowLevelKey);
+				console.info('got key:', cutils.jscGetDeepest(rez_getKey));
+				return parseInt(cutils.jscGetDeepest(rez_getKey));
+				*/
+				
+				// METHOD: dont set on top just focus app, this has that ugly scroll side affect if user is focused on another desktop on that monitor due to full screen app or something
+				focusSelfApp();
+				
 			break;
 		default:
 			console.error('os not supported');
-	}	
+	}
 }
 
-function makeWinFullAllMon(aHwndStr, aOptions={}) {
-	// makes a window full across all monitors (so an extension of fullscreen)
+function focusWindows(aArrHwndPtrStr) {
+	// aArrHwndPtrStr is an array of hwnd's and the windows in it will be focused in order
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
-				if (!('topLeftMostX' in aOptions) || !('topLeftMostY' in aOptions)) {
-					throw new Error('winnt requries topLeftMostX and topLeftMostY');
-				}
-				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {
-					throw new Error('winnt requries fullWidth and fullHeight');
-				}
 				
-				var aHwnd = ostypes.TYPE.HWND.ptr(ctypes.UInt64(aHwndStr));
-				var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions.topLeftMostX, aOptions.topLeftMostY, aOptions.fullWidth, aOptions.fullHeight, 0/*ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW*/);
-				console.info('rez_setTop:', rez_setTop);
+				
 				
 			break;
 		case 'gtk':
+				
+				
+				
+			break;
+		case 'darwin':
+				
+				
+				
+			break;
+		default:
+			console.error('os not supported');
+	}
+}
+
+function focusSelfApp() {
+	// makes the firefox you run this code from the active app, like brings it forward
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
 			
-				if (!('fullWidth' in aOptions) || !('fullHeight' in aOptions)) {
-					throw new Error('gtk requries fullWidth and fullHeight');
-				}
 				
-				console.info('incoming aHwndStr:', aHwndStr);
-				//var aHwnd = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr));
-				//var rez_setMode = ostypes.API('gdk_window_set_fullscreen_mode', aHwnd, ostypes.CONST.GDK_FULLSCREEN_ON_ALL_MONITORS);
-
 				
-				var gdkWinPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aHwndStr));
-				var gtkWinPtr = ostypes.HELPER.gdkWinPtrToGtkWinPtr(gdkWinPtr);
-
-				//var rez_makeFull = ostypes.API('gtk_window_fullscreen', gtkWinPtr); // it seems this cannot run from another thread... as its not making it fullscreen
 				
-				var rez_topIt = ostypes.API('gtk_window_set_keep_above')(gtkWinPtr, true);
+			break;
+		case 'gtk':
 				
-				//var rez_splashIt = ostypes.API('gdk_window_set_type_hint')(gdkWinPtr, ostypes.CONST.WINDOW_TYPE_HINT_SPLASHSCREEN);
 				
-				//var rez_Unconstrain = ostypes.API('gtk_window_set_position')(gtkWinPtr, ostypes.CONST.GTK_WIN_POS_NONE);
 				
-				//var rez_focus = ostypes.API('gtk_window_present')(gtkWinPtr);
+			break;
+		case 'darwin':
 				
-				// var geom = ostypes.TYPE.GdkGeometry();
-				// geom.max_width = aOptions.fullWidth;
-				// geom.max_height = aOptions.fullHeight;
-				// var rez_geo = ostypes.API('gtk_window_set_geometry_hints')(gtkWinPtr, null, geom.address(), ostypes.CONST.GDK_HINT_MAX_SIZE);
+				var NSApplication = ostypes.HELPER.class('NSApplication');
+				var sharedApplication = ostypes.HELPER.sel('sharedApplication');
+				var NSApp = ostypes.API('objc_msgSend')(NSApplication, sharedApplication);
+				
+				// [NSApp activateIgnoringOtherApps:YES];
+				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps:'), ostypes.CONST.YES);
+				console.info('rez_actIgOthrApps:', rez_actIgOthrApps);
 				
 			break;
 		default:

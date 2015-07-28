@@ -45,6 +45,8 @@ var macTypes = function() {
 	this.CGDirectDisplayID = ctypes.uint32_t;
 	this.CGError = ctypes.int32_t;
 	this.CGFloat = is64bit ? ctypes.double : ctypes.float; // ctypes.float is 32bit deosntw ork as of May 10th 2015 see this bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1163406 this would cause crash on CGDisplayGetBounds http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac#comment48414568_28247749
+	this.CGWindowLevel = ctypes.int32_t;
+	this.CGWindowLevelKey = ctypes.int32_t;
 	this.ConstStr255Param = ctypes.unsigned_char.ptr;
 	this.ConstStringPtr = ctypes.unsigned_char.ptr;
 	this.OpaqueDialogPtr = ctypes.StructType("OpaqueDialogPtr");
@@ -93,13 +95,17 @@ var macTypes = function() {
 		{ x: this.CGFloat },
 		{ y: this.CGFloat }
 	]);
+	this.CGSize = ctypes.StructType('CGSize', [
+		{ width: this.CGFloat },
+		{ height: this.CGFloat }
+	]);
 	this.Point = ctypes.StructType('Point', [
 		{ v: this.short },
 		{ h: this.short }
 	]);
-	this.CGSize = ctypes.StructType('CGSize', [
-		{ width: this.CGFloat },
-		{ height: this.CGFloat }
+	this.ProcessSerialNumber = new ctypes.StructType('ProcessSerialNumber', [
+		{ highLongOfPSN: this.UInt32 },
+		{ lowLongOfPSN: this.UInt32 }
 	]);
 	this.timespec = ctypes.StructType('timespec', [ // http://www.opensource.apple.com/source/text_cmds/text_cmds-69/sort/timespec.h
 		{ tv_sec: this.time_t },
@@ -189,6 +195,7 @@ var macTypes = function() {
 	this.IMP = ctypes.voidptr_t;
 	this.SEL = ctypes.voidptr_t;
 	this.Class = ctypes.voidptr_t;
+	this.NSWindow = ctypes.voidptr_t;
 	
 	// NULL CONSTs that i use for vaiadic args
 	
@@ -198,6 +205,9 @@ var macTypes = function() {
 	// ADV OBJC STRUCTS
 	
 
+	// dispatch stuff
+	this.dispatch_block_t = ctypes.FunctionType(this.CALLBACK_ABI, this.void, []).ptr;
+	this.dispatch_queue_t = ctypes.voidptr_t; // guess
 }
 
 var macInit = function() {
@@ -214,10 +224,33 @@ var macInit = function() {
 		get kCFTypeArrayCallBacks () { if (!('kCFTypeArrayCallBacks' in _const)) { _const['kCFTypeArrayCallBacks'] = lib('CoreFoundation').declare('kCFTypeArrayCallBacks', self.TYPE.CFArrayCallBacks); } return _const['kCFTypeArrayCallBacks']; },
 		kCGErrorSuccess: 0,
 		kCGNullDirectDisplay: 0,
+		kCGBaseWindowLevelKey: 0,
+		kCGMinimumWindowLevelKey: 1,
+		kCGDesktopWindowLevelKey: 2,
+		kCGBackstopMenuLevelKey: 3,
+		kCGNormalWindowLevelKey: 4,
+		kCGFloatingWindowLevelKey: 5,
+		kCGTornOffMenuWindowLevelKey: 6,
+		kCGDockWindowLevelKey: 7,
+		kCGMainMenuWindowLevelKey: 8,
+		kCGStatusWindowLevelKey: 9,
+		kCGModalPanelWindowLevelKey: 10,
+		kCGPopUpMenuWindowLevelKey: 11,
+		kCGDraggingWindowLevelKey: 12,
+		kCGScreenSaverWindowLevelKey: 13,
+		kCGMaximumWindowLevelKey: 14,
+		kCGOverlayWindowLevelKey: 15,
+		kCGHelpWindowLevelKey: 16,
+		kCGUtilityWindowLevelKey: 17,
+		kCGDesktopIconWindowLevelKey: 18,
+		kCGCursorWindowLevelKey: 19,
+		kCGAssistiveTechHighWindowLevelKey: 20,
+		kCGNumberOfWindowLevelKeys: 21,
 		///////// OBJC - all consts are wrapped in a type as if its passed to variadic it needs to have type defind, see jsctypes chat with arai on 051015 357p
 		NO: self.TYPE.BOOL(0),
 		NSPNGFileType: self.TYPE.NSUInteger(4),
-		YES: self.TYPE.BOOL(1) // i do this instead of 1 becuase for varidic types we need to expclicitly define it
+		YES: self.TYPE.BOOL(1), // i do this instead of 1 becuase for varidic types we need to expclicitly define it
+		NIL: self.TYPE.void.ptr(ctypes.UInt64('0x0')) // needed for varidic args, as i cant pass null there
 	};
 
 	var _lib = {}; // cache for lib
@@ -412,6 +445,12 @@ var macInit = function() {
 				self.TYPE.uint32_t.ptr				// *displayCount
 			);
 		},
+		CGWindowLevelForKey: function() {
+			return lib('CoreGraphics').declare('CGWindowLevelForKey', self.TYPE.ABI,
+				self.TYPE.CGWindowLevel,
+				self.TYPE.CGWindowLevelKey
+			);
+		},
 		CGImageRelease: function() {
 			return lib('CoreGraphics').declare('CGImageRelease', self.TYPE.ABI,
 				self.TYPE.void,
@@ -462,6 +501,32 @@ var macInit = function() {
 				self.TYPE.CGRect
 			);
 		},
+		dispatch_get_main_queue: function() {
+			/* https://developer.apple.com/library/prerelease/mac/documentation/Performance/Reference/GCD_libdispatch_Ref/#//apple_ref/c/func/dispatch_get_main_queue
+			 *  dispatch_queue_t dispatch_get_main_queue (
+			 *   void
+			 * ); 
+			 */
+			// return lib('/usr/lib/system/libdispatch.dylib').declare('_dispatch_main_q', self.TYPE.ABI,
+			// 	self.TYPE.dispatch_queue_t	// return
+			// );
+			// do not do ostypes.API('dispatch_get_main_queue')() the () will give error not FuncitonType.ptr somhting like that, must just use ostypes.API('dispatch_get_main_queue')
+			// http://stackoverflow.com/questions/31637321/standard-library-containing-dispatch-get-main-queue-gcd
+			return lib('/usr/lib/system/libdispatch.dylib').declare('_dispatch_main_q', self.TYPE.dispatch_queue_t);
+		},
+		dispatch_sync: function() {
+			/* https://developer.apple.com/library/prerelease/mac/documentation/Performance/Reference/GCD_libdispatch_Ref/#//apple_ref/c/func/dispatch_sync
+			 * void dispatch_sync (
+			 *   dispatch_queue_t queue,
+			 *   dispatch_block_t block
+			 * ); 
+			 */
+			return lib('/usr/lib/system/libdispatch.dylib').declare('dispatch_sync', self.TYPE.ABI,
+				self.TYPE.void,					// return
+				self.TYPE.dispatch_queue_t,		// queue
+				self.TYPE.dispatch_block_t		// block
+			);
+		},
 		//////////// OBJC
 		objc_getClass: function() {
 			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_getClass
@@ -498,6 +563,60 @@ var macInit = function() {
 			return lib('objc').declare('sel_registerName', self.TYPE.ABI,
 				self.TYPE.SEL,		// return
 				self.TYPE.char.ptr	// *str
+			);
+		},
+		objc_registerClassPair: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_registerClassPair
+			 * void objc_registerClassPair (
+			 *   Class cls
+			 * ); 
+			 */
+			return lib('objc').declare('objc_registerClassPair', self.TYPE.ABI,
+				self.TYPE.void,	// return
+				self.TYPE.Class	// cls
+			);
+		},
+		objc_allocateClassPair: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_allocateClassPair
+			 *  Class objc_allocateClassPair (
+			 *   Class superclass,
+			 *   const char *name,
+			 *   size_t extraBytes
+			 * );
+			 */
+			return lib('objc').declare('objc_allocateClassPair', self.TYPE.ABI,
+				self.TYPE.Class,		// return
+				self.TYPE.Class,		// superclass
+				self.TYPE.char.ptr,		// *name
+				self.TYPE.size_t		// extraBytes
+			);
+		},
+		class_addMethod: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/class_addMethod
+			 * BOOL class_addMethod (
+			 *   Class cls,
+			 *   SEL name,
+			 *   IMP imp,
+			 *   const char *types
+			 * ); 
+			 */
+			return lib('objc').declare('class_addMethod', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.Class,	// cls
+				self.TYPE.SEL,		// name
+				self.TYPE.IMP,		// imp
+				self.TYPE.char.ptr	// *types
+			);
+		},
+		objc_disposeClassPair: function() {
+			/* https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ObjCRuntimeRef/index.html#//apple_ref/c/func/objc_disposeClassPair
+			 * void objc_disposeClassPair (
+			 *   Class cls
+			 * ); 
+			 */
+			return lib('objc').declare('objc_disposeClassPair', self.TYPE.ABI,
+				self.TYPE.void,	// return
+				self.TYPE.Class	// cls
 			);
 		},
 		///////////// LIBC

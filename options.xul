@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<!DOCTYPE mydialog SYSTEM "chrome://nativeshot/locale/options_inline.dtd">
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<setting title="&nativeshot.options-inline.app-launch-title;" type="control" desc="&nativeshot.options-inline.app-launch-desc;">
+		<button label="&nativeshot.options-inline.app-launch-btn;" oncommand="window.location='about:nativeshot'" />
+	</setting>
+</vbox>

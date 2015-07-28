@@ -1,13 +1,17 @@
 // Imports
-const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
+const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
+Cm.QueryInterface(Ci.nsIComponentRegistrar);
+
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
+Cu.import('resource://gre/modules/ctypes.jsm');
+Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
 const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
-Cu.importGlobalProperties(['btoa']);
+Cu.importGlobalProperties(['btoa', 'atob']);
 
 // Globals
 const core = {
@@ -17,31 +21,39 @@ const core = {
 		path: {
 			name: 'nativeshot',
 			content: 'chrome://nativeshot/content/',
+			images: 'chrome://nativeshot/content/resources/images/',
 			locale: 'chrome://nativeshot/locale/',
 			resources: 'chrome://nativeshot/content/resources/',
-			images: 'chrome://nativeshot/content/resources/images/'
+			scripts: 'chrome://nativeshot/content/resources/scripts/',
+			styles: 'chrome://nativeshot/content/resources/styles/'
 		}
 	},
 	os: {
-		name: OS.Constants.Sys.Name.toLowerCase()
+		name: OS.Constants.Sys.Name.toLowerCase(),
+		toolkit: Services.appinfo.widgetToolkit.toLowerCase(),
+		xpcomabi: Services.appinfo.XPCOMABI
+	},
+	firefox: {
+		pid: Services.appinfo.processID,
+		version: Services.appinfo.version
 	}
 };
 
 var PromiseWorker;
 var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
-const cui_cssUri = Services.io.newURI(core.addon.path.resources + 'cui.css', null, null);
+const cui_cssUri = Services.io.newURI(core.addon.path.styles + 'cui.css', null, null);
 const JETPACK_DIR_BASENAME = 'jetpack';
+const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
 
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'global.properties?' + Math.random()); /* Randomize URI to work around bug 719376 */ });
-XPCOMUtils.defineLazyGetter(myServices, 'sm', function () { return Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager) });
+XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + Math.random()); /* Randomize URI to work around bug 719376 */ });
 
 function extendCore() {
-	// adds some properties i use to core
+	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
 	switch (core.os.name) {
 		case 'winnt':
 		case 'winmo':
@@ -90,12 +102,6 @@ function extendCore() {
 			// nothing special
 	}
 	
-	core.os.toolkit = Services.appinfo.widgetToolkit.toLowerCase();
-	core.os.xpcomabi = Services.appinfo.XPCOMABI;
-	
-	core.firefox = {};
-	core.firefox.version = Services.appinfo.version;
-	
 	console.log('done adding to core, it is now:', core);
 }
 
@@ -114,6 +120,43 @@ var observers = {
 	}
 };
 //end obs stuff
+
+// about module
+var aboutFactory_nativeshot;
+function AboutNativeShot() {}
+AboutNativeShot.prototype = Object.freeze({
+	classDescription: 'NativeShot History Application',
+	contractID: '@mozilla.org/network/protocol/about;1?what=nativeshot',
+	classID: Components.ID('{2079bd20-3369-11e5-a2cb-0800200c9a66}'),
+	QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
+
+	getURIFlags: function(aURI) {
+		return Ci.nsIAboutModule.ALLOW_SCRIPT;
+	},
+
+	newChannel: function(aURI) {
+		let channel = Services.io.newChannel(core.addon.path.content + 'app.xhtml', null, null);
+		channel.originalURI = aURI;
+		return channel;
+	}
+});
+
+function AboutFactory(component) {
+	this.createInstance = function(outer, iid) {
+		if (outer) {
+			throw Cr.NS_ERROR_NO_AGGREGATION;
+		}
+		return new component();
+	};
+	this.register = function() {
+		Cm.registerFactory(component.prototype.classID, component.prototype.classDescription, component.prototype.contractID, this);
+	};
+	this.unregister = function() {
+		Cm.unregisterFactory(component.prototype.classID, this);
+	}
+	Object.freeze(this);
+	this.register();
+}
 
 // START - Addon Functionalities					
 // global editor values
@@ -231,6 +274,8 @@ function get_gEMenuDomJson() {
 	return gEMenuDomJson;
 }
 // start - observer handlers
+var gColReuploadTimers = {};
+var gLastReuploadTimerId = 0;
 // start - canvas functions to act across all canvases
 var gCanDim = {
 	execFunc: function(aStrFuncName, aArrFuncArgs=[], aObjConvertScreenToLayer) {
@@ -318,6 +363,87 @@ var gCanDim = {
 	}
 };
 
+var gNotifierStrRandomizer = ' '; // because on ubuntu if back to back same exact title and/or msg (not sure the combintation) the native alert wont show the second time but alertshown triggers as if it had shown but didnt, but probably triggered cuz the one before it was the same
+var gENotifListener = {
+	observe: function(aSubject, aTopic, aData) {
+		// aSubject is always null
+		// aData is the aClickCookie, i set aClickCookie to notif id. if its not clickable aClickCookie is not set
+		// aTopic is: alertfinished, alertclickcallback, alertshow
+		if (aTopic == 'alertclickcallback')	{
+			if (gNotifClickCallback[aData]) {
+				gNotifClickCallback[aData]();
+				delete gNotifClickCallback[aData];
+			}
+		} else if (aTopic == 'alertshow') {
+			//gENotifPending[0].shown = true;
+			var shown = gENotifPending.splice(0, 1);
+			console.log('just showed:', shown);
+			gNotifierStrRandomizer = gNotifierStrRandomizer == ' ' ? '' : ' ';
+		} else if (aTopic == 'alertfinished') {
+			if (gNotifClickCallback[aData]) {
+				// user didnt click it
+				delete gNotifClickCallback[aData];
+			}
+		}
+	}
+};
+var gNotifClickCallback = {};
+var gNotifLastId = 0;  //minimum gNotifLastId is 1 link687412
+var gENotifPending = []; // contains array of objs like: {shown:false, aTitle:'', aMsg:'', aClickCookie:''}
+var gNotifTimerRunning = false;
+// ensures to show notifications in order
+const gNotifTimerInterval = 1000; //ms
+var gENotifCallback = {
+	notify: function() {
+		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
+		if (gENotifPending.length > 0) {
+			if (gENotifPending[0].aClickCookie) {
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
+			} else {
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
+			}
+			gNotifTimer.initWithCallback(gENotifCallback, gNotifTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
+		} else {
+			gNotifTimerRunning = false;
+			gNotifTimer = null;
+		}
+	}
+};
+var gPostPrintRemovalFunc;
+const reuploadTimerInterval = 10000;
+
+function notifCB_saveToFile(aOSPath_savedFile) {
+	var nsifile = FileUtils.File(aOSPath_savedFile);
+	showFileInOSExplorer(nsifile);
+}
+
+var gMacTypes;
+function initMacTypes() {
+	gMacTypes = {};
+	gMacTypes.NIL = ctypes.voidptr_t(ctypes.UInt64('0x0'));
+	gMacTypes.objc = ctypes.open(ctypes.libraryName("objc"));
+	gMacTypes.id = ctypes.voidptr_t;
+	gMacTypes.SEL = ctypes.voidptr_t;
+	
+gMacTypes.objc_getClass = gMacTypes.objc.declare("objc_getClass",
+ctypes.default_abi,
+gMacTypes.id,
+ctypes.char.ptr);
+
+gMacTypes.sel_registerName = gMacTypes.objc.declare("sel_registerName",
+ctypes.default_abi,
+gMacTypes.SEL,
+ctypes.char.ptr);
+
+gMacTypes.objc_msgSend = gMacTypes.objc.declare("objc_msgSend",
+ctypes.default_abi,
+gMacTypes.id,
+gMacTypes.id,
+gMacTypes.SEL,
+"...");
+
+}
+
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -326,6 +452,8 @@ var gEditor = {
 	gBrowserDOMWindow: null, // used for clipboard context
 	cleanUp: function() {
 		// reset all globals
+		console.error('doing cleanup');
+		
 		colMon = null;
 		this.lastCompositedRect = null;
 		this.canComp = null;
@@ -465,18 +593,23 @@ var gEditor = {
 			colMon[0].E.DOMWindow.close();
 		}
 	},
-	showNotif: function(aTitle, aMsg) {
+	showNotif: function(aTitle, aMsg, aClickCallback) {
 		if (!gNotifTimer) {
 			gNotifTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-		} else {
-			gNotifTimer.cancel();
 		}
-		gNotifTimer.initWithCallback({
-			notify: function() {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + aTitle, aMsg);
-				gNotifTimer = null;
-			}
-		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+		gNotifLastId++; //minimum gNotifLastId is 1 link687412
+		gENotifPending.push({
+			//shown: false, //no need as as long as it doesnt show its element will be first in the array
+			aTitle: aTitle,
+			aMsg: aMsg,
+			aClickCookie: aClickCallback ? gNotifLastId : null
+		});
+		if (aClickCallback) {
+			gNotifClickCallback[gNotifLastId] = aClickCallback;
+		}
+		if (!gNotifTimerRunning) {
+			gENotifCallback.notify(gNotifTimer);
+		}
 	},
 	saveToFile: function(e, aBoolPreset) {
 		// aBoolPreset true if want to use preset folder and file name
@@ -489,6 +622,7 @@ var gEditor = {
 				var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
 				r.onloadend = function() {
 					// r.result contains the ArrayBuffer.
+					// start - copy block link49842300
 					var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
 					promise_saveToDisk.then(
 						function(aVal) {
@@ -501,7 +635,7 @@ var gEditor = {
 							
 							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 							
-							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'));
+							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
 							// end - do stuff here - promise_saveToDisk
 						},
 						function(aReason) {
@@ -518,12 +652,14 @@ var gEditor = {
 							//deferred_createProfile.reject(rejObj);
 						}
 					);
+					// end - copy block link49842300
 				};
 				r.readAsArrayBuffer(b);
 			}, 'image/png');
 		}
 		
 		if (aBoolPreset) {
+			// start - copy block link7984654
 			// get save path
 			var OSPath_saveDir;
 			try {
@@ -539,13 +675,14 @@ var gEditor = {
 			}
 			
 			// generate file name
-			var filename = 'Screenshot - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
+			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
 			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+			// end - copy block link7984654
 			
 			do_saveCanToDisk();
 		} else {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(this.compDOMWindow, 'Save Screenshot', Ci.nsIFilePicker.modeSave);
+			fp.init(e.view, myServices.sb.GetStringFromName('filepicker-title-save-screenshot'), Ci.nsIFilePicker.modeSave);
 			fp.appendFilter('PNG Image', '*.png');
 			
 			var rv = fp.show();
@@ -558,8 +695,8 @@ var gEditor = {
 				do_saveCanToDisk();
 			} else {
 				 // user canceled
-				console.error('rv was:', rv);
-				gEditor.closeOutEditor(e);
+				console.error('rv was not ok or replace:', rv);
+				//gEditor.closeOutEditor(e);
 			}
 		}
 	},
@@ -617,18 +754,28 @@ var gEditor = {
 		this.compositeSelection();
 		
 		// print method link678321212
-		var win = Services.appShell.hiddenDOMWindow;
+		var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
 		var doc = win.document;
 		var iframe = doc.createElementNS(NS_HTML, 'iframe');
 		iframe.addEventListener('load', function() {
+			iframe.removeEventListener('load', arguments.callee, true);
+			console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
 			console.error('iframe loaded, print it', iframe.contentWindow.print);
-			iframe.contentWindow.addEventListener('afterprint', function() {
+			gPostPrintRemovalFunc = function() {
 				iframe.parentNode.removeChild(iframe);
 				console.error('ok removed iframe that i added to hiddenDOMWindow')
+				gPostPrintRemovalFunc = null;
+			};
+			iframe.contentWindow.addEventListener('afterprint', function() {
+				// iframe.parentNode.removeChild(iframe);
+				// console.error('ok removed iframe that i added to hiddenDOMWindow')
+				//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
+				iframe.setAttribute('src', 'about:blank');
 			}, false);
 			iframe.contentWindow.print();
-		}, true);
+		}, true); // if i use false here it doesnt work
 		iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
+		iframe.setAttribute('style', 'display:none');
 		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 
 		this.closeOutEditor(e);
@@ -642,159 +789,258 @@ var gEditor = {
 		data = data.substr('data:image/png;base64,'.length); // imgur wants without this
 		
 		console.info('base64 data:', data);
-		var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
-			aPostData: {
-				image: data, // this gets encodeURIComponent'ed by my xhr function
-				type: 'base64'
-			},
-			Headers: {
-				Authorization: 'Client-ID fa64a66080ca868',
-				'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
-			},
-			aResponseType: 'json'
-		});
 		
-		promise_uploadAnonImgur.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
-				// start - do stuff here - promise_uploadAnonImgur
-				var imgUrl = aVal.response.data.link;
-				var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
-				var imgId = aVal.response.data.id;
-				
-				var trans = Transferable(gEditor.gBrowserDOMWindow);
-				trans.addDataFlavor('text/unicode');
-				// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-				trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
-				
-				Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-				
-				// save to upload history - only for anonymous uploads to imgur, so can delete in future
-				var promise_appendImgurHistory = tryOsFile_ifDirsNoExistMakeThenRetry();
-				var OSPath_history = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.txt'); //OS.Path.join(OS.Constants.Path.profileDir, 'extensions', 'NativeShot@jetpack_imgur-history.txt'); // creates file if it wasnt there
-				
-				
-				var do_closeHistory = function(hOpen) {
-					var promise_closeHistory = hOpen.close();
-					promise_closeHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_closeHistory - ', aVal);
-							// start - do stuff here - promise_closeHistory
-							// end - do stuff here - promise_closeHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_closeHistory', aReason:aReason};
-							console.warn('Rejected - promise_closeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
+		var abortReuploadAndToFile = function() {
+			// turn data url to file and do quick save
+			gColReuploadTimers[reuploadTimerId].timer.cancel();
+			delete gColReuploadTimers[reuploadTimerId];
+
+			// save data url to file
+			// http://stackoverflow.com/questions/25145792/write-a-data-uri-to-a-file-in-a-firefox-extension/25148685#25148685
+			console.time('charCodeAt method');
+			var dataAtob = atob(data);
+			// Decode to an Uint8Array, because OS.File.writeAtomic expects an ArrayBuffer(View).
+			var byteArr = new Uint8Array(dataAtob.length);
+			for (var i = 0, e = dataAtob.length; i < e; ++i) {
+			  byteArr[i] = dataAtob.charCodeAt(i);
+			}
+			console.timeEnd('charCodeAt method');
+			
+			// start - copy block link7984654 - slight modificaiton
+			// get save path
+			var OSPath_saveDir;
+			try {
+				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+			} catch (ex) {
+				console.warn('ex:', ex);
+				try {
+					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
+				} catch (ex) {
+					console.warn('ex:', ex);
+					OSPath_saveDir = OS.Constants.Path.desktopDir;
+				}
+			}
+			
+			// generate file name
+			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + ' - ' + myServices.sb.GetStringFromName('failed-upload') + '.png';
+			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
+			// end - copy block link7984654 - slight modificaiton
+			
+			// start - copy block link49842300 - slight mod
+			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, byteArr, { tmpPath: OSPath_save + '.tmp' });
+			promise_saveToDisk.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_saveToDisk - ', aVal);
+					// start - do stuff here - promise_saveToDisk
+					var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
+					trans.addDataFlavor('text/unicode');
+					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+					trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
+					
+					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+					
+					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
+					// end - do stuff here - promise_saveToDisk
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
+					console.error('Rejected - promise_saveToDisk - ', rejObj);
+					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
+					//deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
+					console.error('Caught - promise_saveToDisk - ', rejObj);
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+					//deferred_createProfile.reject(rejObj);
+				}
+			);
+			// end - copy block link49842300 - slight mod
+		};
+		
+		var reuploadTimerId = gLastReuploadTimerId++;
+		var reuploadFunc = function() {
+			if (!gColReuploadTimers[reuploadTimerId]) {
+				gColReuploadTimers[reuploadTimerId] = {
+					timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer),
+					callback: {
+						notify: function() {
+							do_xhrToImgur();
 						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
-							console.error('Caught - promise_closeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					);
+					},
+					attempt: 0
 				};
-				
-				var do_writeHistory = function(hOpen) {
-					var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
-					var txtEncoded = getTxtEncodr().encode(txtToAppend);
-					var promise_writeHistory = hOpen.write(txtEncoded);
-					promise_writeHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_writeHistory - ', aVal);
-							// start - do stuff here - promise_writeHistory
-							do_closeHistory(hOpen);
-							// end - do stuff here - promise_writeHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_writeHistory', aReason:aReason};
-							console.warn('Rejected - promise_writeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
-							console.error('Caught - promise_writeHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					);
-				};
-				
-				var do_makeDirsToHistory = function() {
-					var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_history), {from:OS.Constants.Path.profileDir})
-					promise_makeDirsToHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
-							// start - do stuff here - promise_makeDirsToHistory
-							do_openHistory();
-							// end - do stuff here - promise_makeDirsToHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
-							console.warn('Rejected - promise_makeDirsToHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
-							console.error('Caught - promise_makeDirsToHistory - ', rejObj);
-							// deferred_createProfile.reject(rejObj);
-						}
-					);
-				};
-				
-				var openHistoryAttempt = 1;
-				var do_openHistory = function() {
-					var promise_openHistory = OS.File.open(OSPath_history, {write: true, append: true});
-					promise_openHistory.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_openHistory - ', aVal);
-							// start - do stuff here - promise_openHistory
-							do_writeHistory(aVal);
-							// end - do stuff here - promise_openHistory
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_openHistory', aReason:aReason};
-							if (aReason.becauseNoSuchFile && openHistoryAttempt == 1) {
-								// first attempt, and i have only ever gotten here with os.file.open when write append are true if folder doesnt exist, so make it per https://gist.github.com/Noitidart/0401e9a7de716de7de45
-								openHistoryAttempt++;
-								do_makeDirsToHistory();
-								rejObj.openHistoryAttempt = openHistoryAttempt;
-							} else {
-								console.warn('Rejected - promise_openHistory - ', rejObj);
+			}
+			gColReuploadTimers[reuploadTimerId].attempt++;
+			gColReuploadTimers[reuploadTimerId].timer.initWithCallback(gColReuploadTimers[reuploadTimerId].callback, reuploadTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
+			gEditor.showNotif(myServices.sb.formatStringFromName('notif-title_anon-upload-fail', [gColReuploadTimers[reuploadTimerId].attempt], 1), myServices.sb.GetStringFromName('notif-body_anon-upload-fail'), abortReuploadAndToFile);
+		};
+		
+		var do_xhrToImgur = function() {
+			var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
+				aPostData: {
+					image: data, // this gets encodeURIComponent'ed by my xhr function
+					type: 'base64'
+				},
+				Headers: {
+					Authorization: 'Client-ID fa64a66080ca868',
+					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
+				},
+				aResponseType: 'json'
+			});
+			
+			promise_uploadAnonImgur.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
+					// start - do stuff here - promise_uploadAnonImgur
+					if (!aVal.response.success) {
+						reuploadFunc();
+						return;
+					}
+					if (gColReuploadTimers[reuploadTimerId]) {
+						delete gColReuploadTimers[reuploadTimerId];
+					}
+					
+					var imgUrl = aVal.response.data.link;
+					var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
+					var imgId = aVal.response.data.id;
+					
+					var trans = Transferable(gEditor.gBrowserDOMWindow);
+					trans.addDataFlavor('text/unicode');
+					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
+					trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
+					
+					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+					
+					// save to upload history - only for anonymous uploads to imgur, so can delete in future
+					
+					var do_closeHistory = function(hOpen) {
+						var promise_closeHistory = hOpen.close();
+						promise_closeHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_closeHistory - ', aVal);
+								// start - do stuff here - promise_closeHistory
+								// end - do stuff here - promise_closeHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_closeHistory', aReason:aReason};
+								console.warn('Rejected - promise_closeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
+								console.error('Caught - promise_closeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						);
+					};
+					
+					var do_writeHistory = function(hOpen) {
+						var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
+						var txtEncoded = getTxtEncodr().encode(txtToAppend);
+						var promise_writeHistory = hOpen.write(txtEncoded);
+						promise_writeHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_writeHistory - ', aVal);
+								// start - do stuff here - promise_writeHistory
+								do_closeHistory(hOpen);
+								// end - do stuff here - promise_writeHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_writeHistory', aReason:aReason};
+								console.warn('Rejected - promise_writeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
+								console.error('Caught - promise_writeHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						);
+					};
+					
+					var do_makeDirsToHistory = function() {
+						var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyImgHostAnonImgur), {from:OS.Constants.Path.profileDir})
+						promise_makeDirsToHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
+								// start - do stuff here - promise_makeDirsToHistory
+								do_openHistory();
+								// end - do stuff here - promise_makeDirsToHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
+								console.warn('Rejected - promise_makeDirsToHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
+								console.error('Caught - promise_makeDirsToHistory - ', rejObj);
+								// deferred_createProfile.reject(rejObj);
+							}
+						);
+					};
+					
+					var openHistoryAttempt = 1;
+					var do_openHistory = function() {
+						var promise_openHistory = OS.File.open(OSPath_historyImgHostAnonImgur, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
+						promise_openHistory.then(
+							function(aVal) {
+								console.log('Fullfilled - promise_openHistory - ', aVal);
+								// start - do stuff here - promise_openHistory
+								do_writeHistory(aVal);
+								// end - do stuff here - promise_openHistory
+							},
+							function(aReason) {
+								var rejObj = {name:'promise_openHistory', aReason:aReason};
+								if (aReason.becauseNoSuchFile && openHistoryAttempt == 1) {
+									// first attempt, and i have only ever gotten here with os.file.open when write append are true if folder doesnt exist, so make it per https://gist.github.com/Noitidart/0401e9a7de716de7de45
+									openHistoryAttempt++;
+									do_makeDirsToHistory();
+									rejObj.openHistoryAttempt = openHistoryAttempt;
+								} else {
+									console.warn('Rejected - promise_openHistory - ', rejObj);
+									//deferred_createProfile.reject(rejObj);
+								}
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {name:'promise_openHistory', aCaught:aCaught};
+								console.error('Caught - promise_openHistory - ', rejObj);
 								//deferred_createProfile.reject(rejObj);
 							}
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_openHistory', aCaught:aCaught};
-							console.error('Caught - promise_openHistory - ', rejObj);
-							//deferred_createProfile.reject(rejObj);
-						}
-					);
-				};
-				
-				do_openHistory(); // starts the papend to history process
-				
-				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
-				// end - do stuff here - promise_uploadAnonImgur
-			},
-			function(aReason) {
-				var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
-				console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
-				gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-fail'), myServices.sb.GetStringFromName('notif-body_clipboard-fail'));
-				//deferred_createProfile.reject(rejObj);
-			}
-		).catch(
-			function(aCaught) {
-				var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
-				console.error('Caught - promise_uploadAnonImgur - ', rejObj);
-				//deferred_createProfile.reject(rejObj);
-				//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
-			}
-		);
+						);
+					};
+					
+					do_openHistory(); // starts the papend to history process
+					
+					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
+					// end - do stuff here - promise_uploadAnonImgur
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
+					console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
+					// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
+					reuploadFunc();
+					//deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
+					console.error('Caught - promise_uploadAnonImgur - ', rejObj);
+					//deferred_createProfile.reject(rejObj);
+					//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
+				}
+			);
+		};
+		
+		
+		do_xhrToImgur();
 		
 		this.closeOutEditor(e);
 	}
@@ -1022,13 +1268,12 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										.nativeHandle;
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
-	
+	console.info('1st:', aHwndPtrStr);
 	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	
 	aEditorDOMWindow.focus();
 	aEditorDOMWindow.fullScreen = true;
 	
-	/*
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
 	var aArrHwndPtrOsParams = {};
@@ -1036,28 +1281,109 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		left: colMon[iMon].x,
 		top: colMon[iMon].y,
 		right: colMon[iMon].x + colMon[iMon].w,
-		bottom: colMon[iMon].y + colMon[iMon].h
+		bottom: colMon[iMon].y + colMon[iMon].h,
+		width: colMon[iMon].w,
+		height: colMon[iMon].h
 	};
-	var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
-	promise_setWinAlwaysTop.then(
-		function(aVal) {
-			console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
-			// start - do stuff here - promise_setWinAlwaysTop
-			// end - do stuff here - promise_setWinAlwaysTop
-		},
-		function(aReason) {
-			var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
-			console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
-			//deferred_createProfile.reject(rejObj);
-		}
-	).catch(
-		function(aCaught) {
-			var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
-			console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
-			//deferred_createProfile.reject(rejObj);
-		}
-	);
-	*/
+	
+	// if (core.os.name != 'darwinAAAA') {
+		var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
+		promise_setWinAlwaysTop.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
+				// start - do stuff here - promise_setWinAlwaysTop
+				if (core.os.name == 'darwin') {
+					/*
+					if (!gMacTypes) {
+						initMacTypes();
+					}
+					var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+														.getInterface(Ci.nsIWebNavigation)
+														.QueryInterface(Ci.nsIDocShellTreeItem)
+														.treeOwner
+														.QueryInterface(Ci.nsIInterfaceRequestor)
+														.getInterface(Ci.nsIBaseWindow)
+														.nativeHandle;
+
+					var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+					console.info('NSWindowString:', NSWindowString);
+												
+					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+					
+					var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
+					var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
+					console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+					
+					aEditorDOMWindow.setTimeout(function() {
+						var setLevel = gMacTypes.sel_registerName('setLevel:');
+						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, ctypes.long(aVal));
+						console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());
+					}, 2000);
+					*/
+					
+					// aEditorDOMWindow.setTimeout(function() {
+						//aEditorDOMWindow.focus(); // doesnt work to make take full
+						//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+						aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+						console.log('ok resized by');
+					// }, 10);
+					
+				}
+				// end - do stuff here - promise_setWinAlwaysTop
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
+				console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
+				//deferred_createProfile.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
+				console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
+				//deferred_createProfile.reject(rejObj);
+			}
+		);
+	// } else {
+		/*
+		// main thread ctypes
+		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(function() {
+			if (!gMacTypes) {
+				initMacTypes();
+			}
+			// var NSWindow = ctypes.voidptr_t(ctypes.UInt64(aHwndPtrStr));
+			// // var rez_setLevel = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('setLevel:'), ctypes.long(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
+			// // console.info('rez_setLevel:', rez_setLevel.toString());
+			// var rez_orderFront = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('orderFrontRegardless'));
+			// console.info('rez_orderFront:', rez_orderFront.toString());
+	
+			var baseWindow = Services.wm.getMostRecentWindow('navigator:browser').QueryInterface(Ci.nsIInterfaceRequestor)
+										  .getInterface(Ci.nsIWebNavigation)
+										  .QueryInterface(Ci.nsIDocShellTreeItem)
+										  .treeOwner
+										  .QueryInterface(Ci.nsIInterfaceRequestor)
+										  .getInterface(Ci.nsIBaseWindow);
+
+			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+			console.info('NSWindowString:', NSWindowString);
+			
+			var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+												.getInterface(Ci.nsIWebNavigation)
+												.QueryInterface(Ci.nsIDocShellTreeItem)
+												.treeOwner
+												.QueryInterface(Ci.nsIInterfaceRequestor)
+												.getInterface(Ci.nsIBaseWindow)
+												.nativeHandle;
+
+			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+			console.info('NSWindowString:', NSWindowString);
+										
+			var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+			var orderFront = gMacTypes.sel_registerName('setLevel:');
+			var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFront, ctypes.long(3));
+			console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+		}, 5000);
+		*/
+	// }
 	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
 	var w = colMon[iMon].w;
@@ -1098,11 +1424,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			break;
 		case 'darwin':
 			
-				aEditorDOMWindow.setTimeout(function() {
-					//aEditorDOMWindow.focus(); // doesnt work to make take full
-					//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
-					aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-				}, 10);
+				// aEditorDOMWindow.setTimeout(function() {
+				// 	//aEditorDOMWindow.focus(); // doesnt work to make take full
+				// 	//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+				// 	aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+				// }, 10);
 			
 			break;
 		default:
@@ -1209,6 +1535,11 @@ function shootAllMons(aDOMWindow) {
 			console.log('Fullfilled - promise_shoot - ', aVal);
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
+			
+			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
+				gPostPrintRemovalFunc();
+			}
+			
 			// set gETopLeftMostX and gETopLeftMostY
 			for (var i=0; i<colMon.length; i++) {
 				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
@@ -1343,7 +1674,7 @@ var windowListener = {
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
-		} else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
+		}/* else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
 			//console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
 			if (!aDOMWindow.opener) {
 				// this is my print window so lets set opener
@@ -1352,10 +1683,10 @@ var windowListener = {
 				// as whenever i print from my hidden frame on link678321212 it opens the print dialog with opener set to null, and then it tries opener.focus() and it then leaves the window open
 				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
 				console.error('going to set opener to wm! as it was null');
-				aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
+				//aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
 				//console.error('ok set opener! it is:', aDOMWindow.opener);
 			}
-		}
+		}*/
 	},
 	unloadFromWindow: function (aDOMWindow) {
 		if (!aDOMWindow) { return }
@@ -1368,9 +1699,50 @@ var windowListener = {
 };
 /*end - windowlistener*/
 
-var gColInterval = {};
+var gDelayedShotObj;
 var gLastIntervalId = -1;
 const delayedShotTimePerClick = 5; // sec
+
+function delayedShotUpdateBadges() {
+	var widgetInstances = CustomizableUI.getWidget('cui_nativeshot').instances;
+	for (var i=0; i<widgetInstances.length; i++) {
+		if (gDelayedShotObj.time_left > 0 && !widgetInstances[i].node.hasAttribute('badge')) {
+			widgetInstances[i].node.classList.add('badged-button');
+		}
+		if (gDelayedShotObj.time_left > 0) {
+			widgetInstances[i].node.setAttribute('badge', gDelayedShotObj.time_left);
+		} else {
+			widgetInstances[i].node.classList.remove('badged-button');
+			widgetInstances[i].node.removeAttribute('badge');
+		}
+	}
+}
+
+var delayedShotTimerCallback = {
+	notify: function() {
+		gDelayedShotObj.time_left--;
+		delayedShotUpdateBadges();
+		if (!gDelayedShotObj.time_left) {
+			cancelAndCleanupDelayedShot();
+			var aDOMWin = Services.wm.getMostRecentWindow('navigator:browser');
+			if (!aDOMWin) {
+				throw new Error('no navigator:browser type window open, this is required in order to take screenshot')
+			}
+			shootAllMons(aDOMWin);
+		} else {
+			gDelayedShotObj.timer.initWithCallback(delayedShotTimerCallback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+		}
+	}
+};
+
+function cancelAndCleanupDelayedShot() {
+	if (gDelayedShotObj) {
+		gDelayedShotObj.timer.cancel();
+		gDelayedShotObj.time_left = 0; // needed for delayedShotUpdateBadges
+		delayedShotUpdateBadges();
+		gDelayedShotObj = null;
+	}
+}
 
 function install() {}
 function uninstall() {
@@ -1417,36 +1789,24 @@ function startup(aData, aReason) {
 			gEditor.gBrowserDOMWindow = aDOMWin;
 			if (aEvent.shiftKey == 1) {
 				// default time delay queue
-				var cui_btn = aDOMWin.document.getElementById('cui_nativeshot');
-				if (cui_btn.classList.contains('badged-button')) {
-					// user wants to add 5 more sec to time left
-					var aIntervalId = cui_btn.getAttribute('nativeshot_interval-id');
-					gColInterval[aIntervalId].time_left += delayedShotTimePerClick;
-					cui_btn.setAttribute('badge', gColInterval[gLastIntervalId].time_left);
+				if (gDelayedShotObj) {
+					// there is a count down currently running
+					gDelayedShotObj.time_left += delayedShotTimePerClick;
+					// gDelayedShotObj.timer.cancel();
+					delayedShotUpdateBadges();
+					// so user wants to add 5 mroe sec to countdown
 				} else {
-					// users first click telling  want to do delayed shot
-					cui_btn.classList.add('badged-button');
-					gLastIntervalId++;
-					cui_btn.setAttribute('nativeshot_interval-id', gLastIntervalId);
-					gColInterval[gLastIntervalId] = {};
-					gColInterval[gLastIntervalId].DOMWindow = Cu.getWeakReference(aDOMWin);
-					gColInterval[gLastIntervalId].time_left = delayedShotTimePerClick;
-					
-					cui_btn.setAttribute('badge', gColInterval[gLastIntervalId].time_left);
-					gColInterval[gLastIntervalId].interval = aDOMWin.setInterval(function(aIntervalId) {
-						gColInterval[aIntervalId].time_left--;
-						if (gColInterval[aIntervalId].time_left == 0) {
-							cui_btn.classList.remove('badged-button');
-							cui_btn.removeAttribute('badge');
-							gColInterval[aIntervalId].DOMWindow.get().clearInterval(gColInterval[aIntervalId].interval);
-							delete gColInterval[aIntervalId];
-							shootAllMons(aDOMWin);
-						} else {
-							cui_btn.setAttribute('badge', gColInterval[aIntervalId].time_left);
-						}
-					}.bind(null, gLastIntervalId), 1000);
+					gDelayedShotObj = {
+						time_left: delayedShotTimePerClick,
+						timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer)
+					};
+					delayedShotUpdateBadges();
+					gDelayedShotObj.timer.initWithCallback(delayedShotTimerCallback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
 				}
 			} else {
+				if (gDelayedShotObj) {
+					cancelAndCleanupDelayedShot();
+				}
 				// imemdiate freeze
 				shootAllMons(aDOMWin);
 			}
@@ -1462,6 +1822,8 @@ function startup(aData, aReason) {
 		observers[o].reg();
 	}
 	//end observers stuff more
+	
+	aboutFactory_nativeshot = new AboutFactory(AboutNativeShot);
 }
 
 function shutdown(aData, aReason) {
@@ -1480,13 +1842,20 @@ function shutdown(aData, aReason) {
 	//end observers stuff more
 	
 	// clear intervals if any are pending
-	for (var intervalId in gColInterval) {
-		var aDOMWindow = gColInterval[intervalId].DOMWindow.get();
-		if (aDOMWindow && !aDOMWindow.closed/* && gColInterval[intervalId].time_left > 0*/) {
-			aDOMWindow.clearInterval(gColInterval[intervalId].interval);
-			delete gColInterval[intervalId];
-		}
+	if (gDelayedShotObj) {
+		cancelAndCleanupDelayedShot();
 	}
+	
+	if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
+		gPostPrintRemovalFunc();
+	}
+	
+	for (var id in gColReuploadTimers) {
+		gColReuploadTimers[id].timer.cancel();
+		delete gColReuploadTimers[id];
+	}
+	
+	aboutFactory_nativeshot.unregister();
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
 }
@@ -1663,6 +2032,7 @@ function getSafedForOSPath(aStr, useNonDefaultRepChar) {
 	}
 }
 function xhr(aStr, aOptions={}) {
+	// update 072615 - added support for aOptions.aMethod
 	// currently only setup to support GET and POST
 	// does an async request
 	// aStr is either a string of a FileURI such as `OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'test.png'));` or a URL such as `http://github.com/wet-boew/wet-boew/archive/master.zip`
@@ -1699,9 +2069,9 @@ function xhr(aStr, aOptions={}) {
 	
 	var deferredMain_xhr = new Deferred();
 	console.log('here222');
-	let xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
 
-	let handler = ev => {
+	var handler = ev => {
 		evf(m => xhr.removeEventListener(m, handler, !1));
 
 		switch (ev.type) {
@@ -1759,7 +2129,7 @@ function xhr(aStr, aOptions={}) {
 		}
 	};
 
-	let evf = f => ['load', 'error', 'abort'].forEach(f);
+	var evf = f => ['load', 'error', 'abort'].forEach(f);
 	evf(m => xhr.addEventListener(m, handler, false));
 
 	if (aOptions.isBackgroundReq) {
@@ -1798,7 +2168,7 @@ function xhr(aStr, aOptions={}) {
 		console.info('aPostStr:', aPostStr.join('&'));
 		xhr.send(aPostStr.join('&'));
 	} else {
-		xhr.open('GET', aStr, true);
+		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'GET', aStr, true);
 		do_setHeaders();
 		xhr.channel.loadFlags |= aOptions.aLoadFlags;
 		xhr.responseType = aOptions.aResponseType;
@@ -2033,5 +2403,15 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 	
 	
 	return deferred_tryOsFile_ifDirsNoExistMakeThenRetry.promise;
+}
+function showFileInOSExplorer(aNsiFile) {
+	//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
+	// opens the directory of the aNsiFile
+	
+	if (aNsiFile.isDirectory()) {
+		aNsiFile.launch();
+	} else {
+		aNsiFile.reveal();
+	}
 }
 // end - common helper functions
