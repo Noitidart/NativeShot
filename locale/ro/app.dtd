@@ -1,0 +1,10 @@
+<!ENTITY nativeshot.app.title 'NativeShot'>
+<!ENTITY nativeshot.app.desc 'Capture and edit screenshots of anything on any monitor'>
+
+<!ENTITY nativeshot.app.history 'History'>
+
+<!ENTITY nativeshot.app.img-host-anon-imgur-title 'Image Host - Anonymous Uploads - Imgur'>
+
+<!ENTITY nativeshot.app.image 'Image'>
+<!ENTITY nativeshot.app.link 'Link'>
+<!ENTITY nativeshot.app.delete 'Delete'>
