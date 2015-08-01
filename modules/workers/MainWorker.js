@@ -145,6 +145,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					console.error('info:', aArrHwndPtrStr[i]);
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					
+					/*
 					var xevent = ostypes.TYPE.XEvent();
 					console.info('xevent:', uneval(xevent));
 					
@@ -162,9 +163,107 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
 					console.log('rez_SendEv:', rez_SendEv, rez_SendEv.toString());
+					*/
+					
+					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					
+					// testing XListProperties
+					var numAtoms = ostypes.TYPE.int();
+					var rez_ListProp = ostypes.API('XListProperties')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, numAtoms.address());
+					console.info('rez_ListProp:', rez_ListProp.toString());
+					console.info('numAtoms:', numAtoms);
+					//if (cutils.jscEqual(rez_ListProp, ostypes.CONST.BadWindow)) { // need to figure out how to test this, it seems when rez_ListProp is null, so im not sure how to get BadWindow its just not returning it // throw new Error('XListProperties failed with reason BadWindow'); // }
+					if (rez_ListProp.isNull()) {
+						// then probably failed
+						throw new Error('XListProperties probably failed with BadWindow BUT is possible the window really has no properties set on it in which case i should not throw error on this line');
+					}
+					
+					var atomsJS = ctypes.cast(rez_ListProp, ostypes.TYPE.Atom.array(parseInt(cutils.jscGetDeepest(numAtoms))).ptr).contents;
+					console.info('atomsJS:', atomsJS);
+					var atomsC = rez_ListProp;
+					numAtoms = parseInt(cutils.jscGetDeepest(numAtoms));
+					
+					// ostypes.API('XFree')(rez_ListProp); // must be done
+					
+					// test XGetAtomNames
+					
+					var atomsJS = [
+						1,
+						2,
+						3
+					];
+					var numAtoms = atomsJS.length;
+					var atomsC = ostypes.TYPE.Atom.array(atomsJS.length)(atomsJS);
+					
+					var atomNames = ostypes.TYPE.char.ptr();
+					console.info('atomNames:', atomNames.toString())
+					var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames.address());
+					console.info('rez_GetANames:', rez_GetANames.toString());
+					if (cutils.jscEqual(rez_GetANames, 0)) {
+						throw new Error('failed XGetAtomNames');
+					}
+					
+					// ostypes.API('XFree')(atomNames); // must be done
+					// ostypes.API('XFree')(rez_ListProp); // must be done
+					return;
+					
+					// https://github.com/HarveyHunt/barney/blob/bf43fef9ce95d1f7e2150973c2a28e0970bd8dfb/barney/bar.py#L199				
+					// the reason this XChangeProperty on _NET_WM_STATE is not working is because explained here: "http://standards.freedesktop.org/wm-spec/wm-spec-1.3.html#idm140130317612768" --> "A Client wishing to change the state of a window MUST send a _NET_WM_STATE client message to the root window (see below). The Window Manager MUST keep this property updated to reflect the current state of the window." meaning the WM will handle setting this, and I should be ADDing this from XSendEvent
+					var dataJS = [
+						ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK')
+					];
+					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+					
+					
+					// doesnt make it stay on top i dont know why, didnt do anything
+					var dataJS = [
+						ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE')
+					];
+					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_STATE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeAppend, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+
+					var dataJS = [
+						ostypes.HELPER.cachedAtom('_NET_WM_STATE_STICKY')
+					];
+					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_STATE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeAppend, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+
+					// make window show on all desktops
+					var dataJS = [
+						ostypes.TYPE.Atom('0xFFFFFFFF') // means all desktops
+					];
+					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 32; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_DESKTOP'), ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+					
+					/*
+					// change window title
+					var dataJS = [
+						String.charCodeAt('r'),
+						String.charCodeAt('a'),
+						String.charCodeAt('w'),
+					];
+					var dataC = ostypes.TYPE.unsigned_char.array(dataJS.length)(dataJS);
+					var dataCCasted = dataC; // no need to cast as it is already 8 byte //ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					var dataFormat = 8; // cuz unsigned_long
+					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_NAME'), ostypes.HELPER.cachedAtom('UTF8_STRING'), dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					console.info('rez_XChg:', rez_XChg.toString());
+					*/
 				}
 				
-				ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay()); // will not set on top if you dont do this
+				ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay()); // will not set on top if you dont do this, wont even change window title name which was done via XChangeProperty, MUST FLUSH
 				
 				/*
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {

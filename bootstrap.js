@@ -344,7 +344,7 @@ var gCanDim = {
 					// adjust width and height, needed for multi monitor selection correction
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.w] = rectIntersecting.width;
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.h] = rectIntersecting.height;
-					console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
+					//console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
 				}
 				// end - block link6587436215
 			}

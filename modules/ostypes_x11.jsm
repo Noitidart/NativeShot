@@ -239,6 +239,8 @@ var x11Init = function() {
 		XA_WINDOW: 33,
 		RR_CONNECTED: 0,
 		PropModeReplace: 0,
+		PropModePrepend: 1,
+		PropModeAppend: 2,
 		ClientMessage: 33,
 		_NET_WM_STATE_REMOVE: 0,
 		_NET_WM_STATE_ADD: 1,
@@ -598,6 +600,23 @@ var x11Init = function() {
 				self.TYPE.XWindowAttributes.ptr	// *window_attributes_return
 			); 
 		},
+		XGetAtomNames: function() {
+			/* http://www.x.org/releases/X11R7.5/doc/man/man3/XGetAtomNames.3.html
+			 * Status XGetAtomNames (
+			 *   Display *display,
+			 *   Atom *atoms,
+			 *   int count,
+			 *   char **names_return
+			 * );
+			 */
+			return lib('x11').declare('XGetAtomNames', self.TYPE.ABI,
+				self.TYPE.Status,		// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Atom.ptr,		// *atoms
+				self.TYPE.int,			// count
+				self.TYPE.char.ptr.ptr	// **names_return
+			);
+		},
 		XGetWindowProperty: function() {
 			/* http://www.xfree86.org/4.4.0/XGetWindowProperty.3.html
 			 * int XGetWindowProperty(
@@ -618,7 +637,7 @@ var x11Init = function() {
 			return lib('x11').declare('XGetWindowProperty', self.TYPE.ABI,
 				self.TYPE.int,					// return
 				self.TYPE.Display.ptr,			// *display
-				self.TYPE.Window,					// w
+				self.TYPE.Window,				// w
 				self.TYPE.Atom,					// property
 				self.TYPE.long,					// long_offset
 				self.TYPE.long,					// long_length
@@ -626,9 +645,24 @@ var x11Init = function() {
 				self.TYPE.Atom,					// req_type
 				self.TYPE.Atom.ptr,				// *actual_type_return
 				self.TYPE.int.ptr,				// *actual_format_return
-				self.TYPE.unsigned_long.ptr,		// *nitems_return
-				self.TYPE.unsigned_long.ptr,		// *bytes_after_return
+				self.TYPE.unsigned_long.ptr,	// *nitems_return
+				self.TYPE.unsigned_long.ptr,	// *bytes_after_return
 				self.TYPE.unsigned_char.ptr.ptr	// **prop_return
+			);
+		},
+		XListProperties: function() {
+			/* http://tronche.com/gui/x/xlib/window-information/XListProperties.html
+			 * Atom *XListProperties(
+			 *   Display *display,
+			 *   Window w,
+			 *   int *num_prop_return
+			 * )
+			 */
+			return lib('x11').declare('XListProperties', self.TYPE.ABI,
+				self.TYPE.Atom.ptr,			// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.Window,			// w
+				self.TYPE.int.ptr			// *num_prop_return
 			);
 		},
 		XGetWMName: function() {
