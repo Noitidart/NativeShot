@@ -166,6 +166,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					*/
 					
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					console.error('got xwin');
 					
 					// testing XListProperties
 					var numAtoms = ostypes.TYPE.int();
@@ -202,6 +203,8 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					if (cutils.jscEqual(rez_GetANames, 0)) {
 						throw new Error('failed XGetAtomNames');
 					}
+					
+					console.error('ok finned');
 					
 					// ostypes.API('XFree')(atomNames); // must be done
 					// ostypes.API('XFree')(rez_ListProp); // must be done
