@@ -208,9 +208,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					for (var i=0; i<atomNames.length; i++) {
 						console.log('ATOM INFO - ', 'int:', atomsJS[i], 'atom name:', atomNames[i].readString());
+						ostypes.API('XFree')(atomNames[i]); // must be done
 					}
 					
-					ostypes.API('XFree')(atomNames); // must be done
 					ostypes.API('XFree')(rez_ListProp); // must be done
 					return;
 					
