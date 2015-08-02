@@ -195,10 +195,10 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					];
 					var numAtoms = atomsJS.length;
 					var atomsC = ostypes.TYPE.Atom.array(atomsJS.length)(atomsJS);
+					*/
 					
 					var atomNames = ostypes.TYPE.char.ptr.array(numAtoms)();
 					console.info('atomNames:', atomNames.toString())
-					*/
 					var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames);
 					console.info('rez_GetANames:', rez_GetANames.toString());
 					if (cutils.jscEqual(rez_GetANames, 0)) {
