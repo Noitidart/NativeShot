@@ -189,15 +189,15 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// ostypes.API('XFree')(rez_ListProp); // must be done
 					
 					// test XGetAtomNames
-					/*
-					var atomsJS = [
-						1,
-						2,
-						3
-					];
-					var numAtoms = atomsJS.length;
-					var atomsC = ostypes.TYPE.Atom.array(atomsJS.length)(atomsJS);
-					*/
+					
+					// // var atomsJS = [
+					// // 	1,
+					// // 	2,
+					// // 	3
+					// // ];
+					// // var numAtoms = atomsJS.length;
+					// // var atomsC = ostypes.TYPE.Atom.array(atomsJS.length)(atomsJS);
+					
 					
 					var atomNames = ostypes.TYPE.char.ptr.array(numAtoms)();
 					console.info('atomNames:', atomNames.toString())
