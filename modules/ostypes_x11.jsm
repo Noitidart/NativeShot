@@ -558,6 +558,17 @@ var x11Init = function() {
 				self.TYPE.void.ptr	// *data
 			);
 		},
+		XFreeStringList: function() {
+			/* http://www.xfree86.org/4.4.0/XFreeStringList.3.html
+			 * void XFreeStringList (
+			 *   char **list
+			 * );
+			 */
+			return lib('x11').declare('XFreeStringList', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.char.ptr.ptr	// **list
+			);
+		},
 		XGetGeometry: function() {
 			/* http://www.xfree86.org/4.4.0/XGetGeometry.3.html
 			 * Status XGetGeometry(

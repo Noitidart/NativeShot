@@ -208,8 +208,11 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					for (var i=0; i<atomNames.length; i++) {
 						console.log('ATOM INFO - ', 'int:', atomsJS[i], 'atom name:', atomNames[i].readString());
-						ostypes.API('XFree')(atomNames[i]); // must be done
+						//ostypes.API('XFree')(atomNames[i]);
 					}
+					
+					// doing XFree on atomNames seemed to cause an eventual crash, so i did XFree on each element and that seemed to not crash, i am now trying to see if I can do a XFreeStringList instead of XFree on each item
+					ostypes.API('XFreeStringList')(atomNames);
 					
 					ostypes.API('XFree')(rez_ListProp); // must be done
 					return;
