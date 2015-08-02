@@ -205,7 +205,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					}
 					console.info('atomNames:', atomNames.toString())
 					
-					for (var i=0; i<atomsNames.length; i++) {
+					for (var i=0; i<atomNames.length; i++) {
 						console.log('ATOM INFO - ', 'int:', atomsJS[i], 'atom name:', atomNames[i].readString());
 					}
 					
