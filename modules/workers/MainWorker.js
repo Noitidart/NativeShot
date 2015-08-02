@@ -224,7 +224,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// XFreeStringList crashes it almost immediately
 					// XFree on atomNames crashes it eventually
 					// XFree on each element seems the only crash free way
-					ostypes.API('XFreeStringList')(atomNames.address());
+					ostypes.API('XFreeStringList')(atomNames);
 					ostypes.API('XFree')(rez_ListProp); // must be done
 
 					return;
