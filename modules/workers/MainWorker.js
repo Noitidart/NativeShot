@@ -203,11 +203,14 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					if (cutils.jscEqual(rez_GetANames, 0)) {
 						throw new Error('failed XGetAtomNames');
 					}
+					console.info('atomNames:', atomNames.toString())
 					
-					console.error('ok finned');
+					for (var i=0; i<atomsNames.length; i++) {
+						console.log('ATOM INFO - ', 'int:', atomsJS[i], 'atom name:', atomNames[i].readString());
+					}
 					
-					// ostypes.API('XFree')(atomNames); // must be done
-					// ostypes.API('XFree')(rez_ListProp); // must be done
+					ostypes.API('XFree')(atomNames); // must be done
+					ostypes.API('XFree')(rez_ListProp); // must be done
 					return;
 					
 					// https://github.com/HarveyHunt/barney/blob/bf43fef9ce95d1f7e2150973c2a28e0970bd8dfb/barney/bar.py#L199				
