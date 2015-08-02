@@ -187,7 +187,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// ostypes.API('XFree')(rez_ListProp); // must be done
 					
 					// test XGetAtomNames
-					
+					/*
 					var atomsJS = [
 						1,
 						2,
@@ -198,6 +198,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					var atomNames = ostypes.TYPE.char.ptr.array(numAtoms)();
 					console.info('atomNames:', atomNames.toString())
+					*/
 					var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames);
 					console.info('rez_GetANames:', rez_GetANames.toString());
 					if (cutils.jscEqual(rez_GetANames, 0)) {
