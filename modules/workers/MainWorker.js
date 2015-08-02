@@ -166,6 +166,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					*/
 					
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					console.error('got xwin');
 					
 					// testing XListProperties
 					var numAtoms = ostypes.TYPE.int();
@@ -186,7 +187,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// ostypes.API('XFree')(rez_ListProp); // must be done
 					
 					// test XGetAtomNames
-					
+					/*
 					var atomsJS = [
 						1,
 						2,
@@ -194,17 +195,30 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					];
 					var numAtoms = atomsJS.length;
 					var atomsC = ostypes.TYPE.Atom.array(atomsJS.length)(atomsJS);
+					*/
 					
-					var atomNames = ostypes.TYPE.char.ptr();
+					var atomNames = ostypes.TYPE.char.ptr.array(numAtoms)();
 					console.info('atomNames:', atomNames.toString())
-					var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames.address());
+					var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames);
 					console.info('rez_GetANames:', rez_GetANames.toString());
 					if (cutils.jscEqual(rez_GetANames, 0)) {
 						throw new Error('failed XGetAtomNames');
 					}
+					console.info('atomNames:', atomNames.toString())
 					
-					// ostypes.API('XFree')(atomNames); // must be done
-					// ostypes.API('XFree')(rez_ListProp); // must be done
+					for (var i=0; i<atomNames.length; i++) {
+						console.log('ATOM INFO - ', 'int:', atomsJS[i], 'atom name:', atomNames[i].readString());
+						ostypes.API('XFree')(atomNames[i]);
+					}
+					
+					// doing XFree on atomNames seemed to cause an eventual crash, so i did XFree on each element and that seemed to not crash, i am now trying to see if I can do a XFreeStringList instead of XFree on each item
+					//ostypes.API('XFreeStringList')(atomNames);
+					
+					// XFreeStringList crashes it almost immediately
+					// XFree on atomNames crashes it eventually
+					// XFree on each element seems the only crash free way
+					
+					ostypes.API('XFree')(rez_ListProp); // must be done
 					return;
 					
 					// https://github.com/HarveyHunt/barney/blob/bf43fef9ce95d1f7e2150973c2a28e0970bd8dfb/barney/bar.py#L199				

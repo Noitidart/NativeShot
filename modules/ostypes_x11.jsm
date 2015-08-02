@@ -558,6 +558,17 @@ var x11Init = function() {
 				self.TYPE.void.ptr	// *data
 			);
 		},
+		XFreeStringList: function() {
+			/* http://www.xfree86.org/4.4.0/XFreeStringList.3.html
+			 * void XFreeStringList (
+			 *   char **list
+			 * );
+			 */
+			return lib('x11').declare('XFreeStringList', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.char.ptr.ptr	// **list
+			);
+		},
 		XGetGeometry: function() {
 			/* http://www.xfree86.org/4.4.0/XGetGeometry.3.html
 			 * Status XGetGeometry(
@@ -601,7 +612,8 @@ var x11Init = function() {
 			); 
 		},
 		XGetAtomNames: function() {
-			/* http://www.x.org/releases/X11R7.5/doc/man/man3/XGetAtomNames.3.html
+			/* NOTE: XGetAtomNames() is more efficient, but doesn't exist in X11R5. Source: https://github.com/JohnArchieMckown/nedit/blob/b4560954930d28113086b5471ffcda27a3d28e77/source/server_common.c#L130
+			 * http://www.x.org/releases/X11R7.5/doc/man/man3/XGetAtomNames.3.html
 			 * Status XGetAtomNames (
 			 *   Display *display,
 			 *   Atom *atoms,
