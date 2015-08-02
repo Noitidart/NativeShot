@@ -1287,7 +1287,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	};
 	
 	// if (core.os.name != 'darwinAAAA') {
+		console.error('going to send out ot main');
 		var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
+		console.error('ok sent to main');
 		promise_setWinAlwaysTop.then(
 			function(aVal) {
 				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
