@@ -172,7 +172,6 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
 					console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
 
-					return;
 					
 					/*
 					
@@ -231,14 +230,14 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					// https://github.com/HarveyHunt/barney/blob/bf43fef9ce95d1f7e2150973c2a28e0970bd8dfb/barney/bar.py#L199				
 					// the reason this XChangeProperty on _NET_WM_STATE is not working is because explained here: "http://standards.freedesktop.org/wm-spec/wm-spec-1.3.html#idm140130317612768" --> "A Client wishing to change the state of a window MUST send a _NET_WM_STATE client message to the root window (see below). The Window Manager MUST keep this property updated to reflect the current state of the window." meaning the WM will handle setting this, and I should be ADDing this from XSendEvent
-					var dataJS = [
-						ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK')
-					];
-					var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
-					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-					var dataFormat = 32; // cuz unsigned_long
-					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-					console.info('rez_XChg:', rez_XChg.toString());
+					// var dataJS = [
+						// ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK')
+					// ];
+					// var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
+					// var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					// var dataFormat = 32; // cuz unsigned_long
+					// var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					// console.info('rez_XChg:', rez_XChg.toString());
 
 					// make window show on all desktops
 					var dataJS = [
