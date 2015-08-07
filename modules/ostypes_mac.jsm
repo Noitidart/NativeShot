@@ -424,9 +424,21 @@ var macInit = function() {
 				self.TYPE.CGDirectDisplayID
 			);
 		},
+		CGDisplayHideCursor: function() {
+			return lib('CoreGraphics').declare("CGDisplayHideCursor", self.TYPE.ABI,
+				self.TYPE.CGError,
+				self.TYPE.CGDirectDisplayID
+			);
+		},
 		CGDisplayMirrorsDisplay: function() {
 			return lib('CoreGraphics').declare('CGDisplayMirrorsDisplay', self.TYPE.ABI,
 				self.TYPE.CGDirectDisplayID,
+				self.TYPE.CGDirectDisplayID
+			);
+		},
+		CGDisplayShowCursor: function() {
+			return lib('CoreGraphics').declare("CGDisplayShowCursor", self.TYPE.ABI,
+				self.TYPE.CGError,
 				self.TYPE.CGDirectDisplayID
 			);
 		},
