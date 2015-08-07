@@ -1519,7 +1519,7 @@ function shootAllMons(aDOMWindow) {
 	gESelected = false;
 	var openWindowOnEachMon = function() {
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,width=1,height=1,screenX=1,screenY=1', null);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=1,screenX=1,screenY=1', null);
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,

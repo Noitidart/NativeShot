@@ -109,6 +109,52 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
+function getAllWin(aOptions) {
+	// returns an array of objects a list of all the windows in z order front to back:
+	/*
+		[
+			{
+				hwnd: window handle, hwnd for windows, gdkWindow* for gtk, nswindow for mac,
+				pid: process id, if set getPid to true
+				title: window title name, set getTitle true,
+				bounds: window rect, set getBounds true,
+				icon: custom icon for the window, set getIcon true,
+			},
+			{},
+		]
+	*/
+	/*
+	aOptions = {
+		activeWorkspace: bool, set to true if you want only the windows on the active workspace from each monitor,
+		getPid: bool, set to true if u want it,
+		getTitle: bool, set to true if you want it,
+		getBounds: bool, set to true if you want it,
+		getIcon: bool, set to true if you want to test if window has custom icon, if it does it returns its byte data? maybe hwnd? not sure maybe different per os, but if it doesnt have custom icon then key is present but set to null,
+		getAlwaysTop: bool, set to true if you want to test if window is set to always on top
+	}
+	*/
+	
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+			
+				
+			
+			break;
+		case 'gtk':
+			
+				
+			
+			break;
+		case 'darwin':
+			
+				
+			
+			break;
+		default:
+			console.error('os not supported');
+	}
+}
+
 function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 	// aArrHwndPtrStr is an array of multiple hwnds, each of them will get set to always on top
 	// aOptions holds keys that are hwndPtrStr in aArr and hold params like, left, right, top, left needed for x11 strut partial stuff OR for SetWindowPos for winapi
@@ -146,7 +192,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
 					
-					/*
+					
 					var xevent = ostypes.TYPE.XEvent();
 					console.info('xevent:', uneval(xevent));
 					
@@ -165,16 +211,15 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
 					console.log('rez_SendEv always on top:', rez_SendEv, rez_SendEv.toString());
 
-					xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_STICKY');
-					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-					console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
+					// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_STICKY');
+					// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
+					// console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
 					
-					xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
-					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-					console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
+					// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
+					// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
+					// console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
 
-					*/
-					
+					/*
 					// testing XListProperties
 					var numAtoms = ostypes.TYPE.int();
 					var rez_ListProp = ostypes.API('XListProperties')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, numAtoms.address());
@@ -250,18 +295,17 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_DESKTOP'), ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
 					console.info('rez_XChg:', rez_XChg.toString());
 					
-					/*
-					// change window title
-					var dataJS = [
-						String.charCodeAt('r'),
-						String.charCodeAt('a'),
-						String.charCodeAt('w'),
-					];
-					var dataC = ostypes.TYPE.unsigned_char.array(dataJS.length)(dataJS);
-					var dataCCasted = dataC; // no need to cast as it is already 8 byte //ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-					var dataFormat = 8; // cuz unsigned_long
-					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_NAME'), ostypes.HELPER.cachedAtom('UTF8_STRING'), dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-					console.info('rez_XChg:', rez_XChg.toString());
+					// // change window title
+					// var dataJS = [
+					// 	String.charCodeAt('r'),
+					// 	String.charCodeAt('a'),
+					// 	String.charCodeAt('w'),
+					// ];
+					// var dataC = ostypes.TYPE.unsigned_char.array(dataJS.length)(dataJS);
+					// var dataCCasted = dataC; // no need to cast as it is already 8 byte //ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
+					// var dataFormat = 8; // cuz unsigned_long
+					// var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_NAME'), ostypes.HELPER.cachedAtom('UTF8_STRING'), dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
+					// console.info('rez_XChg:', rez_XChg.toString());
 					*/
 				}
 				
@@ -979,6 +1023,8 @@ function shootAllMons() {
 				var myNSStrings;
 				var allocNSBIP;
 				try {
+					var rez_hideCursor = ostypes.API('CGDisplayHideCursor')(ostypes.CONST.kCGNullDirectDisplay);
+					
 					myNSStrings = new ostypes.HELPER.nsstringColl();
 					
 					var rez_width = ostypes.API('CGRectGetWidth')(rect);
@@ -1122,6 +1168,8 @@ function shootAllMons() {
 					// end - try to get byte array
 				} finally {
 					console.error('starting finally block');
+					var rez_showCursor = ostypes.API('CGDisplayShowCursor')(ostypes.CONST.kCGNullDirectDisplay);
+					
 					if (allocNSBIP) {
 						var rez_relNSBPI = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
 						console.info('rez_relNSBPI:', rez_relNSBPI.toString());
