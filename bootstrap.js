@@ -190,7 +190,7 @@ var gEMDX = null; // mouse down x
 var gEMDY = null; // mouse down y
 var gESelectedRect = new Rect(0, 0, 0, 0);
 
-const gDefDimFillStyle = 'rgba(0, 0, 0, 0.4)';
+const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
 const gDefLineDash = [3, 2];
 const gDefStrokeStyle = '#ccc';
 const gDefLineWidth = '1';
@@ -573,6 +573,7 @@ var gEditor = {
 		}
 		
 		gEditor.pendingWinSelect = true;
+		gCanDim.execStyle('cursor', 'pointer');
 		
 	},
 	compositeSelection: function() {
@@ -1205,7 +1206,8 @@ function gEMouseDown(e) {
 	// check if mouse downed on move selection hit box
 	if (gEditor.pendingWinSelect) {
 		gEditor.pendingWinSelect = false;
-
+		gCanDim.execStyle('cursor', 'crosshair');
+		
 		console.log('user made win sel at point:', cEMDX, cEMDY);
 		
 		var do_selWinAtPt = function() {
@@ -1259,7 +1261,11 @@ function gEMouseDown(e) {
 			}
 		};
 		
-		colMon[iMon].E.DOMWindow.setTimeout(do_selWinAtPt, 100); // as winArr is populated async'ly. user may click before winArr is populated
+		if (gEditor.winArr) {
+			do_selWinAtPt();
+		} else {
+			colMon[iMon].E.DOMWindow.setTimeout(do_selWinAtPt, 100); // as winArr is populated async'ly. user may click before winArr is populated
+		}
 		
 	} else if (e.target.id == 'hitboxMoveSel') {
 		gEMoving = true;
@@ -1501,7 +1507,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var json = 
 	[
 		'xul:stack', {id:'contOfCans'},
-				['html:canvas', {draggable:'false',id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
+				['html:canvas', {draggable:'false',id:'canBase',width:w,height:h,style:'display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
 				['html:canvas', {draggable:'false',id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
 	];
 	
@@ -1577,7 +1583,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
 	}
 	
-	ctxDim.fillStyle = 'rgba(0, 0, 0, 0.6)';
+	ctxDim.fillStyle = gDefDimFillStyle;
 	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 
 	var menuElRef = {};
