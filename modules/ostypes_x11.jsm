@@ -573,7 +573,7 @@ var x11Init = function() {
 			/* http://www.xfree86.org/4.4.0/XGetGeometry.3.html
 			 * Status XGetGeometry(
 			 *   Display 		*display,
-			 *   Drawable		d,
+			 *   Drawable		d,	// It is legal to pass an InputOnly window as a drawable to this request. 
 			 *   Window			*root_return,
 			 *   int			*x_return,
 			 *   int			*y_return,
@@ -827,14 +827,14 @@ var x11Init = function() {
 			 *   unsigned int *nchildren_return
 			 * )
 			 */
-			return lib('x11').delcare('XQueryTree', self.TYPE.ABI,
+			return lib('x11').declare('XQueryTree', self.TYPE.ABI,
 				self.TYPE.Status,			// return
 				self.TYPE.Display.ptr,		// *display
 				self.TYPE.Window,			// w
 				self.TYPE.Window.ptr,		// *root_return
 				self.TYPE.Window.ptr,		// *parent_return
 				self.TYPE.Window.ptr.ptr,	// **children_return
-				self.TYPE.unsigned_int		// *nchildren_return
+				self.TYPE.unsigned_int.ptr	// *nchildren_return
 			);
 		},
 		// start - XRANDR
@@ -1083,6 +1083,32 @@ var x11Init = function() {
 				self._cacheAtoms[aAtomName] = atom;
 			}
 			return self._cacheAtoms[aAtomName];
+		},
+		getWinProp_ReturnStatus: function(devUserRequestedType, funcReturnedType, funcReturnedFormat, funcBytesAfterReturned, dontThrowOnDevTypeMismatch) {
+			// devUserRequestedType is req_type arg passed to XGetWindowProperty
+			// this tells us what the return of XGetWindowProperty means and if it needs XFree'ing
+			// returns < 0 if nitems_return is empty and no need for XFree. > 0 if needs XFree as there are items. 0 if no items but needs XFree, i have never seen this situation and so have not set up this to return 0
+				// -1 - console.log('The specified property does not exist for the specified window. The delete argument was ignored. The nitems_return argument will be empty.');
+				// -2 - must set dontThrowOnDevTypeMismatch to true else it throws - console.log('Specified property/atom exists on window but here because returns actual type does not match the specified type (the xgwpArg.req_type) you supplied to function. The delete argument was ignored. The nitems_return argument will be empty.');
+				// 1 - console.log('The specified property exists and either you assigned AnyPropertyType to the req_type argument or the specified type matched the actual property type of the returned data.');
+			
+			if (cutils.jscEqual(funcReturnedType, self.CONST.None) && cutils.jscEqual(funcReturnedFormat, 0) && cutils.jscEqual(funcBytesAfterReturned, 0)) {
+				// console.log('The specified property does not exist for the specified window. The delete argument was ignored. The nitems_return argument will be empty.');
+				return -1;
+			} else if (!cutils.jscEqual(devUserRequestedType, self.CONST.AnyPropertyType) && !cutils.jscEqual(devUserRequestedType, funcReturnedType)) {
+				// console.log('Specified property/atom exists on window but here because returns actual type does not match the specified type (the xgwpArg.req_type) you supplied to function. The delete argument was ignored. The nitems_return argument will be empty.');
+				console.info('devUserRequestedType:', cutils.jscGetDeepest(devUserRequestedType));
+				console.info('funcReturnedType:', cutils.jscGetDeepest(funcReturnedType));
+				if (!dontThrowOnDevTypeMismatch) {
+					throw new Error('devuser supplied wrong type for title, fix it stupid, or maybe not a throw? maybe intentionally wrong? to just check if it exists on the window but dont want any data returend as dont want to XFree?');
+				}
+				return -2;
+			} else if (cutils.jscEqual(devUserRequestedType, self.CONST.AnyPropertyType) || cutils.jscEqual(devUserRequestedType, funcReturnedType)) {
+				// console.log('The specified property exists and either you assigned AnyPropertyType to the req_type argument or the specified type matched the actual property type of the returned data.');
+				return 1;
+			}  else {
+				throw new Error('should never get here')
+			}
 		}
 	};
 };

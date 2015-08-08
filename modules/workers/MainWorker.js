@@ -229,8 +229,95 @@ function getAllWin(aOptions) {
 			break;
 		case 'gtk':
 			
-				var rez_XQ = XQueryTree(ostypes.HELPER.cachedXOpenDisplay(), w, wRoot.address(), wParent.address(), wChild.address(), nChildren.address()); // interesting note about XQueryTree and workspaces: "The problem with this approach is that it will only return windows on the same virtual desktop.  In the case of multiple virtual desktops, windows on other virtual desktops will be ignored." source: http://www.experts-exchange.com/Programming/System/Q_21443252.html
-				searchForPidStartingAtWindow(_x11RootWindow, _x11Display);
+				var xqRoot = ostypes.TYPE.Window();
+				var xqParent = ostypes.TYPE.Window();
+				var xqChildArr = ostypes.TYPE.Window.ptr();
+				var nChilds = ostypes.TYPE.unsigned_int();
+				
+				var gpTypeReturned = ostypes.TYPE.Atom();
+				var gpFormatReturned = ostypes.TYPE.int();
+				var gpNItemsReturned = ostypes.TYPE.unsigned_long();
+				var gpBytesAfterReturn = ostypes.TYPE.unsigned_long();
+				var gpItemsArr = ostypes.TYPE.unsigned_char.ptr();
+				
+				var geoRoot = ostypes.TYPE.Window();
+				var geoX = ostypes.TYPE.int();
+				var geoY = ostypes.TYPE.int();
+				var geoW = ostypes.TYPE.unsigned_int();
+				var geoH = ostypes.TYPE.unsigned_int();
+				var geoBorderWidth = ostypes.TYPE.unsigned_int();
+				var geoDepth = ostypes.TYPE.unsigned_int();
+				
+				var processWin = function(w) {
+					// test if win qualifies
+					var winQualifiesForRezWinArr = true;
+					if (winQualifiesForRezWinArr) {
+						var thisWin = {};
+						// fetch props on thisWin
+						
+						if (aOptions.getPid) {
+							var rez_pid = ostypes.API('XGetWindowProperty')(ostypes.HELPER.cachedXOpenDisplay(), w, ostypes.HELPER.cachedAtom('_NET_WM_PID'), 0, 1, ostypes.CONST.False, ostypes.CONST.XA_CARDINAL, gpTypeReturned.address(), gpFormatReturned.address(), gpNItemsReturned.address(), gpBytesAfterReturn.address(), gpItemsArr.address());
+							if (ostypes.HELPER.getWinProp_ReturnStatus(ostypes.CONST.XA_CARDINAL, gpTypeReturned, gpFormatReturned, gpBytesAfterReturn) == 1) {
+								var jsN = parseInt(cutils.jscGetDeepest(gpNItemsReturned));
+								if (jsN == 0) {
+									thisWin.pid = null; // set to null as this window did not have a pid, but i add the key indicating i tested for it and the window had the proerty
+								} else {
+									//console.info('gpItemsArr:', gpItemsArr.toString(), 'casted:', ctypes.cast(gpItemsArr, ostypes.TYPE.CARD32).toString(), 'casted to single el:', ctypes.cast(gpItemsArr, ostypes.TYPE.CARD32.array(1).ptr).contents.toString()); // "gpItemsArr:" "ctypes.unsigned_char.ptr(ctypes.UInt64("0x7f229409d710"))" "casted:" "ctypes.unsigned_int(2483672848)" "casted to single el:" "ctypes.unsigned_int.array(1)([2212])" // showing that it must be cast and not just to type cuz its single element, but to array of 1 element
+									thisWin.pid = parseInt(cutils.jscGetDeepest(ctypes.cast(gpItemsArr, ostypes.TYPE.CARD32.array(1).ptr).contents[0]));
+								}
+								ostypes.API('XFree')(gpItemsArr);
+							} else {
+								thisWin.pid = undefined; // window didnt even have property
+							}
+						}
+						
+						if (aOptions.getTitle) {
+							var rez_title = ostypes.API('XGetWindowProperty')(ostypes.HELPER.cachedXOpenDisplay(), w, ostypes.HELPER.cachedAtom('_NET_WM_NAME'), 0, 256 /* this number times 4 is maximum ctypes.char that can be returned*/, ostypes.CONST.False, ostypes.HELPER.cachedAtom('UTF8_STRING'), gpTypeReturned.address(), gpFormatReturned.address(), gpNItemsReturned.address(), gpBytesAfterReturn.address(), gpItemsArr.address());
+							if (ostypes.HELPER.getWinProp_ReturnStatus(ostypes.HELPER.cachedAtom('UTF8_STRING'), gpTypeReturned, gpFormatReturned, gpBytesAfterReturn) == 1) {
+								var jsN = parseInt(cutils.jscGetDeepest(gpNItemsReturned));
+								if (jsN == 0) {
+									thisWin.title = ''; // window had property but not title
+								} else {
+									thisWin.title = ctypes.cast(gpItemsArr, ostypes.TYPE.char.array(jsN).ptr).contents.readString();
+								}
+								ostypes.API('XFree')(gpItemsArr);
+							} else {
+								thisWin.title = undefined; // window didnt even have property
+							}
+						}
+						
+						if (aOptions.getBounds) {
+							var rez_bounds = ostypes.API('XGetGeometry')(ostypes.HELPER.cachedXOpenDisplay(), w, geoRoot.address(), geoX.address(), geoY.address(), geoW.address(), geoH.address(), geoBorderWidth.address(), geoDepth.address());
+							thisWin.left = parseInt(cutils.jscGetDeepest(geoX));
+							thisWin.top = parseInt(cutils.jscGetDeepest(geoY));
+							
+							var borderWidth = parseInt(cutils.jscGetDeepest(geoBorderWidth));
+							thisWin.width = parseInt(cutils.jscGetDeepest(geoW)) + borderWidth;
+							thisWin.height = parseInt(cutils.jscGetDeepest(geoH)) + borderWidth;
+							
+							thisWin.right = thisWin.left + thisWin.width;
+							thisWin.bottom = thisWin.top + thisWin.height;
+						}
+						
+						rezWinArr.push(thisWin);
+					}
+					
+					// dig the win even if it doesnt qualify
+					var rez_XQ = ostypes.API('XQueryTree')(ostypes.HELPER.cachedXOpenDisplay(), w, xqRoot.address(), xqParent.address(), xqChildArr.address(), nChilds.address()); // interesting note about XQueryTree and workspaces: "The problem with this approach is that it will only return windows on the same virtual desktop.  In the case of multiple virtual desktops, windows on other virtual desktops will be ignored." source: http://www.experts-exchange.com/Programming/System/Q_21443252.html
+					
+					var jsNC = parseInt(cutils.jscGetDeepest(nChilds));
+					
+					if (jsNC > 0) {
+						var jsChildArr = ctypes.cast(xqChildArr, ostypes.TYPE.Window.array(jsNC).ptr).contents;
+						
+						for (var i=0; i<jsNC; i++) {
+							var wChild = jsChildArr[i];
+							processWin(wChild);
+						}
+					}
+				}
+				
+				processWin(ostypes.HELPER.cachedDefaultRootWindow());
 			
 			break;
 		case 'darwin':
