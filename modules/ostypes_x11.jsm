@@ -607,7 +607,7 @@ var x11Init = function() {
 			return lib('x11').declare('XGetWindowAttributes', self.TYPE.ABI,
 				self.TYPE.Status,				// return
 				self.TYPE.Display.ptr,			// *display
-				self.TYPE.Window,				// *display_name
+				self.TYPE.Window,				// w
 				self.TYPE.XWindowAttributes.ptr	// *window_attributes_return
 			); 
 		},

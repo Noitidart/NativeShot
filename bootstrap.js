@@ -190,7 +190,7 @@ var gEMDX = null; // mouse down x
 var gEMDY = null; // mouse down y
 var gESelectedRect = new Rect(0, 0, 0, 0);
 
-const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
+const gDefDimFillStyle = 'rgba(0, 0, 0, 0.4)';
 const gDefLineDash = [3, 2];
 const gDefStrokeStyle = '#ccc';
 const gDefLineWidth = '1';
@@ -1213,11 +1213,13 @@ function gEMouseDown(e) {
 				// go through all windows in z order and draw sel around the window rect that contains cEMDX, cEMDY
 				console.log('ok winArr is populated, lets go throgh and find it');
 				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
+				var first_nativeshot_canvas_found = false;
 				for (var i=0; i<gEditor.winArr.length; i++) {
-					var skipThisWinArrI_AsItIsNSWin = false;
 					if (gEditor.winArr[i].title == 'nativeshot_canvas') {
-						skipThisWinArrI_AsItIsNSWin = true;
-					} else {
+						first_nativeshot_canvas_found = true;
+						continue;
+					}/* else { // had to discontinue this block, as osx CGWindowListCopyWindowInfo doesnt give NSWindow for windows that are not of the process running the code, had to give nativeshot_canvas title and test that
+						var skipThisWinArrI_AsItIsNSWin = false;
 						for (var j=0; j<colMon.length; j++) {
 							if (i == 0) {
 								console.log('colMon[j].hwndPtrStr', j, colMon[j].hwndPtrStr);
@@ -1231,6 +1233,9 @@ function gEMouseDown(e) {
 					}
 					if (skipThisWinArrI_AsItIsNSWin) {
 						continue;
+					}*/
+					if (!first_nativeshot_canvas_found) {
+						continue; // find nativeshot_canvas first then start paying attention to windows, as context menu is above, on osx also the cursor gets a window and its element 0
 					}
 					if (cEMDX >= gEditor.winArr[i].left && cEMDX <= gEditor.winArr[i].right && cEMDY >= gEditor.winArr[i].top && cEMDY <= gEditor.winArr[i].bottom) {
 						console.log('selecting winArr element i:', i);
