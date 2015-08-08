@@ -229,12 +229,54 @@ function getAllWin(aOptions) {
 			break;
 		case 'gtk':
 			
-				
+				var rez_XQ = XQueryTree(ostypes.HELPER.cachedXOpenDisplay(), w, wRoot.address(), wParent.address(), wChild.address(), nChildren.address()); // interesting note about XQueryTree and workspaces: "The problem with this approach is that it will only return windows on the same virtual desktop.  In the case of multiple virtual desktops, windows on other virtual desktops will be ignored." source: http://www.experts-exchange.com/Programming/System/Q_21443252.html
+				searchForPidStartingAtWindow(_x11RootWindow, _x11Display);
 			
 			break;
 		case 'darwin':
 			
-				
+				var cfarr_win = ostypes.API('CGWindowListCopyWindowInfo')(ostypes.CONST.kCGWindowListOptionAll | ostypes.CONST.kCGWindowListExcludeDesktopElements, ostypes.CONST.kCGNullWindowID);
+				try {
+					var myNSStrings = new ostypes.HELPER.nsstringColl();
+					
+					var cnt_win = ostypes.API('CFArrayGetCount')(cfarr_win);
+					console.info('cnt_win:', cnt_win);
+					cnt_win = parseInt(cutils.jscGetDeepest(cnt_win));
+					console.info('cnt_win:', cnt_win);
+					
+					for (var i=0; i<cnt_win; i++) {
+						var thisWin = {};
+						var c_win = ostypes.API('CFArrayGetValueAtIndex')(cfarr_win, i);
+						
+						if (aOptions.getTitle) {
+							var windowName = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowName')); // (NSString *)[window objectForKey:@"kCGWindowName"];
+							var windowNameLen = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('length'));
+							console.info('windowNameLen:', windowNameLen);
+							windowNameLen = ctypes.cast(windowNameLen, ostypes.TYPE.NSUInteger);
+							console.info('windowNameLen casted:', windowNameLen);
+							windowNameLen = parseInt(cutils.jscGetDeepest(windowNameLen));
+							console.info('windowNameLen casted parseInted:', windowNameLen);
+							
+							if (windowNameLen == 0) {
+								thisWin.title = '';
+							} else {
+								var utf8str = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('UTF8String'));
+								var str_casted = ctypes.cast(utf8str, ostypes.TYPE.char.array(windowNameLen).ptr).contents;
+								console.info('str_casted:', str_casted.toString());
+								thisWin.title = str_casted.readString();
+							}
+							
+							rezWinArr.push(thisWin);
+						}
+					}
+
+				} finally {
+					ostypes.API('CFRelease')(cfarr_win);
+					
+					if (myNSStrings) {
+						myNSStrings.releaseAll()
+					}
+				}
 			
 			break;
 		default:

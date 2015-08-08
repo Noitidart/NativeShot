@@ -816,6 +816,27 @@ var x11Init = function() {
 				self.TYPE.XEvent.ptr	// *event_sent
 			); 
 		},
+		XQueryTree: function() {
+			/* http://tronche.com/gui/x/xlib/window-information/XQueryTree.html
+			 * Status XQueryTree (
+			 *   Display *display,
+			 *   Window w,
+			 *   Window *root_return,
+			 *   Window *parent_return,
+			 *   Window **children_return,
+			 *   unsigned int *nchildren_return
+			 * )
+			 */
+			return lib('x11').delcare('XQueryTree', self.TYPE.ABI,
+				self.TYPE.Status,			// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.Window,			// w
+				self.TYPE.Window.ptr,		// *root_return
+				self.TYPE.Window.ptr,		// *parent_return
+				self.TYPE.Window.ptr.ptr,	// **children_return
+				self.TYPE.unsigned_int		// *nchildren_return
+			);
+		},
 		// start - XRANDR
 		XRRGetScreenResources: function() {
 			/* http://cgit.freedesktop.org/xorg/lib/libXrandr/tree/src/XrrScreen.c

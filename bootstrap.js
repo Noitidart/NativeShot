@@ -1487,7 +1487,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	var json = 
 	[
 		'xul:stack', {id:'contOfCans'},
-				['html:canvas', {draggable:'false',id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
+				['html:canvas', {draggable:'false',id:'canBase',width:w,height:h,style:'display:-moz-box;cursor:crosshair;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
 				['html:canvas', {draggable:'false',id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
 	];
 	

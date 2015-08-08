@@ -45,8 +45,10 @@ var macTypes = function() {
 	this.CGDirectDisplayID = ctypes.uint32_t;
 	this.CGError = ctypes.int32_t;
 	this.CGFloat = is64bit ? ctypes.double : ctypes.float; // ctypes.float is 32bit deosntw ork as of May 10th 2015 see this bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1163406 this would cause crash on CGDisplayGetBounds http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac#comment48414568_28247749
+	this.CGWindowID = ctypes.uint32_t;
 	this.CGWindowLevel = ctypes.int32_t;
 	this.CGWindowLevelKey = ctypes.int32_t;
+	this.CGWindowListOption = ctypes.uint32_t;
 	this.ConstStr255Param = ctypes.unsigned_char.ptr;
 	this.ConstStringPtr = ctypes.unsigned_char.ptr;
 	this.OpaqueDialogPtr = ctypes.StructType("OpaqueDialogPtr");
@@ -246,6 +248,13 @@ var macInit = function() {
 		kCGCursorWindowLevelKey: 19,
 		kCGAssistiveTechHighWindowLevelKey: 20,
 		kCGNumberOfWindowLevelKeys: 21,
+		kCGNullWindowID: 0,
+		kCGWindowListOptionAll: 0,
+		kCGWindowListOptionOnScreenOnly: 1,
+		kCGWindowListOptionOnScreenAboveWindow: 2,
+		kCGWindowListOptionOnScreenBelowWindow: 4,
+		kCGWindowListOptionIncludingWindow: 8,
+		kCGWindowListExcludeDesktopElements: 16,
 		///////// OBJC - all consts are wrapped in a type as if its passed to variadic it needs to have type defind, see jsctypes chat with arai on 051015 357p
 		NO: self.TYPE.BOOL(0),
 		NSPNGFileType: self.TYPE.NSUInteger(4),
@@ -356,12 +365,25 @@ var macInit = function() {
 	// start - predefine your declares here
 	var preDec = { //stands for pre-declare (so its just lazy stuff) //this must be pre-populated by dev // do it alphabateized by key so its ez to look through
 		CFArrayCreate: function() {
-			return lib('CoreFoundation').declare("CFArrayCreate", self.TYPE.ABI,
+			return lib('CoreFoundation').declare('CFArrayCreate', self.TYPE.ABI,
 				self.TYPE.CFArrayRef,
 				self.TYPE.CFAllocatorRef,
 				self.TYPE.void.ptr.ptr,
 				self.TYPE.CFIndex,
 				self.TYPE.CFArrayCallBacks.ptr
+			);
+		},
+		CFArrayGetCount: function() {
+			return lib('CoreFoundation').declare('CFArrayGetCount', self.TYPE.ABI,
+				self.TYPE.CFIndex,
+				self.TYPE.CFArrayRef
+			);
+		},
+		CFArrayGetValueAtIndex: function() {
+			return lib('CoreFoundation').declare('CFArrayGetValueAtIndex', self.TYPE.ABI,
+				self.TYPE.void.ptr,
+				self.TYPE.CFArrayRef,
+				self.TYPE.CFIndex
 			);
 		},
 		CFStringCreateWithCharacters: function() {
@@ -461,6 +483,19 @@ var macInit = function() {
 			return lib('CoreGraphics').declare('CGWindowLevelForKey', self.TYPE.ABI,
 				self.TYPE.CGWindowLevel,
 				self.TYPE.CGWindowLevelKey
+			);
+		},
+		CGWindowListCopyWindowInfo: function() {
+			/* https://developer.apple.com/library/mac/documentation/Carbon/Reference/CGWindow_Reference/Reference/Functions.html
+			 * CFArrayRef CGWindowListCopyWindowInfo(
+			 *   CGWindowListOption option,
+			 *   CGWindowID relativeToWindow
+			 * );
+			 */
+			return lib('CoreGraphics').declare('CGWindowListCopyWindowInfo', self.TYPE.ABI,
+				self.TYPE.CFArrayRef,
+				self.TYPE.CGWindowListOption,
+				self.TYPE.CGWindowID
 			);
 		},
 		CGImageRelease: function() {
