@@ -87,10 +87,12 @@ var macTypes = function() {
 	// SIMPLE STRUCTS // based on any of the types above
 	this.__CFAllocator = ctypes.StructType('__CFAllocator');
 	this.__CFArray = ctypes.StructType("__CFArray");
+	this.__CFDictionary = new ctypes.StructType('__CFDictionary');
 	this.__CFRunLoop = ctypes.StructType("__CFRunLoop");
 	this.__CFString = ctypes.StructType('__CFString');
 	this.__CFURL = ctypes.StructType('__CFURL');
 	this.__FSEventStream = ctypes.StructType("__FSEventStream");
+	this.CFDictionaryRef = this.__CFDictionary.ptr;
 	this.CGImage = ctypes.StructType('CGImage');
 	this.CGContext = ctypes.StructType('CGContext');
 	this.CGPoint = ctypes.StructType('CGPoint', [
@@ -528,6 +530,19 @@ var macInit = function() {
 					self.TYPE.CGSize(width, height)
 				);
 			};
+		},
+		CGRectMakeWithDictionaryRepresentation: function() {
+			/* https://developer.apple.com/library/ios/documentation/GraphicsImaging/Reference/CGGeometry/index.html#//apple_ref/c/func/CGRectMakeWithDictionaryRepresentation
+			 * bool CGRectMakeWithDictionaryRepresentation (
+			 *   CFDictionaryRef dict,
+			 *   CGRect *rect
+			 * ); 
+			 */
+			return lib('CoreGraphics').declare('CGRectMakeWithDictionaryRepresentation', self.TYPE.ABI,
+				ctypes.bool,				// return
+				self.TYPE.CFDictionaryRef,	// dict
+				self.TYPE.CGRect.ptr		// *rect
+			);
 		},
 		CGRectGetHeight: function() {
 			return lib('CoreGraphics').declare('CGRectGetHeight', self.TYPE.ABI,

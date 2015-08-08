@@ -626,6 +626,8 @@ var gEditor = {
 			// end - mod of copied block link6587436215
 			
 			// this.canComp.style.position = 'fixed'; // :debug:
+			console.info('i:', i, 'colMon:', colMon, 'this.lastCompositedRect.left:', this.lastCompositedRect.left, 'this.lastCompositedRect.top:', this.lastCompositedRect.top, 'rectIntersecting.left:', rectIntersecting.left, 'rectIntersecting.top:', rectIntersecting.top, 'rectIntersecting.width:', rectIntersecting.width, 'rectIntersecting.height:', rectIntersecting.height);
+			console.info(colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			
 			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
@@ -1212,14 +1214,18 @@ function gEMouseDown(e) {
 				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
 				for (var i=0; i<gEditor.winArr.length; i++) {
 					var skipThisWinArrI_AsItIsNSWin = false;
-					for (var j=0; j<colMon.length; j++) {
-						if (i == 0) {
-							console.log('colMon[j].hwndPtrStr', j, colMon[j].hwndPtrStr);
-						}
-						if (colMon[j].hwndPtrStr == gEditor.winArr[i].hwnd) {
-							// this is a nativeshot canvas window, skip it
-							skipThisWinArrI_AsItIsNSWin = true;
-							break;
+					if (gEditor.winArr[i].title == 'nativeshot_canvas') {
+						skipThisWinArrI_AsItIsNSWin = true;
+					} else {
+						for (var j=0; j<colMon.length; j++) {
+							if (i == 0) {
+								console.log('colMon[j].hwndPtrStr', j, colMon[j].hwndPtrStr);
+							}
+							if (colMon[j].hwndPtrStr == gEditor.winArr[i].hwnd) {
+								// this is a nativeshot canvas window, skip it
+								skipThisWinArrI_AsItIsNSWin = true;
+								break;
+							}
 						}
 					}
 					if (skipThisWinArrI_AsItIsNSWin) {
@@ -1228,24 +1234,18 @@ function gEMouseDown(e) {
 					if (cEMDX >= gEditor.winArr[i].left && cEMDX <= gEditor.winArr[i].right && cEMDY >= gEditor.winArr[i].top && cEMDY <= gEditor.winArr[i].bottom) {
 						console.log('selecting winArr element i:', i);
 						gESelectedRect.setRect(gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height);
-						gCanDim.execFunc('clearRect', [gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height]);
+						gCanDim.execFunc('clearRect', [gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height]/*, {x:0,y:1,w:2,h:3}*/);
+						gESelected = true;
 						break;
 					}
 				}
 				
 			} else {
-				gEditor.compDOMWindow.setTimeout(do_selWinAtPt, 100);
+				colMon[iMon].E.DOMWindow.setTimeout(do_selWinAtPt, 100);
 			}
 		};
 		
-		if (!gEditor.compDOMWindow) {
-			// need to initalize it
-			gEditor.compDOMWindow = colMon[0].E.DOMWindow;
-			gEditor.canComp = gEditor.compDOMWindow.document.createElementNS(NS_HTML, 'canvas');
-			gEditor.ctxComp = gEditor.canComp.getContext('2d');
-		}
-		
-		gEditor.compDOMWindow.setTimeout(do_selWinAtPt, 100); // as winArr is populated async'ly. user may click before winArr is populated
+		colMon[iMon].E.DOMWindow.setTimeout(do_selWinAtPt, 100); // as winArr is populated async'ly. user may click before winArr is populated
 		
 	} else if (e.target.id == 'hitboxMoveSel') {
 		gEMoving = true;

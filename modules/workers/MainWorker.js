@@ -235,7 +235,7 @@ function getAllWin(aOptions) {
 			break;
 		case 'darwin':
 			
-				var cfarr_win = ostypes.API('CGWindowListCopyWindowInfo')(ostypes.CONST.kCGWindowListOptionAll | ostypes.CONST.kCGWindowListExcludeDesktopElements, ostypes.CONST.kCGNullWindowID);
+				var cfarr_win = ostypes.API('CGWindowListCopyWindowInfo')(ostypes.CONST.kCGWindowListOptionOnScreenOnly | ostypes.CONST.kCGWindowListExcludeDesktopElements, ostypes.CONST.kCGNullWindowID);
 				try {
 					var myNSStrings = new ostypes.HELPER.nsstringColl();
 					
@@ -251,23 +251,77 @@ function getAllWin(aOptions) {
 						if (aOptions.getTitle) {
 							var windowName = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowName')); // (NSString *)[window objectForKey:@"kCGWindowName"];
 							var windowNameLen = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('length'));
-							console.info('windowNameLen:', windowNameLen);
+							// console.info('windowNameLen:', windowNameLen);
 							windowNameLen = ctypes.cast(windowNameLen, ostypes.TYPE.NSUInteger);
-							console.info('windowNameLen casted:', windowNameLen);
+							// console.info('windowNameLen casted:', windowNameLen);
 							windowNameLen = parseInt(cutils.jscGetDeepest(windowNameLen));
-							console.info('windowNameLen casted parseInted:', windowNameLen);
+							// console.info('windowNameLen casted parseInted:', windowNameLen);
 							
-							if (windowNameLen == 0) {
+							if (windowNameLen == 0) { // can be 0 as its stated that kCGWindowName is an optional source: https://developer.apple.com/library/mac/documentation/Carbon/Reference/CGWindow_Reference/Constants/Constants.html#//apple_ref/doc/constant_group/Required_Window_List_Keys
 								thisWin.title = '';
 							} else {
 								var utf8str = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('UTF8String'));
 								var str_casted = ctypes.cast(utf8str, ostypes.TYPE.char.array(windowNameLen).ptr).contents;
-								console.info('str_casted:', str_casted.toString());
+								// console.info('str_casted:', str_casted.toString());
 								thisWin.title = str_casted.readString();
 							}
-							
-							rezWinArr.push(thisWin);
 						}
+						
+						if (aOptions.getPid) {
+							var rez_pid = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowOwnerPID'));
+							console.info('rez_pid:', rez_pid.toString());
+							
+							// rez_pid = ctypes.cast(rez_pid, ostypes.TYPE.NSInteger);
+							// console.info('rez_pid casted:', rez_pid);
+							
+							// rez_pid = parseInt(cutils.jscGetDeepest(rez_pid));
+							// console.info('rez_pid casted parseInted:', rez_pid);
+							// thisWin.pid = rez_pid;
+							
+							var int_pid = ostypes.API('objc_msgSend')(rez_pid, ostypes.HELPER.sel('integerValue'));
+							int_pid = ctypes.cast(int_pid, ostypes.TYPE.NSInteger);
+							// console.info('int_pid casted:', int_pid);
+							
+							int_pid = parseInt(cutils.jscGetDeepest(int_pid));
+							// console.info('int_pid casted parseInted:', int_pid);
+							thisWin.pid = int_pid;
+						}
+						
+						/*
+						// start debug i just want to see if fullscreen apps have a different workspace number
+						// if (aOptions.getPid) {
+							var rez_ws = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowWorkspace'));
+
+							var int_ws = ostypes.API('objc_msgSend')(rez_ws, ostypes.HELPER.sel('integerValue'));
+							int_ws = ctypes.cast(int_ws, ostypes.TYPE.NSInteger);
+							int_ws = parseInt(cutils.jscGetDeepest(int_ws));
+							thisWin.ws = int_ws;
+						// }
+						*/
+						
+						if (aOptions.getBounds) {
+							var rez_bs = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowBounds'));
+							console.info('rez_bs:', rez_bs);
+							
+							var bounds = ostypes.TYPE.CGRect();
+							rez_bs = ctypes.cast(rez_bs, ostypes.TYPE.CFDictionaryRef);
+							console.info('rez_bs casted:', rez_bs);
+							
+							var rez_makeBounds = ostypes.API('CGRectMakeWithDictionaryRepresentation')(rez_bs, bounds.address());
+							console.info('rez_makeBounds:', rez_makeBounds.toString());
+							
+							console.info('bounds:', bounds.toString());
+							
+							thisWin.left = parseInt(cutils.jscGetDeepest(bounds.origin.x));
+							thisWin.top = parseInt(cutils.jscGetDeepest(bounds.origin.y));
+							thisWin.width = parseInt(cutils.jscGetDeepest(bounds.size.width));
+							thisWin.height = parseInt(cutils.jscGetDeepest(bounds.size.height));
+
+							thisWin.right = thisWin.left + thisWin.width;
+							thisWin.bottom = thisWin.top + thisWin.height;
+						}
+						
+						rezWinArr.push(thisWin);
 					}
 
 				} finally {
