@@ -125,20 +125,107 @@ function getAllWin(aOptions) {
 	*/
 	/*
 	aOptions = {
-		activeWorkspace: bool, set to true if you want only the windows on the active workspace from each monitor,
+		filterVisible: bool, will only contain windows that are visible,
+		filterActiveWorkspace: bool, set to true if you want only the windows on the active workspace from each monitor,
 		getPid: bool, set to true if u want it,
 		getTitle: bool, set to true if you want it,
 		getBounds: bool, set to true if you want it,
-		getIcon: bool, set to true if you want to test if window has custom icon, if it does it returns its byte data? maybe hwnd? not sure maybe different per os, but if it doesnt have custom icon then key is present but set to null,
-		getAlwaysTop: bool, set to true if you want to test if window is set to always on top
+		getIcon: bool, set to true if you want to test if window has custom icon, if it does it returns its byte data? maybe hwnd? not sure maybe different per os, but if it doesnt have custom icon then key is present but set to null, // NOT YET SUPPORTED
+		getAlwaysTop: bool, set to true if you want to test if window is set to always on top, // NOT YET SUPPORTED
+		hwndAsPtr: bool, set to true if you want the hwnd to be ptr, otherwise it will be string of pointer, i recall that the loop would jack up and pointers would be bad so by default it will give strings, should verify and fix why the pointers were bad if they are aug 7 2015
 	}
 	*/
+	
+	var rezWinArr = [];
 	
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
+				if (aOptions.getPid) {
+					var PID = ostypes.TYPE.DWORD();
+				}
 				
+				if (aOptions.getTitle) {
+					var lpStringMax = 500; // i dont think there is a max length to this so lets just go with 500
+					var lpString = ostypes.TYPE.LPTSTR.targetType.array(lpStringMax)();
+				}
+				
+				if (aOptions.getBounds) {
+					var lpRect = ostypes.TYPE.RECT();
+				}
+				
+				var f = 0;
+				var SearchPD = function(hwnd, lparam) {
+					f++;
+					var thisWin = {};
+					
+					thisWin.hwnd = aOptions.hwndAsPtr ? hwnd : cutils.strOfPtr(hwnd);
+					
+					if (aOptions.filterVisible) {
+						var hwndStyle = ostypes.API('GetWindowLongPtr')(hwnd, ostypes.CONST.GWL_STYLE);
+						hwndStyle = parseInt(cutils.jscGetDeepest(hwndStyle));
+						if (hwndStyle & ostypes.CONST.WS_VISIBLE) {
+							
+						} else {
+							// window is not visible
+							return true; // continue iterating // do not push thisWin into rezWinArr
+						}
+					}
+					
+					if (aOptions.getPid) {
+						var rez_GWTPI = ostypes.API('GetWindowThreadProcessId')(hwnd, PID.address());
+						thisWin.pid = cutils.jscGetDeepest(PID);
+					}
+					
+					if (aOptions.getTitle) {
+						var rez_lenNotInclNullTerm = ostypes.API('GetWindowText')(hwnd, lpString, lpStringMax);
+						thisWin.title = lpString.readString();
+						var lenParseInt = parseInt(cutils.jscGetDeepest(rez_lenNotInclNullTerm)); // i dont think the rez_lenNotInclNullTerm will exceed lpStringMax even if truncated
+						for (var i=0; i<=lenParseInt; i++) { // need <= as len is till the last char, we need to reset it so we can reuse this var, otherwise if we read next thing into same buffer and its length is shorter, then we'll have left over chars from previous tagged on to the current
+							lpString[i] = 0;
+						}
+					}
+					
+					if (aOptions.getBounds) {
+						var rez_rect = ostypes.API('GetWindowRect')(hwnd, lpRect.address());
+						thisWin.left = cutils.jscGetDeepest(lpRect.left);
+						thisWin.top = cutils.jscGetDeepest(lpRect.top);
+						thisWin.bottom = cutils.jscGetDeepest(lpRect.bottom);
+						thisWin.right = cutils.jscGetDeepest(lpRect.right);
+						
+						thisWin.width = thisWin.right - thisWin.left;
+						thisWin.height = thisWin.bottom - thisWin.top;
+					}
+					
+					/*
+					//console.log(['PID.value: ', PID.value, PID.value == aProfilePID].join(' '));
+					if (cutils.jscEqual(PID, tPid)) {
+						var hwndStyle = ostypes.API('GetWindowLongPtr')(hwnd, ostypes.CONST.GWL_STYLE);
+						if (cutils.jscEqual(hwndStyle, 0)) {
+							throw new Error('Failed to GetWindowLongPtr');
+						}
+						hwndStyle = parseInt(cutils.jscGetDeepest(hwndStyle));
+						
+						// debug block
+						foundInOrder.push([cutils.strOfPtr(hwnd) + ' - ' + debugPrintAllStylesOnIt(hwndStyle)]); //debug
+						if (!focusThisHwnd && (hwndStyle & ostypes.CONST.WS_VISIBLE) && (hwndStyle & ostypes.CONST.WS_CAPTION)) {
+							foundInOrder.push('the hwnd above this row is what i will focus');
+							focusThisHwnd = cutils.strOfPtr(hwnd); // for some reason if i set this to just hwnd, the global var of focusThisHwnd is getting cut shortend to just 0x2 after this enum is complete later on, even though on find it is 0x10200 so weird!!
+						}
+						// end // debug block
+						return true; // keep iterating as debug
+					}
+					*/
+					
+					rezWinArr.push(thisWin);
+					
+					return true; // keep iterating
+				}
+				var SearchPD_ptr = ostypes.TYPE.WNDENUMPROC.ptr(SearchPD);
+				var wnd = ostypes.TYPE.LPARAM();
+				var rez_EnuMWindows = ostypes.API('EnumWindows')(SearchPD_ptr, wnd);
 			
+				console.info('total windows enumed:', f);
 			break;
 		case 'gtk':
 			
@@ -153,6 +240,9 @@ function getAllWin(aOptions) {
 		default:
 			console.error('os not supported');
 	}
+	
+	return rezWinArr;
+	
 }
 
 function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {

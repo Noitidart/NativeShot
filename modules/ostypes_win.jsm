@@ -301,7 +301,9 @@ var winInit = function() {
 		MDT_Effective_DPI: 0,
 		MDT_Angular_DPI: 1,
 		MDT_Raw_DPI: 2,
-		MDT_Default: 0 // MDT_Effective_DPI
+		MDT_Default: 0, // MDT_Effective_DPI
+		WS_VISIBLE: 0x10000000,
+		GWL_STYLE: -16
 	};
 
 	var _lib = {}; // cache for lib
@@ -530,6 +532,19 @@ var winInit = function() {
 			    self.TYPE.DEVMODE.ptr	// *lpDevMode
 			);
 		},
+		EnumWindows: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms633497%28v=vs.85%29.aspx
+			 * BOOL WINAPI EnumWindows(
+			 *   __in_  WNDENUMPROC lpEnumFunc,
+			 *   __in_  LPARAM lParam
+			 * );
+			 */
+			return lib('user32').declare('EnumWindows', self.TYPE.ABI,
+				self.TYPE.BOOL,				// return
+				self.TYPE.WNDENUMPROC.ptr,	// lpEnumFunc
+				self.TYPE.LPARAM			// lParam
+			);
+		},
 		GetClientRect: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633503%28v=vs.85%29.aspx
 			 * BOOL WINAPI GetClientRect(
@@ -629,6 +644,60 @@ var winInit = function() {
 				self.TYPE.HDC, // hWnd
 				self.TYPE.INT, // nXPos
 				self.TYPE.INT // nYPos
+			);
+		},
+		GetWindowLongPtr: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633585%28v=vs.85%29.aspx
+			 *	LONG_PTR WINAPI GetWindowLongPtr(
+			 *	  __in_  HWND hWnd,
+			 *	  __in_  int nIndex
+			 *	);
+			 */
+			return lib('user32').declare(is64bit ? (ifdef_UNICODE ? 'GetWindowLongPtrW' : 'GetWindowLongPtrA') : (ifdef_UNICODE ? 'GetWindowLongW' : 'GetWindowLongA'), self.TYPE.ABI,
+				is64bit ? self.TYPE.LONG_PTR : self.TYPE.LONG,	// return
+				self.TYPE.HWND,									// hWnd
+				self.TYPE.INT									// nIndex
+			);
+		},
+		GetWindowText: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms633520%28v=vs.85%29.aspx
+			 * int WINAPI GetWindowText(
+			 *   _In_  HWND   hWnd,
+			 *   _Out_ LPTSTR lpString,
+			 *   _In_  int    nMaxCount
+			 * );
+			 */
+			return lib('user32').declare(ifdef_UNICODE ? 'GetWindowTextW' : 'GetWindowTextA', self.TYPE.ABI,
+				self.TYPE.INT,		// return
+				self.TYPE.HWND,		// hWnd
+				self.TYPE.LPTSTR,	// lpString
+				self.TYPE.INT		// nMaxCount
+			);
+		},
+		GetWindowRect: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms633519.aspx
+			 * BOOL WINAPI GetWindowRect(
+			 *   _In_  HWND   hWnd,
+			 *   _Out_ LPRECT lpRect
+			 * );
+			 */
+			return lib('user32').declare('GetWindowRect', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.HWND,		// hWnd
+				self.TYPE.LPRECT	// lpRect
+			);
+		},
+		GetWindowThreadProcessId: function() {
+			/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms633522%28v=vs.85%29.aspx
+			 * DWORD WINAPI GetWindowThreadProcessId(
+			 *   __in_		HWND hWnd,
+			 *   __out_opt_	LPDWORD lpdwProcessId
+			 * );
+			 */
+			return lib('user32').declare('GetWindowThreadProcessId', self.TYPE.ABI,
+				self.TYPE.DWORD,	// return
+				self.TYPE.HWND,		// hWnd
+				self.TYPE.LPDWORD	// lpdwProcessId
 			);
 		},
 		memcpy: function() {

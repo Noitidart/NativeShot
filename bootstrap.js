@@ -250,6 +250,7 @@ function get_gEMenuDomJson() {
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_select-fullscreen')},
 						gEMenuArrRefs.select_fullscreen
 					],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-window'), oncommand:function(e){ gEditor.selectWindow(e) }}],
 					/*
 					['xul:menu', {label:'Select Window'},
 						['xul:menupopup', {},
@@ -357,8 +358,14 @@ var gCanDim = {
 	},
 	execProp: function(aStrPropName, aPropVal) {
 		for (var i=0; i<colMon.length; i++) {
-			var aCtxDim = colMon[i].E.ctxDim;			
+			var aCtxDim = colMon[i].E.ctxDim;
 			aCtxDim[aStrPropName] = aPropVal;
+		}
+	},
+	execStyle: function(aPropName, aPropVal) {
+		for (var i=0; i<colMon.length; i++) {
+			var aCanDim = colMon[i].E.canDim;
+			aCanDim.style[aPropName] = aPropVal;
 		}
 	}
 };
@@ -472,6 +479,9 @@ var gEditor = {
 		gEMDY = null; // mouse down y
 
 		gESelectedRect = new Rect(0, 0, 0, 0);
+		
+		this.pendingWinSelect = false;
+		this.winArr = null;
 	},
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
@@ -524,6 +534,45 @@ var gEditor = {
 					colMon[iMon].E.ctxDim.clearRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 		}
 		gESelected = true;
+		
+	},
+	selectWindow: function(e) {
+		
+		try {
+			gEditor.clearSelection(e);
+		} catch(ignore) {}
+		
+		if (!gEditor.winArr) {
+			console.time('getAllWin');
+			var promise_fetchWin = MainWorker.post('getAllWin', [{
+				getPid: true,
+				getBounds: true,
+				getTitle: true,
+				filterVisible: true
+			}])
+			promise_fetchWin.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_fetchWin - ', aVal);
+					// start - do stuff here - promise_fetchWin
+					console.timeEnd('getAllWin');
+					gEditor.winArr = aVal;
+					// end - do stuff here - promise_fetchWin
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_fetchWin', aReason:aReason};
+					console.warn('Rejected - promise_fetchWin - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_fetchWin', aCaught:aCaught};
+					console.error('Caught - promise_fetchWin - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			);
+		}
+		
+		gEditor.pendingWinSelect = true;
 		
 	},
 	compositeSelection: function() {
@@ -1152,7 +1201,53 @@ function gEMouseDown(e) {
 	//console.info('pre mod', e.screenX, 'post mod:', cEMDX);
 	
 	// check if mouse downed on move selection hit box
-	if (e.target.id == 'hitboxMoveSel') {
+	if (gEditor.pendingWinSelect) {
+		gEditor.pendingWinSelect = false;
+		console.log('user made win sel at point:', cEMDX, cEMDY);
+		
+		var do_selWinAtPt = function() {
+			if (gEditor.winArr) {
+				// go through all windows in z order and draw sel around the window rect that contains cEMDX, cEMDY
+				console.log('ok winArr is populated, lets go throgh and find it');
+				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
+				for (var i=0; i<gEditor.winArr.length; i++) {
+					var skipThisWinArrI_AsItIsNSWin = false;
+					for (var j=0; j<colMon.length; j++) {
+						if (i == 0) {
+							console.log('colMon[j].hwndPtrStr', j, colMon[j].hwndPtrStr);
+						}
+						if (colMon[j].hwndPtrStr == gEditor.winArr[i].hwnd) {
+							// this is a nativeshot canvas window, skip it
+							skipThisWinArrI_AsItIsNSWin = true;
+							break;
+						}
+					}
+					if (skipThisWinArrI_AsItIsNSWin) {
+						continue;
+					}
+					if (cEMDX >= gEditor.winArr[i].left && cEMDX <= gEditor.winArr[i].right && cEMDY >= gEditor.winArr[i].top && cEMDY <= gEditor.winArr[i].bottom) {
+						console.log('selecting winArr element i:', i);
+						gESelectedRect.setRect(gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height);
+						gCanDim.execFunc('clearRect', [gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height]);
+						break;
+					}
+				}
+				
+			} else {
+				gEditor.compDOMWindow.setTimeout(do_selWinAtPt, 100);
+			}
+		};
+		
+		if (!gEditor.compDOMWindow) {
+			// need to initalize it
+			gEditor.compDOMWindow = colMon[0].E.DOMWindow;
+			gEditor.canComp = gEditor.compDOMWindow.document.createElementNS(NS_HTML, 'canvas');
+			gEditor.ctxComp = gEditor.canComp.getContext('2d');
+		}
+		
+		gEditor.compDOMWindow.setTimeout(do_selWinAtPt, 100); // as winArr is populated async'ly. user may click before winArr is populated
+		
+	} else if (e.target.id == 'hitboxMoveSel') {
 		gEMoving = true;
 		gEMDX = cEMDX;
 		gEMDY = cEMDY;
