@@ -1205,6 +1205,7 @@ function gEMouseDown(e) {
 	// check if mouse downed on move selection hit box
 	if (gEditor.pendingWinSelect) {
 		gEditor.pendingWinSelect = false;
+
 		console.log('user made win sel at point:', cEMDX, cEMDY);
 		
 		var do_selWinAtPt = function() {
@@ -1233,9 +1234,17 @@ function gEMouseDown(e) {
 					}
 					if (cEMDX >= gEditor.winArr[i].left && cEMDX <= gEditor.winArr[i].right && cEMDY >= gEditor.winArr[i].top && cEMDY <= gEditor.winArr[i].bottom) {
 						console.log('selecting winArr element i:', i);
-						gESelectedRect.setRect(gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height);
-						gCanDim.execFunc('clearRect', [gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height]/*, {x:0,y:1,w:2,h:3}*/);
+
+						gIMonMouseDownedIn = iMon;
+						gESelecting = false;
 						gESelected = true;
+						
+						gEMDX = cEMDX;
+						gEMDY = cEMDY;
+						
+						gESelectedRect.setRect(gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height);
+						gCanDim.execFunc('clearRect', [gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height], {x:0,y:1,w:2,h:3});
+						
 						break;
 					}
 				}

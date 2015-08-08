@@ -188,10 +188,10 @@ function getAllWin(aOptions) {
 					
 					if (aOptions.getBounds) {
 						var rez_rect = ostypes.API('GetWindowRect')(hwnd, lpRect.address());
-						thisWin.left = cutils.jscGetDeepest(lpRect.left);
-						thisWin.top = cutils.jscGetDeepest(lpRect.top);
-						thisWin.bottom = cutils.jscGetDeepest(lpRect.bottom);
-						thisWin.right = cutils.jscGetDeepest(lpRect.right);
+						thisWin.left = parseInt(cutils.jscGetDeepest(lpRect.left));
+						thisWin.top = parseInt(cutils.jscGetDeepest(lpRect.top));
+						thisWin.bottom = parseInt(cutils.jscGetDeepest(lpRect.bottom));
+						thisWin.right = parseInt(cutils.jscGetDeepest(lpRect.right));
 						
 						thisWin.width = thisWin.right - thisWin.left;
 						thisWin.height = thisWin.bottom - thisWin.top;
