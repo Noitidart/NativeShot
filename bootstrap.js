@@ -376,7 +376,9 @@ var gENotifListener = {
 		// aSubject is always null
 		// aData is the aClickCookie, i set aClickCookie to notif id. if its not clickable aClickCookie is not set
 		// aTopic is: alertfinished, alertclickcallback, alertshow
+		console.error('incoming notification observer:', aSubject, aTopic, aData);
 		if (aTopic == 'alertclickcallback')	{
+			console.error('user clicked trying to throw click');
 			if (gNotifClickCallback[aData]) {
 				gNotifClickCallback[aData]();
 				delete gNotifClickCallback[aData];
@@ -387,8 +389,10 @@ var gENotifListener = {
 			console.log('just showed:', shown);
 			gNotifierStrRandomizer = gNotifierStrRandomizer == ' ' ? '' : ' ';
 		} else if (aTopic == 'alertfinished') {
+			console.log('just alertfinished')
 			if (gNotifClickCallback[aData]) {
 				// user didnt click it
+				console.warn('user didnt click it man');
 				delete gNotifClickCallback[aData];
 			}
 		}
@@ -404,7 +408,8 @@ var gENotifCallback = {
 	notify: function() {
 		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
 		if (gENotifPending.length > 0) {
-			if (gENotifPending[0].aClickCookie) {
+			if (gENotifPending[0].aClickCookie !== null) {
+				console.warn('doing showAlert with CLICK cookie');
 				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
 			} else {
 				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
@@ -420,6 +425,7 @@ var gPostPrintRemovalFunc;
 const reuploadTimerInterval = 10000;
 
 function notifCB_saveToFile(aOSPath_savedFile) {
+	console.error('in the click thingy baby');
 	var nsifile = FileUtils.File(aOSPath_savedFile);
 	showFileInOSExplorer(nsifile);
 }
@@ -658,6 +664,7 @@ var gEditor = {
 		});
 		if (aClickCallback) {
 			gNotifClickCallback[gNotifLastId] = aClickCallback;
+			console.log('registered this notif with a CLICK callback, gNotifClickCallback:', gNotifClickCallback);
 		}
 		if (!gNotifTimerRunning) {
 			gENotifCallback.notify(gNotifTimer);

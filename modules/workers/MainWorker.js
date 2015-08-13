@@ -262,6 +262,8 @@ function getAllWin(aOptions) {
 					var thisWin = {};
 					// fetch props on thisWin
 					
+					thisWin.hwndXid = parseInt(cutils.jscGetDeepest(w));
+					
 					if (aOptions.getPid) {
 						var rez_pid = ostypes.API('XGetWindowProperty')(ostypes.HELPER.cachedXOpenDisplay(), w, ostypes.HELPER.cachedAtom('_NET_WM_PID'), 0, 1, ostypes.CONST.False, ostypes.CONST.XA_CARDINAL, gpTypeReturned.address(), gpFormatReturned.address(), gpNItemsReturned.address(), gpBytesAfterReturn.address(), gpItemsArr.address());
 						if (ostypes.HELPER.getWinProp_ReturnStatus(ostypes.CONST.XA_CARDINAL, gpTypeReturned, gpFormatReturned, gpBytesAfterReturn) == 1) {
@@ -300,8 +302,10 @@ function getAllWin(aOptions) {
 							thisWin.top = parseInt(cutils.jscGetDeepest(wAttr.y));
 							
 							var borderWidth = parseInt(cutils.jscGetDeepest(wAttr.border_width));
-							thisWin.width = parseInt(cutils.jscGetDeepest(wAttr.width)) + borderWidth;
-							thisWin.height = parseInt(cutils.jscGetDeepest(wAttr.height)) + borderWidth;
+							thisWin.borderWidth = borderWidth;
+							
+							thisWin.width = parseInt(cutils.jscGetDeepest(wAttr.width))/* + borderWidth*/;
+							thisWin.height = parseInt(cutils.jscGetDeepest(wAttr.height))/* + borderWidth*/;
 							
 							thisWin.right = thisWin.left + thisWin.width;
 							thisWin.bottom = thisWin.top + thisWin.height;
@@ -310,9 +314,11 @@ function getAllWin(aOptions) {
 							thisWin.left = parseInt(cutils.jscGetDeepest(geoX));
 							thisWin.top = parseInt(cutils.jscGetDeepest(geoY));
 							
-							var borderWidth = parseInt(cutils.jscGetDeepest(geoBorderWidth));
-							thisWin.width = parseInt(cutils.jscGetDeepest(geoW)) + borderWidth;
-							thisWin.height = parseInt(cutils.jscGetDeepest(geoH)) + borderWidth;
+							var borderWidth = parseInt(cutils.jscGetDeepest(wAttr.border_width));
+							thisWin.borderWidth = borderWidth;
+							
+							thisWin.width = parseInt(cutils.jscGetDeepest(wAttr.width))/* + borderWidth*/;
+							thisWin.height = parseInt(cutils.jscGetDeepest(wAttr.height))/* + borderWidth*/;
 							
 							thisWin.right = thisWin.left + thisWin.width;
 							thisWin.bottom = thisWin.top + thisWin.height;
