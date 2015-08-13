@@ -14,4 +14,14 @@
 	toolbarpaletteitem[place="palette"] > #cui_nativeshot {
 		list-style-image: url('chrome://nativeshot/content/resources/images/gray32.png');
 	}
+	/*start-non cui stuff*/
+	notification button.nativeshot-twitter-bad .button-icon {
+		-moz-margin-end: 5px;
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_bad16.png');
+	}
+	notification button.nativeshot-twitter .button-icon {
+		-moz-margin-end: 5px;
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter16.png');
+	}
+	/*end-non cui stuff*/
 }

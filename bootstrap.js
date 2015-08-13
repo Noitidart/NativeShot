@@ -46,6 +46,10 @@ const cui_cssUri = Services.io.newURI(core.addon.path.styles + 'cui.css', null, 
 const JETPACK_DIR_BASENAME = 'jetpack';
 const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
 
+const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettify on twitter javascript files
+const TWITTER_MAX_UPLOAD_FILE_SIZE = 3145728; // i got this from doing debugger prettify on twitter javascript files
+const TWITTER_URL = 'https://twitter.com/';
+
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
@@ -236,14 +240,12 @@ function get_gEMenuDomJson() {
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_imgur'), oncommand:function(e){ gEditor.uploadToImgur(e, false) }}]
 						]
 					],
-					/*
-					['xul:menu', {label:'Share to Social Media'},
+					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_share-to-social')},
 						['xul:menupopup', {},
-							['xul:menuitem', {label:'Facebook'}],
-							['xul:menuitem', {label:'Twitter'}]
+							/*['xul:menuitem', {label:'Facebook'}],*/
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_twitter'), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
 						]
 					],
-					*/
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
 					['xul:menuseparator', {}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-clear'), oncommand:function(e){ gEditor.clearSelection(e) }}],
@@ -456,6 +458,10 @@ gMacTypes.SEL,
 "...");
 
 }
+var userAckPending = { // object holding on to data till user is notified of the tabs, images have succesfully been dropped into tabs, and user ancknolwedges by makeing focus to tabs (as i may need to hold onto the data, if user is not signed in, or if user want to use another account [actually i dont think ill bother with other account thing, just signed in])
+	// todo thinking about tying this with global browser notif bar, and dismiss time
+	twitter: [] // {gEditorSessionId:,tab:,fs:,imgDataUris:[],imgUrls:[]} // array of objects, weak reference to tab, framescript, the 4 (because thats max allowed by twitter per tweet) data uri of imgs for that tab, and then after upload it holds the image urls for copy to clipboard
+}
 
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
@@ -463,6 +469,7 @@ var gEditor = {
 	ctxComp: null, // holds ctx element
 	compDOMWindow: null, // i use colMon[i].DOMWindow for this
 	gBrowserDOMWindow: null, // used for clipboard context
+	sessionId: null,
 	cleanUp: function() {
 		// reset all globals
 		console.error('doing cleanup');
@@ -488,6 +495,8 @@ var gEditor = {
 		
 		this.pendingWinSelect = false;
 		this.winArr = null;
+		
+		this.sessionId = null;
 	},
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
@@ -837,6 +846,53 @@ var gEditor = {
 		iframe.setAttribute('style', 'display:none');
 		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 
+		this.closeOutEditor(e);
+	},
+	shareToTwitter: function(e) {
+		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
+		
+		this.compositeSelection();
+		
+		var refUAP = gEditor.userAckPending;
+		
+		var refUAPEntry;
+		if (refUAP.length == 0) {
+			
+		} else {
+			for (var i=0; i<refUAP.length; i++) {
+				if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDataUris.length <= 4) {
+					refUAPEntry = refUAP[i];
+					break;
+				}
+			}
+		}
+		
+		var cImgDataUri = this.canComp.toDataURL('image/png', '');
+		
+		if (!refUAPEntry) {
+			var newtab = gEditor.gBrowserDOMWindow.loadOneTab(TWITTER_URL, {
+				loadInBackground: false,
+				relatedToCurrent: false
+			});
+			newtab.linkedBrowser.messageManager.loadFrameScript(chrome.addon.path.resource + 'fs_twitter.js', false);
+			refUAPEntry = refUAP[refUAP.push({
+				gEditorSessionId: gEditor.sessionId,
+				tab: newtab,
+				browserMM: newtab.linkedBrowser.messageManager,
+				imgDataUris: [],
+				imgUrls: []
+			}) - 1];
+		}
+		
+		// twitter allows maximum 4 attachment, so if 
+		
+		refUAPEntry.browserMM.sendAsyncMessage(core.addon.id, {
+			aTopic:'serverCommand_attachImgDataURI',
+			imgDataUri: cImgDataUri,
+			iIn_arrImgDataUris: refUAPEntry.imgDataUris.length
+		});
+		refUAPEntry.imgDataUris.push(cImgDataUri);
+		
 		this.closeOutEditor(e);
 	},
 	uploadToImgur: function(e, aBoolAnon) {
@@ -1640,6 +1696,7 @@ function shootAllMons(aDOMWindow) {
 	
 	gESelected = false;
 	var openWindowOnEachMon = function() {
+		gEditor.sessionId = new Date().getTime();
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=1,screenX=1,screenY=1', null);
 			colMon[i].E = {
@@ -1711,6 +1768,218 @@ function shootAllMons(aDOMWindow) {
 	);
 }
 
+var NBs = { // short for "notification bars"
+	crossWin: {},  // holds objects of details for nb's that should show across all windows, key should be aGroupId
+	/* struct
+	{
+		msg: String,
+		img: String,
+		p: Number, // priority
+		g-editor-session-id: Number,
+		btns: Array
+		///// btns Array
+		// [{
+		// 	label: 'Button-ID:String', // nativeshot custom, append -ID: and whatever string you want, this is how it recognizes button future updates, this is converted to custom attribute on the element //CHANGABLE, RESPECTED BY updateGlobal // after item is appended it doesnt use the '-ID:' anymore so when update it, no need to add in the -ID: link64798787
+		// 	accessKey: 'B', //CHANGABLE, RESPECTED BY updateGlobal // should be optional but its a bug i need to file on bugzilla, if dont set, then its undefined and accesskey is set to u as thats first letter of undefined
+		// 	popup: null,  //NOT changeable, by updateGlobal yet
+		//  type: String // optional  //NOT changeable, by updateGlobal yet
+		//  anchor: String // optional  //NOT changeable, by updateGlobal yet
+		//  isDefault: String // optional, if none of your buttons have this, then button at position 0 is made default
+		//  class: 'blah1 blah2 blah3', // nativeshot custom, setAttribute('class')  //CHANGABLE, RESPECTED BY updateGlobal
+		//  btn_id: String, // nativeshot custom same string set in label // only has to be unique per notification notifcation, not per deck
+		// 	callback: function(blah) {  //NOT changable, updateGlobal doesnt set this yet, ill have to learn how, im sure its possible, as of aug 13 2015
+		// 	  _actionTaken = true;
+		// 	  console.log('blah:', blah);
+		// 	}
+		// ]
+		///
+	}
+	*/
+	updateGlobal: function(aGroupId, aHints) {
+		// do the changes on the NBs.crossWin[aGroupId] then call this, and it will update to dom. but if you removed some btns, this will remove from the js object, so you dont have to pre do that
+		// aHints is an obj is then no need to close and update
+			// lbl - any
+			// p - any
+			// btns - {removed:[btn_ids],label:[btn_ids],class:[btn_ids]} // not yet supported added:[btn_ids]
+		
+		var cCrossWin = NBs.crossWin[aGroupId];
+		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
+		while (DOMWindows.hasMoreElements()) {
+			var aDOMWindow = DOMWindows.getNext();
+			var btmDeckBox = aDOMWindow.document.getElementById('nativeshotBtmDeckBox');
+			if (btmDeckBox) {
+				var nb = btmDeckBox.getNotificationWithValue(aGroupId);
+				if (aHints.lbl) {
+					nb.label = cCrossWin.lbl;
+				}
+				if (aHints.p) {
+					nb.priority = cCrossWin.p;
+					// copied from here, keep updated from here, :https://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/notification.xml#151
+					if (cCrossWin.p >= btmDeckBox.PRIORITY_CRITICAL_LOW) {
+						nb.setAttribute("type", "critical");
+					} else if (cCrossWin.p <= btmDeckBox.PRIORITY_INFO_HIGH) {
+						nb.setAttribute("type", "info");
+					} else {
+						nb.setAttribute("type", "warning");
+					}
+				}
+				if (aHints.btns) {
+					var allBtnsQ = nb.querySelectorAll('button.notification-button');
+					var allBtnsEl = {};
+					for (var i=0; i<allBtnsQ.length; i++) {
+						var cBtnId = allBtnsQ[i].getAttribute('data-btn-id');
+						allBtnsEl[cBtnId] = allBtnsQ[i];
+					}
+					allBtnsQ = null;
+					console.info('allBtnsEl:', allBtnsEl);
+					
+					var allBtnsInfo = {};
+					for (var i=0; i<cCrossWin.btns.length; i++) {
+						var cBtnInfo = cCrossWin.btns[i];
+						allBtnsInfo[cBtnInfo.btn_id] = {};
+						for (var p in cBtnInfo) {
+							allBtnsInfo[cBtnInfo.btn_id][p] = cBtnInfo[p];
+						}
+					}
+					console.info('allBtnsInfo:', allBtnsInfo);
+					
+					if (aHints.btns.removed) {
+						for (var i=0; i<aHints.btns.removed.length; i++) {
+							allBtnsEl[aHints.btns.removed[i]].parentNode.removeChild(btn);
+						}
+					}
+					if (aHints.btns.label) {
+						for (var i=0; i<aHints.btns.label.length; i++) {
+							allBtnsEl[aHints.btns.label[i]].label = allBtnsInfo[aHints.btns.label[i]].label;
+						}
+					}
+					if (aHints.btns.akey) {
+						for (var i=0; i<aHints.btns.akey.length; i++) {
+							allBtnsEl[aHints.btns.akey[i]].setAttribute('accesskey', allBtnsInfo[aHints.btns.akey[i]].accessKey);
+						}
+					}
+					if (aHints.btns.class) {
+						for (var i=0; i<aHints.btns.class.length; i++) {
+							var cClass = allBtnsEl[aHints.btns.class[i]].getAttribute('class');
+							cClass = cClass.substr(0, cClass.indexOf(' custom_classes_divider '));
+							allBtnsEl[aHints.btns.class[i]].setAttribute('class', cClass + ' custom_classes_divider ' + allBtnsInfo[aHints.btns.class[i]].class);
+						}
+					}
+				}
+			} else {
+				console.error('doesnt exist in this window, this is weird, maybe should insertGlobalToWin');
+			}
+		}
+	
+		// to update, i close the notif and reopen it
+	},
+	closeGlobal: function(aGroupId) {
+		
+		delete NBs.crossWin[aGroupId];
+		
+		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
+		while (DOMWindows.hasMoreElements()) {
+			var aDOMWindow = DOMWindows.getNext();
+			var btmDeckBox = aDOMWindow.document.getElementById('nativeshotBtmDeckBox');
+			if (btmDeckBox) {
+				var n = btmDeckBox.getNotificationWithValue(aGroupId);
+				if (n) {
+					n.close();
+				}
+			} else {
+				console.warn('very werid, it didnt even have it, it was global nb it should have had it');
+			}
+		}
+	},
+	insertGlobalToWin: function(aGroupId, aDOMWindow) {
+		// aDOMWindow is a dom window or 'all'
+		if (aDOMWindow == 'all') {
+			var DOMWindows = Services.wm.getEnumerator('navigator:browser');
+			while (DOMWindows.hasMoreElements()) {
+				aDOMWindow = DOMWindows.getNext();
+				if (aDOMWindow.gBrowser) {
+					NBs.insertGlobalToWin.bind(null, aGroupId, aDOMWindow)();
+				}
+			}
+			return;
+		};
+		var aDOMDocument = aDOMWindow.document;
+		
+		var cCrossWin = NBs.crossWin[aGroupId];	
+		
+		var deck = aDOMDocument.getElementById('content-deck');
+		var btmDeckBox = aDOMDocument.getElementById('nativeshotBtmDeckBox');
+		console.info('btmDeckBox:', btmDeckBox);
+		if (!btmDeckBox) {
+		  console.log('created new btm deck');
+		  btmDeckBox = aDOMDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'notificationbox');
+		  btmDeckBox.id = 'nativeshotBtmDeckBox'; //setAttribute doesnt work for id //btmDeckBox.setAttribute('id', 'nativeshotBtmDeckBox');
+		  // deck.parentNode.insertBefore(btmDeckBox, deck); // for top
+		  deck.parentNode.appendChild(btmDeckBox); // for bottom
+		} else { console.log('already there'); }
+
+		var nb = btmDeckBox; //win.gBrowser.getNotificationBox(); //use _gNB for window level notification. use `win.gBrowser.getNotificationBox()` for tab level
+		var n = btmDeckBox.getNotificationWithValue(aGroupId);
+		console.log('nb:', nb, 'n:', n);
+
+		if (n) {
+			console.log('global nb already in this window, so not adding');
+		} else {
+			
+			var cNB;
+			var notifCallback = function(what) {
+				console.log('what:', what);
+				if (what == 'removed') {
+					btmDeckBox.removeNotification(cNB, false); // close just hides it, so we do removeNotification to remove it. otherwise if same groupid, nativeshot will find it already exists and then not create another one
+					if (aGroupId in NBs.crossWin) {
+						NBs.closeGlobal(aGroupId);
+					} else {
+						console.log('aGroupId no longer in crossWin so this is probably a global close');
+					}
+				}
+			}
+			
+			// https://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/notification.xml#79
+			cNB = nb.appendNotification(
+				cCrossWin.msg,
+				aGroupId,
+				cCrossWin.img,
+				cCrossWin.p,
+				cCrossWin.btns,
+				notifCallback
+			);
+			var btns = cNB.querySelectorAll('button.notification-button');
+			for (var i=0; i<btns.length; i++) {
+				var label_with_id = btns[i].getAttribute('label');
+				var id_index = label_with_id.lastIndexOf('-ID:');
+				var btn_id = label_with_id.substr(id_index + '-ID:'.length);
+				var label = label_with_id.substr(0, id_index);
+				
+				console.info('btn_id:', btn_id);
+				console.info('label:', label);
+				
+				btns[i].setAttribute('label', label);
+				btns[i].setAttribute('data-btn-id', btn_id);
+				
+				var btn_id_found_in_crossWinBtns = false;
+				for (var j=0; j<cCrossWin.btns.length; j++) {
+					if (cCrossWin.btns[j].btn_id == btn_id) {
+						btn_id_found_in_crossWinBtns = true;
+						break;
+					}
+				}
+				if (!btn_id_found_in_crossWinBtns) {
+					throw new Error('btn_id in label post -ID: was not found in crossWinBtns because devuser made typo'); // should never happen devuser dont make typo
+				}
+				
+				var cClasses = btns[i].getAttribute('class');
+				btns[i].setAttribute('class', cClasses + ' custom_classes_divider ' + cCrossWin.btns[j].class);
+				
+				btns[i].label = label; // after item is appended it doesnt use the '-ID:' anymore so when update it, no need to add in the -ID: link64798787
+			}
+		}
+	}
+};
 // END - Addon Functionalities
 // start - clipboard boilerplate
 // Create a constructor for the built-in supports-string class.
@@ -1796,6 +2065,10 @@ var windowListener = {
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
+			
+			for (aGroupId in NBs.crossWin) {
+				NBs.insertGlobalToWin(aGroupId, aDOMWindow);
+			}
 		}/* else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
 			//console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
 			if (!aDOMWindow.opener) {
