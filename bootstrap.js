@@ -657,6 +657,7 @@ var gEditor = {
 		if (e.shiftKey) {
 			console.log('will not close out editor as shift key was held, user wants to do more actions')
 		} else {
+			gEditor.gBrowserDOMWindow.focus();
 			colMon[0].E.DOMWindow.close();
 		}
 	},
@@ -1403,7 +1404,7 @@ function gEKeyUp(e) {
 	if (e.keyCode == 27) {
 		if (gPanelWasNotOpenDuringEsc) {
 			gPanelWasNotOpenDuringEsc = false; // ok user didnt hit esc to close out menu. they inteded to close out editor
-			colMon[0].E.DOMWindow.close();
+			gEditor.closeOutEditor({shiftKey:false});
 		}
 	}
 }
