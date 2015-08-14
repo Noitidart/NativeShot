@@ -853,7 +853,7 @@ var gEditor = {
 		
 		this.compositeSelection();
 		
-		var refUAP = gEditor.userAckPending;
+		var refUAP = userAckPending.twitter;
 		
 		var refUAPEntry;
 		if (refUAP.length == 0) {
@@ -870,11 +870,11 @@ var gEditor = {
 		var cImgDataUri = this.canComp.toDataURL('image/png', '');
 		
 		if (!refUAPEntry) {
-			var newtab = gEditor.gBrowserDOMWindow.loadOneTab(TWITTER_URL, {
-				loadInBackground: false,
+			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
+				inBackground: false,
 				relatedToCurrent: false
 			});
-			newtab.linkedBrowser.messageManager.loadFrameScript(chrome.addon.path.resource + 'fs_twitter.js', false);
+			newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + Math.random(), false);
 			refUAPEntry = refUAP[refUAP.push({
 				gEditorSessionId: gEditor.sessionId,
 				tab: newtab,
@@ -887,7 +887,7 @@ var gEditor = {
 		// twitter allows maximum 4 attachment, so if 
 		
 		refUAPEntry.browserMM.sendAsyncMessage(core.addon.id, {
-			aTopic:'serverCommand_attachImgDataURI',
+			aTopic:'serverCommand_attachImgDataURIWhenReady',
 			imgDataUri: cImgDataUri,
 			iIn_arrImgDataUris: refUAPEntry.imgDataUris.length
 		});
