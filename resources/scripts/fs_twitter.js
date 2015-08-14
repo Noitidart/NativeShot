@@ -1,9 +1,12 @@
 console.error('THIS:', this);
 const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
-console.error('Ci:', Ci, Ci.nsIRequest);
+
 var core = {
 	addon: {
-		id: 'NativeShot@jetpack'
+		id: 'NativeShot@jetpack',
+		path: {
+			content_accessible: 'chrome://nativeshot-accessible/content/'
+		}
 	}
 };
 const clientId = new Date().getTime(); // server doesnt generate clientId in this framescript ecosystem
@@ -45,11 +48,23 @@ const serverMessageListener = {
 function register() {
 	// i dont have server telling us when to do init in this framescript ecosystem
 	addMessageListener(core.addon.id, serverMessageListener);
-	init();
+	
+	var aContentWindow = content;
+	var aContentDocument = aContentWindow.document;
+	if (aContentDocument.readyState.state == 'ready' && aContentWindow.location.hostname == TWITTER_HOSTNAME) {
+		init();
+	} else {
+		addEventListener('DOMContentLoaded', listenForTwitterLoad, false); // add listener to listen to page loads  till it finds twitter page
+	}
+	
 }
 
 function unregister() {
 	console.error('unregistering!!!!!');
+	
+	var aContentWindow = content;
+	var aContentDocument = content.document;
+	
 	try {
 		removeMessageListener(core.addon.id, serverMessageListener);
 	} catch(ignore) {
@@ -61,19 +76,43 @@ function unregister() {
 		clearTimeout(timeoutRemoveObs);
 		observers['http-on-modify-request'].unreg();
 	}
+	
+	var myUnregScript = aContentDocument.createElement('script');
+	myUnregScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_unregister.js');
+	myUnregScript.setAttribute('id', 'nativeshot_twitter_unregister');
+	
+	aContentDocument.documentElement.appendChild(myUnregScript);
 }
 
 function init() {
-	var aContentDocument = content.document;
-	if (aContentDocument.readyState.state == 'ready') {
-		console.log('twitter already loaded so no need to attach load listener');
-		do_openTweetModal();
-	} else {
-		addEventListener('DOMContentLoaded', listenForTwitterLoad, false);
-	}
+	var aContentWindow = content;
+	var aContentDocument = aContentWindow.document;
+	
+	// :todo: absolutely ensure we are on home page, meaning users timeline, because when user submits tweet, if they are not on timeline, then the images are not loaded and i wont be able to get their uploaded image urls
+	
+	var myRegScript = aContentDocument.createElement('script');
+	myRegScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_register.js');
+	myRegScript.setAttribute('id', 'nativeshot_twitter_register');
+	
+	aContentDocument.documentElement.appendChild(myRegScript);
+	
+	aContentWindow.addEventListener('nativeShot_notifyDialogClosed', function() {
+	  // :todo: tell notification-bar that tweet was lost due to closed tweet, offer on click to openTweetModal and reattach
+	  console.error('tweet dialog closed');
+	}, false, true);
+	
+	do_openTweetModal();
+
+	// :todo: detect if user clicks on "x" of any of the previews, then that should be removed from notification-bar, to identify which one got x'ed i can identify by on attach, i wait till it gets attached right, so on attach get that upload id. maybe just addEventListener on those preview x's, it seems you cant tab to it, so this is good, just attach click listeners to it
+	
+	addEventListener('unload', listenForTwittterUnload, false);
 }
 
 // START - custom functionalities
+function listenForTwittterUnload(aEvent) {
+	// :todo: notify notification-bar that tweet was lost due to unload, offer on click to load twitter.com again, its important that tweet happens from twitter.com as when the tweet goes through the images show up in the timeline and i can get those
+}
+
 var twitterReady = false; // set to true after twitter loads, and new tweet modal is opened
 function listenForTwitterLoad(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
@@ -84,9 +123,9 @@ function listenForTwitterLoad(aEvent) {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			// twitterReady = true;
 			removeEventListener('DOMContentLoaded', listenForTwitterLoad, false);
-			do_openTweetModal();
+			init();
 		} else {
-			console.error('page done loading buts it not twitter:', aContentWindow.location);
+			console.error('page done loading buts it not twitter, so keep listener attached, im waiting for twitter:', aContentWindow.location);
 		}
 	}
 }
@@ -103,21 +142,29 @@ function serverCommand_attachImgDataURIWhenReady(aImgDataUri, a_iIn_arrImgDataUr
 	};
 	
 	if (twitterReady) {
-		do_waitUntil(0, do_overlayIfNoFocus);
+		if (!for_waitUntil_aTest_1_running) {
+			do_waitUntil(0, do_overlayIfNoFocus);
+		} // else do nothing, as its running, it will find that it needs to be attached
 	}
 }
 
-function do_openTweetModal(aContentWindow) {
+function do_openTweetModal() {
+	var aContentWindow = content;
 	var aContentDocument = content.document;
-    var btnNewTweet = aContentDocument.getElementById('global-new-tweet-button'); // id of twitter button :maintain:
-
-    if (!btnNewTweet) {
-        throw new Error('global tweet button not found, probably not logged in');
-		// :todo: detect if not signed in, then set notification bar accordingly
-    }
+	var dialogTweet = aContentDocument.getElementById('global-tweet-dialog');
+	if (!dialogTweet) {
+		throw new Error('no tweet dialog, no clue why, this should not happen, i do the signed in check in init');
+	}
 	
-	// :todo: test if open already, if it is, then dont click the button
-	btnNewTweet.click();
+	if (aContentWindow.getComputedStyle(dialogTweet, null).getPropertyValue('display') == 'none') { // test if open already, if it is, then dont click the button
+		// its closed, so lets open it
+		var btnNewTweet = aContentDocument.getElementById('global-new-tweet-button'); // id of twitter button :maintain:
+		if (!btnNewTweet) {
+			throw new Error('global tweet button not found, no idea why');
+		}
+		
+		btnNewTweet.click();
+	}
 	
 	twitterReady = true;
 	
