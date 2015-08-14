@@ -1,3 +1,6 @@
+console.error('THIS:', this);
+const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
+console.error('Ci:', Ci, Ci.nsIRequest);
 var core = {
 	addon: {
 		id: 'NativeShot@jetpack'
@@ -5,6 +8,8 @@ var core = {
 };
 const clientId = new Date().getTime(); // server doesnt generate clientId in this framescript ecosystem
 const TWITTER_HOSTNAME = 'twitter.com';
+const TWITTER_IMAGE_SUBSTR = 'https://pbs.twimg.com/media/';
+var TWITTER_IMAGE_SUBSTR_REGEX = /\.twimg\.com/i;
 
 const serverMessageListener = {
 	// listens to messages sent from clients (child framescripts) to me/server
@@ -44,7 +49,18 @@ function register() {
 }
 
 function unregister() {
-	removeMessageListener(core.addon.id, serverMessageListener);
+	console.error('unregistering!!!!!');
+	try {
+		removeMessageListener(core.addon.id, serverMessageListener);
+	} catch(ignore) {
+		console.info('failed to removeMessageListener probably because tab is already dead, ex:', ignore);
+	}
+	
+	if (timeoutRemoveObs !== null) {
+		// observer was added, lets remove it
+		clearTimeout(timeoutRemoveObs);
+		observers['http-on-modify-request'].unreg();
+	}
 }
 
 function init() {
@@ -109,6 +125,9 @@ function do_openTweetModal(aContentWindow) {
 }
 
 const waitForInterval_ms = 100;
+
+var observer_listener_attached_to_submit = false;
+
 var for_waitUntil_aTest_1_currentPreviewElementsCount = 0;
 var for_waitUntil_aTest_1_trying_iIn_arr = -1;
 var for_waitUntil_aTest_1_running = false;
@@ -167,9 +186,92 @@ function do_waitUntil(aTest, aCB, aOptions) {
 	}
 }
 
+var observers = {
+	'http-on-modify-request': { // this trick detects actual load of iframe from bootstrap scope
+		observe: function (aSubject, aTopic, aData) {
+			obsHandler_httpOnMoifyRequest(aSubject, aTopic, aData);
+		},
+		reg: function () {
+			console.error('observer registered!');
+			Services.obs.addObserver(observers['http-on-modify-request'], 'http-on-modify-request', false);
+		},
+		unreg: function () {
+			Services.obs.removeObserver(observers['http-on-modify-request'], 'http-on-modify-request');
+		}
+	}
+};
+
+var twitterImgUrls = {}; // keep track of the urls we tested
+function obsHandler_httpOnMoifyRequest(aSubject, aTopic, aData) {
+	if (!docShell) {
+		// tab was closed, unregister this guy // in non e10s, the framescript stays alive and this observer keeps going, when tab is closed though docShell goes to null, so i use that to unregister self
+		console.log('docShell is null');
+		unregister();
+		return;
+	}
+	var aHttpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
+	var requestUrl = aHttpChannel.URI.spec;
+	
+	if (TWITTER_IMAGE_SUBSTR_REGEX.test(requestUrl)) {
+		console.info('incoming twitter image:', requestUrl);
+	}
+	
+	return;
+	
+	var aLoadContext = getLoadContext(aSubject);
+	if (aSubject.loadInfo && aSubject.loadingDocument && aSubject.loadingDocument.docShell) {
+		var FromMyTab = aSubject.loadingDocument.docShell == docShell;
+	} else {	
+		if (!aLoadContext) {
+			// i ignore things with no load context
+			console.warn('no loadContext on this guy, so ignoring it, requestUrl:', requestUrl, aSubject);
+			return;
+		} else {
+			if (aLoadContext.chromeEventHandler) {
+				var FromMyTab = (aLoadContext.chromeEventHandler.docShell == docShell);
+			} else {
+				// i ignore if load context has no chromeEventHandler
+				console.warn('no chromeEventHandler on this guy, so ignoring it, requestUrl:', requestUrl, aSubject);
+				return;
+			}
+		}
+	}
+	console.info('request opened:', {
+		FromMyTab: FromMyTab,
+		requestUrl: requestUrl,
+		'aSubject': aSubject,
+		'aTopic': aTopic,
+		'aData': aData,
+		'aLoadContext': aLoadContext,
+		'docShell': docShell,
+		'aHttpChannel': aHttpChannel,
+	});
+	
+	if (requestUrl.substr(-4).toLowerCase() == '.png') {
+		console.error('ITS AN IMAGE!!', requestUrl);
+	}
+}
+
+var timeoutRemoveObs = null;
 function do_overlayIfNoFocus(modalTweet) {
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
+	
+	if (!observer_listener_attached_to_submit) {
+		var btnSubmitTweet = modalTweet.querySelector('button.primary-btn');
+		//console.info('btnSubmitTweet:', btnSubmitTweet);
+		btnSubmitTweet.addEventListener('click', function() {
+			if (timeoutRemoveObs === null) {
+				observers['http-on-modify-request'].reg();
+				timeoutRemoveObs = setTimeout(observers['http-on-modify-request'].unreg, 5 * 60 * 1000); // 5 minutes
+			} else {
+				// user re-clicked, so lets reset the timeout
+				clearTimeout(timeoutRemoveObs);
+				timeoutRemoveObs = setTimeout(observers['http-on-modify-request'].unreg, 5 * 60 * 1000); // 5 minutes
+			}
+		}, false);
+		observer_listener_attached_to_submit = true;
+	}
 	
 	var isFocused_aContentWindow = isFocused(aContentWindow);
 	if (!isFocused_aContentWindow) {
@@ -261,6 +363,7 @@ function do_attachUnattachedsToTweet() {
 					aMaxTry: (1000 / waitForInterval_ms) * 5, // try for this many seconds // 10 tries per sec // try * 5 means try 50 times means try for 5 sec
 					aCBMaxTried: function() {
 						imgDataUris[for_waitUntil_aTest_1_trying_iIn_arr].failedToAttach = true;  // can also use a_iIn_arrImgDataUris instead of the for_waitUntil_aTest_1_trying_iIn_arr, but i feel using for_ is more robust
+						// :todo: handle this, maybe offer save to disk
 					},
 					richInputTweetMsg: richInputTweetMsg
 				};
@@ -276,68 +379,6 @@ function do_attachUnattachedsToTweet() {
 		}
 	}
 	
-	return;
-	
-	var richInputTweetMsg = aContentDocument.getElementById('tweet-box-global'); // <button#global-new-tweet-button.js-global-new-tweet.js-tooltip btn primary-btn tweet-btn js-dynamic-tooltip> // :maintain:
-	
-	const actionDelay = 10;
-	
-	var keysImgDataUris = Object.keys(imgDataUris);
-	
-	var isFocused_aContentWindow = isFocused(aContentWindow);
-	
-	if (!isFocused_aContentWindow) {
-		// insert note telling them something will happen
-		
-		var modalTweet = aContentDocument.getElementById('global-tweet-dialog-dialog').querySelector('.modal-tweet-form-container');
-
-		var nativeshotNote = aContentDocument.createElement('div');
-		nativeshotNote.setAttribute('style', 'background-color:rgba(255,255,255,0.7); position:absolute; width:' + modalTweet.offsetWidth + 'px; height:' + modalTweet.offsetHeight + 'px; z-index:100; top:' + modalTweet.offsetTop + 'px; left:0px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:bold;');
-		
-		var nativeshotText = aContentDocument.createElement('span');
-		nativeshotText.setAttribute('style', 'margin-top:-60px;');
-		nativeshotText.textContent = 'NativeShot will attach images to this tweet when you focus this tab'
-		
-		nativeshotNote.appendChild(nativeshotText);
-		
-		modalTweet.insertBefore(nativeshotNote, modalTweet.firstChild);
-		
-		aContentWindow.addEventListener('focus', function() {
-			aContentWindow.removeEventListener('focus', arguments.callee, false);
-			//modalTweet.removeChild(nativeshotNote);
-		}, false);
-		
-		Services.prompt.alert(null, 'not foc', 'overlaid');
-		// insert note telling them something will happen
-	}
-	
-	/*
-	for (var i=0; i<keysImgDataUris.length; i++) {
-		let iHoisted = i;
-		if (!imgDataUris[keysImgDataUris[i]].attachedToTweet) {
-			imgDataUris[keysImgDataUris[i]].attachedToTweet = true;
-			var doit = function() {
-				aContentWindow.removeEventListener('focus', arguments.callee, false);
-				setTimeout(function() {
-					console.log('attaching iHoisted:', (iHoisted + 2) * actionDelay);
-					console.info('imgDataUris[keysImgDataUris[iHoisted]].imgDataUri:', '<img src="' + imgDataUris[keysImgDataUris[iHoisted]].imgDataUri + '" />');
-					var img = aContentDocument.createElement('img');
-					img.setAttribute('src', imgDataUris[keysImgDataUris[iHoisted]].imgDataUri);
-					richInputTweetMsg.appendChild(img);
-					// richInputTweetMsg.innerHTML += '<img src="' + imgDataUris[keysImgDataUris[iHoisted]].imgDataUri + '" />';
-				}, (iHoisted + 2) * actionDelay);
-			};
-			if (isFocused_aContentWindow) {
-				console.log('is focused, so doit');
-				doit();
-			} else {
-				console.log('wasnt focused so adding focus event listener for doit');
-				
-				aContentWindow.addEventListener('focus', doit, false);
-			}
-		}
-	}
-	*/
 	// :todo: after attaching, test to verify it attached to tweet
 	// :todo: also test for listener on modal close, then notify in user bar that images from tweet detached
 
@@ -357,6 +398,38 @@ function isFocused(window) {
     }
 
     return (focusedChildWindow === childTargetWindow);
+}
+function getLoadContext(request) {
+    var loadContext = null;
+
+    if (request instanceof Ci.nsIRequest) {
+        try {
+            if (request.loadGroup && request.loadGroup.notificationCallbacks) {
+                loadContext = request.loadGroup.notificationCallbacks.getInterface(Ci.nsILoadContext);
+            }
+        } catch (ex) {
+            console.exception('request loadGroup with notificationCallbacks but oculd not get nsIloadContext', ex);
+            try {
+                if (request.notificationCallbacks) {
+                    loadContext = request.notificationCallbacks.getInterface(Ci.nsILoadContext);
+                }
+            } catch (ex) {
+                console.exception('request has notificationCallbacks but could not get nsILoadContext', ex);
+                /* start - noit's backup try, it might be redundant (im not sure) as Wladamir Palant didn't have this way*/
+                try {
+                    var interfaceRequestor = httpChannel.notificationCallbacks.QueryInterface(Ci.nsIInterfaceRequestor);
+                    loadContext = interfaceRequestor.getInterface(Ci.nsILoadContext);
+                } catch (ex) {
+                    console.exception('backup method failed:', ex); // fixed on aug 14 2015
+                }
+                /* end - my backup try, it might be redundant as Wladamir Palant didn't have this way*/
+            }
+        }
+    } else {
+        console.warn('request argument is not instance of nsIRequest')
+    }
+
+    return loadContext;
 }
 // END - helper functions
 

@@ -269,7 +269,7 @@ function get_gEMenuDomJson() {
 					]
 					*/
 					['xul:menuseparator', {}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_close'), oncommand:'window.close()'}]
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_close'), oncommand:function() { gEditor.closeOutEditor({shiftKey:false}) }}]
 				]
 			];
 	}
@@ -458,10 +458,9 @@ gMacTypes.SEL,
 "...");
 
 }
-var userAckPending = { // object holding on to data till user is notified of the tabs, images have succesfully been dropped into tabs, and user ancknolwedges by makeing focus to tabs (as i may need to hold onto the data, if user is not signed in, or if user want to use another account [actually i dont think ill bother with other account thing, just signed in])
-	// todo thinking about tying this with global browser notif bar, and dismiss time
-	twitter: [] // {gEditorSessionId:,tab:,fs:,imgDataUris:[],imgUrls:[]} // array of objects, weak reference to tab, framescript, the 4 (because thats max allowed by twitter per tweet) data uri of imgs for that tab, and then after upload it holds the image urls for copy to clipboard
-}
+var userAckPending = [ // object holding on to data till user is notified of the tabs, images have succesfully been dropped into tabs, and user ancknolwedges by makeing focus to tabs (as i may need to hold onto the data, if user is not signed in, or if user want to use another account [actually i dont think ill bother with other account thing, just signed in])
+// {gEditorSessionId:,tab:,fs:,imgDataUris:[],imgUrls:[]} // array of objects, weak reference to tab, framescript, the 4 (because thats max allowed by twitter per tweet) data uri of imgs for that tab, and then after upload it holds the image urls for copy to clipboard
+];
 
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
@@ -657,6 +656,11 @@ var gEditor = {
 		if (e.shiftKey) {
 			console.log('will not close out editor as shift key was held, user wants to do more actions')
 		} else {
+			for (var p in NBs.crossWin) {
+				if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
+					NBs.insertGlobalToWin(p, 'all');
+				}
+			}
 			gEditor.gBrowserDOMWindow.focus();
 			colMon[0].E.DOMWindow.close();
 		}
@@ -854,14 +858,14 @@ var gEditor = {
 		
 		this.compositeSelection();
 		
-		var refUAP = userAckPending.twitter;
+		var refUAP = userAckPending;
 		
 		var refUAPEntry;
 		if (refUAP.length == 0) {
 			
 		} else {
 			for (var i=0; i<refUAP.length; i++) {
-				if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDataUris.length <= 4) {
+				if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDataUris.length < 4) {
 					refUAPEntry = refUAP[i];
 					break;
 				}
@@ -869,6 +873,8 @@ var gEditor = {
 		}
 		
 		var cImgDataUri = this.canComp.toDataURL('image/png', '');
+		
+		var crossWinId = gEditor.sessionId + '-twitter'; // note: make every crossWinId start with gEditor.sessionId
 		
 		if (!refUAPEntry) {
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
@@ -878,21 +884,63 @@ var gEditor = {
 			newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + Math.random(), false);
 			refUAPEntry = refUAP[refUAP.push({
 				gEditorSessionId: gEditor.sessionId,
+				userAckId: Math.random(),
 				tab: newtab,
 				browserMM: newtab.linkedBrowser.messageManager,
 				imgDataUris: [],
 				imgUrls: []
 			}) - 1];
+			
+			if (crossWinId in NBs.crossWin) {
+				NBs.crossWin[crossWinId].btns.push({
+					label: 'Images Pending Tweet (1)-ID:' + refUAPEntry.userAckId, // :l10n:
+					btn_id: refUAPEntry.userAckId,
+					class: 'nativeshot-twitter-neutral',
+					accessKey: 'T',
+					callback: function() {
+						refUAPEntry.tab.ownerDocument.defaultView.focus();
+						refUAPEntry.tab.ownerDocument.defaultView.gBrowser.selectedTab = refUAPEntry.tab;
+						throw new Error('preventing close of this n');
+					}
+				});
+			} else {
+				NBs.crossWin[crossWinId] = {
+					msg: 'Images have been prepared for Tweeting. User interaction needed in order to complete:', // :l10n:
+					img: core.addon.path.images + 'twitter16.png',
+					p: 6,
+					btns: [{
+						label: 'Images Pending Tweet (1)-ID:' + refUAPEntry.userAckId,
+						btn_id: refUAPEntry.userAckId,
+						class: 'nativeshot-twitter-neutral',
+						accessKey: 'T',
+						callback: function() {
+							refUAPEntry.tab.ownerDocument.defaultView.focus();
+							refUAPEntry.tab.ownerDocument.defaultView.gBrowser.selectedTab = refUAPEntry.tab;
+							throw new Error('preventing close of this n');
+						}
+					}]
+				};
+			}
+		} else {
+			var btnEntryInCrossWin;
+			for (var i=0; i<NBs.crossWin[crossWinId].btns.length; i++) {
+				if (NBs.crossWin[crossWinId].btns[i].btn_id == refUAPEntry.userAckId) {
+					btnEntryInCrossWin = NBs.crossWin[crossWinId].btns[i];
+					break;
+				}
+			}
+			btnEntryInCrossWin.label = 'Images Pending Tweet (' + (refUAPEntry.imgDataUris.length + 1) + ')-ID:' + refUAPEntry.userAckId;  // :l10n:
 		}
 		
 		// twitter allows maximum 4 attachment, so if 
 		
+		refUAPEntry.imgDataUris.push(cImgDataUri);
+		
 		refUAPEntry.browserMM.sendAsyncMessage(core.addon.id, {
-			aTopic:'serverCommand_attachImgDataURIWhenReady',
+			aTopic: 'serverCommand_attachImgDataURIWhenReady',
 			imgDataUri: cImgDataUri,
 			iIn_arrImgDataUris: refUAPEntry.imgDataUris.length
 		});
-		refUAPEntry.imgDataUris.push(cImgDataUri);
 		
 		this.closeOutEditor(e);
 	},
@@ -1807,7 +1855,7 @@ var NBs = { // short for "notification bars"
 		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
 		while (DOMWindows.hasMoreElements()) {
 			var aDOMWindow = DOMWindows.getNext();
-			var btmDeckBox = aDOMWindow.document.getElementById('nativeshotBtmDeckBox');
+			var btmDeckBox = aDOMWindow.document.getElementById('nativeshotDeck' + aGroupId);
 			if (btmDeckBox) {
 				var nb = btmDeckBox.getNotificationWithValue(aGroupId);
 				if (aHints.lbl) {
@@ -1881,7 +1929,7 @@ var NBs = { // short for "notification bars"
 		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
 		while (DOMWindows.hasMoreElements()) {
 			var aDOMWindow = DOMWindows.getNext();
-			var btmDeckBox = aDOMWindow.document.getElementById('nativeshotBtmDeckBox');
+			var btmDeckBox = aDOMWindow.document.getElementById('nativeshotDeck' + aGroupId);
 			if (btmDeckBox) {
 				var n = btmDeckBox.getNotificationWithValue(aGroupId);
 				if (n) {
@@ -1909,12 +1957,12 @@ var NBs = { // short for "notification bars"
 		var cCrossWin = NBs.crossWin[aGroupId];	
 		
 		var deck = aDOMDocument.getElementById('content-deck');
-		var btmDeckBox = aDOMDocument.getElementById('nativeshotBtmDeckBox');
+		var btmDeckBox = aDOMDocument.getElementById('nativeshotDeck' + aGroupId);
 		console.info('btmDeckBox:', btmDeckBox);
 		if (!btmDeckBox) {
 		  console.log('created new btm deck');
 		  btmDeckBox = aDOMDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'notificationbox');
-		  btmDeckBox.id = 'nativeshotBtmDeckBox'; //setAttribute doesnt work for id //btmDeckBox.setAttribute('id', 'nativeshotBtmDeckBox');
+		  btmDeckBox.setAttribute('id', 'nativeshotDeck' + aGroupId);
 		  // deck.parentNode.insertBefore(btmDeckBox, deck); // for top
 		  deck.parentNode.appendChild(btmDeckBox); // for bottom
 		} else { console.log('already there'); }
@@ -1931,7 +1979,10 @@ var NBs = { // short for "notification bars"
 			var notifCallback = function(what) {
 				console.log('what:', what);
 				if (what == 'removed') {
-					btmDeckBox.removeNotification(cNB, false); // close just hides it, so we do removeNotification to remove it. otherwise if same groupid, nativeshot will find it already exists and then not create another one
+					// btmDeckBox.removeNotification(cNB, false); // close just hides it, so we do removeNotification to remove it. otherwise if same groupid, nativeshot will find it already exists and then not create another one
+					aDOMWindow.setTimeout(function() {
+						btmDeckBox.parentNode.removeChild(btmDeckBox);
+					}, 1000);
 					if (aGroupId in NBs.crossWin) {
 						NBs.closeGlobal(aGroupId);
 					} else {

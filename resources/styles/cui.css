@@ -19,9 +19,13 @@
 		-moz-margin-end: 5px;
 		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_bad16.png');
 	}
-	notification button.nativeshot-twitter .button-icon {
+	notification button.nativeshot-twitter-good .button-icon {
 		-moz-margin-end: 5px;
-		list-style-image: url('chrome://nativeshot/content/resources/images/twitter16.png');
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_good16.png');
+	}
+	notification button.nativeshot-twitter-neutral .button-icon {
+		-moz-margin-end: 5px;
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_neutral16.png');
 	}
 	/*end-non cui stuff*/
 }
