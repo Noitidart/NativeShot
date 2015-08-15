@@ -1,12 +1,18 @@
 // have to do this because i need to add stuff into the jquery
-$(document).off('uiTweetDialogClosed', nativeShot_notifyDialogClosed);
-
-delete window.nativeShot_notifyDialogClosed;
-
 var scriptReg = docuement.getElementById('nativeshot_twitter_register');
-var scriptUneg = docuement.getElementById('nativeshot_twitter_unregister');
+if (scriptReg) {
+	$(document).off('uiTweetDialogClosed', nativeShot_notifyDialogClosed);
+	$(document).off('dataTweetSuccess', nativeShot_notifyDataTweetSuccess);
+	$(document).off('dataTweetError', nativeShot_notifyDataTweetError);
+	
+	delete window.nativeShot_notifyDialogClosed;
+	delete window.nativeShot_notifyDataTweetSuccess;
+	delete window.nativeShot_notifyDataTweetError;
+	
+	scriptReg.parentNode.removeChild(scriptReg);
+}
 
-scriptReg.parentNode.removeChild(scriptReg);
+var scriptUneg = docuement.getElementById('nativeshot_twitter_unregister');
 scriptUneg.parentNode.removeChild(scriptUneg);
 
 alert('unregistered');

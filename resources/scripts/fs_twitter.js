@@ -1,6 +1,10 @@
 console.error('THIS:', this);
-const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
 
+// Imports
+const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
+// Cu.import('resource://gre/modules/XPCOMUtils.jsm'); // frame scripts already have this loaded
+
+// Globals
 var core = {
 	addon: {
 		id: 'NativeShot@jetpack',
@@ -13,6 +17,10 @@ const clientId = new Date().getTime(); // server doesnt generate clientId in thi
 const TWITTER_HOSTNAME = 'twitter.com';
 const TWITTER_IMAGE_SUBSTR = 'https://pbs.twimg.com/media/';
 var TWITTER_IMAGE_SUBSTR_REGEX = /\.twimg\.com/i;
+
+// Lazy Imports
+const myServices = {};
+// XPCOMUtils.defineLazyGetter(myServices, 'ssl', function () { return Cc['@mozilla.org/moz/jssubscript-loader;1'].getService(Ci.mozIJSSubScriptLoader) });
 
 const serverMessageListener = {
 	// listens to messages sent from clients (child framescripts) to me/server
@@ -54,6 +62,7 @@ function register() {
 	if (aContentDocument.readyState.state == 'ready' && aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 		init();
 	} else {
+		console.error('adding listener for twitter load');
 		addEventListener('DOMContentLoaded', listenForTwitterLoad, false); // add listener to listen to page loads  till it finds twitter page
 	}
 	
@@ -62,26 +71,26 @@ function register() {
 function unregister() {
 	console.error('unregistering!!!!!');
 	
-	var aContentWindow = content;
-	var aContentDocument = content.document;
-	
 	try {
 		removeMessageListener(core.addon.id, serverMessageListener);
 	} catch(ignore) {
 		console.info('failed to removeMessageListener probably because tab is already dead, ex:', ignore);
 	}
 	
-	if (timeoutRemoveObs !== null) {
-		// observer was added, lets remove it
-		clearTimeout(timeoutRemoveObs);
-		observers['http-on-modify-request'].unreg();
+	try {
+		var aContentWindow = content;
+		var aContentDocument = content.document;
+	} catch (ignore) {} // content goes to null when tab is killed
+	
+	if (aContentWindow) {
+		var myUnregScript = aContentDocument.createElement('script');
+		myUnregScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_unregister.js');
+		myUnregScript.setAttribute('id', 'nativeshot_twitter_unregister');
+		myUnregScript.setAttribute('nonce', aContentDocument.querySelector('script[nonce]').getAttribute('nonce'));
+		aContentDocument.documentElement.appendChild(myUnregScript);
+		
+		// myServices.ssl.loadSubScript(core.addon.path.content_accessible + 'twitter_unregister.js', aContentWindow)
 	}
-	
-	var myUnregScript = aContentDocument.createElement('script');
-	myUnregScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_unregister.js');
-	myUnregScript.setAttribute('id', 'nativeshot_twitter_unregister');
-	
-	aContentDocument.documentElement.appendChild(myUnregScript);
 }
 
 function init() {
@@ -93,12 +102,45 @@ function init() {
 	var myRegScript = aContentDocument.createElement('script');
 	myRegScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_register.js');
 	myRegScript.setAttribute('id', 'nativeshot_twitter_register');
-	
+	myRegScript.setAttribute('nonce', aContentDocument.querySelector('script[nonce]').getAttribute('nonce'));
 	aContentDocument.documentElement.appendChild(myRegScript);
 	
-	aContentWindow.addEventListener('nativeShot_notifyDialogClosed', function() {
-	  // :todo: tell notification-bar that tweet was lost due to closed tweet, offer on click to openTweetModal and reattach
-	  console.error('tweet dialog closed');
+	// myServices.ssl.loadSubScript(core.addon.path.content_accessible + 'twitter_register.js', aContentWindow)
+	
+	
+	aContentWindow.addEventListener('nativeShot_notifyDialogClosed', function(aEvent) {
+		// :todo: tell notification-bar that tweet was lost due to closed tweet, offer on click to openTweetModal and reattach
+		console.error('tweet dialog closed, aEvent:', aEvent);
+	}, false, true);
+	
+	aContentWindow.addEventListener('nativeShot_notifyDataTweetSuccess', function(aEvent) {
+		// :todo: tell notification-bar that tweet was submited succesfully, and is now waiting to receive uploaded image urls
+		var a = aEvent.detail.a;
+		var b = aEvent.detail.b;
+		
+		console.error('tweet success baby, aEvent:', {aEvent: aEvent,a: a, b: b});
+		
+		var refDetails;
+		if (b.tweetboxId) {
+			refDetails = b;
+		} else {
+			refDetails = b.sourceEventData;
+		}
+	}, false, true);
+	
+	aContentWindow.addEventListener('nativeShot_notifyDataTweetError', function(aEvent) {
+		// :todo: tell notification-bar that tweet was submited and failed
+		var a = aEvent.detail.a;
+		var b = aEvent.detail.b;
+		
+		console.error('tweet submission came back error, aEvent:', {aEvent: aEvent,a: a, b: b});
+		
+		var refDetails;
+		if (b.tweetboxId) {
+			refDetails = b;
+		} else {
+			refDetails = b.sourceEventData;
+		}
 	}, false, true);
 	
 	do_openTweetModal();
@@ -173,8 +215,6 @@ function do_openTweetModal() {
 
 const waitForInterval_ms = 100;
 
-var observer_listener_attached_to_submit = false;
-
 var for_waitUntil_aTest_1_currentPreviewElementsCount = 0;
 var for_waitUntil_aTest_1_trying_iIn_arr = -1;
 var for_waitUntil_aTest_1_running = false;
@@ -233,92 +273,9 @@ function do_waitUntil(aTest, aCB, aOptions) {
 	}
 }
 
-var observers = {
-	'http-on-modify-request': { // this trick detects actual load of iframe from bootstrap scope
-		observe: function (aSubject, aTopic, aData) {
-			obsHandler_httpOnMoifyRequest(aSubject, aTopic, aData);
-		},
-		reg: function () {
-			console.error('observer registered!');
-			Services.obs.addObserver(observers['http-on-modify-request'], 'http-on-modify-request', false);
-		},
-		unreg: function () {
-			Services.obs.removeObserver(observers['http-on-modify-request'], 'http-on-modify-request');
-		}
-	}
-};
-
-var twitterImgUrls = {}; // keep track of the urls we tested
-function obsHandler_httpOnMoifyRequest(aSubject, aTopic, aData) {
-	if (!docShell) {
-		// tab was closed, unregister this guy // in non e10s, the framescript stays alive and this observer keeps going, when tab is closed though docShell goes to null, so i use that to unregister self
-		console.log('docShell is null');
-		unregister();
-		return;
-	}
-	var aHttpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-	var requestUrl = aHttpChannel.URI.spec;
-	
-	if (TWITTER_IMAGE_SUBSTR_REGEX.test(requestUrl)) {
-		console.info('incoming twitter image:', requestUrl);
-	}
-	
-	return;
-	
-	var aLoadContext = getLoadContext(aSubject);
-	if (aSubject.loadInfo && aSubject.loadingDocument && aSubject.loadingDocument.docShell) {
-		var FromMyTab = aSubject.loadingDocument.docShell == docShell;
-	} else {	
-		if (!aLoadContext) {
-			// i ignore things with no load context
-			console.warn('no loadContext on this guy, so ignoring it, requestUrl:', requestUrl, aSubject);
-			return;
-		} else {
-			if (aLoadContext.chromeEventHandler) {
-				var FromMyTab = (aLoadContext.chromeEventHandler.docShell == docShell);
-			} else {
-				// i ignore if load context has no chromeEventHandler
-				console.warn('no chromeEventHandler on this guy, so ignoring it, requestUrl:', requestUrl, aSubject);
-				return;
-			}
-		}
-	}
-	console.info('request opened:', {
-		FromMyTab: FromMyTab,
-		requestUrl: requestUrl,
-		'aSubject': aSubject,
-		'aTopic': aTopic,
-		'aData': aData,
-		'aLoadContext': aLoadContext,
-		'docShell': docShell,
-		'aHttpChannel': aHttpChannel,
-	});
-	
-	if (requestUrl.substr(-4).toLowerCase() == '.png') {
-		console.error('ITS AN IMAGE!!', requestUrl);
-	}
-}
-
-var timeoutRemoveObs = null;
 function do_overlayIfNoFocus(modalTweet) {
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
-	
-	if (!observer_listener_attached_to_submit) {
-		var btnSubmitTweet = modalTweet.querySelector('button.primary-btn');
-		//console.info('btnSubmitTweet:', btnSubmitTweet);
-		btnSubmitTweet.addEventListener('click', function() {
-			if (timeoutRemoveObs === null) {
-				observers['http-on-modify-request'].reg();
-				timeoutRemoveObs = setTimeout(observers['http-on-modify-request'].unreg, 5 * 60 * 1000); // 5 minutes
-			} else {
-				// user re-clicked, so lets reset the timeout
-				clearTimeout(timeoutRemoveObs);
-				timeoutRemoveObs = setTimeout(observers['http-on-modify-request'].unreg, 5 * 60 * 1000); // 5 minutes
-			}
-		}, false);
-		observer_listener_attached_to_submit = true;
-	}
 	
 	var isFocused_aContentWindow = isFocused(aContentWindow);
 	if (!isFocused_aContentWindow) {
