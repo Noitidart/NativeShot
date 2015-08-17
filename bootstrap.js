@@ -21,11 +21,12 @@ const core = {
 		path: {
 			name: 'nativeshot',
 			content: 'chrome://nativeshot/content/',
+			content_accessible: 'chrome://nativeshot-accessible/content/',
 			images: 'chrome://nativeshot/content/resources/images/',
 			locale: 'chrome://nativeshot/locale/',
 			resources: 'chrome://nativeshot/content/resources/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
-			styles: 'chrome://nativeshot/content/resources/styles/'
+			styles: 'chrome://nativeshot/content/resources/styles/',
 		}
 	},
 	os: {
@@ -459,8 +460,158 @@ gMacTypes.SEL,
 
 }
 var userAckPending = [ // object holding on to data till user is notified of the tabs, images have succesfully been dropped into tabs, and user ancknolwedges by makeing focus to tabs (as i may need to hold onto the data, if user is not signed in, or if user want to use another account [actually i dont think ill bother with other account thing, just signed in])
-// {gEditorSessionId:,tab:,fs:,imgDataUris:[],imgUrls:[]} // array of objects, weak reference to tab, framescript, the 4 (because thats max allowed by twitter per tweet) data uri of imgs for that tab, and then after upload it holds the image urls for copy to clipboard
+// {gEditorSessionId:,tab:,fs:,imgDatas:{dataURL,uploadedURL,attachedToTweet,sentToFS}} // array of objects, weak reference to tab, framescript, the 4 (because thats max allowed by twitter per tweet) data uri of imgs for that tab, and then after upload it holds the image urls for copy to clipboard
 ];
+
+const fsComServer = {
+	serverId: Math.random();
+	// start - twitter framescript specific
+	twitterListenerRegistered: false,
+	twitterClientMessageListener: {
+		// listens to messages sent from clients (child framescripts) to me/server
+		// also from old server, to listen when to trigger updated register
+		receiveMessage: function(aMsg) {
+			console.error('SERVER recieving msg:', aMsg.json);
+			if ((aMsg.json.subServer == 'twitter') & (!('serverId' in aMsg.json) || aMsg.json.serverId == fsComServer.id)) {
+				switch (aMsg.json.aTopic) {
+					/* // i dont need this because the sendMessage is sync event though sendAsync, so if i do load and do sendAsync message it will get that message
+					case 'clientRequest_clientBorn':
+							
+							
+							
+						break;
+					*/
+					case 'clientRequest_vailableToAttachAnother':
+							
+							
+							
+						break;
+					case 'clientNotify_clientUnregistered':
+
+							// check if the currently unregistering fs was succesfully tweeted and update notif bar accordingly
+							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
+							if (aMsg.json.gTweeted) {
+								// was successfully tweeted, so set this refUAPEntry to completed AND framescript: inactive
+								refUAPEntry.tweeted = true;
+								refUAPEntry.actionOnBtn = 'show-clips-popup';
+								// :todo: make notif-bar green
+							} else {
+								// set refUAPEntry to failed tweet (either tab closed, twitter page navigated away from, ), and make its notif button, on click to open a new tab and reattach
+								// refUAPEntry.tweeted = false; // it should already be false, no need to set it
+								// :todo: make notif-bar red
+								refUAPEntry.actionOnBtn = 'open-tab';
+							}
+							
+							// check if any other twitter fs are active (meaning a succesful tweet is pending), if none found remove the twitterClientMessageListener
+							var refUAP = userAckPending;
+							var nonTweetedUAPFound = false;
+							for (var i=0; i<refUAP.length; i++) {
+								if (refUAP.uaGroup == 'twitter' && !refUAP.tweeted) {
+									nonTweetedUAPFound = true;
+									break;
+								}
+							}
+							if (!nonTweetedUAPFound) {
+								fsComServer.twitterListenerRegistered = false;
+								Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+							}
+							
+						break;
+					case 'clientNotify_readyToAttach':
+							
+							// notification that the FS with this UAP is ready to accept another image
+							
+							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
+							
+							// check if something was attached by this notification, and mark it so
+							if ('justAttachedImgId' in aMsg.json) {
+								refUAPEntry.imgDatas[justAttachedImgId].attachedToTweet = true;
+							}
+							
+							refUAPEntry.FSReadyToAttach = true; // short for frameScript_isReadyToAttachAnother, basically ready to accept another send
+							
+							twitter_IfFSReadyToAttach_sendNextUnattached(aMsg.json.userAckId);
+							
+						break;
+					case 'clientResponse_imgAttached':
+							
+							
+							
+						break;
+					case 'clientRequest_clientShutdownComplete':
+							
+							
+							
+						break;
+					// start - devuser edit - add your personal message topics to listen to from clients
+						
+					// end - devuser edit - add your personal message topics to listen to from clients
+					default:
+						console.error('SERVER unrecognized aTopic:', aMsg.json.aTopic, aMsg, 'server id:', fsComServer.id);
+				}
+			} // else { console.warn('incoming message to server but it has an id and it is not of this so ignore it', 'this server id:', fsComServer.id, 'msg target server is:', aMsg.json.serverId, 'aMsg:', aMsg); }
+		}
+	},
+	twitterInitFS: function(userAckId) {
+		var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {aTopic:'serverCommand_init', serverId:fsComServer.serverId, userAckId:userAckId})
+	},
+	twitterSendDataToAttach: function(userAckId) {
+		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
+	},
+	twitter_IfFSReadyToAttach_sendNextUnattached: function(userAckId) {
+		// returns true, if something was found unattached and sent, returns false if nothing found unnatached or FS wasnt ready
+		if (refUAPEntry.FSReadyToAttach) {
+			// its available to attach, so send it
+			// check if any imgs are waiting to be attached
+			for (var imgId in refUAPEntry.imgDatas) {
+				if (!refUAPEntry.imgDatas[imgId].attachedToTweet) {
+					// send command to client to attached
+					refUAPEntry.FSReadyToAttach = false;
+					refUAPEntry.imgDatas[imgiD].sentToFS = true;
+					refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage('serverCommand_attachImgToTweet', {
+						serverId: fsComServer.serverId,
+						imgId: imgId,
+						dataURL: refUAPEntry.imgDatas[imgiD].dataURL;
+					});
+					return true;
+				}
+			}
+		} else {
+			// not yet availble to attach so do nothing. because when fs is ready to attach it will send me a clientNotify_readyToAttach, and i run this function of twitter_IfFSReadyToAttach_sendNextUnattached there
+			return false;
+		}
+	}
+	// end - twitter framescript specific
+}
+
+function getUAPEntry_byUserAckId(userAckId) {
+	// THROWS if not found
+	var refUAP = userAckPending;
+	var refUAPEntry;
+	for (var i=0; i<refUAP.length; i++) {
+		if (refUAP[i].userAckId == userAckId) {
+			return refUAP[i];
+		}
+	}
+	console.error('could not find aUAPEntry with userAckId of', userAckId, 'this is UAP:', refUAP);
+	throw new Error('could not find aUAPEntry with userAckId - should not happen i think');
+}
+
+function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
+	// does NOT throw if not found
+	var refUAP = userAckPending;
+	var refUAPEntry;
+	for (var i=0; i<refUAP.length; i++) {
+		if (refUAP[i].gEditorSessionId == gEditorSessionId) {
+			return refUAP[i];
+		}
+	}
+	if (throwOnNotFound) {
+		console.error('could not find aUAPEntry with userAckId of', userAckId, 'this is UAP:', refUAP);
+		throw new Error('could not find aUAPEntry with userAckId - should not happen i think');
+	}
+}
 
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
@@ -860,23 +1011,17 @@ var gEditor = {
 		
 		var refUAP = userAckPending;
 		
-		var refUAPEntry;
-		if (refUAP.length == 0) {
-			
-		} else {
-			for (var i=0; i<refUAP.length; i++) {
-				if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDataUris.length < 4) {
-					refUAPEntry = refUAP[i];
-					break;
-				}
-			}
-		}
+		var refUAPEntry = getUAPEntry_byGEditorSessionId(this.sessionId);
 		
 		var cImgDataUri = this.canComp.toDataURL('image/png', '');
 		
 		var crossWinId = gEditor.sessionId + '-twitter'; // note: make every crossWinId start with gEditor.sessionId
 		
 		if (!refUAPEntry) {
+			if (!fsComServer.twitterListenerRegistered) {
+				Services.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+				fsComServer.twitterListenerRegistered = true;
+			}
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
 				inBackground: false,
 				relatedToCurrent: false
@@ -885,23 +1030,26 @@ var gEditor = {
 			refUAPEntry = refUAP[refUAP.push({
 				gEditorSessionId: gEditor.sessionId,
 				userAckId: Math.random(),
-				tab: newtab,
-				browserMM: newtab.linkedBrowser.messageManager,
-				imgDataUris: [],
-				imgUrls: []
+				tab: Cu.getWeakReference(newtab),
+				imgDatas: {},
+				FSReadyToAttach: true,
+				imgDatasCount: 0,
+				uaGroup: 'twitter'
+				actionOnBtn: 'focus-tab'
+					/*
+						focus-tab: default (meaning if invaild actionOnBtn it will do this), it focuses tab of this framescript
+						open-new-tab: opens new tab, loads twitter, and starts the attaching process
+					*/
 			}) - 1];
 			
+			newTab.linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {aTopic:'serverCommand_clientInit', core:core, userAckId:refUAPEntry.userAckId});
 			if (crossWinId in NBs.crossWin) {
 				NBs.crossWin[crossWinId].btns.push({
 					label: 'Images Pending Tweet (1)-ID:' + refUAPEntry.userAckId, // :l10n:
 					btn_id: refUAPEntry.userAckId,
 					class: 'nativeshot-twitter-neutral',
 					accessKey: 'T',
-					callback: function() {
-						refUAPEntry.tab.ownerDocument.defaultView.focus();
-						refUAPEntry.tab.ownerDocument.defaultView.gBrowser.selectedTab = refUAPEntry.tab;
-						throw new Error('preventing close of this n');
-					}
+					callback: twitterNotifBtnCB.bind(null, refUAPEntry)
 				});
 			} else {
 				NBs.crossWin[crossWinId] = {
@@ -913,11 +1061,7 @@ var gEditor = {
 						btn_id: refUAPEntry.userAckId,
 						class: 'nativeshot-twitter-neutral',
 						accessKey: 'T',
-						callback: function() {
-							refUAPEntry.tab.ownerDocument.defaultView.focus();
-							refUAPEntry.tab.ownerDocument.defaultView.gBrowser.selectedTab = refUAPEntry.tab;
-							throw new Error('preventing close of this n');
-						}
+						callback: twitterNotifBtnCB.bind(null, refUAPEntry) // :todo: test what the arguments on click of button are
 					}]
 				};
 			}
@@ -929,14 +1073,23 @@ var gEditor = {
 					break;
 				}
 			}
-			btnEntryInCrossWin.label = 'Images Pending Tweet (' + (refUAPEntry.imgDataUris.length + 1) + ')-ID:' + refUAPEntry.userAckId;  // :l10n:
+			btnEntryInCrossWin.label = 'Images Pending Tweet (' + (refUAPEntry.imgDatasCount + 1) + ')-ID:' + refUAPEntry.userAckId;  // :l10n:
 		}
 		
 		// twitter allows maximum 4 attachment, so if 
 		
-		refUAPEntry.imgDataUris.push(cImgDataUri);
+		refUAPEntry.imgDatas[refUAPEntry.imgDatasCount] = {
+			dataURL: cImgDataUri,
+			attachedToTweet: false,
+			sentToFS: false,
+			uploadedURL: null
+		};
+		refUAPEntry.imgDatasCount++;
+		// refUAPEntry.imgDataUris.push(cImgDataUri);
 		
-		refUAPEntry.browserMM.sendAsyncMessage(core.addon.id, {
+		fsComServer.twitter_serverAddedAttachment_ifFSReadySend_elseDoNothingAndWaitTillFSSendsItIsReady();
+		
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
 			aTopic: 'serverCommand_attachImgDataURIWhenReady',
 			imgDataUri: cImgDataUri,
 			iIn_arrImgDataUris: refUAPEntry.imgDataUris.length
@@ -1815,6 +1968,45 @@ function shootAllMons(aDOMWindow) {
 			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 		}
 	);
+}
+
+function twitterNotifBtnCB(aUAPEntry, aNotifBar, aButton) {
+	console.info('notifBtn clicked, this:', arguments);
+	switch (aUAPEntry.actionOnBtn) {
+		'show-clips-popup':
+			
+				console.log('show popup so user can copy stuff to clipboard');
+			
+			break;
+		'reopen-tweet':
+			
+				aUAPEntry.tab.ownerDocument.defaultView.focus();
+				aUAPEntry.tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get();
+				aUAPEntry.tabMM.sendAsyncMessage(core.addon.id, {
+					serverId: fsComServer.serverId,
+					aTopic: 'serverCommand_reOpenTweetModal'
+				});
+			
+			break;
+		'open-new-tab':
+			
+				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
+					inBackground: false,
+					relatedToCurrent: false
+				});
+				newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + Math.random(), false);
+				aUAPEntry.tab = Cu.getWeakReference(newtab);
+				aUAPEntry.tweeted = false; // synonomous with fsActive = false
+			
+			break;
+		'focus-tab':
+		default:
+		
+				aUAPEntry.tab.ownerDocument.defaultView.focus();
+				aUAPEntry.tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get();
+	}
+	
+	throw new Error('throw to preventing close of this notif-bar');
 }
 
 var NBs = { // short for "notification bars"

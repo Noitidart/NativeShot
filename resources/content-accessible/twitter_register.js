@@ -32,4 +32,6 @@ $(document).on('uiTweetDialogClosed', nativeShot_notifyDialogClosed);
 $(document).on('dataTweetSuccess', nativeShot_notifyDataTweetSuccess);
 $(document).on('dataTweetError', nativeShot_notifyDataTweetError);
 
-alert('registered');
+var jqReggedEvt = document.createEvent('CustomEvent');
+jqReggedEvt.initCustomEvent('nativeShot_notifyJqueryRegistered', true, true, {});
+window.dispatchEvent(jqReggedEvt);

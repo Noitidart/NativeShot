@@ -1,5 +1,5 @@
 // have to do this because i need to add stuff into the jquery
-var scriptReg = docuement.getElementById('nativeshot_twitter_register');
+var scriptReg = document.getElementById('nativeshot_twitter_register');
 if (scriptReg) {
 	$(document).off('uiTweetDialogClosed', nativeShot_notifyDialogClosed);
 	$(document).off('dataTweetSuccess', nativeShot_notifyDataTweetSuccess);
@@ -12,7 +12,7 @@ if (scriptReg) {
 	scriptReg.parentNode.removeChild(scriptReg);
 }
 
-var scriptUneg = docuement.getElementById('nativeshot_twitter_unregister');
+var scriptUneg = document.getElementById('nativeshot_twitter_unregister');
 scriptUneg.parentNode.removeChild(scriptUneg);
 
 alert('unregistered');
