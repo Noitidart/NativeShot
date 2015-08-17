@@ -27,42 +27,38 @@ const myServices = {};
 const serverMessageListener = {
 	// listens to messages sent from clients (child framescripts) to me/server
 	receiveMessage: function(aMsg) {
-		console.error('CLIENT recieving msg:', 'this client id:', clientId, 'aMsg:', aMsg);
-		switch (aMsg.json.aTopic) {
-			case 'serverCommand_clientInit':
-					
-					// server sends init after i send server clientBorn message
-					fsComClient.init(aMsg.json.core, aMsg.json.userAckId);
-					
-				break;
-			case 'serverCommand_clientShutdown':
-			
-					unregReason = 'server-command';
-					unregister();
-			
-				break;
-			// start - devuser edit - add your personal message topics to listen to from server
-			case 'serverCommand_attachImgDataURIWhenReady':
-			
-					if (!FSInited) { console.error('frame scirpt not yet inited, ignoring msg:', aMsg.josn) }
-					serverCommand_attachImgDataURIWhenReady(aMsg.json.imgDataUri, aMsg.json.iIn_arrImgDataUris);
-			
-				break;
-			case 'serverCommand_reOpenTweetModal':
-			
-					if (!FSInited) { console.error('frame scirpt not yet inited, ignoring msg:', aMsg.josn) }
-					do_openTweetModal();
-			
-				break;
-			// end - devuser edit - add your personal message topics to listen to from server
-			default:
-				console.error('CLIENT unrecognized aTopic:', aMsg.json.aTopic, 'aMsg:', aMsg);
+		console.error('CLIENT recieving msg:', 'this client id:', userAckId, 'aMsg:', aMsg);
+		if (!userAckId || !aMsg.json.userAckId || (aMsg.json.userAckId && userAckId && aMsg.json.userAckId == userAckId)) {
+			switch (aMsg.json.aTopic) {
+				case 'serverCommand_clientInit':
+						
+						// server sends init after i send server clientBorn message
+						init(aMsg.json.core, aMsg.json.userAckId, aMsg.json.serverId);
+						
+					break;
+				case 'serverCommand_clientShutdown':
+				
+						unregReason = 'server-command';
+						unregister();
+				
+					break;
+				case 'serverCommand_attachImgToTweet':
+				
+						console.error('incoming serverCommand_attachImgToTweet');
+						do_openTweetModal(aMsg.json.imgId, aMsg.json.dataURL);
+				
+					break;
+				default:
+					console.error('CLIENT unrecognized aTopic:', aMsg.json.aTopic, 'aMsg:', aMsg);
+			}
+		} else {
+			console.warn('incoming msg to twitter client but its userAckId are not for this client, not an error, althugh I never do send to other clients, aMsg:', aMsg);
 		}
 	}
 };
 
 function fsUnloaded(aEvent) {
-	if (aEven.target == gContentFrameMessageManager) {
+	if (aEvent.target == gContentFrameMessageManager) {
 		// frame script unloaded, tab was closed
 		// :todo: check if the tweet was submitted, if it wasnt, then notif parent to make the notification-bar button to a "open new tab and reattach"
 		unregReason = 'tab-closed';
@@ -117,7 +113,7 @@ function unregister() {
 		}
 	}
 	
-	var sendAsyncJson = {aTopic:'clientNotify_clientUnregistered', userAckId:userAckId, tweeted:gTweeted, subServer:'twitter', unregReason:unregReason};
+	var sendAsyncJson = {aTopic:'clientNotify_clientUnregistered', userAckId:userAckId, subServer:'twitter', serverId:serverId, unregReason:unregReason};
 	if (unregReason == 'tweet-success') {
 		// then add in the clipboard stuff
 		sendAsyncJson.clips = succesfullyTweetedClips;
@@ -163,6 +159,9 @@ function on_nativeShot_notifyDataTweetError(aEvent) {
 var succesfullyTweetedClips;
 function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	// :todo: tell notification-bar that tweet was submited succesfully, and is now waiting to receive uploaded image urls
+	
+	gTweeted = true;
+	
 	var a = aEvent.detail.a;
 	var b = aEvent.detail.b;
 	
@@ -179,23 +178,21 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 		tweet_id: refDetails.tweet_id
 	}; // key is img id, vaulue is img url, key of 'tweet' holds tweet_id, on the server side, convert this id to a url to the tweet
 	
-	var parser = new DOMParser();
+	var parser = Cc['@mozilla.org/xmlextras/domparser;1'].createInstance(Ci.nsIDOMParser);
 	var parsedDocument = parser.parseFromString(refDetails.tweet_html, 'text/html');
+	console.info('parsedDocument:', parsedDocument);
 	
-	var tweetUrl = parsedDocument.querySelector()
-	var photos = parsedDocument.querySelectorAll('div[class^="photo-"]');
+	var photos = parsedDocument.querySelectorAll('div[data-img-src]');
 	for (var i=0; i<photos.length; i++) {
-		var imgIdOfPhotoMatch = /photo-(\d)/.match(photos[i].classList);
-		if (!imgIdOfPhoto) {
-			throw new Error('id could not be detected for photo, maybe twitter changed and have photo-NON_DIGIT class now');
+		for (var imgId in imgIdsAttached_andPreviewIndex) {
+			if (imgIdsAttached_andPreviewIndex[imgId] == i) {
+				// index is i, and it was found that at this preview index, was this imgId
+				clips[imgId] = photos[i].getAttribute('data-img-src');
+				break;
+			}
 		}
-		var imgIdOfPhoto = imgIdOfPhotoMatch[1];
-		
-		if (imgIdOfPhoto in imgIdsAttached_andPreviewIndex) {
-			clips[imgIdOfPhoto] = photos[i].data.url;
-		} // else, this is possible, as if user deleted a preview then attached another // :todo: when user does delete a preview, then the previewIndex of my attached images after that index should be reduced by 1
+		// it is possible that a pic is not among the urls to return, as user may have added their own image. or also if user mixed it up and then added. etc etc :todo: revise for removing deletion of preview, as if user deleted a preview then attached another // :todo: when user does delete a preview, then the previewIndex of my attached images after that index should be reduced by 1
 	}
-	gTweeted = true;
 	
 	
 	console.info('clips:', clips);
@@ -209,12 +206,15 @@ function on_nativeShot_notifyDialogClosed(aEvent) {
 	console.error('tweet dialog closed, aEvent:', aEvent);
 	if (!gTweeted) {
 		// :todo: tell notification-bar that tweet was lost due to closed tweet, offer on click to openTweetModal and reattach
-		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_tweetClosedWithoutSubmit', clientId:clientId, subServer:'twitter'});
+		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_tweetClosedWithoutSubmit', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 	}
 }
 // step 0
-function init(aCore, aUserAckId) {
+
+var serverId;
+function init(aCore, aUserAckId, aServerId) {
 	userAckId = aUserAckId;
+	serverId = aServerId;
 	core = aCore;
 	
 	FSInited = true;
@@ -242,12 +242,15 @@ function listenForTwitterLoad(aEvent) {
 	} else {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			// twitterReady = true;
+			console.error('ok twitter loaded');
 			removeEventListener('DOMContentLoaded', listenForTwitterLoad, false);
 			aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 			ensureSignedIn();
 		} else {
 			console.error('page done loading buts it not twitter, so keep listener attached, im waiting for twitter:', aContentWindow.location);
-			sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_nonTwitterPage_onLoadComplete', userAckId:userAckId, subServer:'twitter'});
+			unregReason = 'non-twitter-load';
+			unregister();
+			//sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_nonTwitterPage_onLoadComplete', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 		}
 	}
 }
@@ -255,12 +258,14 @@ function listenForTwitterLoad(aEvent) {
 // step 1
 function ensureSignedIn() {
 	// test if signed in
+	var aContentWindow = content;
+	var aContentDocument = aContentWindow.document;
 	var btnNewTweet = aContentDocument.getElementById('global-new-tweet-button');
 	if (!btnNewTweet) {
 		// assume not signed in
 		// add listener listening to sign in
 		addEventListener('DOMContentLoaded', listenForTwitterSignIn, false);
-		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_twitterNotSignedIn', userAckId:userAckId, subServer:'twitter'});
+		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_twitterNotSignedIn', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 		return false;
 	} else {
 		registerJqueryScript();
@@ -270,6 +275,8 @@ function ensureSignedIn() {
 
 // step 2
 function registerJqueryScript() {
+	var aContentWindow = content;
+	var aContentDocument = aContentWindow.document;
 	aContentWindow.addEventListener('nativeShot_notifyDialogClosed', on_nativeShot_notifyDialogClosed, false, true);
 	aContentWindow.addEventListener('nativeShot_notifyDataTweetSuccess', on_nativeShot_notifyDataTweetSuccess, false, true);
 	aContentWindow.addEventListener('nativeShot_notifyDataTweetError', on_nativeShot_notifyDataTweetError, false, true);
@@ -284,16 +291,25 @@ function registerJqueryScript() {
 }
 
 // step 3
+var jqueryScriptRegistered = false;
 function on_nativeShot_notifyJqueryRegistered(aEvent) {
+	console.error('ok good jquery registered, aEvent:', aEvent);
+	var aContentWindow = content;
+	var aContentDocument = aContentWindow.document;
 	jqueryScriptRegistered = true;
 	aContentWindow.removeEventListener('nativeShot_notifyJqueryRegistered', on_nativeShot_notifyJqueryRegistered, false, true);
-	do_openTweetModal();
+	do_clientNotify_FSReadyToAttach();
 }
 
 // step 4 and step 10
-function do_clientNotify_FSReadyToAttach() {
+function do_clientNotify_FSReadyToAttach(aJustAttachedImgId) {
 	FSReadyToAttach = true;
-	sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_FSReadyToAttach', userAckId:userAckId, subServer:'twitter'});
+	console.error('sending FSReady from client');
+	var sendAsyncJson = {aTopic:'clientNotify_FSReadyToAttach', userAckId:userAckId, subServer:'twitter', serverId:serverId};
+	if (aJustAttachedImgId) {
+		sendAsyncJson.justAttachedImgId = aJustAttachedImgId;
+	}
+	sendAsyncMessage(core.addon.id, sendAsyncJson);
 }
 
 // step 5 ---- this is entry point from server when FSReadyToAttach is true
@@ -304,8 +320,8 @@ function do_openTweetModal(aImgId, aImgDataUrl) {
 	FSReadyToAttach = false;
 	
 	currentlyAttaching.imgId = aImgId;
-	currentlyAttaching.imgDataUrl = aImgDataUrl;
-	
+	currentlyAttaching.imgDataURL = aImgDataUrl;
+
 	var aContentWindow = content;
 	var aContentDocument = content.document;
 	
@@ -326,7 +342,7 @@ function do_openTweetModal(aImgId, aImgDataUrl) {
 		btnNewTweet.click();
 	}
 	
-	do_clientNotify_FSReadyToAttach();
+	do_waitForTweetDialogToOpen();
 }
 
 // step 6
@@ -338,7 +354,7 @@ function do_waitForTweetDialogToOpen() {
 	tweetDialogDialog = aContentDocument.getElementById('global-tweet-dialog-dialog'); // :maintain: with twitter updates
 	if (tweetDialogDialog) {
 		console.log('PASSED found test 0');
-		do_attachImgToTweet();
+		do_waitForTabFocus();
 	} else {
 		console.log('not yet found test 0');
 		setTimeout(do_waitForTweetDialogToOpen, waitForInterval_ms);
@@ -348,13 +364,13 @@ function do_waitForTweetDialogToOpen() {
 // step 7
 var modalTweet;
 function do_waitForTabFocus() {
-	var aContentWindow = aEvent.target.defaultView;
+	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
 	
 	var isFocused_aContentWindow = isFocused(aContentWindow);
 	if (!isFocused_aContentWindow) {
 		// insert note telling them something will happen
-		
+		console.log('it does NOT have focus so wait for focus');
 		try {
 			modalTweet = tweetDialogDialog.querySelector('.modal-tweet-form-container'); // :maintain: with twitter updates
 		} catch(ignore) {}
@@ -384,6 +400,7 @@ function do_waitForTabFocus() {
 		
 		// insert note telling them something will happen
 	} else {
+		console.log('it has focus so attach it');
 		attachSentImgData();
 	}	
 }
@@ -391,7 +408,7 @@ function do_waitForTabFocus() {
 // step 8
 var richInputTweetMsg;
 function attachSentImgData() {
-	var aContentWindow = aEvent.target.defaultView;
+	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
 	
 	richInputTweetMsg = aContentDocument.getElementById('tweet-box-global'); // :maintain: with twitter updates
@@ -402,7 +419,10 @@ function attachSentImgData() {
 	
 	countPreview = richInputTweetMsg.parentNode.querySelectorAll('.previews .preview').length;
 	
+	console.log('countPreview pre attach:', countPreview);
+	
 	var img = aContentDocument.createElement('img');
+	console.info('will attach dataurl:', currentlyAttaching.imgDataURL);
 	img.setAttribute('src', currentlyAttaching.imgDataURL);
 	currentlyAttaching.imgDataURL = null; // memperf
 	richInputTweetMsg.appendChild(img);
@@ -421,12 +441,14 @@ function waitForAttachToFinish() {
 	var nowCountPreview = richInputTweetMsg.parentNode.querySelectorAll('.previews .preview').length;
 	if (nowCountPreview == countPreview + 1) {
 		// :todo: add event listener on click of the x of the preview, on delete, send msg to parent saying deleted, also delete from imgIdsAttached_andPreviewIndex
-		imgIdsAttached_andPreviewIndex[currentlyAttaching.imgId] = countPreview;
+		var justAttachedImgId = currentlyAttaching.imgId;
+		currentlyAttaching = {};
+		imgIdsAttached_andPreviewIndex[justAttachedImgId] = countPreview;
 		countPreview = null;
 		console.log('PASSED img attach test', 'took this much seconds:', ((new Date().getTime() - timeStartedAttach)/1000));
-		do_clientNotify_FSReadyToAttach();
+		do_clientNotify_FSReadyToAttach(justAttachedImgId);
 	} else {
-		console.log('NOT yet img attach test passed');
+		console.log('NOT yet img attach test passed, nowCountPreview:', nowCountPreview);
 		if (new Date().getTime() - timeStartedAttach < waitForAttach_maxMsWait) {
 			setTimeout(waitForAttachToFinish, waitForInterval_ms);
 		} else {
@@ -455,6 +477,7 @@ var currentlyAttaching = {
 var imgIdsAttached_andPreviewIndex = {}; // key is imgId, value is index of preview
 var FSReadyToAttach = false;
 const waitForInterval_ms = 100;
+var waitForFocus_forAttach;
 // :todo: once image is attached, add event listener to the on delete of it, to sendAsyncMessage to server saying it was deleted
 
 

@@ -15,4 +15,4 @@ if (scriptReg) {
 var scriptUneg = document.getElementById('nativeshot_twitter_unregister');
 scriptUneg.parentNode.removeChild(scriptUneg);
 
-alert('unregistered');
+// alert('unregistered');

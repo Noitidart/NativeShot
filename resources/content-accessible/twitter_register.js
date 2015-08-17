@@ -15,8 +15,8 @@ var nativeShot_notifyDataTweetSuccess = function(aEvent, bEvent) {
 	});
     window.dispatchEvent(evt);
 	
-	alert('aEvent.message:' + aEvent.message);
-	alert('bEvent.message:' + bEvent.message);
+	// alert('aEvent.message:' + aEvent.message);
+	// alert('bEvent.message:' + bEvent.message);
 };
 
 var nativeShot_notifyDataTweetError = function(aEvent, bEvent) {
