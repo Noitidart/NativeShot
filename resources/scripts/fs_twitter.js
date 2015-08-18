@@ -98,15 +98,10 @@ function unregister() {
 	if (aContentWindow) {
 		aContentWindow.removeEventListener('unload', listenForTwittterUnload, false);
 		
-		var myUnregScript = aContentDocument.createElement('script');
-		myUnregScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_unregister.js');
-		myUnregScript.setAttribute('id', 'nativeshot_twitter_unregister');
-		myUnregScript.setAttribute('nonce', aContentDocument.querySelector('script[nonce]').getAttribute('nonce'));
-		aContentDocument.documentElement.appendChild(myUnregScript);
-		
-		aContentWindow.removeEventListener('nativeShot_notifyDialogClosed', on_nativeShot_notifyDialogClosed, false, true);
-		aContentWindow.removeEventListener('nativeShot_notifyDataTweetSuccess', on_nativeShot_notifyDataTweetSuccess, false, true);
-		aContentWindow.removeEventListener('nativeShot_notifyDataTweetError', on_nativeShot_notifyDataTweetError, false, true);
+		if (aSandbox) {
+			Cu.evalInSandbox(unregisterJqueryScript, aSandbox);
+			Cu.nukeSandbox(aSandbox);
+		}
 		
 		if (waitForFocus_forAttach) {
 			aContentWindow.removeEventListener('focus', waitForFocus_forAttach, false);
@@ -226,7 +221,7 @@ function init(aCore, aUserAckId, aServerId) {
 		aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 	} else {
 		console.error('adding listener for twitter load');
-		addEventListener('DOMContentLoaded', listenForTwitterLoad, false); // add listener to listen to page loads  till it finds twitter page
+		addEventListener('load', listenForTwitterLoad, true); // add listener to listen to page loads  till it finds twitter page // if i use third argument of false, load doenst trigger, so had to make it true. if false then i can use DOMContentLoaded however at DOMContentLoaded $ is not defined so had to switch to $
 	}
 	
 	// :todo: absolutely ensure we are on home page, meaning users timeline, because when user submits tweet, if they are not on timeline, then the images are not loaded and i wont be able to get their uploaded image urls
@@ -243,7 +238,7 @@ function listenForTwitterLoad(aEvent) {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			// twitterReady = true;
 			console.error('ok twitter loaded');
-			removeEventListener('DOMContentLoaded', listenForTwitterLoad, false);
+			removeEventListener('load', listenForTwitterLoad, true);
 			aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 			ensureSignedIn();
 		} else {
@@ -268,30 +263,33 @@ function ensureSignedIn() {
 		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_twitterNotSignedIn', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 		return false;
 	} else {
-		registerJqueryScript();
+		doRegisterJqueryScript();
 		return true;
 	}
 }
 
 // step 2
-function registerJqueryScript() {
+var aSandbox;
+function doRegisterJqueryScript() {
+	
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
-	aContentWindow.addEventListener('nativeShot_notifyDialogClosed', on_nativeShot_notifyDialogClosed, false, true);
-	aContentWindow.addEventListener('nativeShot_notifyDataTweetSuccess', on_nativeShot_notifyDataTweetSuccess, false, true);
-	aContentWindow.addEventListener('nativeShot_notifyDataTweetError', on_nativeShot_notifyDataTweetError, false, true);
 	
-	aContentWindow.addEventListener('nativeShot_notifyJqueryRegistered', on_nativeShot_notifyJqueryRegistered, false, true);
-	
-	var myRegScript = aContentDocument.createElement('script');
-	myRegScript.setAttribute('src', core.addon.path.content_accessible + 'twitter_register.js');
-	myRegScript.setAttribute('id', 'nativeshot_twitter_register');
-	myRegScript.setAttribute('nonce', aContentDocument.querySelector('script[nonce]').getAttribute('nonce'));
-	aContentDocument.documentElement.appendChild(myRegScript);
+	var options = {
+		sandboxPrototype: aContentWindow,
+		wantXrays: false
+	};
+	var principal = aContentWindow.location.origin; //docShell.chromeEventHandler.contentPrincipal; //gBrowser.selectedTab.linkedBrowser.contentPrincipal; //gBrowser.contentWindow.location.origin;
+	console.log('principal:', principal);
+	aSandbox = Cu.Sandbox(principal, options);
+
+	Cu.evalInSandbox(registerJqueryScript, aSandbox);
+	// no sync stuff in my registerJqueryScript so i dont have to wait, i can continue immediately
+	do_clientNotify_FSReadyToAttach();
 }
 
-// step 3
-var jqueryScriptRegistered = false;
+// step 3 - skipping step3 no longer used
+/*
 function on_nativeShot_notifyJqueryRegistered(aEvent) {
 	console.error('ok good jquery registered, aEvent:', aEvent);
 	var aContentWindow = content;
@@ -300,6 +298,7 @@ function on_nativeShot_notifyJqueryRegistered(aEvent) {
 	aContentWindow.removeEventListener('nativeShot_notifyJqueryRegistered', on_nativeShot_notifyJqueryRegistered, false, true);
 	do_clientNotify_FSReadyToAttach();
 }
+*/
 
 // step 4 and step 10
 function do_clientNotify_FSReadyToAttach(aJustAttachedImgId) {
@@ -466,6 +465,7 @@ function listenForTwittterUnload(aEvent) {
 	if (aContentWindow.frameElement) {
 		//console.warn('frame element loaded, so dont respond yet');
 	} else {
+		unregReason = 'twitter-page-unloaded';
 		unregister();
 	}
 }
@@ -478,6 +478,44 @@ var imgIdsAttached_andPreviewIndex = {}; // key is imgId, value is index of prev
 var FSReadyToAttach = false;
 const waitForInterval_ms = 100;
 var waitForFocus_forAttach;
+
+// have to do console.error from these scripts as console.log doesnt show for some reason
+var registerJqueryScript = [];
+registerJqueryScript.push('function nativeShot_notifyDialogClosed(aEvent) {');
+registerJqueryScript.push('	console.error(\'incoming uiTweetDialogClosed event\', aEvent)');
+registerJqueryScript.push('	var evt = document.createEvent(\'CustomEvent\');');
+registerJqueryScript.push('	evt.initCustomEvent(\'nativeShot_notifyDialogClosed\', true, true, {});');
+registerJqueryScript.push('	window.dispatchEvent(evt);');
+registerJqueryScript.push('}');
+registerJqueryScript.push('');
+registerJqueryScript.push('function nativeShot_notifyDataTweetSuccess(aEvent, bEvent) {');
+registerJqueryScript.push('	console.error(\'incoming dataTweetSuccess event\', aEvent, bEvent)');
+registerJqueryScript.push('	var evt = document.createEvent(\'CustomEvent\');');
+registerJqueryScript.push('	evt.initCustomEvent(\'nativeShot_notifyDataTweetSuccess\', true, true, {a:aEvent, b:bEvent});');
+registerJqueryScript.push('	window.dispatchEvent(evt);');
+registerJqueryScript.push('}');
+registerJqueryScript.push('');
+registerJqueryScript.push('function nativeShot_notifyDataTweetError(aEvent, bEvent) {');
+registerJqueryScript.push('	console.error(\'incoming dataTweetError event\', aEvent, bEvent)');
+registerJqueryScript.push('	var evt = document.createEvent(\'CustomEvent\');');
+registerJqueryScript.push('	evt.initCustomEvent(\'nativeShot_notifyDataTweetError\', true, true, {a:aEvent, b:bEvent});');
+registerJqueryScript.push('	window.dispatchEvent(evt);');
+registerJqueryScript.push('}');
+registerJqueryScript.push('');
+registerJqueryScript.push('$(document).on(\'uiTweetDialogClosed\', nativeShot_notifyDialogClosed);');
+registerJqueryScript.push('$(document).on(\'dataTweetSuccess\', nativeShot_notifyDataTweetSuccess);');
+registerJqueryScript.push('$(document).on(\'dataTweetError\', nativeShot_notifyDataTweetError);');
+registerJqueryScript.push('console.error(\'jquery registered, $\', $);');
+registerJqueryScript = registerJqueryScript.join('\n');
+
+var unregisterJqueryScript = [];
+unregisterJqueryScript.push('$(document).off(\'uiTweetDialogClosed\', nativeShot_notifyDialogClosed);');
+unregisterJqueryScript.push('$(document).off(\'dataTweetSuccess\', nativeShot_notifyDataTweetSuccess);');
+unregisterJqueryScript.push('$(document).off(\'dataTweetError\', nativeShot_notifyDataTweetError);');
+unregisterJqueryScript.push('console.error(\'jquery unregistered\')');
+unregisterJqueryScript = unregisterJqueryScript.join('\n');
+
+
 // :todo: once image is attached, add event listener to the on delete of it, to sendAsyncMessage to server saying it was deleted
 
 

@@ -335,10 +335,10 @@ var gCanDim = {
 				// start - block link6587436215
 				// check if intersection
 				var rectIntersecting = colMon[i].rect.intersect(cRect);
-				console.info('iMon:', i, 'rectIntersecting:', rectIntersecting, 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect)
+				// console.info('iMon:', i, 'rectIntersecting:', rectIntersecting, 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect)
 				if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 					// does not intersect, continue to next monitor
-					console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
+					// console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
 					continue;
 				} else {
 					//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
@@ -693,7 +693,7 @@ function getUAPEntry_byUserAckId(userAckId) {
 	console.error('could not find aUAPEntry with userAckId of', userAckId, 'this is UAP:', refUAP);
 	throw new Error('could not find aUAPEntry with userAckId - should not happen i think');
 }
-
+/* // used only in one place so removed this
 function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
 	// does NOT throw if not found
 	var refUAP = userAckPending;
@@ -708,7 +708,7 @@ function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
 		throw new Error('could not find aUAPEntry with userAckId - should not happen i think');
 	}
 }
-
+*/
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -1107,7 +1107,13 @@ var gEditor = {
 		
 		var refUAP = userAckPending;
 		
-		var refUAPEntry = getUAPEntry_byGEditorSessionId(this.sessionId);
+		//var refUAPEntry = getUAPEntry_byGEditorSessionId(this.sessionId);
+		var refUAPEntry;
+		for (var i=0; i<refUAP.length; i++) {
+			if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDatasCount < 4) {
+				refUAPEntry = refUAP[i];
+			}
+		}
 		
 		var cImgDataUri = this.canComp.toDataURL('image/png', '');
 		
@@ -1129,7 +1135,7 @@ var gEditor = {
 				tab: Cu.getWeakReference(newtab),
 				imgDatas: {},
 				FSReadyToAttach: false,
-				imgDatasCount: 0,
+				imgDatasCount: 0, // will get ++'ed in very next lines out of this block. reason is so i dont hav eto have a custom ++ if not first push
 				uaGroup: 'twitter',
 				actionOnBtn: 'focus-tab'
 					/*
@@ -1468,7 +1474,7 @@ function gEMouseMove(e) {
 		// var cEMMX = e.screenX;
 		// var cEMMY = e.screenY;
 		
-		console.info('PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMMX, cEMMY);
+		// console.info('PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMMX, cEMMY);
 		var newW = cEMMX - gEMDX;
 		var newH = cEMMY - gEMDY;
 		
