@@ -7,7 +7,8 @@ var core = {
 	addon: {
 		id: 'NativeShot@jetpack',
 		path: {
-			content_accessible: 'chrome://nativeshot-accessible/content/'
+			content_accessible: 'chrome://nativeshot-accessible/content/',
+			scripts: 'chrome://nativeshot/content/resources/scripts/'
 		}
 	}
 };
@@ -99,7 +100,11 @@ function unregister() {
 		aContentWindow.removeEventListener('unload', listenForTwittterUnload, false);
 		
 		if (aSandbox) {
-			Cu.evalInSandbox(unregisterJqueryScript, aSandbox);
+			// Cu.evalInSandbox(unregisterJqueryScript, aSandbox);
+			aContentWindow.removeEventListener('nativeShot_notifyDialogClosed', on_nativeShot_notifyDialogClosed, false, true);
+			aContentWindow.removeEventListener('nativeShot_notifyDataTweetSuccess', on_nativeShot_notifyDataTweetSuccess, false, true);
+			aContentWindow.removeEventListener('nativeShot_notifyDataTweetError', on_nativeShot_notifyDataTweetError, false, true);
+			Services.scriptloader.loadSubScript(core.addon.path.scripts + 'contentScript_twitterUnregisterJquery.js', aSandbox, 'UTF-8');
 			Cu.nukeSandbox(aSandbox);
 		}
 		
@@ -279,11 +284,18 @@ function doRegisterJqueryScript() {
 		sandboxPrototype: aContentWindow,
 		wantXrays: false
 	};
-	var principal = aContentWindow.location.origin; //docShell.chromeEventHandler.contentPrincipal; //gBrowser.selectedTab.linkedBrowser.contentPrincipal; //gBrowser.contentWindow.location.origin;
+	var principal = docShell.chromeEventHandler.contentPrincipal; // aContentWindow.location.origin;
 	console.log('principal:', principal);
 	aSandbox = Cu.Sandbox(principal, options);
 
-	Cu.evalInSandbox(registerJqueryScript, aSandbox);
+	// load in twitter_inlay.js // per https://developer.mozilla.org/en-US/Add-ons/Overlay_Extensions/XUL_School/Appendix_D:_Loading_Scripts#Examples_2
+	aContentWindow.addEventListener('nativeShot_notifyDialogClosed', on_nativeShot_notifyDialogClosed, false, true);
+	aContentWindow.addEventListener('nativeShot_notifyDataTweetSuccess', on_nativeShot_notifyDataTweetSuccess, false, true);
+	aContentWindow.addEventListener('nativeShot_notifyDataTweetError', on_nativeShot_notifyDataTweetError, false, true);
+	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'contentScript_twitterRegisterJquery.js', aSandbox, 'UTF-8');
+	
+	// Cu.evalInSandbox(registerJqueryScript, aSandbox);
+	console.error('is this true: does it fire after the loadSubScript?: if this log happens after last log in that script then yes:', 'no sync stuff in my registerJqueryScript so i dont have to wait, i can continue immediately')
 	// no sync stuff in my registerJqueryScript so i dont have to wait, i can continue immediately
 	do_clientNotify_FSReadyToAttach();
 }
@@ -478,43 +490,6 @@ var imgIdsAttached_andPreviewIndex = {}; // key is imgId, value is index of prev
 var FSReadyToAttach = false;
 const waitForInterval_ms = 100;
 var waitForFocus_forAttach;
-
-// have to do console.error from these scripts as console.log doesnt show for some reason
-var registerJqueryScript = [];
-registerJqueryScript.push('function nativeShot_notifyDialogClosed(aEvent) {');
-registerJqueryScript.push('	console.error(\'incoming uiTweetDialogClosed event\', aEvent)');
-registerJqueryScript.push('	var evt = document.createEvent(\'CustomEvent\');');
-registerJqueryScript.push('	evt.initCustomEvent(\'nativeShot_notifyDialogClosed\', true, true, {});');
-registerJqueryScript.push('	window.dispatchEvent(evt);');
-registerJqueryScript.push('}');
-registerJqueryScript.push('');
-registerJqueryScript.push('function nativeShot_notifyDataTweetSuccess(aEvent, bEvent) {');
-registerJqueryScript.push('	console.error(\'incoming dataTweetSuccess event\', aEvent, bEvent)');
-registerJqueryScript.push('	var evt = document.createEvent(\'CustomEvent\');');
-registerJqueryScript.push('	evt.initCustomEvent(\'nativeShot_notifyDataTweetSuccess\', true, true, {a:aEvent, b:bEvent});');
-registerJqueryScript.push('	window.dispatchEvent(evt);');
-registerJqueryScript.push('}');
-registerJqueryScript.push('');
-registerJqueryScript.push('function nativeShot_notifyDataTweetError(aEvent, bEvent) {');
-registerJqueryScript.push('	console.error(\'incoming dataTweetError event\', aEvent, bEvent)');
-registerJqueryScript.push('	var evt = document.createEvent(\'CustomEvent\');');
-registerJqueryScript.push('	evt.initCustomEvent(\'nativeShot_notifyDataTweetError\', true, true, {a:aEvent, b:bEvent});');
-registerJqueryScript.push('	window.dispatchEvent(evt);');
-registerJqueryScript.push('}');
-registerJqueryScript.push('');
-registerJqueryScript.push('$(document).on(\'uiTweetDialogClosed\', nativeShot_notifyDialogClosed);');
-registerJqueryScript.push('$(document).on(\'dataTweetSuccess\', nativeShot_notifyDataTweetSuccess);');
-registerJqueryScript.push('$(document).on(\'dataTweetError\', nativeShot_notifyDataTweetError);');
-registerJqueryScript.push('console.error(\'jquery registered, $\', $);');
-registerJqueryScript = registerJqueryScript.join('\n');
-
-var unregisterJqueryScript = [];
-unregisterJqueryScript.push('$(document).off(\'uiTweetDialogClosed\', nativeShot_notifyDialogClosed);');
-unregisterJqueryScript.push('$(document).off(\'dataTweetSuccess\', nativeShot_notifyDataTweetSuccess);');
-unregisterJqueryScript.push('$(document).off(\'dataTweetError\', nativeShot_notifyDataTweetError);');
-unregisterJqueryScript.push('console.error(\'jquery unregistered\')');
-unregisterJqueryScript = unregisterJqueryScript.join('\n');
-
 
 // :todo: once image is attached, add event listener to the on delete of it, to sendAsyncMessage to server saying it was deleted
 

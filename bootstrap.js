@@ -908,7 +908,9 @@ var gEditor = {
 					NBs.insertGlobalToWin(p, 'all');
 				}
 			}
-			gEditor.gBrowserDOMWindow.focus();
+			if (gEditor.wasFirefoxWinFocused) {
+				gEditor.gBrowserDOMWindow.focus();
+			}
 			colMon[0].E.DOMWindow.close();
 		}
 	},
@@ -1994,6 +1996,7 @@ function shootAllMons(aDOMWindow) {
 	gESelected = false;
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime();
+		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=1,screenX=1,screenY=1', null);
 			colMon[i].E = {
@@ -2611,6 +2614,19 @@ function shutdown(aData, aReason) {
 }
 
 // start - common helper functions
+function isFocused(window) {
+    let childTargetWindow = {};
+    Services.focus.getFocusedElementForWindow(window, true, childTargetWindow);
+    childTargetWindow = childTargetWindow.value;
+
+    let focusedChildWindow = {};
+    if (Services.focus.activeWindow) {
+        Services.focus.getFocusedElementForWindow(Services.focus.activeWindow, true, focusedChildWindow);
+        focusedChildWindow = focusedChildWindow.value;
+    }
+
+    return (focusedChildWindow === childTargetWindow);
+}
 function Deferred() {
 	if (Promise && Promise.defer) {
 		//need import of Promise.jsm for example: Cu.import('resource:/gree/modules/Promise.jsm');
