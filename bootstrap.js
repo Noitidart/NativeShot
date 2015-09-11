@@ -2069,6 +2069,9 @@ function shootAllMons(aDOMWindow) {
 			
 			// set gETopLeftMostX and gETopLeftMostY
 			for (var i=0; i<colMon.length; i++) {
+				var cidat = new aDOMWindow.ImageData(colMon[i].w, colMon[i].h);
+				cidat.data.set(new Uint8ClampedArray(colMon[i].screenshot))
+				colMon[i].screenshot = cidat;
 				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
 				if (i == 0) {
 					gETopLeftMostX = colMon[i].x;

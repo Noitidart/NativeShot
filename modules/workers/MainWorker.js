@@ -853,6 +853,7 @@ var gTimer;
 function shootAllMons() {
 	
 	var collMonInfos = [];
+	var aScreenshotBuffersToTransfer = [];
 	if (gTimer) {
 		clearTimeout(gTimer);
 	}
@@ -1035,7 +1036,8 @@ function shootAllMons() {
 					}
 					console.timeEnd('BGRA -> RGBA');
 					
-					collMonInfos[s].screenshot = imagedata;
+					collMonInfos[s].screenshot = imagedata.data.buffer;
+					aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
 					
 					// release memory of screenshot stuff
 					//delete collMonInfos[s].otherInfo;
@@ -1238,7 +1240,8 @@ function shootAllMons() {
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = screnImagedata;
+					collMonInfos[i].screenshot = screnImagedata.data.buffer;
+					aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
@@ -1505,7 +1508,8 @@ function shootAllMons() {
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = screnImagedata;
+					collMonInfos[i].screenshot = screnImagedata.data.buffer;
+					aScreenshotBuffersToTransfer.push(screnImagedata.data.buffer);
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
@@ -1519,7 +1523,7 @@ function shootAllMons() {
 		collMonInfos = null;
 	}, 3000)
 	
-	return collMonInfos;
+	return new PromiseWorker.Meta(collMonInfos, {transfers: aScreenshotBuffersToTransfer});
 }
 
 // End - Addon Functionality
