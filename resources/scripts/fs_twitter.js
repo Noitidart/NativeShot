@@ -79,7 +79,7 @@ function register() {
 	
 	addMessageListener(core.addon.id, serverMessageListener);
 	
-	addEventListener('unload', fsUnloaded, false);	
+	addEventListener('unload', fsUnloaded, false);
 }
 
 var unregReason;

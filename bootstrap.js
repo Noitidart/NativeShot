@@ -639,6 +639,7 @@ const fsComServer = {
 							if (!nonTweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
 								Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+								console.log('removed message listener for twitter as no other twitter tabs im caring about (meaning that im watching for succesful image attach then tweet) are left open');
 							}
 							
 						break;
@@ -1169,7 +1170,7 @@ var gEditor = {
 		
 		if (!refUAPEntry) {
 			if (!fsComServer.twitterListenerRegistered) {
-				Services.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+				Services.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
 				fsComServer.twitterListenerRegistered = true;
 			}
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
@@ -2131,6 +2132,10 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 		case 'open-new-tab':
 
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab');
+				if (!fsComServer.twitterListenerRegistered) {
+					Services.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+					fsComServer.twitterListenerRegistered = true;
+				}
 				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
 					inBackground: false,
 					relatedToCurrent: false
