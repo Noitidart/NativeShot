@@ -488,8 +488,10 @@ const fsComServer = {
 							for (var imgId in refUAPEntry.imgDatas) {
 								refUAPEntry.imgDatas[imgId].attachedToTweet = false;
 							}
-							refUAPEntry.actionOnBtn = 'reopen-tweet-modal';
 							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
+							
+							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Tweet Dialog Closed - Twitter auto detached imgs - Click to reopen/reattach', 'nativeshot-twitter-bad', 'reopen-tweet-modal')
+							
 							
 						break;
 					case 'clientNotify_imgDeleted':
@@ -501,11 +503,41 @@ const fsComServer = {
 						break;
 					case 'clientNotify_clientUnregistered':
 					
+							console.error('ok in SERVER SIDE clientNotify_clientUnregistered');
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							switch (aMsg.json.unregReason) {
+								case 'error-loading':
+								case 'non-twitter-load':
 								case 'tab-closed':
+								
+										// note that none of the images were attached
+										for (var imgId in refUAPEntry.imgDatas) {
+											refUAPEntry.imgDatas[imgId].attachedToTweet = false;
+										}
 										
-										// asdf
+										var aMsg;
+										switch (aMsg.json.unregReason) {
+											case 'error-loading':
+													
+													aMsg = 'Error loading Twitter - You may be offline - Click to open new tab and try again';
+													
+												break;
+											case 'non-twitter-load':
+													
+													aMsg = 'Navigated away from Twitter.com - Click to open new tab with Twitter';
+													
+												break;
+											case 'tab-closed':
+													
+													aMsg = 'Tab Closed - Click to reopen';
+													
+												break;
+											default:
+												throw new Error('unrecongized uregReason in sub block - should never get here');
+										}
+										
+										NBs_updateGlobal_updateTwitterBtn(refUAPEntry, aMsg, 'nativeshot-twitter-bad', 'open-new-tab');
+										console.error('should have set action btn to open-new-tab');
 										
 									break;
 								case 'tweet-success':
@@ -537,11 +569,13 @@ const fsComServer = {
 										if (cntBtnsTweeted == aBtnInfos.length) {
 											NBs.crossWin[crossWinId].msg = 'All images were succesfully tweeted!'; //:l10n:
 										}
+										
 										if (!aBtnInfo) {
 											console.error('this should never happend, btn for userAckId was not found, userAckId', userAckId, 'aBtnInfos:', aBtnInfos, 'NBs.crossWin:', NBs.crossWin);
 											throw new Error('this should never happen');
 										}
 										
+										// no need to delete aBtnInfo.actionOnBtn as its not type menu so it wont have any affect
 										aBtnInfo.tweeted = true;
 										aBtnInfo.label = 'Succesfully Tweeted - Image URLs Copied';
 										aBtnInfo.class = 'nativeshot-twitter-good';
@@ -577,6 +611,7 @@ const fsComServer = {
 									// nothing special
 							}
 							
+							/*
 							// check if the currently unregistering fs was succesfully tweeted and update notif bar accordingly
 							if (aMsg.json.gTweeted) {
 								// was successfully tweeted, so set this refUAPEntry to completed AND framescript: inactive
@@ -589,12 +624,14 @@ const fsComServer = {
 								// :todo: make notif-bar red
 								refUAPEntry.actionOnBtn = 'open-tab';
 							}
+							*/
 							
 							// check if any other twitter fs are active (meaning a succesful tweet is pending), if none found remove the twitterClientMessageListener
 							var refUAP = userAckPending;
 							var nonTweetedUAPFound = false;
 							for (var i=0; i<refUAP.length; i++) {
-								if (refUAP.uaGroup == 'twitter' && !refUAP.tweeted) {
+								// :todo: apparently i found here somethign that had no refUAP.uaGroup, investigate why this was - i was just getting back to nativeshot after doing other work so i dont recall at this time what all intricacies
+								if (refUAP.uaGroup && refUAP.uaGroup == 'twitter' && !refUAP.tweeted) {
 									nonTweetedUAPFound = true;
 									break;
 								}
@@ -647,6 +684,14 @@ const fsComServer = {
 	twitterSendDataToAttach: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
 	},
+	twitter_focusContentWindow: function(userAckId) {
+		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
+			aTopic: 'serverCommand_focusContentWindow',
+			serverId: fsComServer.serverId,
+			userAckId: refUAPEntry.userAckId
+		});
+	},
 	twitter_IfFSReadyToAttach_sendNextUnattached: function(userAckId) {
 		// returns true, if something was found unattached and sent, returns false if nothing found unnatached or FS wasnt ready
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
@@ -672,6 +717,7 @@ const fsComServer = {
 				}
 			}
 			console.log('all imgs are attached');
+			NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Tweet dialog opened and images attached - awaiting user input', 'nativeshot-twitter-neutral', 'focus-tab');
 		} else {
 			console.error('in here ok good h1');
 			// not yet availble to attach so do nothing. because when fs is ready to attach it will send me a clientNotify_readyToAttach, and i run this function of twitter_IfFSReadyToAttach_sendNextUnattached there
@@ -1149,7 +1195,8 @@ var gEditor = {
 			fsComServer.twitterInitFS(refUAPEntry.userAckId);
 			if (crossWinId in NBs.crossWin) {
 				NBs.crossWin[crossWinId].btns.push({
-					label: 'Images Pending Tweet (1)-ID:' + refUAPEntry.userAckId, // :l10n:
+					// label: 'Images Pending Tweet (1)-ID:' + refUAPEntry.userAckId, // :l10n:
+					label: 'Waiting to for progrmattic attach (1)-ID:' + refUAPEntry.userAckId,
 					btn_id: refUAPEntry.userAckId,
 					class: 'nativeshot-twitter-neutral',
 					accessKey: 'T',
@@ -1161,7 +1208,8 @@ var gEditor = {
 					img: core.addon.path.images + 'twitter16.png',
 					p: 6,
 					btns: [{
-						label: 'Images Pending Tweet (1)-ID:' + refUAPEntry.userAckId,
+						// label: 'Image Pending Tweet (1)-ID:' + refUAPEntry.userAckId,
+						label: 'Waiting to for progrmattic attach (1)-ID:' + refUAPEntry.userAckId,
 						btn_id: refUAPEntry.userAckId,
 						class: 'nativeshot-twitter-neutral',
 						accessKey: 'T',
@@ -2069,7 +2117,7 @@ function shootAllMons(aDOMWindow) {
 }
 
 function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
-	// console.info('notifBtn clicked, arguments:', arguments);
+	console.info('notifBtn clicked, arguments:', arguments);
 	// console.info('notifBtn clicked, this:', this); // this is bootstrap sandbox, interesting
 	switch (aUAPEntry.actionOnBtn) {
 		case 'show-clips-popup':
@@ -2077,13 +2125,9 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 				console.log('show popup so user can copy stuff to clipboard');
 			
 			break;
-		case 'reopen-tweet-modal':
-			
-				fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(aUAPEntry.userAckId);
-			
-			break;
 		case 'open-new-tab':
-			
+
+				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab');
 				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
 					inBackground: false,
 					relatedToCurrent: false
@@ -2094,12 +2138,25 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 				fsComServer.twitterInitFS(aUAPEntry.userAckId);
 			
 			break;
+
+		case 'reopen-tweet-modal':
+			
+				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab');
+				// need to focus for that paste event thingy work around
+				var tab = aUAPEntry.tab.get();
+				tab.ownerDocument.defaultView.focus(); // focus browser window
+				tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get(); // focus tab
+				fsComServer.twitter_focusContentWindow(aUAPEntry.userAckId); // focus content window
+				fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(aUAPEntry.userAckId);
+			
+			break;
 		case 'focus-tab':
 		default:
-		
+			
+				console.log('doing default as aUAPEntry.actionOnBtn:', aUAPEntry.actionOnBtn);
 				var tab = aUAPEntry.tab.get();
-				tab.ownerDocument.defaultView.focus();
-				tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get();
+				tab.ownerDocument.defaultView.focus(); // focus browser window
+				tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get(); // focus tab
 	}
 	
 	throw new Error('throw to preventing close of this notif-bar');
@@ -2611,6 +2668,41 @@ function shutdown(aData, aReason) {
 	aboutFactory_nativeshot.unregister();
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
+}
+
+function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {
+	// update twitter btn label, class, and action, because i do this so much
+	
+	// get notif bar id, as crossWinId
+	var crossWinId = aUAPEntry.gEditorSessionId + '-twitter';
+	// get the buttons infos in this notif bar
+	var aBtnInfos = NBs.crossWin[crossWinId].btns;
+	
+	// find our specific btninfo for this tab
+	var aBtnInfo;
+	for (var i=0; i<aBtnInfos.length; i++) {
+		if (aBtnInfos[i].btn_id == aUAPEntry.userAckId) {
+			aBtnInfo = aBtnInfos[i];
+			break;
+		}
+	}
+	
+	if (!aBtnInfo) {
+		throw new Error('couldnt find btn info for this tab, this should never happen');
+	}
+	
+	aBtnInfo.label = newLabel;
+	aBtnInfo.class = newClass;
+	aUAPEntry.actionOnBtn = newAction;
+	console.error('set actionOnBtn to newAction of:', newAction);
+	
+	NBs.updateGlobal(crossWinId, {
+		lbl: 1, // label was updated for sure
+		btns:{
+			label: [aUAPEntry.userAckId], // arr of btn ids that need updating
+			class: [aUAPEntry.userAckId] // arr of btn ids that need updating
+		}
+	});
 }
 
 // start - common helper functions

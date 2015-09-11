@@ -21,6 +21,18 @@ function nativeShot_notifyDataTweetError(aEvent, bEvent) {
 	window.dispatchEvent(evt);
 }
 
+function on__nativeShot_clickNewTweetBtn() {
+	console.log('incoming on__nativeShot_clickNewTweetBtn event');
+	var btn = $('#global-new-tweet-button');
+	if (!btn) {
+		throw new Error('maybe twitter changed the id, it couldnt be found');
+	}
+	
+	btn.trigger('click');
+}
+
+document.addEventListener('nativeShot_clickNewTweetBtn', on__nativeShot_clickNewTweetBtn, false);
+
 $(document).on('uiTweetDialogClosed', nativeShot_notifyDialogClosed);
 $(document).on('dataTweetSuccess', nativeShot_notifyDataTweetSuccess);
 $(document).on('dataTweetError', nativeShot_notifyDataTweetError);

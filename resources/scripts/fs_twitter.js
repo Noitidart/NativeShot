@@ -49,6 +49,11 @@ const serverMessageListener = {
 						do_openTweetModal(aMsg.json.imgId, aMsg.json.dataURL);
 				
 					break;
+					
+				case 'serverCommand_focusContentWindow':
+				
+					do_focusContentWindow();
+					
 				default:
 					console.error('CLIENT unrecognized aTopic:', aMsg.json.aTopic, 'aMsg:', aMsg);
 			}
@@ -59,6 +64,7 @@ const serverMessageListener = {
 };
 
 function fsUnloaded(aEvent) {
+	// console.error('in fs unloaded, aEvent.target:', aEvent.target, 'aEvent:', aEvent);;
 	if (aEvent.target == gContentFrameMessageManager) {
 		// frame script unloaded, tab was closed
 		// :todo: check if the tweet was submitted, if it wasnt, then notif parent to make the notification-bar button to a "open new tab and reattach"
@@ -79,11 +85,12 @@ function register() {
 var unregReason;
 function unregister() {
 	FSRegistered = false;
-	console.error('unregistering!!!!!');
+	console.error('unregistering!!!!! unregReason:', unregReason);
 	
 	removeEventListener('unload', fsUnloaded, false);
-	removeEventListener('DOMContentLoaded', listenForTwitterLoad, false);
+	removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
 	removeEventListener('DOMContentLoaded', listenForTwitterSignIn, false);
+	removeEventListener('load', listenForTwitterLoad, true);
 	
 	try {
 		removeMessageListener(core.addon.id, serverMessageListener);
@@ -118,7 +125,9 @@ function unregister() {
 		// then add in the clipboard stuff
 		sendAsyncJson.clips = succesfullyTweetedClips;
 	}
+	//contentMMFromContentWindow_Method2(content, true).
 	sendAsyncMessage(core.addon.id, sendAsyncJson);
+	console.error('client sending server msg with json:', sendAsyncJson);
 }
 
 function listenForTwitterSignIn(aEvent) {
@@ -221,12 +230,20 @@ function init(aCore, aUserAckId, aServerId) {
 	
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
-	if (aContentDocument.readyState.state == 'ready' && aContentWindow.location.hostname == TWITTER_HOSTNAME) {
-		ensureSignedIn();
-		aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
+	console.info('aContentDocument.readyState.state:', aContentDocument.readyState.state);
+	if (aContentDocument.readyState.state == 'complete') {
+		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
+			ensureSignedIn();
+			aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
+		} else {
+			console.error('landing page done loading, but its not twitter:', aContentWindow.location);
+			unregReason = 'non-twitter-load';
+			unregister();
+		}
 	} else {
+		// aContentDocument.readyState.state == undefined //is undefined as asoon as framescript loaded as no page has lodaed yet, but also when get "problem loading page" like for offline, it stays undefined
 		console.error('adding listener for twitter load');
-		addEventListener('load', listenForTwitterLoad, true); // add listener to listen to page loads  till it finds twitter page // if i use third argument of false, load doenst trigger, so had to make it true. if false then i can use DOMContentLoaded however at DOMContentLoaded $ is not defined so had to switch to $
+		addEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false); // add listener to listen to page loads  till it finds twitter page // if i use third argument of false, load doenst trigger, so had to make it true. if false then i can use DOMContentLoaded however at DOMContentLoaded $ is not defined so had to switch to $
 	}
 	
 	// :todo: absolutely ensure we are on home page, meaning users timeline, because when user submits tweet, if they are not on timeline, then the images are not loaded and i wont be able to get their uploaded image urls
@@ -234,24 +251,46 @@ function init(aCore, aUserAckId, aServerId) {
 }
 
 // step 0.5 // decimal steps are optional, they may not happen
-function listenForTwitterLoad(aEvent) {
+function listenForTwitterDOMContentLoad(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
 	var aContentDocument = aContentWindow.document;
 	if (aContentWindow.frameElement) {
-		console.warn('frame element loaded, so dont respond yet');
+		console.warn('frame element DOMContentLoaded, so dont respond yet');
 	} else {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
-			// twitterReady = true;
-			console.error('ok twitter loaded');
-			removeEventListener('load', listenForTwitterLoad, true);
-			aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
-			ensureSignedIn();
+			// check if got error loading page:
+			var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+			var docuri = webnav.document.documentURI;
+			console.info('docuri:', docuri);
+			if (docuri.indexOf('about:') == 0) {
+				// twitter didnt really load, it was an error page
+				console.error('twitter loaded but an error page loaded, so like offline or something:', aContentWindow.location, 'docuri:', docuri);
+				unregReason = 'error-loading';
+				unregister();
+			} else {
+				// twitterReady = true;
+				console.error('ok twitter loaded');
+				removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
+				addEventListener('load', listenForTwitterLoad, true); // need to wait for load, as need to wait for jquery $ to come in // need to use true otherwise load doesnt trigger
+				aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
+			}
 		} else {
 			console.error('page done loading buts it not twitter, so keep listener attached, im waiting for twitter:', aContentWindow.location);
 			unregReason = 'non-twitter-load';
 			unregister();
 			//sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_nonTwitterPage_onLoadComplete', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 		}
+	}
+}
+
+function listenForTwitterLoad(aEvent) {
+	var aContentWindow = aEvent.target.defaultView;
+	var aContentDocument = aContentWindow.document;
+	if (aContentWindow.frameElement) {
+		console.warn('frame element loaded, so dont respond yet');
+	} else {
+		removeEventListener('load', listenForTwitterLoad, true);
+		ensureSignedIn();
 	}
 }
 
@@ -343,6 +382,8 @@ function do_openTweetModal(aImgId, aImgDataUrl) {
 	
 	if (aContentWindow.getComputedStyle(dialogTweet, null).getPropertyValue('display') == 'none') { // test if open already, if it is, then dont click the button
 		// its closed, so lets open it
+		
+		/*
 		var btnNewTweet = aContentDocument.getElementById('global-new-tweet-button'); // id of twitter button :maintain:
 		if (!btnNewTweet) {
 			// assume not signed in as checked if signed in earlier in the process
@@ -351,6 +392,12 @@ function do_openTweetModal(aImgId, aImgDataUrl) {
 		}
 		
 		btnNewTweet.click();
+		*/
+		
+		var event = new aContentWindow.CustomEvent('nativeShot_clickNewTweetBtn');
+		aContentDocument.dispatchEvent(event);
+		console.log('should have dispatched event');
+		
 	}
 	
 	do_waitForTweetDialogToOpen();
@@ -491,6 +538,11 @@ var FSReadyToAttach = false;
 const waitForInterval_ms = 100;
 var waitForFocus_forAttach;
 
+function do_focusContentWindow() {
+	content.focus();
+	console.log('ok content window focused');
+}
+
 // :todo: once image is attached, add event listener to the on delete of it, to sendAsyncMessage to server saying it was deleted
 
 
@@ -509,6 +561,17 @@ function isFocused(window) {
     }
 
     return (focusedChildWindow === childTargetWindow);
+}
+var gCFMM;
+function contentMMFromContentWindow_Method2(aContentWindow, refreshCache) {
+	if (!gCFMM || refreshCache) {
+		gCFMM = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIDocShell)
+							  .QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIContentFrameMessageManager);
+	}
+	return gCFMM;
+
 }
 // END - helper functions
 
