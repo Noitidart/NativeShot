@@ -849,14 +849,12 @@ function focusSelfApp() {
 	}
 }
 
-var gTimer;
+
 function shootAllMons() {
 	
 	var collMonInfos = [];
 	var aScreenshotBuffersToTransfer = [];
-	if (gTimer) {
-		clearTimeout(gTimer);
-	}
+
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 		case 'winmo':
@@ -1519,11 +1517,10 @@ function shootAllMons() {
 			throw new Error('os not supported ' + core.os.name);
 	}
 	
-	gTimer = setTimeout(function() {
-		collMonInfos = null;
-	}, 3000)
-	
-	return new PromiseWorker.Meta(collMonInfos, {transfers: aScreenshotBuffersToTransfer});
+	var rezOfFunc = new PromiseWorker.Meta(collMonInfos, {transfers: aScreenshotBuffersToTransfer});
+	collMonInfos = null;
+	aScreenshotBuffersToTransfer = null;
+	return rezOfFunc;
 }
 
 // End - Addon Functionality

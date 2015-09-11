@@ -482,6 +482,18 @@ const fsComServer = {
 							
 						break;
 					*/
+					case 'clientNotify_twitterNotSignedIn':
+							
+							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
+							for (var imgId in refUAPEntry.imgDatas) {
+								refUAPEntry.imgDatas[imgId].attachedToTweet = false;
+							}
+							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
+							
+							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Not Signed In - User actioning needed to focus this tab and sign in here, or sign into twitter in another tab then reload this tab', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
+							
+							
+						break;
 					case 'clientNotify_tweetClosedWithoutSubmit':
 							
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
@@ -2070,9 +2082,7 @@ function shootAllMons(aDOMWindow) {
 			
 			// set gETopLeftMostX and gETopLeftMostY
 			for (var i=0; i<colMon.length; i++) {
-				var cidat = new aDOMWindow.ImageData(colMon[i].w, colMon[i].h);
-				cidat.data.set(new Uint8ClampedArray(colMon[i].screenshot))
-				colMon[i].screenshot = cidat;
+				colMon[i].screenshot = new aDOMWindow.ImageData(new aDOMWindow.Uint8ClampedArray(colMon[i].screenshot), colMon[i].w, colMon[i].h);
 				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
 				if (i == 0) {
 					gETopLeftMostX = colMon[i].x;
@@ -2676,6 +2686,10 @@ function shutdown(aData, aReason) {
 	aboutFactory_nativeshot.unregister();
 	
 	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
+	
+	// destroy worker
+	MainWorker._worker.terminate();
+	console.error('worker should have termed');
 }
 
 function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {
