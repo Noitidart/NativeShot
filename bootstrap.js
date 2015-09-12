@@ -595,11 +595,15 @@ const fsComServer = {
 										aBtnInfo.popup = ['xul:menupopup', {},
 															['xul:menuitem', {label:'Tweet URL', oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL) }] // :l10n:
 														 ];
-														 
+
 										var arrOfImgUrls = [];
 										for (var imgId in refUAPEntry.imgDatas) {
 											arrOfImgUrls.push(aMsg.json.clips[imgId]);
 											aBtnInfo.popup.push(['xul:menuitem', {label:'Image ' + arrOfImgUrls.length + ' URL', oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId])}]); // :l10n:
+										}
+										
+										if (arrOfImgUrls.length > 1) {
+											aBtnInfo.popup.push(['xul:menuitem', {label:'All ' + arrOfImgUrls.length + ' Image URLs', oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'))}]); // :l10n:
 										}
 										
 										// copy all img urls to clipboard:
@@ -640,15 +644,16 @@ const fsComServer = {
 							
 							// check if any other twitter fs are active (meaning a succesful tweet is pending), if none found remove the twitterClientMessageListener
 							var refUAP = userAckPending;
-							var nonTweetedUAPFound = false;
+							var untweetedUAPFound = false;
+							console.log('checking if any untweeted tabs are open, and if they are then it wont remove listener:', refUAP);
 							for (var i=0; i<refUAP.length; i++) {
 								// :todo: apparently i found here somethign that had no refUAP.uaGroup, investigate why this was - i was just getting back to nativeshot after doing other work so i dont recall at this time what all intricacies
-								if (refUAP.uaGroup && refUAP.uaGroup == 'twitter' && !refUAP.tweeted) {
-									nonTweetedUAPFound = true;
+								if (refUAP[i].uaGroup && refUAP[i].uaGroup == 'twitter' && !refUAP[i].tweeted) {
+									untweetedUAPFound = true;
 									break;
 								}
 							}
-							if (!nonTweetedUAPFound) {
+							if (!untweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
 								Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
 								console.log('removed message listener for twitter as no other twitter tabs im caring about (meaning that im watching for succesful image attach then tweet) are left open');
