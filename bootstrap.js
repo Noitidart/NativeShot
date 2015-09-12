@@ -692,7 +692,9 @@ const fsComServer = {
 					default:
 						console.error('SERVER unrecognized aTopic:', aMsg.json.aTopic, aMsg, 'server id:', fsComServer.serverId);
 				}
-			} // else { console.warn('incoming message to server but it has an id and it is not of this so ignore it', 'this server id:', fsComServer.id, 'msg target server is:', aMsg.json.serverId, 'aMsg:', aMsg); }
+			} // else {
+				// console.warn('incoming message to server but it has an id and it is not of this so ignore it', 'this server id:', fsComServer.id, 'msg target server is:', aMsg.json.serverId, 'aMsg:', aMsg);
+			//}
 		}
 	},
 	twitterInitFS: function(userAckId) {
@@ -2349,7 +2351,9 @@ var NBs = { // short for "notification bars"
 		  btmDeckBox.setAttribute('id', 'nativeshotDeck' + aGroupId);
 		  // deck.parentNode.insertBefore(btmDeckBox, deck); // for top
 		  deck.parentNode.appendChild(btmDeckBox); // for bottom
-		} else { console.log('already there'); }
+		} else {
+			console.log('already there');
+		}
 
 		var nb = btmDeckBox; //win.gBrowser.getNotificationBox(); //use _gNB for window level notification. use `win.gBrowser.getNotificationBox()` for tab level
 		var n = btmDeckBox.getNotificationWithValue(aGroupId);
