@@ -13,7 +13,8 @@
 	<link href="chrome://nativeshot/content/app/css/animsition.min.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/magnific-popup.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/style.css" rel="stylesheet" type="text/css"/>
-    
+    <link href="chrome://nativeshot/content/app/css/slider.css" rel="stylesheet"/>
+	
 	<title>Dashboard | NativeShot</title>
 	
 	<style>
@@ -86,13 +87,17 @@
            	  </div>
            	  <div class="col-md-4 col-sm-6 col-xs-12" style="text-align:center;">
            	  	  <div class="second-caption">
-           	  	  	 <h3>Usage</h3>
 					<p>
 						<span>
 							click category to apply filter
 						</span>
 					</p>
            	  	  </div>
+				   <div class="price-chose">
+					  <div class="price-bar">
+						<b>Aug 15, 2015</b> <!--<input type="text" class="h-slider" value="" data-slider-min="5" data-slider-max="1000" data-slider-step="5" data-slider-value="[250,450]"/> --><b>Sep 13, 2015</b>
+					  </div>
+				   </div>
            	  </div>
            	  <div class="col-md-4 col-sm-12 col-xs-12">
            	  	  <div class="second-caption">
@@ -220,13 +225,14 @@
 <script src="chrome://nativeshot/content/app/js/jquery.magnific-popup.min.js"></script>
 <script src="chrome://nativeshot/content/app/js/jquery.sliphover.min.js"></script>
 <script src="chrome://nativeshot/content/app/js/idangerous.swiper.min.js"></script>
+<script src="js/bootstrap-slider.js"></script>
 <script src="chrome://nativeshot/content/app/js/all.js"></script>
 <script>
 	// after update counts
 	var nativeshot_log_counts = {
-		'imgur-anonymous': 10,
-		'twitter': 6,
-		'save-quick': 1,
+		'imgur-anonymous': 2,
+		'twitter': 0,
+		'save-quick': 5,
 		'save-browse': 4,
 		'copy': 0,
 		'print': 3
