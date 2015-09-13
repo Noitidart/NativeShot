@@ -141,7 +141,12 @@ AboutNativeShot.prototype = Object.freeze({
 	},
 
 	newChannel: function(aURI) {
-		let channel = Services.io.newChannel(core.addon.path.content + 'app.xhtml', null, null);
+		var channel;
+		if (aURI.path.toLowerCase().indexOf('?options') > -1) {
+			channel = Services.io.newChannel(core.addon.path.content + 'app/options.xhtml', null, null);
+		} else {
+			channel = Services.io.newChannel(core.addon.path.content + 'app/logs.xhtml', null, null);
+		}
 		channel.originalURI = aURI;
 		return channel;
 	}
