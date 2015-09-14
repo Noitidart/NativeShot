@@ -2674,6 +2674,7 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 	});
 }
 
+// link872132154 cross file
 const aTypeStrToTypeInt = {
 	'imgur-anonymous': 0,
 	'twitter': 1,
