@@ -225,33 +225,13 @@ function matchIsotopeContentsToFileJson() {
 			
 			var createdEl = jsonToDOM(slipCoverJson, document, {});
 			console.log('createdEl:', createdEl);
-			var appendedEl = izotopeContainer.append(createdEl);
-			// izotopeContainer.isotope('addItems', appendedEl);
-			// izotopeContainer.isotope('reloadItems');
+			izotopeContainer.append(createdEl);
 		}
 	}
-	// izotopeContainer.isotope('layout');
 	izotopeContainer.imagesLoaded(function() {
-		var $container = $('.izotope-container');
-		$container.isotope({
-			itemSelector: '.item',
-			layoutMode: 'masonry',
-			masonry: {
-				columnWidth: '.grid-sizer'
-			}
-		});
-		$('#filters').on('click', '.but', function() {
-			/*
-			$('.izotope-container').each(function(){
-				$(this).find('.item').removeClass('animated');
-			});
-			*/
-			$('#filters .but').removeClass('activbut');
-			$(this).addClass('activbut');
-			var filterValue = $(this).attr('data-filter');
-			// alert('filterValue: ' + filterValue);
-			$container.isotope({filter: filterValue});
-		});
+		// alert('running layout');
+		izotopeContainer.isotope('reloadItems');
+		izotopeContainer.isotope();
 	});
 	return;
 	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
