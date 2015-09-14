@@ -137,7 +137,7 @@ var slipCoverJson = ['html:div', classREF,
 						]
 					];
 
-function matchIsotopeContentsToFileJson() {
+function matchIsotopeContentsToFileJson(isNotInit) {
 	// adds in images that are not in isotope but are in gFileJson
 	// removes images that are in isotopte and not in gFileJson
 	
@@ -170,7 +170,8 @@ function matchIsotopeContentsToFileJson() {
 	
 	console.log('objOfImagePathsInIsotope:', objOfImagePathsInIsotope);
 	
-	var izotopeContainer = $('.izotope-container');
+	var ic = document.getElementById('izoc');
+	var izotopeContainer = $(ic);
 	
 	var fileJsonAsIzotopeEls = {}; // key is img src (OS.Path.toFileURI on save-*'s) value is {aTypeInt:, aDataId:int} // holds only things that should have image in the isotope container, like even if copy/print type did have img src it wouldnt be in here
 	for (var i=0; i<gFileJson.length; i++) {
@@ -225,12 +226,28 @@ function matchIsotopeContentsToFileJson() {
 			
 			var createdEl = jsonToDOM(slipCoverJson, document, {});
 			console.log('createdEl:', createdEl);
-			izotopeContainer.append(createdEl);
+			ic.appendChild(createdEl);
+			if (isNotInit) {
+				izotopeContainer.isotope('addItems', createdEl);
+			}
 		}
 	}
+
+	if (!isNotInit) {
+		izotopeContainer.isotope({
+			itemSelector: '.item',
+			layoutMode: 'masonry',
+			masonry: {
+				columnWidth: '.grid-sizer'
+			}
+		});
+	}
+
 	izotopeContainer.imagesLoaded(function() {
 		// alert('running layout');
-		izotopeContainer.isotope('reloadItems');
+		if (isNotInit) {
+			izotopeContainer.isotope('reloadItems');
+		}
 		izotopeContainer.isotope();
 	});
 	return;
@@ -251,8 +268,7 @@ function matchIsotopeContentsToFileJson() {
 			izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
 		}
 	}
-	
-	izotopeContainer.isotope('layout');
+
 }
 
 var gFileJson;
