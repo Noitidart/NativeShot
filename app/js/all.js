@@ -303,7 +303,7 @@
 	/*SLIP HOVER PLUGIN*/
 	/**********************************/
 				 
-	if ($(window).width()>992){			 
+	// if ($(window).width()>992){			 
 	if ($('.sliphover').length){			 
 		 $('.sliphover').sliphover({
 			 target: '.ellem',
@@ -311,7 +311,7 @@
 			 fontColor: '#fff'
 		 });
 	}
-	}
+	// }
 				 
 	/***********************************/
 	/*GOOGLE MAP*/

@@ -1,5 +1,6 @@
 // Imports
-const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
+const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
+Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
@@ -104,11 +105,101 @@ function updateCountsToSkillBars() {
 	}
 };
 
-var dataCaptionVariants = {};
-dataCaptionVariants[aTypeStrToTypeInt['imgur-anonymous']] = "<span class='vertical-align'><h4>September 12, 2015 - 7:41 PM</h4><span class='pr-sutitle'>Imgur - Anonymous</span><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-remove'></span>Delete</a><a href='#' class='card-button'><span class='fa fa-history'></span>Remove</a></span>";
-dataCaptionVariants[aTypeStrToTypeInt['twitter']] = "<span class='vertical-align'><h4>September 12, 2015 - 7:41 PM</h4><span class='pr-sutitle'>Twitter</span><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-ttttttt'></span>Open Tweet</a><a href='#' class='card-button'><span class='fa fa-history'></span>Remove</a></span>";
-dataCaptionVariants[aTypeStrToTypeInt['save-quick']] = "<span class='vertical-align'><h4>September 12, 2015 - 7:41 PM</h4><span class='pr-sutitle'>Save - Quick</span><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button'><span class='fa fa-history'></span>Remove</a></span>";
-dataCaptionVariants[aTypeStrToTypeInt['save-browse']] = "<span class='vertical-align'><h4>September 12, 2015 - 7:41 PM</h4><span class='pr-sutitle'>Save - Browse</span><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button'><span class='fa fa-history'></span>Remove</a></span>";
+function getArrElInFileJsonByGettime(aGettime) {
+	for (var i=0; i<gFileJson.length; i++) {
+		if (gFileJson[i].d == aGettime) {
+			return gFileJson[i];
+		}
+	}
+	
+	throw new Error('no entry in gFileJson found with .d of ' + aGettime);
+}
+
+function getImageURL(aArrEl, nonFileUri) {
+	
+	switch (aArrEl.t) {
+		case aTypeStrToTypeInt['save-quick']:
+		case aTypeStrToTypeInt['save-browse']:
+				
+				if (nonFileUri) {
+					return OS.Path.join(aArrEl.f, aArrEl.n);
+				} else {
+					return OS.Path.toFileURI(OS.Path.join(aArrEl.f, aArrEl.n));
+				}
+			
+			break;
+		case aTypeStrToTypeInt['twitter']:
+			
+				return aArrEl.l;
+			
+			break;
+		case aTypeStrToTypeInt['imgur-anonymous']:
+			
+				return IMGUR_IMG_URL_PREFIX + aArrEl.n + IMGUR_IMG_URL_SUFFIX;
+			
+			break;
+		default:
+			throw new Error('this aTypeInt has no image url, aTypeInt: ' + aTypeInt);
+	}
+	
+}
+
+function izoView(aGettime) {
+	alert('magnific this: ' + getImageURL(getArrElInFileJsonByGettime(aGettime)));
+};
+function izoCopy(aGettime) {
+	var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
+	trans.addDataFlavor('text/unicode');
+	var linktxt = getImageURL(getArrElInFileJsonByGettime(aGettime), true);
+	
+	trans.setTransferData('text/unicode', SupportsString(linktxt), linktxt.length * 2);
+	
+	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+};
+function izoOpen(aGettime) {
+	
+	var aArrEl = getArrElInFileJsonByGettime(aGettime);
+	switch (aArrEl.t) {
+		case aTypeStrToTypeInt['save-quick']:
+		case aTypeStrToTypeInt['save-browse']:
+			
+				showFileInOSExplorer(new FileUtils.File(OS.Path.join(aArrEl.f, aArrEl.n)));
+			
+			break;
+		case aTypeStrToTypeInt['twitter']:
+			
+				Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL + aArrEl.p.substr(1), {
+					inBackground: false,
+					relatedToCurrent: true
+				});
+			
+			break;
+		default:
+			throw new Error('this type does not have a open method, aTypeInt: ' + aArrEl.t);
+	}
+};
+function izoDelete(aGettime) {
+	alert('delete on id: ' + aGettime);
+};
+function izoRemove(aGettime) {
+	alert('remove on id: ' + aGettime);
+};
+
+function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime) {
+	// September 12, 2015 - 7:41 PM
+	switch (aTypeInt) {
+		case aTypeStrToTypeInt['imgur-anonymous']:
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+		case aTypeStrToTypeInt['twitter']:
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>Open Tweet</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+		case aTypeStrToTypeInt['save-browse']:
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+		case aTypeStrToTypeInt['save-quick']:
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+		default:
+			throw new Error('unrecognized aTypeInt: ' + aTypeInt);
+	}
+}
 
 // all values in Varitants must be array or obj as it is a pass by reference
 var classVariants = {}
@@ -136,7 +227,7 @@ var slipCoverJson = ['html:div', classREF,
 							['html:img', imgREF]
 						]
 					];
-
+					
 function matchIsotopeContentsToFileJson(isNotInit) {
 	// adds in images that are not in isotope but are in gFileJson
 	// removes images that are in isotopte and not in gFileJson
@@ -178,58 +269,38 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		if (!(gFileJson[i].t in aTypeIntToTypeStr)) {
 			throw new Error('found a type in the log file, that is not known to the app.js global aTypeStrToTypeInt. the unknown type id is: ' + gFileJson[i].t);
 		}
-		var didDefault = false;
 		switch (gFileJson[i].t) {
 			case aTypeStrToTypeInt['save-quick']:
 			case aTypeStrToTypeInt['save-browse']:
-				
-					var thisImgSrc = OS.Path.toFileURI(OS.Path.join(gFileJson[i].f, gFileJson[i].n));
-					fileJsonAsIzotopeEls[thisImgSrc] = {
-						aTypeInt: aTypeStrToTypeInt[gFileJson[i].t]
-					};
-				
-				break;
 			case aTypeStrToTypeInt['twitter']:
-				
-					var thisOpenTweet = TWITTER_URL + gFileJson[i].p.substr(1);
-					var thisImgSrc = gFileJson[i].l;
-					fileJsonAsIzotopeEls[thisImgSrc] = {
-						aTypeInt: aTypeStrToTypeInt[gFileJson[i].t]
-					};
-				
-				break;
 			case aTypeStrToTypeInt['imgur-anonymous']:
-				
-					var thisImgSrc = IMGUR_IMG_URL_PREFIX + gFileJson[i].n + IMGUR_IMG_URL_SUFFIX;
-					fileJsonAsIzotopeEls[thisImgSrc] = {
+						
+					if (!(gFileJson[i].t in classVariants)) {
+						throw new Error('no mainDivClassVariants for type ' + gFileJson[i].t);
+					}
+								
+					classREF.class = classVariants[gFileJson[i].t];
+					var imgDate = new Date(gFileJson[i].d);
+					var formattedDate = myServices.sb.GetStringFromName('month' + (imgDate.getMonth()+1)) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
+					
+					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d);
+					dataCaptionREF['data-gettime'] = gFileJson[i].d;
+					imgREF.src = getImageURL(gFileJson[i]);
+					
+					fileJsonAsIzotopeEls[imgREF.src] = {
 						aTypeInt: aTypeStrToTypeInt[gFileJson[i].t]
 					};
+					
+					var createdEl = jsonToDOM(slipCoverJson, document, {});
+					console.log('createdEl:', createdEl);
+					ic.appendChild(createdEl);
+					if (isNotInit) {
+						izotopeContainer.isotope('addItems', createdEl);
+					}
 				
 				break;
 			default:
 				// no image for this type in isotope, like copy and print
-				didDefault = true; // means that we dont add for this i
-		}
-		
-		if (!didDefault) {
-			
-			if (!(gFileJson[i].t in classVariants)) {
-				throw new Error('no mainDivClassVariants for type ' + gFileJson[i].t);
-			}
-			if (!(gFileJson[i].t in dataCaptionVariants)) {
-				throw new Error('no divWithDataCapVariants for type ' + gFileJson[i].t);
-			}
-						
-			classREF.class = classVariants[gFileJson[i].t];
-			dataCaptionREF['data-caption'] = dataCaptionVariants[gFileJson[i].t];
-			imgREF.src = thisImgSrc;
-			
-			var createdEl = jsonToDOM(slipCoverJson, document, {});
-			console.log('createdEl:', createdEl);
-			ic.appendChild(createdEl);
-			if (isNotInit) {
-				izotopeContainer.isotope('addItems', createdEl);
-			}
 		}
 	}
 
@@ -243,6 +314,26 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		});
 	}
 
+
+	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
+	if (isNotInit) {
+		// check if any of the isotope srcs that were present when i started this function, need to not be there (meaning they are not in the fileJsonAsIzotopeEls obj)
+		for (var isotopeImgSrc in objOfImagePathsInIsotope) {
+			// go through the gFileJson obj i created
+			var found = false;
+			for (var jsonImgSrc in fileJsonAsIzotopeEls) {
+				if (jsonImgSrc.toLowerCase() == isotopeImgSrc.toLowerCase()) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				console.log('need to remove from isotope this img src:', isotopeImgSrc);
+				izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
+			}
+		}
+	}
+
 	izotopeContainer.imagesLoaded(function() {
 		// alert('running layout');
 		if (isNotInit) {
@@ -250,25 +341,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		}
 		izotopeContainer.isotope();
 	});
-	return;
-	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
 	
-	// check if any of the isotope srcs that were present when i started this function, need to not be there (meaning they are not in the fileJsonAsIzotopeEls obj)
-	for (var isotopeImgSrc in objOfImagePathsInIsotope) {
-		// go through the gFileJson obj i created
-		var found = false;
-		for (var jsonImgSrc in fileJsonAsIzotopeEls) {
-			if (jsonImgSrc.toLowerCase() == isotopeImgSrc.toLowerCase()) {
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			console.log('need to remove from isotope this img src:', isotopeImgSrc);
-			izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
-		}
-	}
-
 }
 
 var gFileJson;
@@ -898,7 +971,40 @@ function jsonToDOM(json, doc, nodes) {
     }
     return tag.apply(null, json);
 }
+function showFileInOSExplorer(aNsiFile) {
+	//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
+	// opens the directory of the aNsiFile
+	
+	if (aNsiFile.isDirectory()) {
+		aNsiFile.launch();
+	} else {
+		aNsiFile.reveal();
+	}
+}
+const nsTransferable = CC('@mozilla.org/widget/transferable;1', 'nsITransferable');
+function Transferable(source) {
+    var res = nsTransferable();
+    if ('init' in res) {
+        // When passed a Window object, find a suitable privacy context for it.
+        if (source instanceof Ci.nsIDOMWindow) {
+            // Note: in Gecko versions >16, you can import the PrivateBrowsingUtils.jsm module
+            // and use PrivateBrowsingUtils.privacyContextFromWindow(sourceWindow) instead
+            source = source.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+		}
+		
+        res.init(source);
+    }
+    return res;
+}
+const nsSupportsString = CC('@mozilla.org/supports-string;1', 'nsISupportsString');
+function SupportsString(str) {
+    // Create an instance of the supports-string class
+    var res = nsSupportsString();
 
+    // Store the JavaScript string that we want to wrap in the new nsISupportsString object
+    res.data = str;
+    return res;
+}
 // end - common helper functions
 
 document.addEventListener('DOMContentLoaded', onPageReady, false);
