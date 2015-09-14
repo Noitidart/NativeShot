@@ -89,7 +89,7 @@
 	/***********************************/
 	/*MAGNIFIC POPUP*/
 	/**********************************/			 
-
+	/*
 	$('.popup-gallery').magnificPopup({
 		delegate: 'a',
 		type: 'image',
@@ -125,8 +125,46 @@
 		 closeBtnInside: false,
          closeOnContentClick: true,
          midClick: true
+	});
+	*/
+	/*
+	$('.izotope-container').magnificPopup({
+		delegate: 'a',
+		type: 'image',
+		tLoading: '',
+		mainClass: 'mfp-with-zoom',
+		removalDelay: 500,
+		gallery: {
+			enabled: true,
+			navigateByImgClick: true
+		},
+		zoom: {
+			enabled: true,
+			duration: 300,
+			easing: 'ease-in-out', 
+			opener: function(openerElement) {
+			  return openerElement.is('img') ? openerElement : openerElement.find('img');
+			}
+		},
+		callbacks: {
+			imageLoadComplete: function() {
+			  var self = this;
+			  setTimeout(function() {
+				self.wrap.addClass('mfp-image-loaded');
+			  }, 16);
+			},
+			close: function() {
+			  this.wrap.removeClass('mfp-image-loaded');
+			},
+			beforeChange: function() {
+     this.items[0].src = this.items[0].src + '?=' + Math.random(); 
+            }
+		},
+		 closeBtnInside: false,
+         closeOnContentClick: true,
+         midClick: true
 	});				 
-				 
+	*/
 	/***********************************/
 	/*MOBILE MENU*/
 	/**********************************/
@@ -406,30 +444,7 @@
 	/*WINDOW LOAD*/
 	/**********************************/
  
-    $(window).load(function() {
-		if($('#map-canvas-contact').length==1){
-		   initialize('map-canvas-contact');}
-		
-	    if ($('.izotope-container').length) { 
-			 var $container = $('.izotope-container');
-              $container.isotope({
-                itemSelector: '.item',
-                layoutMode: 'masonry',
-                masonry: {
-                  columnWidth: '.grid-sizer'
-                }
-              });
-			  $('#filters').on('click', '.but', function() {
-				$('.izotope-container').each(function(){
-				   $(this).find('.item').removeClass('animated');
-				});
-				$('#filters .but').removeClass('activbut');
-				  $(this).addClass('activbut');
-					 var filterValue = $(this).attr('data-filter');
-						$container.isotope({filter: filterValue});
-						  });
-           }
-	 });
+	// removed the isotope stuff from here
 				 
 	/***********************************/
 	/*TEAM HOVER*/

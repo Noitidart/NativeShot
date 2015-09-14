@@ -170,8 +170,9 @@ function matchIsotopeContentsToFileJson() {
 	
 	console.log('objOfImagePathsInIsotope:', objOfImagePathsInIsotope);
 	
+	var izotopeContainer = $('.izotope-container');
+	
 	var fileJsonAsIzotopeEls = {}; // key is img src (OS.Path.toFileURI on save-*'s) value is {aTypeInt:, aDataId:int} // holds only things that should have image in the isotope container, like even if copy/print type did have img src it wouldnt be in here
-	var izotopeContainer = document.querySelector('.izotope-container');
 	for (var i=0; i<gFileJson.length; i++) {
 		if (!(gFileJson[i].t in aTypeIntToTypeStr)) {
 			throw new Error('found a type in the log file, that is not known to the app.js global aTypeStrToTypeInt. the unknown type id is: ' + gFileJson[i].t);
@@ -222,12 +223,37 @@ function matchIsotopeContentsToFileJson() {
 			dataCaptionREF['data-caption'] = dataCaptionVariants[gFileJson[i].t];
 			imgREF.src = thisImgSrc;
 			
-			var createdEl = jsonToDOM(slipCoverJson, document,{});
+			var createdEl = jsonToDOM(slipCoverJson, document, {});
 			console.log('createdEl:', createdEl);
-			izotopeContainer.appendChild(createdEl);
+			var appendedEl = izotopeContainer.append(createdEl);
+			// izotopeContainer.isotope('addItems', appendedEl);
+			// izotopeContainer.isotope('reloadItems');
 		}
 	}
-	
+	// izotopeContainer.isotope('layout');
+	izotopeContainer.imagesLoaded(function() {
+		var $container = $('.izotope-container');
+		$container.isotope({
+			itemSelector: '.item',
+			layoutMode: 'masonry',
+			masonry: {
+				columnWidth: '.grid-sizer'
+			}
+		});
+		$('#filters').on('click', '.but', function() {
+			/*
+			$('.izotope-container').each(function(){
+				$(this).find('.item').removeClass('animated');
+			});
+			*/
+			$('#filters .but').removeClass('activbut');
+			$(this).addClass('activbut');
+			var filterValue = $(this).attr('data-filter');
+			// alert('filterValue: ' + filterValue);
+			$container.isotope({filter: filterValue});
+		});
+	});
+	return;
 	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
 	
 	// check if any of the isotope srcs that were present when i started this function, need to not be there (meaning they are not in the fileJsonAsIzotopeEls obj)
@@ -242,10 +268,11 @@ function matchIsotopeContentsToFileJson() {
 		}
 		if (!found) {
 			console.log('need to remove from isotope this img src:', isotopeImgSrc);
-			$(objOfImagePathsInIsotope[isotopeImgSrc].domElItem).remove();
+			izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
 		}
 	}
 	
+	izotopeContainer.isotope('layout');
 }
 
 var gFileJson;
@@ -332,7 +359,7 @@ function onPageReady() {
 	var step2 = function() {
 		// from gFileJson update skill bars and add in images to isotope zone
 		updateCountsToSkillBars();
-		// matchIsotopeContentsToFileJson();
+		matchIsotopeContentsToFileJson();
 	};
 	
 	step1();
