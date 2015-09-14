@@ -184,7 +184,6 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	}
 	
 	var clips = {
-		tweet_id: refDetails.tweet_id
 	}; // key is img id, vaulue is img url, key of 'tweet' holds tweet_id, on the server side, convert this id to a url to the tweet
 	
 	var parser = Cc['@mozilla.org/xmlextras/domparser;1'].createInstance(Ci.nsIDOMParser);
@@ -203,7 +202,18 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 		// it is possible that a pic is not among the urls to return, as user may have added their own image. or also if user mixed it up and then added. etc etc :todo: revise for removing deletion of preview, as if user deleted a preview then attached another // :todo: when user does delete a preview, then the previewIndex of my attached images after that index should be reduced by 1
 	}
 	
+	clips.other_info = {};
 	
+	clips.other_info.tweet_id = refDetails.tweet_id;
+	try {
+		clips.other_info.user_id = refDetails.profile_stats[0].user_id;
+	} catch (ex) {
+		console.warn('ex when trying to read from profile_stats so using querySelector method');
+		clips.other_info.user_id = parsedDocument.querySelector('div[data-permalink-path]').getAttribute('data-permalink-path');
+	}
+	clips.other_info.permlink = parsedDocument.querySelector('div[data-permalink-path]').getAttribute('data-permalink-path');
+	clips.other_info.screen_name = parsedDocument.querySelector('div[data-screen-name]').getAttribute('data-screen-name');
+	// clips.other_info.full_name = parsedDocument.querySelector('div[data-name]').getAttribute('data-name');
 	console.info('clips:', clips);
 	
 	succesfullyTweetedClips = clips;

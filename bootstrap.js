@@ -47,6 +47,7 @@ const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const cui_cssUri = Services.io.newURI(core.addon.path.styles + 'cui.css', null, null);
 const JETPACK_DIR_BASENAME = 'jetpack';
 const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
+const OSPath_historyLog = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'history-log.unbracketed.json');
 
 const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettify on twitter javascript files
 const TWITTER_MAX_UPLOAD_FILE_SIZE = 3145728; // i got this from doing debugger prettify on twitter javascript files
@@ -561,9 +562,13 @@ const fsComServer = {
 										
 										refUAPEntry.tweeted = true;
 										
-										// set urls to userAckId so can offer clipboard
-										refUAPEntry.tweetURL = myServices.sb.formatStringFromName('url_tweet-from-status-id', [aMsg.json.clips.tweet_id], 1);
-										delete aMsg.json.clips.tweetId;
+										// set urls to userAckId so can offer clipboard										
+										var other_info = aMsg.json.clips.other_info;
+										delete aMsg.json.clips.other_info;
+										
+										refUAPEntry.tweetURL = TWITTER_URL + other_info.permlink.substr(1); // because permlink is preceded by slash
+										
+										console.info('other_info:', other_info);
 										
 										for (var imgId in refUAPEntry.imgDatas) {
 											refUAPEntry.imgDatas[imgId].uploadedURL = aMsg.json.clips[imgId];
@@ -615,6 +620,16 @@ const fsComServer = {
 										copyTextToClip(arrOfImgUrls.join('\n'));
 										
 										// get those uploaded urls
+										// add in update to log file
+										for (var i=0; i<arrOfImgUrls.length; i++) {
+											appendToHistoryLog('twitter', {
+												d: new Date().getTime(),
+												u: other_info.user_id,
+												// s: other_info.screen_name,
+												p: other_info.permlink,
+												l: arrOfImgUrls[i]
+											});
+										}
 										
 										NBs.updateGlobal(crossWinId, {
 											lbl:1, // in case it was updated
@@ -1029,6 +1044,13 @@ var gEditor = {
 							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 							
 							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
+							
+							appendToHistoryLog(aBoolPreset ? 'save-quick' : 'save-browse', {
+								d: new Date().getTime(),
+								n: OS.Path.basename(OSPath_save),
+								f: OS.Path.dirname(OSPath_save)
+							});
+							
 							// end - do stuff here - promise_saveToDisk
 						},
 						function(aReason) {
@@ -1071,8 +1093,9 @@ var gEditor = {
 			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
 			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
 			// end - copy block link7984654
-			
+						
 			do_saveCanToDisk();
+			
 		} else {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 			fp.init(e.view, myServices.sb.GetStringFromName('filepicker-title-save-screenshot'), Ci.nsIFilePicker.modeSave);
@@ -1141,6 +1164,10 @@ var gEditor = {
 		
 		gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_clipboard-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
 		
+		appendToHistoryLog('copy', {
+			d: new Date().getTime()
+		});
+		
 		this.closeOutEditor(e);
 	},
 	sendToPrinter: function(e) {
@@ -1171,6 +1198,10 @@ var gEditor = {
 		iframe.setAttribute('style', 'display:none');
 		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 
+		appendToHistoryLog('print', {
+			d: new Date().getTime()
+		});
+		
 		this.closeOutEditor(e);
 	},
 	shareToTwitter: function(e) {
@@ -1400,110 +1431,12 @@ var gEditor = {
 					
 					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 					
-					// save to upload history - only for anonymous uploads to imgur, so can delete in future
-					
-					var do_closeHistory = function(hOpen) {
-						var promise_closeHistory = hOpen.close();
-						promise_closeHistory.then(
-							function(aVal) {
-								console.log('Fullfilled - promise_closeHistory - ', aVal);
-								// start - do stuff here - promise_closeHistory
-								// end - do stuff here - promise_closeHistory
-							},
-							function(aReason) {
-								var rejObj = {name:'promise_closeHistory', aReason:aReason};
-								console.warn('Rejected - promise_closeHistory - ', rejObj);
-								// deferred_createProfile.reject(rejObj);
-							}
-						).catch(
-							function(aCaught) {
-								var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
-								console.error('Caught - promise_closeHistory - ', rejObj);
-								// deferred_createProfile.reject(rejObj);
-							}
-						);
-					};
-					
-					var do_writeHistory = function(hOpen) {
-						var txtToAppend = ',"' + imgId + '":"' + deleteHash + '"';
-						var txtEncoded = getTxtEncodr().encode(txtToAppend);
-						var promise_writeHistory = hOpen.write(txtEncoded);
-						promise_writeHistory.then(
-							function(aVal) {
-								console.log('Fullfilled - promise_writeHistory - ', aVal);
-								// start - do stuff here - promise_writeHistory
-								do_closeHistory(hOpen);
-								// end - do stuff here - promise_writeHistory
-							},
-							function(aReason) {
-								var rejObj = {name:'promise_writeHistory', aReason:aReason};
-								console.warn('Rejected - promise_writeHistory - ', rejObj);
-								// deferred_createProfile.reject(rejObj);
-							}
-						).catch(
-							function(aCaught) {
-								var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
-								console.error('Caught - promise_writeHistory - ', rejObj);
-								// deferred_createProfile.reject(rejObj);
-							}
-						);
-					};
-					
-					var do_makeDirsToHistory = function() {
-						var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyImgHostAnonImgur), {from:OS.Constants.Path.profileDir})
-						promise_makeDirsToHistory.then(
-							function(aVal) {
-								console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
-								// start - do stuff here - promise_makeDirsToHistory
-								do_openHistory();
-								// end - do stuff here - promise_makeDirsToHistory
-							},
-							function(aReason) {
-								var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
-								console.warn('Rejected - promise_makeDirsToHistory - ', rejObj);
-								// deferred_createProfile.reject(rejObj);
-							}
-						).catch(
-							function(aCaught) {
-								var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
-								console.error('Caught - promise_makeDirsToHistory - ', rejObj);
-								// deferred_createProfile.reject(rejObj);
-							}
-						);
-					};
-					
-					var openHistoryAttempt = 1;
-					var do_openHistory = function() {
-						var promise_openHistory = OS.File.open(OSPath_historyImgHostAnonImgur, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
-						promise_openHistory.then(
-							function(aVal) {
-								console.log('Fullfilled - promise_openHistory - ', aVal);
-								// start - do stuff here - promise_openHistory
-								do_writeHistory(aVal);
-								// end - do stuff here - promise_openHistory
-							},
-							function(aReason) {
-								var rejObj = {name:'promise_openHistory', aReason:aReason};
-								if (aReason.becauseNoSuchFile && openHistoryAttempt == 1) {
-									// first attempt, and i have only ever gotten here with os.file.open when write append are true if folder doesnt exist, so make it per https://gist.github.com/Noitidart/0401e9a7de716de7de45
-									openHistoryAttempt++;
-									do_makeDirsToHistory();
-									rejObj.openHistoryAttempt = openHistoryAttempt;
-								} else {
-									console.warn('Rejected - promise_openHistory - ', rejObj);
-									//deferred_createProfile.reject(rejObj);
-								}
-							}
-						).catch(
-							function(aCaught) {
-								var rejObj = {name:'promise_openHistory', aCaught:aCaught};
-								console.error('Caught - promise_openHistory - ', rejObj);
-								//deferred_createProfile.reject(rejObj);
-							}
-						);
-					};
-					
-					do_openHistory(); // starts the papend to history process
+					// add in update to log file
+					appendToHistoryLog('imgur-anonymous', {
+						d: new Date().getTime(),
+						x: deleteHash,
+						n: imgId
+					});
 					
 					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
 					// end - do stuff here - promise_uploadAnonImgur
@@ -2739,6 +2672,189 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 			class: [aUAPEntry.userAckId] // arr of btn ids that need updating
 		}
 	});
+}
+
+const aTypeStrToTypeInt = {
+	'imgur-anonymous': 0,
+	'twitter': 1,
+	'copy': 2,
+	'print': 3,
+	'save-quick': 4,
+	'save-browse': 5
+};
+
+function appendToHistoryLog(aTypeStr, aData) {
+	/* // info on args
+	// aTypeStr - string. will get added to push obj with key of `t` for type
+		// imgur-anonymous
+		// twitter
+		// print
+		// copy (for copy image to clipboard)
+		// save-quick
+		// save-browse
+	// aData - object
+		{
+			// regardless of aType must have
+			d: new Date().getTime()
+			
+			// save-quick and save-browse
+			n: 'file name with extension so like blah.png as in future will likely support other then png output' // `n` for name
+			f: 'full os path to folder saved in'
+			
+			// imgur-anonymous
+			x: 'delete hash' // `x` signifies image when remove, as d is taken for date
+			n: 'file name here is the img id as its anonymous'
+			
+			// twitter
+			u: 'user_id uploaded too', // maybe not necessary
+			// s: 'user_screen_name uploaded too', // maybe not necessary // for now no, because its at the start of `p` anyways which is `other_info.permlink`
+			p: 'post, p stands for post which stands for tweet, id. so post id. so tweet id.' // a link is made by going https://twitter.com/USSER_NAME_HERE/status/TWEET_ID // althought USSER_NAME_HERE seems like it can be anything and it gets fixed to the right one
+			l: 'link/url to imaage' // i expected imags to be "https://pbs.twimg.com/media/CO0xs-vVAAEJHqP.png" however im not sure so saving whole url for now
+		}
+	*/
+	
+	// start - validating arguments provided by devuser
+	
+	var dataKeysForTypeId = {}; // these and no more and no less keys should be found in aData
+	dataKeysForTypeId[aTypeStrToTypeInt['imgur-anonymous']] = ['d', 'x', 'n'];
+	dataKeysForTypeId[aTypeStrToTypeInt['twitter']] = ['d', 'u', 'p', 'l'];
+	dataKeysForTypeId[aTypeStrToTypeInt['copy']] = ['d'];
+	dataKeysForTypeId[aTypeStrToTypeInt['print']] = ['d'];
+	dataKeysForTypeId[aTypeStrToTypeInt['save-browse']] = ['d', 'n', 'f'];
+	dataKeysForTypeId[aTypeStrToTypeInt['save-quick']] = ['d', 'n', 'f'];
+	
+	if (!(aTypeStr in aTypeStrToTypeInt)) {
+		throw new Error('unidentified aTypeStr: ' + aTypeStr);
+	}
+	
+	if (!(aTypeStrToTypeInt[aTypeStr] in dataKeysForTypeId)) {
+		throw new Error('dev forgot to define the required keys for aTypeStr: ' + aTypeStr);
+	}
+	
+	// check if any extra keys found in aData, if it is then throw
+	for (var p in aData) {
+		if (dataKeysForTypeId[aTypeStrToTypeInt[aTypeStr]].indexOf(p) == -1) {
+			throw new Error('a key was provided in aData but it is not an acceptable key based on dataKeysForTypeId. the invalid key: ' + p);
+		}
+	}
+	
+	// check to make sure the required keys are found in aData else throw
+	for (var i=0; i<dataKeysForTypeId[aTypeStrToTypeInt[aTypeStr]].length; i++) {
+		if (!(dataKeysForTypeId[aTypeStrToTypeInt[aTypeStr]][i] in aData)) {
+			throw new Error('required key note found in aData. the required key: ' + dataKeysForTypeId[aTypeStrToTypeInt[aTypeStr]][i]);
+		}
+	}
+	
+	// push the aTypeInt to the aData obj
+	aData.t = aTypeStrToTypeInt[aTypeStr];
+	
+	// end - ok done validating arguments provided by devuser
+	
+	// save to upload history - only for anonymous uploads to imgur, so can delete in future
+	
+	var do_closeHistory = function(hOpen) {
+		var promise_closeHistory = hOpen.close();
+		promise_closeHistory.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_closeHistory - ', aVal);
+				// start - do stuff here - promise_closeHistory
+				console.log('Fullfilled - appendToHistoryLog - ', aVal);
+				// end - do stuff here - promise_closeHistory
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_closeHistory', aReason:aReason};
+				console.error('Rejected - promise_closeHistory - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
+				console.error('Caught - promise_closeHistory - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		);
+	};
+	
+	var do_writeHistory = function(hOpen) {
+		var txtToAppend = ',' + JSON.stringify(aData); // note: the text is an unbracketed array, so the leading { and ending } are missing but the stuff within are seperated by a comma, and first character is a comma
+		var txtEncoded = getTxtEncodr().encode(txtToAppend);
+		var promise_writeHistory = hOpen.write(txtEncoded);
+		promise_writeHistory.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_writeHistory - ', aVal);
+				// start - do stuff here - promise_writeHistory
+				do_closeHistory(hOpen);
+				// end - do stuff here - promise_writeHistory
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_writeHistory', aReason:aReason};
+				console.error('Rejected - promise_writeHistory - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
+				console.error('Caught - promise_writeHistory - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		);
+	};
+	
+	var do_makeDirsToHistory = function() {
+		var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyLog), {from:OS.Constants.Path.profileDir})
+		promise_makeDirsToHistory.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
+				// start - do stuff here - promise_makeDirsToHistory
+				do_openHistory();
+				// end - do stuff here - promise_makeDirsToHistory
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
+				console.error('Rejected - promise_makeDirsToHistory - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
+				console.error('Caught - promise_makeDirsToHistory - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		);
+	};
+	
+	var openHistoryAttempt = 1;
+	var do_openHistory = function() {
+		var promise_openHistory = OS.File.open(OSPath_historyLog, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
+		promise_openHistory.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_openHistory - ', aVal);
+				// start - do stuff here - promise_openHistory
+				do_writeHistory(aVal);
+				// end - do stuff here - promise_openHistory
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_openHistory', aReason:aReason};
+				if (aReason.becauseNoSuchFile && openHistoryAttempt == 1) {
+					// first attempt, and i have only ever gotten here with os.file.open when write append are true if folder doesnt exist, so make it per https://gist.github.com/Noitidart/0401e9a7de716de7de45
+					openHistoryAttempt++;
+					do_makeDirsToHistory();
+					rejObj.openHistoryAttempt = openHistoryAttempt;
+				} else {
+					console.error('Rejected - promise_openHistory - ', rejObj);
+					//deferred_createProfile.reject(rejObj);
+				}
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_openHistory', aCaught:aCaught};
+				console.error('Caught - promise_openHistory - ', rejObj);
+				//deferred_createProfile.reject(rejObj);
+			}
+		);
+	};
+	
+	do_openHistory(); // starts the papend to history process
 }
 
 // start - common helper functions
