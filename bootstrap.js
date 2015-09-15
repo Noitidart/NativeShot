@@ -132,7 +132,7 @@ var observers = {
 var aboutFactory_nativeshot;
 function AboutNativeShot() {}
 AboutNativeShot.prototype = Object.freeze({
-	classDescription: 'NativeShot History Application',
+	classDescription: 'NativeShot Dashboard',
 	contractID: '@mozilla.org/network/protocol/about;1?what=nativeshot',
 	classID: Components.ID('{2079bd20-3369-11e5-a2cb-0800200c9a66}'),
 	QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
@@ -146,7 +146,7 @@ AboutNativeShot.prototype = Object.freeze({
 		if (aURI.path.toLowerCase().indexOf('?options') > -1) {
 			channel = Services.io.newChannel(core.addon.path.content + 'app/options.xhtml', null, null);
 		} else {
-			channel = Services.io.newChannel(core.addon.path.content + 'app/logs.xhtml', null, null);
+			channel = Services.io.newChannel(core.addon.path.content + 'app/main.xhtml', null, null);
 		}
 		channel.originalURI = aURI;
 		return channel;

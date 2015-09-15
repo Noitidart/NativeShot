@@ -1,0 +1,20 @@
+<!ENTITY nativeshot.app-options.title 'Options | NativeShot'>
+<!ENTITY nativeshot.app-options.desc 'Feature settings and options'>
+
+<!ENTITY nativeshot.app-options.auto-updates 'Automatic Updates'>
+<!ENTITY nativeshot.app-options.version 'Version'>
+<!ENTITY nativeshot.app-options.last-updated 'Last Updated'>
+
+<!ENTITY nativeshot.app-options.quick-save-dir 'Quick Save Folder'>
+<!ENTITY nativeshot.app-options.quick-save-dir-desc1 'Save Image Here Instantly'>
+<!ENTITY nativeshot.app-options.quick-save-dir-desc2 'No Browse Dialog Shown'>
+
+<!ENTITY nativeshot.app-options.print-preview 'Print Preview'>
+<!ENTITY nativeshot.app-options.print-preview-desc1 'Skip Straight to Print Dialog'>
+<!ENTITY nativeshot.app-options.print-preview-desc2 'Or Show &#39;Print Preview&#39; on Print'>
+
+<!ENTITY nativeshot.app-options.on 'On'>
+<!ENTITY nativeshot.app-options.off 'Off'>
+<!ENTITY nativeshot.app-options.default 'Default'>
+<!ENTITY nativeshot.app-options.reset 'Reset'>
+<!ENTITY nativeshot.app-options.change 'Change'>

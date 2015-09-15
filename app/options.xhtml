@@ -1,6 +1,16 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html [
+	<!ENTITY % blah1 SYSTEM "chrome://nativeshot/locale/app_common.dtd">
+	%blah1;
+	<!ENTITY % blah2 SYSTEM "chrome://nativeshot/locale/app_options.dtd">
+	%blah2;
+]>
+<html xmlns="http://www.w3.org/1999/xhtml" ng-app="nativeshot_options">
   <head>
+		<title>&nativeshot.app-options.title;</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+		<meta name="description" content="&nativeshot.app-options.desc;" />
+		<link rel="shortcut icon" href="chrome://nativeshot/content/resources/images/icon16.png" type="image/png" />
+		
     <meta charset="utf-8"/>
     
     <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -13,8 +23,6 @@
 	<link href="chrome://nativeshot/content/app/css/animsition.min.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/magnific-popup.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/style.css" rel="stylesheet" type="text/css"/>
-    
-	<title>Options | NativeShot</title>
 	
 	<style>
 		/* my style overrides */		
@@ -35,13 +43,16 @@
 			white-space: nowrap;
 		}
 	</style>
+	
+	<script src="chrome://nativeshot/content/app/js/jquery-2.1.3.min.js"></script>
+	<script src="chrome://ccedgetraversal-graph/content/resources/scripts/angular.min.js"></script>
   </head>
-<body class="animsition">
+<body class="animsition" ng-controller="BodyController as BC">
 	<header>
 	  <div class="container">
-		  <div class="logo" style="text-indent: 46px; background: transparent url(chrome://nativeshot/content/resources/images/icon32.png) no-repeat scroll 0% 85%;">
+		  <div class="logo" style="text-indent: 46px; background: transparent url(chrome://nativeshot/content/resources/images/icon32.png) no-repeat scroll 0% 85%; white-space:nowrap;">
 			 <a href="#" style="cursor:default;">
-				NativeShot Dashboard
+				&nativeshot.app-common.head;
 			 </a>
 		  </div>
 		  <div class="nav-menu-icon">
@@ -50,10 +61,10 @@
 		  <nav class="menu">
 		    <ul>
 				<li>
-					<a href="about:nativeshot" class="animsition-link">Main<span class="fa fa-angle-down"></span></a>
+					<a href="about:nativeshot" class="animsition-link">&nativeshot.app-common.nav-main;<span class="fa fa-angle-down"></span></a>
 	            </li>
 				<li>
-					<a href="#" style="cursor:default;">Options<span class="fa fa-angle-down"></span></a>
+					<a href="#" style="cursor:default;">&nativeshot.app-common.nav-options;<span class="fa fa-angle-down"></span></a>
 				</li>
 		    </ul>
 		  </nav> 
@@ -67,26 +78,26 @@
             	 <div class="col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12">
 					 <div class="price-block">
 						 <div class="price-price">
-							<h4>Automatic Updates</h4>
+							<h4>&nativeshot.app-options.auto-updates;</h4>
 						 </div>
 						 <div class="price-title">
-							<span>On</span>
+							<span>{{BC.prefs.auto_update}}</span>
 						 </div>
 						 <ul>
-						   <li>Verison 1.1</li>
-						   <li>Last Updated September 12, 2015</li>
+						   <li>&nativeshot.app-options.version; {{BC.version}}</li>
+						   <li>&nativeshot.app-options.last-updated; {{BC.last_updated}}</li>
 						 </ul>
 						 <div class="button-style-2">
-						   <a href="#" class="b-md butt-style">Default</a>
-						   <a href="#" class="b-md butt-style" style="display:none;">On</a>
-						   <a href="#" class="b-md butt-style">Off</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.default;</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.on;</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.off;</a>
 						 </div>
 					</div>
             	 </div>
             	 <div class="col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12">
 					 <div class="price-block filesystem-path">
 						 <div class="price-price">
-							<h4>Quick Save Folder</h4>
+							<h4>&nativeshot.app-options.quick-save-dir;</h4>
 						 </div>
 						 <div class="price-title">
 						   <sup>C:\Blah\Blah\</sup>
@@ -94,32 +105,32 @@
 								<!--<sub>My Pics</sub>-->
 						 </div>
 						 <ul>
-						   <li>Save Image Here Instantly</li>
-						   <li>No Browse Dialog Shown</li>
+						   <li>&nativeshot.app-options.quick-save-dir-desc1;</li>
+						   <li>&nativeshot.app-options.quick-save-dir-desc2;</li>
 						 </ul>
 						 <div class="button-style-2">
-						   <a href="#" class="b-md butt-style">Change</a>
-						   <a href="#" class="b-md butt-style">Reset</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.change;</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.reset;</a>
 						 </div>
 					</div>
             	 </div>
             	 <div class="col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12">
 					 <div class="price-block">
 						 <div class="price-price">
-							<h4>Print Preview</h4>
+							<h4>&nativeshot.app-options.print-preview;</h4>
 						 </div>
 						 <div class="price-title">
 						   <!--<sup>$</sup>-->
-							  <span>Off</span>
+							  <span>{{BC.prefs.print_preview}}</span>
 								<!--<sub>/mo</sub>-->
 						 </div>
 						 <ul>
-						   <li>Skip Straight to Print Dialog</li>
-						   <li>Or Show 'Print Preview' on Print</li>
+						   <li>&nativeshot.app-options.print-preview-desc1;</li>
+						   <li>&nativeshot.app-options.print-preview-desc2;</li>
 						 </ul>
 						 <div class="button-style-2">
-						   <a href="#" class="b-md butt-style">On</a>
-						   <a href="#" class="b-md butt-style" style="display:none;">Off</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.on;</a>
+						   <a href="#" class="b-md butt-style">&nativeshot.app-options.off;</a>
 						 </div>
 					</div>
             	 </div>      	
@@ -128,14 +139,9 @@
 	   </div>
 	</div>
     
-<script src="chrome://nativeshot/content/app/js/jquery-2.1.3.min.js"></script>
 <script src="chrome://nativeshot/content/app/js/bootstrap.min.js"></script>
-<script src="chrome://nativeshot/content/app/js/isotope.pkgd.min.js"></script>
-<script src="chrome://nativeshot/content/app/js/jquery.countTo.js"></script>
 <script src="chrome://nativeshot/content/app/js/jquery.animsition.min.js"></script>
-<script src="chrome://nativeshot/content/app/js/jquery.magnific-popup.min.js"></script>
-<script src="chrome://nativeshot/content/app/js/jquery.sliphover.min.js"></script>
-<script src="chrome://nativeshot/content/app/js/idangerous.swiper.min.js"></script>
 <script src="chrome://nativeshot/content/app/js/all.js"></script>
+<script src="chrome://nativeshot/content/app/js/app_options.js"></script>
 </body>
 </html>

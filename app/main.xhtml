@@ -1,21 +1,28 @@
-<!DOCTYPE html>
+<!DOCTYPE html [
+	<!ENTITY % blah1 SYSTEM "chrome://nativeshot/locale/app_common.dtd">
+	%blah1;
+	<!ENTITY % blah2 SYSTEM "chrome://nativeshot/locale/app_main.dtd">
+	%blah2;
+]>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+		<title>&nativeshot.app-main.title;</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+		<meta name="description" content="&nativeshot.app-main.desc;" />
+		<link rel="shortcut icon" href="chrome://nativeshot/content/resources/images/icon16.png" type="image/png" />
+		
     <meta charset="utf-8"/>
     
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no"/>
     <meta name="format-detection" content="telephone=no" />
            
-	<link rel="shortcut icon" href="chrome://nativeshot/content/resources/images/icon16.png"/>
 	<link href="chrome://nativeshot/content/app/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
 	<link rel="stylesheet" href="chrome://nativeshot/content/app/css/font-awesome-v4.3.0.min.css"/> <!-- http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css -->
 	<link href="chrome://nativeshot/content/app/css/animsition.min.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/magnific-popup.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/style.css" rel="stylesheet" type="text/css"/>
     <link href="chrome://nativeshot/content/app/css/slider.css" rel="stylesheet"/>
-	
-	<title>Dashboard | NativeShot</title>
 	
 	<style>
 		/* my style overrides */
@@ -43,7 +50,7 @@
 	  <div class="container">
 		  <div class="logo" style="text-indent: 46px; background: transparent url(chrome://nativeshot/content/resources/images/icon32.png) no-repeat scroll 0% 85%; white-space:nowrap;">
 			 <a href="#" style="cursor:default;">
-				NativeShot Dashboard
+				&nativeshot.app-common.head;
 			 </a>
 		  </div>
 		  <div class="nav-menu-icon">
@@ -52,10 +59,10 @@
 		  <nav class="menu">
 		    <ul>
 				<li>
-					<a href="#" style="cursor:default;">Main<span class="fa fa-angle-down"></span></a>
+					<a href="#" style="cursor:default;">&nativeshot.app-common.nav-main;<span class="fa fa-angle-down"></span></a>
 	            </li>
 				<li>
-					<a href="about:nativeshot?options" class="animsition-link">Options<span class="fa fa-angle-down"></span></a>
+					<a href="about:nativeshot?options" class="animsition-link">&nativeshot.app-common.nav-options;<span class="fa fa-angle-down"></span></a>
 				</li>
 		    </ul>
 		  </nav> 
@@ -70,21 +77,21 @@
            	  	  <div class="second-caption">
 					   <div class="skill">
 						  <div class="skill-block">
-							  <span>Save - Quick</span>
+							  <span>&nativeshot.app-main.category-save-quick;</span>
 								<div class="skill-line" data-nativeshot-category="save-quick">
 									<h5 class="timer" data-to="80" data-speed="2000">0</h5>
 									<div data-width-pb="80%"></div>
 								</div>
 						  </div>
 						  <div class="skill-block">
-							  <span>Save - Browse</span>
+							  <span>&nativeshot.app-main.category-save-browse;</span>
 								<div class="skill-line" data-nativeshot-category="save-browse">
 									<h5 class="timer" data-to="74" data-speed="2000">0</h5>
 									<div data-width-pb="74%"></div>
 								</div>
 						  </div>
 						  <div class="skill-block">
-							  <span>Copy</span>
+							  <span>&nativeshot.app-main.category-copy;</span>
 								<div class="skill-line" data-nativeshot-category="copy">
 									<h5 class="timer" data-to="85" data-speed="2000">0</h5>
 									<div data-width-pb="85%"></div>
@@ -97,7 +104,7 @@
            	  	  <div class="second-caption">
 					<p>
 						<span>
-							click category to apply filter
+							&nativeshot.app-main.category-desc;
 						</span>
 					</p>
            	  	  </div>
@@ -111,21 +118,21 @@
            	  	  <div class="second-caption">
 					   <div class="skill">
 						  <div class="skill-block">
-							  <span>Print</span>
+							  <span>&nativeshot.app-main.category-print;</span>
 								<div class="skill-line" data-nativeshot-category="print">
 									<h5 class="timer" data-to="65" data-speed="2000">0</h5>
 									<div data-width-pb="65%"></div>
 								</div>
 						  </div>
 						  <div class="skill-block">
-							  <span>Imgur - Anonymous</span>
+							  <span>&nativeshot.app-main.category-imgur-anonymous;</span>
 								<div class="skill-line" data-nativeshot-category="imgur-anonymous">
 									<h5 class="timer" data-to="80" data-speed="2000">0</h5>
 									<div data-width-pb="80%"></div>
 								</div>
 						  </div>
 						  <div class="skill-block">
-							  <span>Twitter</span>
+							  <span>&nativeshot.app-main.category-twitter;</span>
 								<div class="skill-line" data-nativeshot-category="twitter">
 									<h5 class="timer" data-to="74" data-speed="2000">0</h5>
 									<div data-width-pb="74%"></div>
@@ -139,11 +146,11 @@
          <div class="padd-80">
            <div class="row">
             	<div id="filters" class="fillter-wrap">
-					<button class="but activbut" data-filter="*">All</button>	
-					<button class="but" data-filter=".nativeshot-save-quick">Save - Quick</button>
-					<button class="but" data-filter=".nativeshot-save-browse">Save - Browse</button>
-					<button class="but" data-filter=".nativeshot-imgur-anonymous">Imgur - Anonymous</button>
-					<button class="but" data-filter=".nativeshot-twitter">Twitter</button>
+					<button class="but activbut" data-filter="*">&nativeshot.app-main.category-all;</button>	
+					<button class="but" data-filter=".nativeshot-save-quick">&nativeshot.app-main.category-save-quick;</button>
+					<button class="but" data-filter=".nativeshot-save-browse">&nativeshot.app-main.category-save-browse;</button>
+					<button class="but" data-filter=".nativeshot-imgur-anonymous">&nativeshot.app-main.category-imgur-anonymous;</button>
+					<button class="but" data-filter=".nativeshot-twitter">&nativeshot.app-main.category-twitter;</button>
 				</div>
              </div>
 	       <div class="row">
@@ -170,6 +177,6 @@
 <script src="js/bootstrap-slider.js"></script>
 <script src="chrome://nativeshot/content/app/js/all.js"></script>
 
-<script src="chrome://nativeshot/content/app/js/app.js"></script>
+<script src="chrome://nativeshot/content/app/js/app_main.js"></script>
 </body>
 </html>

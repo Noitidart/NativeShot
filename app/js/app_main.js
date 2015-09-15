@@ -53,7 +53,8 @@ const biggest_count_should_be_percent = 90; // for skill bars
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sb_app_common', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_common.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sb_app_main', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_main.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 
 // start - addon functionalities
 
@@ -144,7 +145,8 @@ function getImageURL(aArrEl, nonFileUri) {
 	
 }
 
-function izoView(aGettime, aEvent) {
+function izoView(aEvent, aGettime) {
+	// alert(aEvent);
 	// console.info('aEvent:', aEvent);
 	if (aEvent.ctrlKey || aEvent.altKey || aEvent.metaKey || aEvent.shiftKey) {
 		// let default browse action happen, which is open in new tab focused, new tab background, or new window
@@ -227,7 +229,7 @@ function izoDelete(aGettime) {
 			break;
 		case aTypeStrToTypeInt['imgur-anonymous']:
 			
-				var rez_conf = confirm(myServices.sb.GetStringFromName('img-host-anon-imgur_confirm-body'));
+				var rez_conf = confirm(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_confirm-body'));
 				if (rez_conf) {
 						
 					var sliptarg = $('div[data-gettime=' + aGettime + ']');
@@ -252,7 +254,7 @@ function izoDelete(aGettime) {
 								removeEntryOrEntriesFromFileJson(aGettime);
 							} else {
 								console.error('Failed to delete image from Imgur servers, response received was:', aVal.responseText);
-								alert(myServices.sb.GetStringFromName('img-host-anon-imgur_delete-fail-server-body'));
+								alert(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_delete-fail-server-body'));
 							}
 							// end - do stuff here - promise_delOnServ
 						},
@@ -260,7 +262,7 @@ function izoDelete(aGettime) {
 							var rejObj = {name:'promise_delOnServ', aReason:aReason};
 							console.error('Rejected - promise_delOnServ - ', rejObj);
 							// console.error('Failed to connect to Imgur servers, debug object:', aVal);
-							alert(myServices.sb.GetStringFromName('img-host-anon-imgur_delete-fail-connect-body'));
+							alert(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_delete-fail-connect-body'));
 							//deferred_createProfile.reject(rejObj);
 						}
 					).catch(
@@ -355,13 +357,13 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 	// September 12, 2015 - 7:41 PM
 	switch (aTypeInt) {
 		case aTypeStrToTypeInt['imgur-anonymous']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ", event)'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
 		case aTypeStrToTypeInt['twitter']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>Open Tweet</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>" + myServices.sb_app_main.GetStringFromName('open-tweet') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
 		case aTypeStrToTypeInt['save-browse']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + myServices.sb_app_main.GetStringFromName('open') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
 		case aTypeStrToTypeInt['save-quick']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + myServices.sb_app_main.GetStringFromName('open') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
 		default:
 			throw new Error('unrecognized aTypeInt: ' + aTypeInt);
 	}
@@ -450,12 +452,12 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 								
 					classREF.class = classVariants[gFileJson[i].t];
 					var imgDate = new Date(gFileJson[i].d);
-					var formattedDate = myServices.sb.GetStringFromName('month' + (imgDate.getMonth()+1)) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
+					var formattedDate = myServices.sb_app_main.GetStringFromName('month' + (imgDate.getMonth()+1)) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
 					
 					dataCaptionREF['data-gettime'] = gFileJson[i].d;
 					imgREF.src = getImageURL(gFileJson[i]);
 					aREF.href = imgREF.src;
-					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d, imgREF.src);
+					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb_app_main.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d, imgREF.src);
 					
 					fileJsonAsIzotopeEls[imgREF.src] = {
 						aTypeInt: aTypeStrToTypeInt[gFileJson[i].t]
