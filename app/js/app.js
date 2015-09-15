@@ -180,10 +180,135 @@ function izoOpen(aGettime) {
 };
 function izoDelete(aGettime) {
 	alert('delete on id: ' + aGettime);
+	var aArrEl = getArrElInFileJsonByGettime(aGettime);
+	switch (aArrEl.t) {
+		case aTypeStrToTypeInt['save-quick']:
+		case aTypeStrToTypeInt['save-browse']:
+			
+				OS.File.remove(OS.Path.join(aArrEl.f, aArrEl.n));
+			
+			break;
+		case aTypeStrToTypeInt['imgur-anonymous']:
+			
+				/*
+				var rez_conf = confirm(myServices.sb.GetStringFromName('img-host-anon-imgur_confirm-body'));
+				if (rez_conf) {
+					var promise_delOnServ = xhr(IMGUR_DEL_URL_PREFIX + aArrEl.x, {
+						aMethod: 'DELETE',
+						Headers: {
+							Authorization: 'Client-ID fa64a66080ca868'
+						},
+						aResponseType: 'json'
+					});
+					promise_delOnServ.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_delOnServ - ', aVal);
+							// start - do stuff here - promise_delOnServ
+							if (aVal.response.success) {
+								delete historyImgHostAnonImgur.json[imgur_img_id];
+								historyImgHostAnonImgur.updateFileDB();
+								historyImgHostAnonImgur.updateDom();
+							} else {
+								console.error('Failed to delete image from Imgur servers, response received was:', aVal.responseText);
+								alert(myServices.sb.GetStringFromName('img-host-anon-imgur_delete-fail-server-body'));
+							}
+							// end - do stuff here - promise_delOnServ
+						},
+						function(aReason) {
+							var rejObj = {name:'promise_delOnServ', aReason:aReason};
+							console.warn('Rejected - promise_delOnServ - ', rejObj);
+							console.error('Failed to connect to Imgur servers, debug object:', aVal);
+							alert(myServices.sb.GetStringFromName('img-host-anon-imgur_delete-fail-connect-body'));
+							//deferred_createProfile.reject(rejObj);
+						}
+					).catch(
+						function(aCaught) {
+							var rejObj = {name:'promise_delOnServ', aCaught:aCaught};
+							console.error('Caught - promise_delOnServ - ', rejObj);
+							alert('devleoper you did something stupid check your browser console - this error should never happen in released addon');
+							//deferred_createProfile.reject(rejObj);
+						}
+					);
+					
+				}
+				*/
+				
+			break;
+		default:
+			throw new Error('this type does not have a open method, aTypeInt: ' + aArrEl.t);
+	}
 };
 function izoRemove(aGettime) {
-	alert('remove on id: ' + aGettime);
+	removeEntryOrEntriesFromFileJson(aGettime);
+	var sliptarg = $('div[data-gettime=' + aGettime + ']');
+	// sliptarg.off('mouseenter.sliphover');
+	$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
+	$('.izotope-container').css('pointer-events', 'none');
+	var enablePointerTimer = setTimeout(function() {
+		$('.izotope-container').css('pointer-events', '');
+	}, 400);
+	$('.sliphover-container').remove();
 };
+
+function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
+	// if provide aTypeInt, all items of that type are removed
+	
+	if (aGettime !== undefined && aTypeInt !== undefined) {
+		throw new Error('must provide either or, not both');
+	}
+	
+	var step1 = function() {
+		// update gFileJson
+		var promise_readAndParse = readInAndParseFileJson();
+		promise_readAndParse.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_readAndParse - ', aVal);
+				// start - do stuff here - promise_readAndParse
+				step2();
+				// end - do stuff here - promise_readAndParse
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_readAndParse', aReason:aReason};
+				console.error('Rejected - promise_readAndParse - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_readAndParse', aCaught:aCaught};
+				console.error('Caught - promise_readAndParse - ', rejObj);
+				// deferred_createProfile.reject(rejObj);
+			}
+		);
+	};
+	
+	var step2 = function() {
+		// remove first element with aGettime (my assumption is aGettime is unique per element as it is down to the milliseconds) or all elements with aTypeInt
+		if (aGettime !== undefined) {
+			for (var i=0; i<gFileJson.length; i++) {
+				if (gFileJson[i].d == aGettime) {
+					gFileJson.splice(i, 1);
+					break;
+				}
+			}
+		} else if (aTypeInt !== undefined) {
+			for (var i=gFileJson.length-1; i>=0; i--) {
+				if (gFileJson[i].t == aTypeInt) {
+					gFileJson.splice(i, 1);
+				}
+			}			
+		} else {
+			throw new Error('must provide an argument');
+		}
+		step3();
+	}
+	
+	var step3 = function() {
+		// save to disk
+		writeFileJsonToFile();
+	}
+	
+	step1();
+}
 
 function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime) {
 	// September 12, 2015 - 7:41 PM
@@ -214,7 +339,8 @@ var classREF = {
 };
 var dataCaptionREF = {
 	class: 'det-img ellem',
-	'data-caption': ''
+	'data-caption': '',
+	'data-gettime': ''
 }
 var imgREF = {
 	src: 'rawr',
@@ -293,7 +419,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 					
 					var createdEl = jsonToDOM(slipCoverJson, document, {});
 					console.log('createdEl:', createdEl);
-					ic.appendChild(createdEl);
+					ic.insertBefore(createdEl, ic.firstChild.nextSibling);
 					if (isNotInit) {
 						izotopeContainer.isotope('addItems', createdEl);
 					}
@@ -312,6 +438,13 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 				columnWidth: '.grid-sizer'
 			}
 		});
+		/*
+		izotopeContainer.on('layoutComplete', function( event, laidOutItems ) {
+			alert('removing pointer events none');
+			izotopeContainer.css('pointer-events', '');
+		});
+		alert('attached on');
+		*/
 	}
 
 
@@ -332,6 +465,24 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 				izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
 			}
 		}
+		
+		/*
+		// set up magnific
+		$('.izotope-container img').magnificPopup({
+			type: 'image',
+			closeOnContentClick: true,
+			closeBtnInside: false,
+			fixedContentPos: true,
+			mainClass: 'mfp-no-margins mfp-with-zoom', // class to remove default margin from left and right side
+			image: {
+				verticalFit: true
+			},
+			zoom: {
+				enabled: true,
+				duration: 300 // don't foget to change the duration also in CSS
+			}
+		});
+		*/
 	}
 
 	izotopeContainer.imagesLoaded(function() {
@@ -348,33 +499,36 @@ var gFileJson;
 function readInAndParseFileJson() {
 	var deferredMain_readInAndParseFileJson = new Deferred();
 
-		// read the file
-		var promise_read = read_encoded(OSPath_historyLog, {encoding:'utf-8'});
-		promise_read.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_read - ', aVal);
-				// start - do stuff here - promise_read
-				gFileJson = JSON.parse('[' + aVal.substr(1) + ']'); // because its saved as unbracketed with a leading comma
+	// read the file
+	var promise_read = read_encoded(OSPath_historyLog, {encoding:'utf-8'});
+	promise_read.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_read - ', aVal);
+			// start - do stuff here - promise_read
+			gFileJson = JSON.parse('[' + aVal.substr(1) + ']'); // because its saved as unbracketed with a leading comma
+			gFileJson.sort(function(a, b) {
+				return a.d > b.d;
+			})
+			deferredMain_readInAndParseFileJson.resolve();
+			// end - do stuff here - promise_read
+		},
+		function(aReason) {
+			var rejObj = {name:'promise_read', aReason:aReason};
+			if (aReasonMax(aReason).becauseNoSuchFile) {
+				gFileJson = [];
 				deferredMain_readInAndParseFileJson.resolve();
-				// end - do stuff here - promise_read
-			},
-			function(aReason) {
-				var rejObj = {name:'promise_read', aReason:aReason};
-				if (aReasonMax(aReason).becauseNoSuchFile) {
-					gFileJson = [];
-					deferredMain_readInAndParseFileJson.resolve();
-				} else {
-					console.warn('Rejected - promise_read - ', rejObj);
-					deferredMain_readInAndParseFileJson.reject(rejObj);
-				}
-			}
-		).catch(
-			function(aCaught) {
-				var rejObj = {name:'promise_read', aCaught:aCaught};
-				console.error('Caught - promise_read - ', rejObj);
+			} else {
+				console.warn('Rejected - promise_read - ', rejObj);
 				deferredMain_readInAndParseFileJson.reject(rejObj);
 			}
-		);
+		}
+	).catch(
+		function(aCaught) {
+			var rejObj = {name:'promise_read', aCaught:aCaught};
+			console.error('Caught - promise_read - ', rejObj);
+			deferredMain_readInAndParseFileJson.reject(rejObj);
+		}
+	);
 	
 	return deferredMain_readInAndParseFileJson.promise;
 }
