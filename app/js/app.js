@@ -139,13 +139,23 @@ function getImageURL(aArrEl, nonFileUri) {
 			
 			break;
 		default:
-			throw new Error('this aTypeInt has no image url, aTypeInt: ' + aTypeInt);
+			throw new Error('this aArrEl.t has no image url, aArrEl.t: ' + aArrEl.t);
 	}
 	
 }
 
-function izoView(aGettime) {
-	alert('magnific this: ' + getImageURL(getArrElInFileJsonByGettime(aGettime)));
+function izoView(aGettime, aEvent) {
+	// console.info('aEvent:', aEvent);
+	if (aEvent.ctrlKey || aEvent.altKey || aEvent.metaKey || aEvent.shiftKey) {
+		// let default browse action happen, which is open in new tab focused, new tab background, or new window
+	} else {
+		// do magnific
+		alert('magnific this: ' + getImageURL(getArrElInFileJsonByGettime(aGettime)));
+		aEvent.stopPropagation();
+		aEvent.preventDefault();
+		aEvent.returnValue = false;
+		return false;
+	}
 };
 function izoCopy(aGettime) {
 	var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
@@ -179,20 +189,54 @@ function izoOpen(aGettime) {
 	}
 };
 function izoDelete(aGettime) {
-	alert('delete on id: ' + aGettime);
+	// alert('delete on id: ' + aGettime);
 	var aArrEl = getArrElInFileJsonByGettime(aGettime);
 	switch (aArrEl.t) {
 		case aTypeStrToTypeInt['save-quick']:
 		case aTypeStrToTypeInt['save-browse']:
 			
-				OS.File.remove(OS.Path.join(aArrEl.f, aArrEl.n));
+				var sliptarg = $('div[data-gettime=' + aGettime + ']');
+				$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
+				var enablePointerTimer = setTimeout(function() {
+					$('.izotope-container').css('pointer-events', '');
+				}, 400);
+				$('.sliphover-container').remove();
+
+				var promise_moveToRecylingBin = OS.File.remove(getImageURL(aArrEl, true), {ignoreAbsent:false});
+				promise_moveToRecylingBin.then(
+					function(aVal) {
+						console.log('Fullfilled - promise_moveToRecylingBin - ', aVal);
+						// start - do stuff here - promise_moveToRecylingBin
+						removeEntryOrEntriesFromFileJson(aGettime);
+						// end - do stuff here - promise_moveToRecylingBin
+					},
+					function(aReason) {
+						var rejObj = {name:'promise_moveToRecylingBin', aReason:aReason};
+						console.error('Rejected - promise_moveToRecylingBin - ', rejObj);
+						alert('Failed to delete file from computer, reload the page and try again');
+						// deferred_createProfile.reject(rejObj);
+					}
+				).catch(
+					function(aCaught) {
+						var rejObj = {name:'promise_moveToRecylingBin', aCaught:aCaught};
+						console.error('Caught - promise_moveToRecylingBin - ', rejObj);
+						// deferred_createProfile.reject(rejObj);
+					}
+				);
 			
 			break;
 		case aTypeStrToTypeInt['imgur-anonymous']:
 			
-				/*
 				var rez_conf = confirm(myServices.sb.GetStringFromName('img-host-anon-imgur_confirm-body'));
 				if (rez_conf) {
+						
+					var sliptarg = $('div[data-gettime=' + aGettime + ']');
+					$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
+					var enablePointerTimer = setTimeout(function() {
+						$('.izotope-container').css('pointer-events', '');
+					}, 400);
+					$('.sliphover-container').remove();
+					
 					var promise_delOnServ = xhr(IMGUR_DEL_URL_PREFIX + aArrEl.x, {
 						aMethod: 'DELETE',
 						Headers: {
@@ -205,9 +249,7 @@ function izoDelete(aGettime) {
 							console.log('Fullfilled - promise_delOnServ - ', aVal);
 							// start - do stuff here - promise_delOnServ
 							if (aVal.response.success) {
-								delete historyImgHostAnonImgur.json[imgur_img_id];
-								historyImgHostAnonImgur.updateFileDB();
-								historyImgHostAnonImgur.updateDom();
+								removeEntryOrEntriesFromFileJson(aGettime);
 							} else {
 								console.error('Failed to delete image from Imgur servers, response received was:', aVal.responseText);
 								alert(myServices.sb.GetStringFromName('img-host-anon-imgur_delete-fail-server-body'));
@@ -216,8 +258,8 @@ function izoDelete(aGettime) {
 						},
 						function(aReason) {
 							var rejObj = {name:'promise_delOnServ', aReason:aReason};
-							console.warn('Rejected - promise_delOnServ - ', rejObj);
-							console.error('Failed to connect to Imgur servers, debug object:', aVal);
+							console.error('Rejected - promise_delOnServ - ', rejObj);
+							// console.error('Failed to connect to Imgur servers, debug object:', aVal);
 							alert(myServices.sb.GetStringFromName('img-host-anon-imgur_delete-fail-connect-body'));
 							//deferred_createProfile.reject(rejObj);
 						}
@@ -231,8 +273,6 @@ function izoDelete(aGettime) {
 					);
 					
 				}
-				*/
-				
 			break;
 		default:
 			throw new Error('this type does not have a open method, aTypeInt: ' + aArrEl.t);
@@ -241,9 +281,7 @@ function izoDelete(aGettime) {
 function izoRemove(aGettime) {
 	removeEntryOrEntriesFromFileJson(aGettime);
 	var sliptarg = $('div[data-gettime=' + aGettime + ']');
-	// sliptarg.off('mouseenter.sliphover');
 	$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
-	$('.izotope-container').css('pointer-events', 'none');
 	var enablePointerTimer = setTimeout(function() {
 		$('.izotope-container').css('pointer-events', '');
 	}, 400);
@@ -305,22 +343,25 @@ function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
 	var step3 = function() {
 		// save to disk
 		writeFileJsonToFile();
+		
+		// update skill bars
+		// updateCountsToSkillBars();
 	}
 	
 	step1();
 }
 
-function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime) {
+function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 	// September 12, 2015 - 7:41 PM
 	switch (aTypeInt) {
 		case aTypeStrToTypeInt['imgur-anonymous']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ", event)'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
 		case aTypeStrToTypeInt['twitter']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>Open Tweet</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>Open Tweet</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
 		case aTypeStrToTypeInt['save-browse']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
 		case aTypeStrToTypeInt['save-quick']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='#' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
+			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button' onclick='izoView(" + aGettime + ")'><span class='fa fa-eye'></span>View</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>Copy</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>Open</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>Delete</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>Remove</a></span>";
 		default:
 			throw new Error('unrecognized aTypeInt: ' + aTypeInt);
 	}
@@ -346,9 +387,11 @@ var imgREF = {
 	src: 'rawr',
 	alt:''
 };
-
+var aREF = {
+	href:'#'
+};
 var slipCoverJson = ['html:div', classREF,
-						['html:a', {href:'#'}],
+						['html:a', aREF],
 						['html:div', dataCaptionREF,
 							['html:img', imgREF]
 						]
@@ -409,9 +452,10 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 					var imgDate = new Date(gFileJson[i].d);
 					var formattedDate = myServices.sb.GetStringFromName('month' + (imgDate.getMonth()+1)) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
 					
-					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d);
 					dataCaptionREF['data-gettime'] = gFileJson[i].d;
 					imgREF.src = getImageURL(gFileJson[i]);
+					aREF.href = imgREF.src;
+					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d, imgREF.src);
 					
 					fileJsonAsIzotopeEls[imgREF.src] = {
 						aTypeInt: aTypeStrToTypeInt[gFileJson[i].t]
@@ -536,6 +580,9 @@ function readInAndParseFileJson() {
 function writeFileJsonToFile() {
 	var writeTxt = JSON.stringify(gFileJson);
 	writeTxt = ',' + writeTxt.substring(1, writeTxt.length-1); // unbracket the array, and lead with comma
+	if (writeTxt == ',') {
+		writeTxt = ''; // as we dont want to write justa comma
+	}
 	console.log('writing to file:', writeTxt);
 	
 	tryOsFile_ifDirsNoExistMakeThenRetry('writeAtomic', [OSPath_historyLog, writeTxt, {
