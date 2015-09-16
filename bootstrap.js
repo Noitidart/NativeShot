@@ -256,7 +256,7 @@ function get_gEMenuDomJson() {
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_twitter'), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
 						]
 					],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
+					['xul:menuitem', {id:'print_menuitem', label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
 					['xul:menuseparator', {}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-clear'), oncommand:function(e){ gEditor.clearSelection(e) }}],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_select-fullscreen')},
@@ -1164,36 +1164,65 @@ var gEditor = {
 	sendToPrinter: function(e) {
 		this.compositeSelection();
 		
-		// print method link678321212
-		var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
-		var doc = win.document;
-		var iframe = doc.createElementNS(NS_HTML, 'iframe');
-		iframe.addEventListener('load', function() {
-			iframe.removeEventListener('load', arguments.callee, true);
-			console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
-			console.error('iframe loaded, print it', iframe.contentWindow.print);
-			gPostPrintRemovalFunc = function() {
-				iframe.parentNode.removeChild(iframe);
-				console.error('ok removed iframe that i added to hiddenDOMWindow')
-				gPostPrintRemovalFunc = null;
+		if (!getPrefNoSetStuff('print_preview')) {
+			// print method link678321212
+			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
+			var doc = win.document;
+			var iframe = doc.createElementNS(NS_HTML, 'iframe');
+			iframe.addEventListener('load', function() {
+				iframe.removeEventListener('load', arguments.callee, true);
+				console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
+				console.error('iframe loaded, print it', iframe.contentWindow.print);
+				gPostPrintRemovalFunc = function() {
+					iframe.parentNode.removeChild(iframe);
+					console.error('ok removed iframe that i added to hiddenDOMWindow')
+					gPostPrintRemovalFunc = null;
+				};
+				iframe.contentWindow.addEventListener('afterprint', function() {
+					// iframe.parentNode.removeChild(iframe);
+					// console.error('ok removed iframe that i added to hiddenDOMWindow')
+					//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
+					iframe.setAttribute('src', 'about:blank');
+				}, false);
+				iframe.contentWindow.print();
+			}, true); // if i use false here it doesnt work
+			iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
+			iframe.setAttribute('style', 'display:none');
+			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
+		} else {
+			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
+			var originalSelectedTab = win.gBrowser.selectedTab;
+			
+			var doc = win.document;
+			var printpreviewtab = win.gBrowser.loadOneTab(this.canComp.toDataURL('image/png'), {
+				inBackground: false,
+				relatedToCurrent: true
+			});
+			// printpreviewtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'frameScript_printPreviewAndClose.js?' + CACHE_KEY, false);
+			
+			var aPPListener = win.PrintPreviewListener;
+			var aOrigPPExit = aPPListener.onExit;
+			aPPListener.onExit = function() {
+				aOrigPPExit.call(aPPListener);
+				win.gBrowser.removeCurrentTab();
+				win.gBrowser.selectedTab = originalSelectedTab;
+				aPPListener.onExit = aOrigPPExit;
 			};
-			iframe.contentWindow.addEventListener('afterprint', function() {
-				// iframe.parentNode.removeChild(iframe);
-				// console.error('ok removed iframe that i added to hiddenDOMWindow')
-				//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
-				iframe.setAttribute('src', 'about:blank');
-			}, false);
-			iframe.contentWindow.print();
-		}, true); // if i use false here it doesnt work
-		iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
-		iframe.setAttribute('style', 'display:none');
-		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
-
+			win.PrintUtils.printPreview(aPPListener);
+			
+			if (e.shiftKey) {
+				// hide print item from menus, as cannot do print preview multiple times, 1) it only shows print preview of last one 2) it starts closing 2 tabs if you did it twice, 3 tabs if thrice, etc
+				for (var i=0; i<colMon.length; i++) {			
+					var print_menuitem = colMon[i].E.DOMWindow.document.getElementById('print_menuitem')
+					print_menuitem.parentNode.removeChild(print_menuitem);
+				}
+			}
+		}
 		appendToHistoryLog('print', {
 			d: new Date().getTime()
 		});
 		
-		this.closeOutEditor(e);
+		this.closeOutEditor(e); // with print preview, cannot do multiple print previews, can probably do multiple other things if its not print preview though
 		
 		/* heres a print method to not show headers etc
 			// https://dxr.mozilla.org/mozilla-central/source/browser/base/content/sync/utils.js?offset=200#148
