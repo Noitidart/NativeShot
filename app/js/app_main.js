@@ -55,6 +55,7 @@ const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
 XPCOMUtils.defineLazyGetter(myServices, 'sb_app_common', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_common.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 XPCOMUtils.defineLazyGetter(myServices, 'sb_app_main', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_main.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sb_dateFormat', function () { return Services.strings.createBundle('chrome://global/locale/dateFormat.properties'); });
 
 // start - addon functionalities
 
@@ -452,7 +453,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 								
 					classREF.class = classVariants[gFileJson[i].t];
 					var imgDate = new Date(gFileJson[i].d);
-					var formattedDate = myServices.sb_app_main.GetStringFromName('month' + (imgDate.getMonth()+1)) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
+					var formattedDate = myServices.sb_dateFormat.GetStringFromName('month.' + (imgDate.getMonth()+1) + '.name') + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
 					
 					dataCaptionREF['data-gettime'] = gFileJson[i].d;
 					imgREF.src = getImageURL(gFileJson[i]);

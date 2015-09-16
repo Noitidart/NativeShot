@@ -45,7 +45,7 @@
 	</style>
 	
 	<script src="chrome://nativeshot/content/app/js/jquery-2.1.3.min.js"></script>
-	<script src="chrome://ccedgetraversal-graph/content/resources/scripts/angular.min.js"></script>
+	<script src="chrome://nativeshot/content/app/js/angular.min.js"></script>
   </head>
 <body class="animsition" ng-controller="BodyController as BC">
 	<header>
@@ -81,16 +81,15 @@
 							<h4>&nativeshot.app-options.auto-updates;</h4>
 						 </div>
 						 <div class="price-title">
-							<span>{{BC.prefs.auto_update}}</span>
+							<span>{{BC.prefs.auto_update == 1 ? (BC.prefs.autoUpdateDefault == true ? '&nativeshot.app-options.on;' : '&nativeshot.app-options.off;') : (BC.prefs.auto_update == 0 ? '&nativeshot.app-options.off;' : '&nativeshot.app-options.on;')}}</span>
 						 </div>
 						 <ul>
 						   <li>&nativeshot.app-options.version; {{BC.version}}</li>
-						   <li>&nativeshot.app-options.last-updated; {{BC.last_updated}}</li>
+						   <li>&nativeshot.app-options.last-updated; {{BC.last_updated | date:'yyyy-MM-dd HH:mm:ss Z'}}</li>
 						 </ul>
 						 <div class="button-style-2">
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.default;</a>
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.on;</a>
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.off;</a>
+						   <a href="#" class="b-md butt-style" ng-show="(BC.prefs.auto_update == 1 &amp;&amp; BC.prefs.autoUpdateDefault == false) || BC.prefs.auto_update == 0" onclick="setAutoUpdateOn()">&nativeshot.app-options.on;</a>
+						   <a href="#" class="b-md butt-style" ng-show="(BC.prefs.auto_update == 1 &amp;&amp; BC.prefs.autoUpdateDefault == true) || BC.prefs.auto_update == 2" onclick="setAutoUpdateOff()">&nativeshot.app-options.off;</a>
 						 </div>
 					</div>
             	 </div>
@@ -100,8 +99,8 @@
 							<h4>&nativeshot.app-options.quick-save-dir;</h4>
 						 </div>
 						 <div class="price-title">
-						   <sup>C:\Blah\Blah\</sup>
-							  <span>My Pics</span>
+						   <sup>{{BC.prefs.quick_save_dir_dirname}}</sup>
+							  <span>{{BC.prefs.quick_save_dir_basename}}</span>
 								<!--<sub>My Pics</sub>-->
 						 </div>
 						 <ul>
@@ -121,7 +120,7 @@
 						 </div>
 						 <div class="price-title">
 						   <!--<sup>$</sup>-->
-							  <span>{{BC.prefs.print_preview}}</span>
+							  <span>{{BC.prefs.print_preview ? '&nativeshot.app-options.on;' : '&nativeshot.app-options.off;'}}</span>
 								<!--<sub>/mo</sub>-->
 						 </div>
 						 <ul>
@@ -129,8 +128,8 @@
 						   <li>&nativeshot.app-options.print-preview-desc2;</li>
 						 </ul>
 						 <div class="button-style-2">
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.on;</a>
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.off;</a>
+						   <a href="#" class="b-md butt-style" onclick="gAngScope.BC.prefs.print_preview = getPref('print_preview', true); gAngScope.$digest();" ng-show="!BC.prefs.print_preview">&nativeshot.app-options.on;</a>
+						   <a href="#" class="b-md butt-style" onclick="gAngScope.BC.prefs.print_preview = getPref('print_preview', false); gAngScope.$digest();" ng-show="BC.prefs.print_preview">&nativeshot.app-options.off;</a>
 						 </div>
 					</div>
             	 </div>      	

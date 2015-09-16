@@ -1,5 +1,6 @@
 // Imports
-const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC} = Components;
+const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC, results: Cr} = Components;
+Cu.import('resource://gre/modules/AddonManager.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
@@ -32,12 +33,14 @@ const core = {
 };
 var gAngScope;
 // var gAngInjector;
+const myPrefBranch = 'extensions.' + core.addon.id + '.';
 
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
 XPCOMUtils.defineLazyGetter(myServices, 'sb_app_common', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_common.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 XPCOMUtils.defineLazyGetter(myServices, 'sb_app_options', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_options.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sb_dateFormat', function () { return Services.strings.createBundle('chrome://global/locale/dateFormat.properties'); });
 
 // start - addon functionalities
 
@@ -52,12 +55,18 @@ var	ANG_APP = angular.module('nativeshot_options', [])
 		
 		MODULE.version = 'rawr';
 		MODULE.last_updated = 'boo';
-		MODULE.prefs = {
-			auto_update: 'Default',
-			quick_save_dir: 'blah',
-			print_preview: 'Off'
-		};
 		
+		var quick_save_dir = getPref('quick_save_dir');
+		
+		MODULE.prefs = {
+			autoUpdateDefault: true,
+			auto_update: 2, // 0 off, 1 default, 2 on
+			quick_save_dir_dirname: null,
+			quick_save_dir_basename: OS.Path.basename(quick_save_dir),
+			print_preview: getPref('print_preview')
+		};
+		MODULE.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(MODULE.prefs.quick_save_dir_basename));
+		fetchAddon_v_lu_au();
 		MODULE.BrowseSelectDir = function(aArgName) {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), 'Pick directory the icon container file should be saved in', Ci.nsIFilePicker.modeGetFolder);
@@ -72,12 +81,143 @@ var	ANG_APP = angular.module('nativeshot_options', [])
 		};
 	}]);
 
+function updateNg_v_lu_au() {
+	// from _cache_fetchAddon_v_lu_au, devuser should never call this, devuser should call fetchAddon_v_lu_au with true/false for refreshCache
+	gAngScope.BC.version = _cache_fetchAddon_v_lu_au.version;
+	var getTime = _cache_fetchAddon_v_lu_au.last_updated;
+	var formattedDate = myServices.sb_dateFormat.GetStringFromName('month.' + (getTime.getMonth()+1) + '.name') + ' ' + getTime.getDate() + ', ' + getTime.getFullYear();
+	gAngScope.BC.last_updated = formattedDate;
+
+	gAngScope.BC.prefs.auto_update = _cache_fetchAddon_v_lu_au.auto_update;
+	gAngScope.BC.prefs.autoUpdateDefault = _cache_fetchAddon_v_lu_au.autoUpdateDefault;
+	gAngScope.$digest();
+}
+
+function setAutoUpdateOn() {
+	if (_cache_fetchAddon_v_lu_au.autoUpdateDefault) {
+		console.log('default is on, so set to default');
+		_cache_gAddon.applyBackgroundUpdates = 1; // set it to default as default is on
+		_cache_fetchAddon_v_lu_au.auto_update = 1;
+	} else {
+		console.log('set to on');
+		_cache_gAddon.applyBackgroundUpdates = 2;
+		_cache_fetchAddon_v_lu_au.auto_update = 2;
+	}
+	fetchAddon_v_lu_au();
+}
+
+function setAutoUpdateOff() {
+	_cache_fetchAddon_v_lu_au.autoUpdateDefault = AddonManager.autoUpdateDefault;
+	if (!_cache_fetchAddon_v_lu_au.autoUpdateDefault) {
+		console.log('default is off, so set to default');
+		_cache_gAddon.applyBackgroundUpdates = 1; // set it to default as default is off
+		_cache_fetchAddon_v_lu_au.auto_update = 1;
+	} else {
+		console.log('set to off');
+		_cache_gAddon.applyBackgroundUpdates = 0;
+		_cache_fetchAddon_v_lu_au.auto_update = 0;
+	}
+	fetchAddon_v_lu_au();
+}
+
+var _cache_fetchAddon_v_lu_au;
+var _cache_gAddon;
+function fetchAddon_v_lu_au(refreshCache) {
+	// fetches addon details of verison, last update, and autoupdate
+	// runs updateNg_v_lu_au
+	if (!_cache_fetchAddon_v_lu_au || refreshCache) {
+		_cache_fetchAddon_v_lu_au = {};
+		AddonManager.getAddonByID(core.addon.id, function(addon) {
+			_cache_gAddon = addon;
+			_cache_fetchAddon_v_lu_au.version = addon.version;
+			_cache_fetchAddon_v_lu_au.last_updated = addon.updateDate;
+			_cache_fetchAddon_v_lu_au.auto_update = parseInt(addon.applyBackgroundUpdates);
+			_cache_fetchAddon_v_lu_au.autoUpdateDefault = AddonManager.autoUpdateDefault;
+			updateNg_v_lu_au();
+		});
+	} else {
+		updateNg_v_lu_au();
+	}
+}			
+
+// on window focus will likely want to do:
+	// fetchAddon_v_lu_au(true);
+
 function onPageReady() {
 	// alert('page ready ' + myServices.sb_app_options.GetStringFromName('blah'))
+	
 }
 // end - addon functionalities
 
-
+function getPref(aPrefName, doSetPrefWithVal) {
+	switch (aPrefName) {
+		case 'quick_save_dir':
+		
+				// os path to dir to save in
+				var defaultVal = function() {
+					try {
+						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+					} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
+						// console.warn('ex:', ex);
+						try {
+							return Services.dirsvc.get('Pict', Ci.nsIFile).path;
+						} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
+							// console.warn('ex:', ex);
+							return OS.Constants.Path.desktopDir;
+						}
+					}
+				};
+				var prefType = 'Char';
+				
+				// set pref part
+				if (doSetPrefWithVal !== undefined) {
+					if (doSetPrefWithVal == 'default') { // note: special case
+						Services.prefs.clearUserPref(myPrefBranch + 'quick_save_dir')
+					} else {
+						Services.prefs['set' + prefType + 'Pref'](myPrefBranch + aPrefNamem, doSetPrefWithVal);
+					}
+				}
+				// end set pref part
+				
+				var prefVal;
+				try {
+					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + aPrefName);
+				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
+					// ok probably doesnt exist, so return default value
+					prefVal = defaultVal();
+				}
+				return prefVal;
+			
+			break;
+		case 'print_preview':
+			
+				var defaultVal = false;
+				var prefType = 'Bool';
+				
+				// set pref part
+				if (doSetPrefWithVal !== undefined) {
+					if (doSetPrefWithVal == defaultVal) {
+						Services.prefs.clearUserPref(myPrefBranch + aPrefName)
+					} else {
+						Services.prefs['set' + prefType + 'Pref'](myPrefBranch + aPrefName, doSetPrefWithVal);
+					}
+				}
+				// end set pref part
+				
+				var prefVal;
+				try {
+					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + 'print_preview');
+				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
+					// ok probably doesnt exist, so return default value
+					prefVal = defaultVal;
+				}
+				return prefVal;
+			
+			break;
+		default:
+			throw new Error('unrecognized aPrefName: ' + aPrefName);
+	}
+}
 // start - common helper functions
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
