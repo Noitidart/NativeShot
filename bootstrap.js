@@ -1078,18 +1078,7 @@ var gEditor = {
 		if (aBoolPreset) {
 			// start - copy block link7984654
 			// get save path
-			var OSPath_saveDir;
-			try {
-				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
-			} catch (ex) {
-				console.warn('ex:', ex);
-				try {
-					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
-				} catch (ex) {
-					console.warn('ex:', ex);
-					OSPath_saveDir = OS.Constants.Path.desktopDir;
-				}
-			}
+			var OSPath_saveDir = getPrefNoSetStuff('quick_save_dir');
 			
 			// generate file name
 			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
@@ -1205,6 +1194,29 @@ var gEditor = {
 		});
 		
 		this.closeOutEditor(e);
+		
+		/* heres a print method to not show headers etc
+			// https://dxr.mozilla.org/mozilla-central/source/browser/base/content/sync/utils.js?offset=200#148
+			this._preparePPiframe(elid, function(iframe) {
+			  let webBrowserPrint = iframe.contentWindow
+										  .QueryInterface(Ci.nsIInterfaceRequestor)
+										  .getInterface(Ci.nsIWebBrowserPrint);
+			  let printSettings = PrintUtils.getPrintSettings();
+
+			  // Display no header/footer decoration except for the date.
+			  printSettings.headerStrLeft
+				= printSettings.headerStrCenter
+				= printSettings.headerStrRight
+				= printSettings.footerStrLeft
+				= printSettings.footerStrCenter = "";
+			  printSettings.footerStrRight = "&D";
+
+			  try {
+				webBrowserPrint.print(printSettings, null);
+			  } catch (ex) {
+				// print()'s return codes are expressed as exceptions. Ignore.
+			  }
+		*/
 	},
 	shareToTwitter: function(e) {
 		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
@@ -2643,6 +2655,58 @@ function shutdown(aData, aReason) {
 	// destroy worker
 	MainWorker._worker.terminate();
 	console.error('worker should have termed');
+}
+
+function getPrefNoSetStuff(aPrefName) {
+	// gets pref, if its not there, returns default
+	// this one doesnt have the set stuff
+	switch (aPrefName) {
+		case 'quick_save_dir':
+		
+				// os path to dir to save in
+				var defaultVal = function() {
+					try {
+						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
+					} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
+						// console.warn('ex:', ex);
+						try {
+							return Services.dirsvc.get('Pict', Ci.nsIFile).path;
+						} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
+							// console.warn('ex:', ex);
+							return OS.Constants.Path.desktopDir;
+						}
+					}
+				};
+				var prefType = 'Char';
+				
+				var prefVal;
+				try {
+					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + aPrefName);
+				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
+					// ok probably doesnt exist, so return default value
+					prefVal = defaultVal();
+				}
+				return prefVal;
+			
+			break;
+		case 'print_preview':
+			
+				var defaultVal = false;
+				var prefType = 'Bool';
+				
+				var prefVal;
+				try {
+					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + 'print_preview');
+				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
+					// ok probably doesnt exist, so return default value
+					prefVal = defaultVal;
+				}
+				return prefVal;
+			
+			break;
+		default:
+			throw new Error('unrecognized aPrefName: ' + aPrefName);
+	}
 }
 
 function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {

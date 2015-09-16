@@ -43,6 +43,11 @@
 			color: #666;
 			white-space: nowrap;
 		}
+		
+		.nav-item-disabled {
+			color: #000 !important; /*disables hover*/
+			cursor: default;
+		}
 	</style>
 	
 	<script src="chrome://nativeshot/content/app/js/jquery-2.1.3.min.js"></script>
@@ -65,7 +70,7 @@
 					<a href="about:nativeshot" class="animsition-link">&nativeshot.app-common.nav-main;<span class="fa fa-angle-down"></span></a>
 	            </li>
 				<li>
-					<a href="#" style="cursor:default;">&nativeshot.app-common.nav-options;<span class="fa fa-angle-down"></span></a>
+					<a href="#" class="nav-item-disabled">&nativeshot.app-common.nav-options;<span class="fa fa-angle-down"></span></a>
 				</li>
 		    </ul>
 		  </nav> 

@@ -43,6 +43,11 @@
 		img {
 			 -moz-force-broken-image-icon: 1;
 		}
+		
+		.nav-item-disabled {
+			color: #000 !important; /*disables hover*/
+			cursor: default;
+		}
 	</style>
   </head>
 <body class="animsition">
@@ -59,7 +64,7 @@
 		  <nav class="menu">
 		    <ul>
 				<li>
-					<a href="#" style="cursor:default;">&nativeshot.app-common.nav-main;<span class="fa fa-angle-down"></span></a>
+					<a href="#" class="nav-item-disabled">&nativeshot.app-common.nav-main;<span class="fa fa-angle-down"></span></a>
 	            </li>
 				<li>
 					<a href="about:nativeshot?options" class="animsition-link">&nativeshot.app-common.nav-options;<span class="fa fa-angle-down"></span></a>

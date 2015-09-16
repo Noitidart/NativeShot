@@ -193,6 +193,8 @@ function onPageReady() {
 // end - addon functionalities
 
 function getPref(aPrefName, doSetPrefWithVal) {
+	// gets pref, if its not there, returns default
+	// this one is mix with setPref, if set 2nd arg, see within blocks to see custom stuff, like quick_save_dir if devuser sets it to 'default' it will reset it
 	switch (aPrefName) {
 		case 'quick_save_dir':
 		
