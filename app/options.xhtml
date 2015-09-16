@@ -28,6 +28,7 @@
 		/* my style overrides */		
 		.price-title span {
 			font-size: 40px;
+			white-space: nowrap;
 		}
 		
 		.filesystem-path {
@@ -98,18 +99,14 @@
 						 <div class="price-price">
 							<h4>&nativeshot.app-options.quick-save-dir;</h4>
 						 </div>
-						 <div class="price-title">
-						   <sup>{{BC.prefs.quick_save_dir_dirname}}</sup>
-							  <span>{{BC.prefs.quick_save_dir_basename}}</span>
-								<!--<sub>My Pics</sub>-->
-						 </div>
+						 <div class="price-title"> <sup>{{BC.prefs.quick_save_dir_dirname}}</sup><span>{{BC.prefs.quick_save_dir_basename}}</span></div>
 						 <ul>
 						   <li>&nativeshot.app-options.quick-save-dir-desc1;</li>
 						   <li>&nativeshot.app-options.quick-save-dir-desc2;</li>
 						 </ul>
 						 <div class="button-style-2">
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.change;</a>
-						   <a href="#" class="b-md butt-style">&nativeshot.app-options.reset;</a>
+						   <a href="#" class="b-md butt-style" ng-click="BC.BrowseSelectDirForPref()">&nativeshot.app-options.change;</a>
+						   <a href="#" class="b-md butt-style" ng-hide="BC.quickSaveDirIsDefault()" ng-click="BC.resetQuickSaveDir()">&nativeshot.app-options.reset;</a>
 						 </div>
 					</div>
             	 </div>

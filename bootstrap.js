@@ -53,6 +53,8 @@ const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettif
 const TWITTER_MAX_UPLOAD_FILE_SIZE = 3145728; // i got this from doing debugger prettify on twitter javascript files
 const TWITTER_URL = 'https://twitter.com/';
 
+const myPrefBranch = 'extensions.' + core.addon.id + '.';
+
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
@@ -2518,8 +2520,12 @@ function cancelAndCleanupDelayedShot() {
 }
 
 function install() {}
-function uninstall() {
+function uninstall(aData, aReason) {
 	// delete imgur history file
+	if (aReason == ADDON_UNINSTALL) {
+		Services.prefs.clearUserPref(myPrefBranch + 'quick_save_dir');
+		Services.prefs.clearUserPref(myPrefBranch + 'print_preview');
+	}
 }
 
 function startup(aData, aReason) {

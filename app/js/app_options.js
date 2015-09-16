@@ -56,29 +56,43 @@ var	ANG_APP = angular.module('nativeshot_options', [])
 		MODULE.version = 'rawr';
 		MODULE.last_updated = 'boo';
 		
-		var quick_save_dir = getPref('quick_save_dir');
-		
+		// just putting the keys in here so i know what goes in here, but this is all updated by readInPrefsToNg
 		MODULE.prefs = {
-			autoUpdateDefault: true,
-			auto_update: 2, // 0 off, 1 default, 2 on
+			autoUpdateDefault: null,
+			auto_update: null, // 0 off, 1 default, 2 on
 			quick_save_dir_dirname: null,
-			quick_save_dir_basename: OS.Path.basename(quick_save_dir),
-			print_preview: getPref('print_preview')
+			quick_save_dir_basename: null,
+			print_preview: null
 		};
-		MODULE.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(MODULE.prefs.quick_save_dir_basename));
 		fetchAddon_v_lu_au();
-		MODULE.BrowseSelectDir = function(aArgName) {
+		
+		MODULE.BrowseSelectDirForPref = function() {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), 'Pick directory the icon container file should be saved in', Ci.nsIFilePicker.modeGetFolder);
+			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), myServices.sb_app_options.GetStringFromName('change-dir-dialog-title'), Ci.nsIFilePicker.modeGetFolder);
 			// fp.appendFilters(Ci.nsIFilePicker.filterAll);
 
 			var rv = fp.show();
 			if (rv == Ci.nsIFilePicker.returnOK) {
-				
-				MODULE[aArgName] = fp.file.path;
-
+				var quick_save_dir = getPref('quick_save_dir', fp.file.path);
+				MODULE.prefs.quick_save_dir_basename = OS.Path.basename(quick_save_dir);
+				MODULE.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(MODULE.prefs.quick_save_dir_basename));
 			}// else { // cancelled	}
 		};
+		
+		MODULE.quickSaveDirIsDefault = function() {
+			try {
+				var prefVal = Services.prefs.getCharPref(myPrefBranch + 'quick_save_dir');
+				return false;
+			} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
+				return true;
+			}
+		}
+		
+		MODULE.resetQuickSaveDir = function() {
+			var quick_save_dir = getPref('quick_save_dir', 'default');
+			MODULE.prefs.quick_save_dir_basename = OS.Path.basename(quick_save_dir);
+			MODULE.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(MODULE.prefs.quick_save_dir_basename));
+		}
 	}]);
 
 function updateNg_v_lu_au() {
@@ -120,6 +134,22 @@ function setAutoUpdateOff() {
 	fetchAddon_v_lu_au();
 }
 
+function readInPrefsToNg() {
+	console.log('reading in prefs to gui');
+	// reads prefs and updates gui
+	
+	// quick_save_dir
+	var quick_save_dir = getPref('quick_save_dir');
+	gAngScope.BC.prefs.quick_save_dir_basename = OS.Path.basename(quick_save_dir);
+	gAngScope.BC.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(gAngScope.BC.prefs.quick_save_dir_basename));
+	
+	// print_preview
+	gAngScope.BC.prefs.print_preview = getPref('print_preview');
+	
+	// call get auto update fetch, and refresh cache, this then calls updateNg_v_lu_au which calls $digest as that is async, so i dont call a $digest in this function
+	fetchAddon_v_lu_au(true)
+}
+
 var _cache_fetchAddon_v_lu_au;
 var _cache_gAddon;
 function fetchAddon_v_lu_au(refreshCache) {
@@ -143,9 +173,22 @@ function fetchAddon_v_lu_au(refreshCache) {
 // on window focus will likely want to do:
 	// fetchAddon_v_lu_au(true);
 
+function doOnBlur() {
+	attachFocusListener();
+}
+function doOnFocus() {
+	window.removeEventListener('focus', doOnFocus, false);
+	readInPrefsToNg();
+}
+
+function attachFocusListener() {
+	window.addEventListener('focus', doOnFocus, false);
+}
+	
 function onPageReady() {
 	// alert('page ready ' + myServices.sb_app_options.GetStringFromName('blah'))
-	
+	window.addEventListener('blur', doOnBlur, false);
+	readInPrefsToNg(); // attachFocusListener();
 }
 // end - addon functionalities
 
@@ -171,10 +214,10 @@ function getPref(aPrefName, doSetPrefWithVal) {
 				
 				// set pref part
 				if (doSetPrefWithVal !== undefined) {
-					if (doSetPrefWithVal == 'default') { // note: special case
+					if (doSetPrefWithVal == 'default' || doSetPrefWithVal == defaultVal()) { // note: special case
 						Services.prefs.clearUserPref(myPrefBranch + 'quick_save_dir')
 					} else {
-						Services.prefs['set' + prefType + 'Pref'](myPrefBranch + aPrefNamem, doSetPrefWithVal);
+						Services.prefs['set' + prefType + 'Pref'](myPrefBranch + aPrefName, doSetPrefWithVal);
 					}
 				}
 				// end set pref part
