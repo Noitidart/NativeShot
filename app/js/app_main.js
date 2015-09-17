@@ -84,7 +84,6 @@ function updateCountsToSkillBars() {
 	
 	console.log('nativeshot_log_counts:', nativeshot_log_counts);
 	
-	if (nativeshot_biggest_count > 0) {
 		// mod biggest count so its percent obeys biggest_count_should_be_percent
 		// alert('biggest count: ' + nativeshot_biggest_count);
 		nativeshot_biggest_count = (nativeshot_biggest_count * 100 / biggest_count_should_be_percent);
@@ -105,9 +104,8 @@ function updateCountsToSkillBars() {
 				speed: 2000
 			});
 			
-			objel.children('div').css('width', Math.round((nativeshot_log_counts[cTypeInt] / nativeshot_biggest_count)*100) + '%');
+			objel.children('div').css('width', nativeshot_biggest_count == 0 ? 0 : Math.round((nativeshot_log_counts[cTypeInt] / nativeshot_biggest_count)*100) + '%');
 		});
-	}
 };
 
 function getArrElInFileJsonByGettime(aGettime) {
@@ -534,7 +532,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		alert('attached on');
 		*/
 	}
-	
+		
 	if (imgsAdded || imgsRemoved) {
 			// before image loaded, so if imgs were added, we start the layout, and then after imgs loaded it adjusts for proper sizes
 			if (isNotInit) {
@@ -547,8 +545,13 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 					// alert('running layout');
 					izotopeContainer.isotope('reloadItems');
 					izotopeContainer.isotope();
+					checkIzoNoRez(true);
 				});
 			}
+	}
+	checkIzoNoRez(true);
+	if (!isNotInit) {
+		document.getElementById('message_div_izo_none').style.display = ''; // link89454 so on load if none it doesnt do transition
 	}
 }
 
@@ -605,12 +608,14 @@ function writeFileJsonToFile() {
 }
 
 function izotopeFilter(aTypeStr) {
+	
 	if (aTypeStr.indexOf('.') == 0) {
 		aTypeStr = aTypeStr.substr(12); // 'nativeshot-'.length + 1
 		// alert(aTypeStr);
 	}
+	
 	$('#filters .but').each(function() {
-		$th = $(this);
+		var $th = $(this);
 		if (aTypeStr == '*') {
 			if ($th.attr('data-filter') == aTypeStr) {
 				$th.addClass('activbut');
@@ -626,7 +631,7 @@ function izotopeFilter(aTypeStr) {
 		}
 	});
 	$('.skill-block').each(function() {
-		$th = $(this);
+		var $th = $(this);
 		if (aTypeStr == '*') {
 			$th.removeClass('non-filtered-skill');
 		} else {
@@ -638,8 +643,31 @@ function izotopeFilter(aTypeStr) {
 			}
 		}
 	});
-	
 	$('.izotope-container').isotope({filter: aTypeStr == '*' ? aTypeStr : '.nativeshot-' + aTypeStr});
+	
+	checkIzoNoRez();
+	
+}
+
+
+function checkIzoNoRez(disallowQuickAnim) {
+	if ( !$('.izotope-container').data('isotope').filteredItems.length ) {
+		// alert('show none');
+		var izo_msg_none = document.getElementById('message_div_izo_none');
+		if (izo_msg_none.classList.contains('izo-msg-show')) {
+			if (!disallowQuickAnim) {
+				var quickAnim = setTimeout(function() {
+					izo_msg_none.classList.add('izo-msg-show');
+				}, 100);
+				izo_msg_none.classList.remove('izo-msg-show');
+			}
+		} else {
+			izo_msg_none.classList.add('izo-msg-show');
+		}
+	} else {
+		// alert('hide none');
+		document.getElementById('message_div_izo_none').classList.remove('izo-msg-show');
+	}
 }
 
 function doOnBlur() {

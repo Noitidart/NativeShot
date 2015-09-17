@@ -105,6 +105,25 @@
 		.skill-block.non-filtered-skill .skill-line div {
 			background-color: #aaa;
 		}
+		#message_div_izo_none {
+			position: absolute;
+			opacity: 0;
+			transition: opacity 300ms, transform 300ms;
+			font-size: 24px;
+			width: 100%;
+			text-align: center;
+			top: 24px;
+			transform: scale(.1);
+		}
+		
+		#message_div_izo_none.izo-msg-show {
+			opacity: 1;
+			transform: scale(1);
+		}
+		
+		.izotope-container {
+			min-height: 50px; /* to fit 24px message_div_izo_none with some top margin, i did 24px at this time*/
+		}
 	</style>
   </head>
 <body class="animsition">
@@ -217,7 +236,7 @@
 				</div>
              </div>
 	       <div class="row">
-         	    <div id="izoc" class="izotope-container gutt-col3 sliphover"><div class="grid-sizer"></div>
+         	    <div id="izoc" class="izotope-container gutt-col3 sliphover"><div class="grid-sizer"></div><div id="message_div_izo_none" style="display:none">&nativeshot.app-main.isotope-no-results;</div> <!--link89454 so on load if none it doesnt do transition-->
 			   </div>
              </div>
          </div>
