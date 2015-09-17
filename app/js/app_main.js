@@ -594,6 +594,44 @@ function writeFileJsonToFile() {
 	}], OS.Constants.Path.profileDir);
 }
 
+function izotopeFilter(aTypeStr) {
+	if (aTypeStr.indexOf('.') == 0) {
+		aTypeStr = aTypeStr.substr(12); // 'nativeshot-'.length + 1
+		// alert(aTypeStr);
+	}
+	$('#filters .but').each(function() {
+		$th = $(this);
+		if (aTypeStr == '*') {
+			if ($th.attr('data-filter') == aTypeStr) {
+				$th.addClass('activbut');
+			} else {
+				$th.removeClass('activbut');
+			}
+		} else {
+			if ($th.attr('data-filter') == '.nativeshot-' + aTypeStr) {
+				$th.addClass('activbut');
+			} else {
+				$th.removeClass('activbut');
+			}			
+		}
+	});
+	$('.skill-block').each(function() {
+		$th = $(this);
+		if (aTypeStr == '*') {
+			$th.removeClass('non-filtered-skill');
+		} else {
+			var cTypeStr = $th.find('.skill-line').attr('data-nativeshot-category');
+			if (cTypeStr == aTypeStr) {
+				$th.removeClass('non-filtered-skill');
+			} else {
+				$th.addClass('non-filtered-skill');
+			}
+		}
+	});
+	
+	$('.izotope-container').isotope({filter: aTypeStr == '*' ? aTypeStr : '.nativeshot-' + aTypeStr});
+}
+
 function onPageReady() {	
 	var step1 = function() {
 		// read in file and do some set up stuff while its reading
@@ -637,6 +675,29 @@ function onPageReady() {
 	
 	step1();
 	
+	/***********************************/
+	/*skill-block click handlers*/
+	/**********************************/
+	$('.skill-block').on('click', function(event) {
+		event.stopPropagation();
+		console.log('event:', event);
+		var typeStr = $(event.target).closest('.skill-block').find('.skill-line').attr('data-nativeshot-category');
+		// alert(['clicked ' + typeStr, 'clicked x:'+event.offsetX,'el left:'+event.target.offsetLeft,'el right:' + (event.target.offsetLeft + event.target.offsetWidth)].join('\n'));
+		if (event.offsetX > event.target.offsetLeft + event.target.offsetWidth || event.offsetX < 0) {
+			// alert(['clicked pseudo el'].join('\n'));
+			// remove all history from log
+		} else {
+			// apply filter
+			switch (typeStr) {
+				case 'print':
+				case 'copy':
+					break; // these arent filterable
+				default:
+					// $('.izotope-container').isotope({filter: '.nativeshot-' + typeStr});
+					izotopeFilter(typeStr);
+			}
+		}
+	})
 	/***********************************/
 	/*MAGNIFIC POPUP*/
 	/**********************************/

@@ -374,11 +374,15 @@
 					$(this).find('.item').removeClass('animated');
 				});
 				*/
+				/*
 				$('#filters .but').removeClass('activbut');
 				$(this).addClass('activbut');
 				var filterValue = $(this).attr('data-filter');
 				// alert('filterValue: ' + filterValue);
 				$('.izotope-container').isotope({filter: filterValue});
+				*/
+				
+				izotopeFilter($(this).attr('data-filter'));
 			});
 		}
 	 });
