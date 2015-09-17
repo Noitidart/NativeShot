@@ -66,6 +66,7 @@ function updateCountsToSkillBars() {
 		nativeshot_log_counts[aTypeStrToTypeInt[p]] = 0;
 	}
 	
+	// calc sums
 	for (var i=0; i<gFileJson.length; i++) {
 		if (!(gFileJson[i].t in nativeshot_log_counts)) {
 			throw new Error('found a type in the log file, that is not known to the app.js global aTypeStrToTypeInt. the unknown type id is: ' + gFileJson[i].t);
@@ -91,19 +92,28 @@ function updateCountsToSkillBars() {
 		
 		 $('.skill-line').each(function(){
 			var objel = $(this);
-			// fake update counts here
+
 			var cTypeStr = objel.attr('data-nativeshot-category');
 			var cTypeInt = aTypeStrToTypeInt[cTypeStr];
 			var nativeshot_category = aTypeStrToTypeInt[cTypeStr];
-			objel.children('h5').attr('data-to', nativeshot_log_counts[cTypeInt]);
-			objel.children('div').attr('data-width-pb', Math.round((nativeshot_log_counts[cTypeInt] / nativeshot_biggest_count)*100) + '%');
+			
+			var timer = objel.children('h5');
+
+			timer.countTo({
+				from: parseInt(timer.text()),
+				to: nativeshot_log_counts[cTypeInt],
+				speed: 2000
+			});
+			
+			objel.children('div').css('width', Math.round((nativeshot_log_counts[cTypeInt] / nativeshot_biggest_count)*100) + '%');
 		});
-		 $('.skill-line div').each(function(){
+		/*
+		$('.skill-line div').each(function(){
 			var objel = $(this);
 			var pb_width = objel.attr('data-width-pb');
 			objel.css({'width':pb_width});
 		});
-		$('.timer').countTo();
+		*/
 	}
 };
 
@@ -323,8 +333,8 @@ function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
 	};
 	
 	var step2 = function() {
-		// remove first element with aGettime (my assumption is aGettime is unique per element as it is down to the milliseconds) or all elements with aTypeInt
 		if (aGettime !== undefined) {
+			// remove first element with aGettime (my assumption is aGettime is unique per element as it is down to the milliseconds) or all elements with aTypeInt
 			for (var i=0; i<gFileJson.length; i++) {
 				if (gFileJson[i].d == aGettime) {
 					gFileJson.splice(i, 1);
@@ -332,6 +342,7 @@ function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
 				}
 			}
 		} else if (aTypeInt !== undefined) {
+			// remove ALL elements that have this aTypeInt
 			for (var i=gFileJson.length-1; i>=0; i--) {
 				if (gFileJson[i].t == aTypeInt) {
 					gFileJson.splice(i, 1);
@@ -348,7 +359,7 @@ function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
 		writeFileJsonToFile();
 		
 		// update skill bars
-		// updateCountsToSkillBars();
+		updateCountsToSkillBars();
 	}
 	
 	step1();
@@ -686,6 +697,14 @@ function onPageReady() {
 		if (event.offsetX > event.target.offsetLeft + event.target.offsetWidth || event.offsetX < 0) {
 			// alert(['clicked pseudo el'].join('\n'));
 			// remove all history from log
+			switch (typeStr) {
+				case 'print':
+				case 'copy':
+					removeEntryOrEntriesFromFileJson(undefined, aTypeStrToTypeInt[typeStr]);
+					break; // these support remove all
+				default:
+					// these dont support remove all
+			}
 		} else {
 			// apply filter
 			switch (typeStr) {
