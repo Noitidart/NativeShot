@@ -154,7 +154,7 @@ function izoView(aEvent, aGettime) {
 	} else {
 		// do magnific
 		// alert('magnific this: ' + getImageURL(getArrElInFileJsonByGettime(aGettime)));
-		// aEvent.stopPropagation();
+		// aEvent.stopPropagation(); // if i uncomment this, then the click will not propoagte to document.body which is where i catch the click
 		aEvent.preventDefault();
 		// aEvent.returnValue = false;
 		// return false;
@@ -636,6 +636,51 @@ function onPageReady() {
 	};
 	
 	step1();
+	
+	/***********************************/
+	/*MAGNIFIC POPUP*/
+	/**********************************/
+	$(document.body).magnificPopup({ // cant do '.izotope-container' here because the click happens on the "view" button in the sliphover which is dynamically added to the body element
+		delegate: '.mag-view',
+		type: 'image',
+		tLoading: '',
+		mainClass: 'mfp-with-zoom',
+		removalDelay: 500,
+		gallery: {
+			enabled: false,
+			navigateByImgClick: false
+		},
+		zoom: {
+			enabled: true,
+			duration: 300,
+			easing: 'ease-in-out', 
+			opener: function(openerElement) {
+			  console.info('openerElement:', openerElement);
+			  var aGettime = openerElement[0].getAttribute('data-card-gettime');
+			  console.log('aGettime:', '"'+aGettime+'"');
+			  var relatedImg = $('.det-img[data-gettime="' + aGettime + '"] img');
+			  console.info('relatedImg:', relatedImg);
+			  return relatedImg;
+			}
+		},
+		callbacks: {
+			imageLoadComplete: function() {
+			  var self = this;
+			  setTimeout(function() {
+				self.wrap.addClass('mfp-image-loaded');
+			  }, 16);
+			},
+			close: function() {
+			  this.wrap.removeClass('mfp-image-loaded');
+			},
+			beforeChange: function() {
+				// this.items[0].src = this.items[0].src + '?=' + Math.random(); 
+            }
+		},
+		 closeBtnInside: false,
+         closeOnContentClick: true,
+         midClick: false
+	});
 }
 
 // start - common helper functions
