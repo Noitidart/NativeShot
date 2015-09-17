@@ -44,6 +44,7 @@ const CACHE_KEY = Math.random(); // set to version on release
 var PromiseWorker;
 var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
+const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 const cui_cssUri = Services.io.newURI(core.addon.path.styles + 'cui.css', null, null);
 const JETPACK_DIR_BASENAME = 'jetpack';
 const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
@@ -1190,25 +1191,34 @@ var gEditor = {
 			iframe.setAttribute('style', 'display:none');
 			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 		} else {
+			
 			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
-			var originalSelectedTab = win.gBrowser.selectedTab;
-			
 			var doc = win.document;
-			var printpreviewtab = win.gBrowser.loadOneTab(this.canComp.toDataURL('image/png'), {
-				inBackground: false,
-				relatedToCurrent: true
-			});
-			// printpreviewtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'frameScript_printPreviewAndClose.js?' + CACHE_KEY, false);
-			
-			var aPPListener = win.PrintPreviewListener;
-			var aOrigPPExit = aPPListener.onExit;
-			aPPListener.onExit = function() {
-				aOrigPPExit.call(aPPListener);
-				win.gBrowser.removeCurrentTab();
-				win.gBrowser.selectedTab = originalSelectedTab;
-				aPPListener.onExit = aOrigPPExit;
-			};
-			win.PrintUtils.printPreview(aPPListener);
+			var iframe = doc.createElementNS(NS_XUL, 'browser');
+			iframe.addEventListener('load', function() {
+				iframe.removeEventListener('load', arguments.callee, true);
+				console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
+				console.error('iframe loaded, print preview it');
+				
+				var aPPListener = win.PrintPreviewListener;
+				var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
+				var aOrigPPExit = aPPListener.onExit;
+				aPPListener.onExit = function() {
+					aOrigPPExit.call(aPPListener);
+					iframe.parentNode.removeChild(iframe);
+					aPPListener.onExit = aOrigPPExit;
+					aPPListener.getSourceBrowser = aOrigPPgetSourceBrowser;
+				};
+				aPPListener.getSourceBrowser = function() {
+					return iframe;
+				};
+				win.PrintUtils.printPreview(aPPListener);
+				
+			}, true); // if i use false here it doesnt work
+			iframe.setAttribute('type', 'content');
+			iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
+			iframe.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
+			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 			
 			if (e.shiftKey) {
 				// hide print item from menus, as cannot do print preview multiple times, 1) it only shows print preview of last one 2) it starts closing 2 tabs if you did it twice, 3 tabs if thrice, etc
