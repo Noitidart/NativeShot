@@ -107,13 +107,6 @@ function updateCountsToSkillBars() {
 			
 			objel.children('div').css('width', Math.round((nativeshot_log_counts[cTypeInt] / nativeshot_biggest_count)*100) + '%');
 		});
-		/*
-		$('.skill-line div').each(function(){
-			var objel = $(this);
-			var pb_width = objel.attr('data-width-pb');
-			objel.css({'width':pb_width});
-		});
-		*/
 	}
 };
 
@@ -444,6 +437,9 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 	
 	console.log('objOfImagePathsInIsotope:', objOfImagePathsInIsotope);
 	
+	var imgsAdded = false;
+	var imgsRemoved = false;
+	
 	var ic = document.getElementById('izoc');
 	var izotopeContainer = $(ic);
 	
@@ -471,20 +467,54 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 					aREF.href = imgREF.src;
 					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb_app_main.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d, imgREF.src);
 					
+					
+					var foundAlreadyInIzotope = false;
+					for (var isotopeImgSrc in objOfImagePathsInIsotope) {
+						// go through the gFileJson obj i created
+						if (imgREF.src.toLowerCase() == isotopeImgSrc.toLowerCase()) {
+							foundAlreadyInIzotope = true;
+							break;
+						}
+					}
 					fileJsonAsIzotopeEls[imgREF.src] = {
 						aTypeInt: aTypeStrToTypeInt[gFileJson[i].t]
 					};
-					
-					var createdEl = jsonToDOM(slipCoverJson, document, {});
-					console.log('createdEl:', createdEl);
-					ic.insertBefore(createdEl, ic.firstChild.nextSibling);
-					if (isNotInit) {
-						izotopeContainer.isotope('addItems', createdEl);
+					if (!foundAlreadyInIzotope) {
+						imgsAdded = true;
+						
+						var createdEl = jsonToDOM(slipCoverJson, document, {});
+						console.log('createdEl:', createdEl);
+						ic.insertBefore(createdEl, ic.firstChild.nextSibling);
+						if (isNotInit) {
+							izotopeContainer.isotope('addItems', createdEl);
+						}
 					}
 				
 				break;
 			default:
 				// no image for this type in isotope, like copy and print
+		}
+	}
+
+
+	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
+	if (isNotInit) {
+		// check if need to remove anything, and remove it
+		// check if any of the isotope srcs that were present when i started this function, need to not be there (meaning they are not in the fileJsonAsIzotopeEls obj)
+		for (var isotopeImgSrc in objOfImagePathsInIsotope) {
+			// go through the gFileJson obj i created
+			var found = false;
+			for (var jsonImgSrc in fileJsonAsIzotopeEls) {
+				if (jsonImgSrc.toLowerCase() == isotopeImgSrc.toLowerCase()) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				console.log('need to remove from isotope this img src:', isotopeImgSrc);
+				imgsRemoved = true;
+				izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
+			}
 		}
 	}
 
@@ -504,53 +534,22 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		alert('attached on');
 		*/
 	}
-
-
-	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
-	if (isNotInit) {
-		// check if any of the isotope srcs that were present when i started this function, need to not be there (meaning they are not in the fileJsonAsIzotopeEls obj)
-		for (var isotopeImgSrc in objOfImagePathsInIsotope) {
-			// go through the gFileJson obj i created
-			var found = false;
-			for (var jsonImgSrc in fileJsonAsIzotopeEls) {
-				if (jsonImgSrc.toLowerCase() == isotopeImgSrc.toLowerCase()) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				console.log('need to remove from isotope this img src:', isotopeImgSrc);
-				izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
-			}
-		}
-		
-		/*
-		// set up magnific
-		$('.izotope-container img').magnificPopup({
-			type: 'image',
-			closeOnContentClick: true,
-			closeBtnInside: false,
-			fixedContentPos: true,
-			mainClass: 'mfp-no-margins mfp-with-zoom', // class to remove default margin from left and right side
-			image: {
-				verticalFit: true
-			},
-			zoom: {
-				enabled: true,
-				duration: 300 // don't foget to change the duration also in CSS
-			}
-		});
-		*/
-	}
-
-	izotopeContainer.imagesLoaded(function() {
-		// alert('running layout');
-		if (isNotInit) {
-			izotopeContainer.isotope('reloadItems');
-		}
-		izotopeContainer.isotope();
-	});
 	
+	if (imgsAdded || imgsRemoved) {
+			// before image loaded, so if imgs were added, we start the layout, and then after imgs loaded it adjusts for proper sizes
+			if (isNotInit) {
+				// alert('izo reloadingItems');
+				izotopeContainer.isotope('reloadItems');
+			}
+			izotopeContainer.isotope('layout');
+			if (imgsAdded) {
+				izotopeContainer.imagesLoaded(function() {
+					// alert('running layout');
+					izotopeContainer.isotope('reloadItems');
+					izotopeContainer.isotope();
+				});
+			}
+	}
 }
 
 var gFileJson;
@@ -643,7 +642,19 @@ function izotopeFilter(aTypeStr) {
 	$('.izotope-container').isotope({filter: aTypeStr == '*' ? aTypeStr : '.nativeshot-' + aTypeStr});
 }
 
-function onPageReady() {	
+function doOnBlur() {
+	attachFocusListener();
+}
+function doOnFocus() {
+	window.removeEventListener('focus', doOnFocus, false);
+	readFileAndUpdateGUI(true);
+}
+
+function attachFocusListener() {
+	window.addEventListener('focus', doOnFocus, false);
+}
+
+function readFileAndUpdateGUI(isNotInit) {
 	var step1 = function() {
 		// read in file and do some set up stuff while its reading
 		var promise_bringInFile = readInAndParseFileJson();
@@ -681,10 +692,30 @@ function onPageReady() {
 	var step2 = function() {
 		// from gFileJson update skill bars and add in images to isotope zone
 		updateCountsToSkillBars();
-		matchIsotopeContentsToFileJson();
+		matchIsotopeContentsToFileJson(isNotInit);
 	};
 	
 	step1();
+}
+
+var serverMessageListener = {
+	receiveMessage: function(aMsg) {
+		console.error('DASHBOARD client recieving msg:', 'aMsg:', aMsg);
+		if (aMsg.json == 'serverCommand_refreshDashboardGuiFromFile') {
+			readFileAndUpdateGUI(true);
+		} else {
+			console.error('DASHBAORD client unrecognized aMasg:', aMsg);
+		}
+	}
+};
+
+function onPageReady() {
+	window.addEventListener('blur', doOnBlur, false);
+	
+	readFileAndUpdateGUI(false);
+	
+	// attach message listener
+	contentMMFromContentWindow_Method2(window).addMessageListener(core.addon.id, serverMessageListener);
 	
 	/***********************************/
 	/*skill-block click handlers*/
@@ -1333,6 +1364,17 @@ function SupportsString(str) {
     // Store the JavaScript string that we want to wrap in the new nsISupportsString object
     res.data = str;
     return res;
+}
+var gCFMM;
+function contentMMFromContentWindow_Method2(aContentWindow, refreshCache) {
+	if (!gCFMM || refreshCache) {
+		gCFMM = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIDocShell)
+							  .QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIContentFrameMessageManager);
+	}
+	return gCFMM;
+
 }
 // end - common helper functions
 

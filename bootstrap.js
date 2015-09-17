@@ -2868,6 +2868,8 @@ function appendToHistoryLog(aTypeStr, aData) {
 			function(aVal) {
 				console.log('Fullfilled - promise_closeHistory - ', aVal);
 				// start - do stuff here - promise_closeHistory
+				// notify any open dashboards that they should reload gui
+				Services.mm.broadcastAsyncMessage(core.addon.id, 'serverCommand_refreshDashboardGuiFromFile');
 				console.log('Fullfilled - appendToHistoryLog - ', aVal);
 				// end - do stuff here - promise_closeHistory
 			},
