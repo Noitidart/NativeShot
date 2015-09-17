@@ -88,24 +88,28 @@
 				 
 	/***********************************/
 	/*MAGNIFIC POPUP*/
-	/**********************************/			 
-	/*
-	$('.popup-gallery').magnificPopup({
-		delegate: 'a',
+	/**********************************/
+	$(document.body).magnificPopup({
+		delegate: '.mag-view',
 		type: 'image',
 		tLoading: '',
 		mainClass: 'mfp-with-zoom',
 		removalDelay: 500,
 		gallery: {
-			enabled: true,
-			navigateByImgClick: true
+			enabled: false,
+			navigateByImgClick: false
 		},
 		zoom: {
 			enabled: true,
 			duration: 300,
 			easing: 'ease-in-out', 
 			opener: function(openerElement) {
-			  return openerElement.is('img') ? openerElement : openerElement.find('img');
+			  console.info('openerElement:', openerElement);
+			  var aGettime = openerElement[0].getAttribute('data-card-gettime');
+			  console.log('aGettime:', '"'+aGettime+'"');
+			  var relatedImg = $('.det-img[data-gettime="' + aGettime + '"] img');
+			  console.info('relatedImg:', relatedImg);
+			  return relatedImg;
 			}
 		},
 		callbacks: {
@@ -119,52 +123,13 @@
 			  this.wrap.removeClass('mfp-image-loaded');
 			},
 			beforeChange: function() {
-     this.items[0].src = this.items[0].src + '?=' + Math.random(); 
+				// this.items[0].src = this.items[0].src + '?=' + Math.random(); 
             }
 		},
 		 closeBtnInside: false,
          closeOnContentClick: true,
-         midClick: true
+         midClick: false
 	});
-	*/
-	/*
-	$('.izotope-container').magnificPopup({
-		delegate: 'a',
-		type: 'image',
-		tLoading: '',
-		mainClass: 'mfp-with-zoom',
-		removalDelay: 500,
-		gallery: {
-			enabled: true,
-			navigateByImgClick: true
-		},
-		zoom: {
-			enabled: true,
-			duration: 300,
-			easing: 'ease-in-out', 
-			opener: function(openerElement) {
-			  return openerElement.is('img') ? openerElement : openerElement.find('img');
-			}
-		},
-		callbacks: {
-			imageLoadComplete: function() {
-			  var self = this;
-			  setTimeout(function() {
-				self.wrap.addClass('mfp-image-loaded');
-			  }, 16);
-			},
-			close: function() {
-			  this.wrap.removeClass('mfp-image-loaded');
-			},
-			beforeChange: function() {
-     this.items[0].src = this.items[0].src + '?=' + Math.random(); 
-            }
-		},
-		 closeBtnInside: false,
-         closeOnContentClick: true,
-         midClick: true
-	});				 
-	*/
 	/***********************************/
 	/*MOBILE MENU*/
 	/**********************************/
