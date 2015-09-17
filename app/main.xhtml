@@ -124,6 +124,15 @@
 		.izotope-container {
 			min-height: 50px; /* to fit 24px message_div_izo_none with some top margin, i did 24px at this time*/
 		}
+		
+		.skill-block:before {
+			/* space filler, so we dont have that area between bar and label where cursor becomes non pointer type, and click does nothing, so so weird i that happens, but anywas that forces this*/
+			position: absolute;
+			background-color: transparent;
+			width: 100%;
+			height: calc(100% + 1em);
+			content: '';
+		}
 	</style>
   </head>
 <body class="animsition">
