@@ -203,6 +203,7 @@ function izoDelete(aGettime) {
 				$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
 				var enablePointerTimer = setTimeout(function() {
 					$('.izotope-container').css('pointer-events', '');
+					checkIzoNoRez();
 				}, 400);
 				$('.sliphover-container').remove();
 
@@ -288,6 +289,7 @@ function izoRemove(aGettime) {
 	$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
 	var enablePointerTimer = setTimeout(function() {
 		$('.izotope-container').css('pointer-events', '');
+		checkIzoNoRez();
 	}, 400);
 	$('.sliphover-container').remove();
 };

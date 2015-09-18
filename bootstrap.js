@@ -906,6 +906,7 @@ var gEditor = {
 					// start - do stuff here - promise_fetchWin
 					console.timeEnd('getAllWin');
 					gEditor.winArr = aVal;
+					// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
 					// end - do stuff here - promise_fetchWin
 				},
 				function(aReason) {

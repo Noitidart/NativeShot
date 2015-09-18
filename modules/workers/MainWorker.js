@@ -346,6 +346,95 @@ function getAllWin(aOptions) {
 				}
 				
 				processWin(ostypes.HELPER.cachedDefaultRootWindow());
+				
+				// start - post analysis, per http://stackoverflow.com/questions/31914311/correlate-groups-from-xquerytree-data-to-a-window?noredirect=1#comment53135178_31914311
+				var analyzedArr = [];
+				var pushItBlock = function() {
+					if (cWinObj) {
+						
+						// start - mini algo to find proper x and y. it first gets max x and y. if they are both 0, then it checks if min x and y are negative and then set its to that (as user may have set up window to left or above or something)
+						var minLeft = Math.min.apply(Math, cWinObj.left);
+						var minTop = Math.min.apply(Math, cWinObj.top);
+						cWinObj.left = Math.max.apply(Math, cWinObj.left);
+						cWinObj.top = Math.max.apply(Math, cWinObj.top);
+						
+						if (cWinObj.left == 0 && cWinObj.top == 0) {
+							if (minLeft != -1 && minTop != -1) {
+								cWinObj.left = minLeft;
+								cWinObj.top = minTop;
+							}
+						}
+						// end - mini algo to find proper x and y
+						cWinObj.width = Math.max.apply(Math, cWinObj.width);
+						cWinObj.height = Math.max.apply(Math, cWinObj.height);
+						
+						cWinObj.right = cWinObj.left + cWinObj.width;
+						cWinObj.bottom = cWinObj.top + cWinObj.height;
+						
+						analyzedArr.push(cWinObj);
+					}
+				}
+
+				var cWinObj = null;
+				for (var i = 0; i < rezWinArr.length; i++) {
+					if (rezWinArr[i].pid || (rezWinArr[i].title && cWinObj.title)) { // apparently sometimes you can hvae a new win title but no pid. like after "browser console" came a "compiz" title but no pid on it
+						pushItBlock();
+						cWinObj = {
+							pid: rezWinArr[i].pid,
+							left: [],
+							top: [],
+							width: [],
+							height: []
+						};
+					}
+					if (cWinObj) {
+						cWinObj.left.push(rezWinArr[i].left);
+						cWinObj.top.push(rezWinArr[i].top);
+						cWinObj.width.push(rezWinArr[i].width);
+						cWinObj.height.push(rezWinArr[i].height);
+						if (rezWinArr[i].title) {
+							cWinObj.title = rezWinArr[i].title;
+						}
+					}
+				}
+				pushItBlock();
+
+				// post pushing analysis
+				// 1) remove all windows who have height and width of 1
+				for (var i = 0; i < analyzedArr.length; i++) {
+					if (analyzedArr[i].width == 1 && analyzedArr[i].height == 1) {
+						analyzedArr.splice(i, 1);
+						i--;
+					}
+				}
+				// 2) remove all windows who have height and width == to Desktop which is that last entry
+				if (analyzedArr[analyzedArr.length - 1].title != 'Desktop') {
+					console.error('title of last item is not Desktop so this may be a bad assumption that last item is Desktop, but just throwing a warning for right now');
+				}
+				var deskW = analyzedArr[analyzedArr.length - 1].width;
+				var deskH = analyzedArr[analyzedArr.length - 1].height;
+				for (var i = 0; i < analyzedArr.length - 2; i++) { // - 2 as we dont want the very last item
+					if (analyzedArr[i].width == deskW && analyzedArr[i].height == deskH) {
+						analyzedArr.splice(i, 1);
+						i--;
+					}
+				}
+				/*
+				// 3) remove windows up till and including the last window with title "nativeshot_canvas"
+				var iOfLastNativeshotCanvas = -1;
+				for (var i = 0; i < analyzedArr.length; i++) {
+					if (analyzedArr[i].title == 'nativeshot_canvas') {
+						iOfLastNativeshotCanvas = i;
+					}
+				}
+				if (iOfLastNativeshotCanvas > -1) {
+					analyzedArr.splice(0, iOfLastNativeshotCanvas + 1);
+				}
+				*/
+				// set rezWinArr to analyzedArr
+				
+				rezWinArr = analyzedArr;
+				// end - post analysis
 			
 			break;
 		case 'darwin':
@@ -1165,6 +1254,7 @@ function shootAllMons() {
 						}
 					}
 				}
+				
 				console.info('json.stringify post clean:', JSON.stringify(collMonInfos), collMonInfos);
 				// end - get all monitor resolutions
 				
@@ -1196,15 +1286,17 @@ function shootAllMons() {
 				var fullLen = 4 * fullWidth * fullHeight;
 				
 				console.time('init imagedata');
-				var imagedata = new ImageData(fullWidth, fullHeight);
+				// var imagedata = new ImageData(fullWidth, fullHeight);
+				var allShotBuf = new ArrayBuffer(fullWidth * fullHeight * 4);
 				console.timeEnd('init imagedata');
 
 				console.time('memcpy');
-				ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
+				// ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
+				ostypes.API('memcpy')(allShotBuf, ximage.contents.data, fullLen);
 				console.timeEnd('memcpy');
 				
-				var iref = imagedata.data;
-				
+				// var iref = imagedata.data;
+				var allShotDView = new DataView(allShotBuf);
 				/*
 				console.time('make bgra to rgba');
 				for (var i=0; i<fullLen; i=i+4) {
@@ -1223,23 +1315,32 @@ function shootAllMons() {
 					var screenUseH = collMonInfos[i].h;
 					
 					console.info('screenUseW:', screenUseW, 'screenUseH:', screenUseH, '_END_');
-					var screnImagedata = new ImageData(screenUseW, screenUseH);
-					var siref = screnImagedata.data;
+					// var screnImagedata = new ImageData(screenUseW, screenUseH);
+					var monShotBuf = new ArrayBuffer(screenUseW * screenUseH * 4);
+					// var siref = screnImagedata.data;
+					var monShotDView = new DataView(monShotBuf);
 					
 					var si = 0;
 					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
 						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
 							var pix1 = (fullWidth*y*4) + (x * 4);
-							var B = iref[pix1];
-							siref[si] = iref[pix1+2];
-							siref[si+1] = iref[pix1+1];
-							siref[si+2] = B;
-							siref[si+3] = 255;
+							// var B = iref[pix1];
+							var B = allShotDView.getUint8(pix1);
+							// siref[si] = iref[pix1+2];
+							monShotDView.setUint8(si, allShotDView.getUint8(pix1+2));
+							// siref[si+1] = iref[pix1+1];
+							monShotDView.setUint8(si+1, allShotDView.getUint8(pix1+1));
+							// siref[si+2] = B;
+							monShotDView.setUint8(si+2, B);
+							// siref[si+3] = 255;
+							monShotDView.setUint8(si+3, 255);
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = screnImagedata.data.buffer;
-					aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
+					// collMonInfos[i].screenshot = screnImagedata.data.buffer;
+					collMonInfos[i].screenshot = monShotBuf;
+					// aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
+					aScreenshotBuffersToTransfer.push(monShotBuf);
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
