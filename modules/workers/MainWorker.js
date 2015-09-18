@@ -1286,61 +1286,50 @@ function shootAllMons() {
 				var fullLen = 4 * fullWidth * fullHeight;
 				
 				console.time('init imagedata');
-				// var imagedata = new ImageData(fullWidth, fullHeight);
 				var allShotBuf = new ArrayBuffer(fullWidth * fullHeight * 4);
 				console.timeEnd('init imagedata');
 
 				console.time('memcpy');
-				// ostypes.API('memcpy')(imagedata.data.buffer, ximage.contents.data, fullLen);
 				ostypes.API('memcpy')(allShotBuf, ximage.contents.data, fullLen);
 				console.timeEnd('memcpy');
 				
-				// var iref = imagedata.data;
-				var allShotDView = new DataView(allShotBuf);
-				/*
-				console.time('make bgra to rgba');
-				for (var i=0; i<fullLen; i=i+4) {
-					var B = iref[i];
-					iref[i] = iref[i+2];
-					iref[i+2] = B;
-				}
-				console.timeEnd('make bgra to rgba');
-				*/
+				var allShotUint8 = new Uint8Array(allShotBuf);
 				// end - take shot of all monitors and push to just first element of collMonInfos
 				
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				console.time('portion out image data');
-				for (var i=0; i<collMonInfos.length; i++) {
-					var screenUseW = collMonInfos[i].w;
-					var screenUseH = collMonInfos[i].h;
+				
+				// optimized linux from 1900ms down to 45ms from chat on #extdev on sept 18 2015 ~430-630am
+				var portionOutAllToMonFromBgra0ToRgba255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
+					// returns aMonUint
+					var monShotBuf = new ArrayBuffer(cutoutMonW * cutoutMonH * 4);
+					var monShotUint8 = new Uint8Array(monShotBuf);
 					
-					console.info('screenUseW:', screenUseW, 'screenUseH:', screenUseH, '_END_');
-					// var screnImagedata = new ImageData(screenUseW, screenUseH);
-					var monShotBuf = new ArrayBuffer(screenUseW * screenUseH * 4);
-					// var siref = screnImagedata.data;
-					var monShotDView = new DataView(monShotBuf);
-					
+					var allShotEndY = cutoutMonY + cutoutMonH;
+					var allShotEndX = cutoutMonX + cutoutMonW;
 					var si = 0;
-					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
-						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
-							var pix1 = (fullWidth*y*4) + (x * 4);
-							// var B = iref[pix1];
-							var B = allShotDView.getUint8(pix1);
-							// siref[si] = iref[pix1+2];
-							monShotDView.setUint8(si, allShotDView.getUint8(pix1+2));
-							// siref[si+1] = iref[pix1+1];
-							monShotDView.setUint8(si+1, allShotDView.getUint8(pix1+1));
-							// siref[si+2] = B;
-							monShotDView.setUint8(si+2, B);
-							// siref[si+3] = 255;
-							monShotDView.setUint8(si+3, 255);
+					for (var y=cutoutMonY; y<allShotEndY; y++) {
+						var pixY = (fullWidth * y << 2); // << 2 is same as * 4
+						for (var x=cutoutMonX; x<allShotEndX; x++) {
+							var pixXY = pixY + (x << 2);
+							var B = allShotUint8[pixXY];
+							monShotUint8[si] = allShotUint8[pixXY+2];
+							monShotUint8[si+1] = allShotUint8[pixXY+1];
+							monShotUint8[si+2] = B;
+							monShotUint8[si+3] = 255;
 							si += 4;
 						}
 					}
-					// collMonInfos[i].screenshot = screnImagedata.data.buffer;
-					collMonInfos[i].screenshot = monShotBuf;
-					// aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
-					aScreenshotBuffersToTransfer.push(monShotBuf);
+					
+					return monShotBuf;
+				};
+				
+				for (var i=0; i<collMonInfos.length; i++) {
+					var monUseW = collMonInfos[i].w;
+					var monUseH = collMonInfos[i].h;
+
+					collMonInfos[i].screenshot = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
+					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
