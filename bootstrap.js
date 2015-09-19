@@ -805,6 +805,7 @@ var gEditor = {
 	compDOMWindow: null, // i use colMon[i].DOMWindow for this
 	gBrowserDOMWindow: null, // used for clipboard context
 	sessionId: null,
+	printPrevWins: null, // holds array of windows waiting to get focus on close of gEditor
 	cleanUp: function() {
 		// reset all globals
 		console.error('doing cleanup');
@@ -832,6 +833,8 @@ var gEditor = {
 		this.winArr = null;
 		
 		this.sessionId = null;
+		
+		this.printPrevWins = null;
 	},
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
@@ -1000,6 +1003,11 @@ var gEditor = {
 			}
 			if (gEditor.wasFirefoxWinFocused) {
 				gEditor.gBrowserDOMWindow.focus();
+			}
+			if (gEditor.printPrevWins) {
+				for (var i=0; i<gEditor.printPrevWins.length; i++) {
+					gEditor.printPrevWins[i].focus();
+				}
 			}
 			colMon[0].E.DOMWindow.close();
 		}
@@ -1193,41 +1201,65 @@ var gEditor = {
 			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 		} else {
 			
-			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
-			var doc = win.document;
-			var iframe = doc.createElementNS(NS_XUL, 'browser');
-			iframe.addEventListener('load', function() {
-				iframe.removeEventListener('load', arguments.callee, true);
-				console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
-				console.error('iframe loaded, print preview it');
-				
-				var aPPListener = win.PrintPreviewListener;
-				var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
-				var aOrigPPExit = aPPListener.onExit;
-				aPPListener.onExit = function() {
-					aOrigPPExit.call(aPPListener);
-					iframe.parentNode.removeChild(iframe);
-					aPPListener.onExit = aOrigPPExit;
-					aPPListener.getSourceBrowser = aOrigPPgetSourceBrowser;
-				};
-				aPPListener.getSourceBrowser = function() {
-					return iframe;
-				};
-				win.PrintUtils.printPreview(aPPListener);
-				
-			}, true); // if i use false here it doesnt work
-			iframe.setAttribute('type', 'content');
-			iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
-			iframe.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
-			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 			
-			if (e.shiftKey) {
-				// hide print item from menus, as cannot do print preview multiple times, 1) it only shows print preview of last one 2) it starts closing 2 tabs if you did it twice, 3 tabs if thrice, etc
-				for (var i=0; i<colMon.length; i++) {			
-					var print_menuitem = colMon[i].E.DOMWindow.document.getElementById('print_menuitem')
-					print_menuitem.parentNode.removeChild(print_menuitem);
+			/*
+			var aPrintPrevWin;
+			// open print preview window on monitor with coords 0,0 wxh 10x10
+			// find monitor dimentiosn that has coord 0,0
+			var primaryScreenPoint = new Rect(1, 1, 1, 1);
+			for (var i=0; i<colMon.length; i++) {
+				if (colMon[i].rect.contains(primaryScreenPoint)) {
+					aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', 'chrome,width=' + colMon[i].w + ',height=' + colMon[i].h + ',screenX=0,screenY=0', null);
 				}
 			}
+			*/
+			// i dont do it that way because i want the available rect so i do this way:
+			// var sDims = {x:{},y:{},w:{},h:{}};
+			// Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager).screenForRect(1,1,1,1).GetAvailRect(sDims.x, sDims.y, sDims.w, sDims.h);
+			// console.info('chrome,width=' + sDims.w.value + ',height=' + sDims.h.value + ',screenX=' + sDims.x.value + ',screenY=' + sDims.y.value);
+			var aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
+			if (this.printPrevWins) {
+				this.printPrevWins.push(aPrintPrevWin);
+			} else {
+				this.printPrevWins = [aPrintPrevWin];
+			}
+			var savedDataURL = this.canComp.toDataURL('image/png');
+			aPrintPrevWin.addEventListener('load', function() {
+				aPrintPrevWin.removeEventListener('load', arguments.callee, false);
+				aPrintPrevWin.focus();
+				// old stuff
+				var win = aPrintPrevWin;
+				var doc = win.document;
+				var iframe = doc.createElementNS(NS_XUL, 'browser');
+				iframe.addEventListener('load', function() {
+					iframe.removeEventListener('load', arguments.callee, true);
+					console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
+					console.error('iframe loaded, print preview it');
+					
+					var aPPListener = win.PrintPreviewListener;
+					var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
+					var aOrigPPExit = aPPListener.onExit;
+					aPPListener.onExit = function() {
+						aOrigPPExit.call(aPPListener);
+						iframe.parentNode.removeChild(iframe);
+						aPPListener.onExit = aOrigPPExit;
+						aPPListener.getSourceBrowser = aOrigPPgetSourceBrowser;
+						win.close();
+					};
+					aPPListener.getSourceBrowser = function() {
+						return iframe;
+					};
+					win.PrintUtils.printPreview(aPPListener);
+					
+				}, true); // if i use false here it doesnt work
+				iframe.setAttribute('type', 'content');
+				iframe.setAttribute('src', savedDataURL);
+				iframe.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
+				doc.documentElement.appendChild(iframe); // src page wont load until i append to document
+				// end old stuff
+				
+				
+			}, false);
 		}
 		appendToHistoryLog('print', {
 			d: new Date().getTime()
