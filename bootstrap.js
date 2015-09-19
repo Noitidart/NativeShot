@@ -499,7 +499,7 @@ const fsComServer = {
 							}
 							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
 							
-							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Not Signed In - User actioning needed to focus this tab and sign in here, or sign into twitter in another tab then reload this tab', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
+							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Not Signed In - Focus this tab and sign in, or sign into Twitter in another tab then reload this tab', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
 							
 							
 						break;
@@ -530,6 +530,7 @@ const fsComServer = {
 								case 'error-loading':
 								case 'non-twitter-load':
 								case 'tab-closed':
+								case 'twitter-page-unloaded':
 								
 										// note that none of the images were attached
 										for (var imgId in refUAPEntry.imgDatas) {
@@ -544,6 +545,7 @@ const fsComServer = {
 													
 												break;
 											case 'non-twitter-load':
+											case 'twitter-page-unloaded':
 													
 													aMsg = 'Navigated away from Twitter.com - Click to open new tab with Twitter';
 													
@@ -806,6 +808,7 @@ var gEditor = {
 	gBrowserDOMWindow: null, // used for clipboard context
 	sessionId: null,
 	printPrevWins: null, // holds array of windows waiting to get focus on close of gEditor
+	forceFocus: null, // set to true like when user does twitter as that needs user focus
 	cleanUp: function() {
 		// reset all globals
 		console.error('doing cleanup');
@@ -835,6 +838,7 @@ var gEditor = {
 		this.sessionId = null;
 		
 		this.printPrevWins = null;
+		this.forceFocus = null;
 	},
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
@@ -1001,7 +1005,7 @@ var gEditor = {
 					NBs.insertGlobalToWin(p, 'all');
 				}
 			}
-			if (gEditor.wasFirefoxWinFocused) {
+			if (gEditor.wasFirefoxWinFocused || gEditor.forceFocus) {
 				gEditor.gBrowserDOMWindow.focus();
 			}
 			if (gEditor.printPrevWins) {
@@ -1381,7 +1385,8 @@ var gEditor = {
 		// refUAPEntry.imgDataUris.push(cImgDataUri);
 		
 		fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(refUAPEntry.userAckId);
-
+		
+		this.forceFocus = true; // as user needs browser focus so they can tweet it
 		this.closeOutEditor(e);
 	},
 	uploadToImgur: function(e, aBoolAnon) {

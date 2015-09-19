@@ -89,7 +89,6 @@ function unregister() {
 	
 	removeEventListener('unload', fsUnloaded, false);
 	removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
-	removeEventListener('DOMContentLoaded', listenForTwitterSignIn, false);
 	removeEventListener('load', listenForTwitterLoad, true);
 	
 	try {
@@ -128,26 +127,6 @@ function unregister() {
 	//contentMMFromContentWindow_Method2(content, true).
 	sendAsyncMessage(core.addon.id, sendAsyncJson);
 	console.error('client sending server msg with json:', sendAsyncJson);
-}
-
-function listenForTwitterSignIn(aEvent) {
-	var aContentWindow = aEvent.target.defaultView;
-	var aContentDocument = aContentWindow.document;
-	if (aContentWindow.frameElement) {
-		//console.warn('frame element loaded, so dont respond yet');
-	} else {
-		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
-			var btnNewTweet = aContentDocument.getElementById('global-new-tweet-button');
-			if (!btnNewTweet) {
-				console.warn('still not signed in yet');
-			} else {
-				// signed in now
-				do_openTweetModal();
-			}
-		} else {
-			console.warn('page done loading buts it not twitter, so keep listener attached, im waiting for twitter:', aContentWindow.location);
-		}
-	}
 }
 
 function on_nativeShot_notifyDataTweetError(aEvent) {
@@ -244,7 +223,6 @@ function init(aCore, aUserAckId, aServerId) {
 	if (aContentDocument.readyState.state == 'complete') {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			ensureSignedIn();
-			aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 		} else {
 			console.error('landing page done loading, but its not twitter:', aContentWindow.location);
 			unregReason = 'non-twitter-load';
@@ -282,10 +260,9 @@ function listenForTwitterDOMContentLoad(aEvent) {
 				console.error('ok twitter loaded');
 				removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
 				addEventListener('load', listenForTwitterLoad, true); // need to wait for load, as need to wait for jquery $ to come in // need to use true otherwise load doesnt trigger
-				aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 			}
 		} else {
-			console.error('page done loading buts it not twitter, so keep listener attached, im waiting for twitter:', aContentWindow.location);
+			console.error('page done loading buts it not twitter, so unregister, location is now:', aContentWindow.location);
 			unregReason = 'non-twitter-load';
 			unregister();
 			//sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_nonTwitterPage_onLoadComplete', userAckId:userAckId, subServer:'twitter', serverId:serverId});
@@ -313,10 +290,11 @@ function ensureSignedIn() {
 	if (!btnNewTweet) {
 		// assume not signed in
 		// add listener listening to sign in
-		addEventListener('DOMContentLoaded', listenForTwitterSignIn, false);
+		addEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
 		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_twitterNotSignedIn', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 		return false;
 	} else {
+		aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 		doRegisterJqueryScript();
 		return true;
 	}
