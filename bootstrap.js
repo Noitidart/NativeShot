@@ -2,6 +2,7 @@
 const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
 Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
+const { BasePromiseWorker } = Cu.import('resource://gre/modules/PromiseWorker.jsm', {});
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
 Cu.import('resource://gre/modules/ctypes.jsm');
@@ -41,7 +42,6 @@ const core = {
 };
 
 const CACHE_KEY = Math.random(); // set to version on release
-var PromiseWorker;
 var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
@@ -2649,8 +2649,6 @@ function startup(aData, aReason) {
 	core.addon.aData = aData;
 	extendCore();
 	
-	PromiseWorker = Cu.import(core.addon.path.content + 'modules/PromiseWorker.jsm').BasePromiseWorker;
-	
 	var promise_getMainWorker = SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js');
 	promise_getMainWorker.then(
 		function(aVal) {
@@ -2725,7 +2723,9 @@ function startup(aData, aReason) {
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
 	
-	Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
+	try {
+		Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
+	}
 	
 	CustomizableUI.destroyWidget('cui_nativeshot');
 	
@@ -2754,8 +2754,6 @@ function shutdown(aData, aReason) {
 	}
 	
 	aboutFactory_nativeshot.unregister();
-	
-	Cu.unload(core.addon.path.content + 'modules/PromiseWorker.jsm');
 	
 	// destroy worker
 	MainWorker._worker.terminate();
@@ -3109,7 +3107,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 	var deferredMain_SIPWorker = new Deferred();
 
 	if (!(workerScopeName in bootstrap)) {
-		bootstrap[workerScopeName] = new PromiseWorker(aPath);
+		bootstrap[workerScopeName] = new BasePromiseWorker(aPath);
 		
 		if ('addon' in aCore && 'aData' in aCore.addon) {
 			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it

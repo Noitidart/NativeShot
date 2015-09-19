@@ -26,12 +26,12 @@ importScripts(core.addon.path.content + 'modules/cutils.jsm');
 importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
 
 // Setup PromiseWorker
-var PromiseWorker = require(core.addon.path.content + 'modules/workers/PromiseWorker.js');
+var PromiseWorker = require('resource://gre/modules/workers/PromiseWorker.js');
 
-var worker = new PromiseWorker.AbstractWorker();
+var worker = new PromiseWorker.AbstractWorker()
 worker.dispatch = function(method, args = []) {
 	return self[method](...args);
-},
+};
 worker.postMessage = function(...args) {
 	self.postMessage(...args);
 };
