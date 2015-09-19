@@ -413,7 +413,7 @@ function getAllWin(aOptions) {
 				}
 				var deskW = analyzedArr[analyzedArr.length - 1].width;
 				var deskH = analyzedArr[analyzedArr.length - 1].height;
-				for (var i = 0; i < analyzedArr.length - 2; i++) { // - 2 as we dont want the very last item
+				for (var i = 0; i < analyzedArr.length - 1; i++) { // - 1 as we dont want the very last item
 					if (analyzedArr[i].width == deskW && analyzedArr[i].height == deskH) {
 						analyzedArr.splice(i, 1);
 						i--;
@@ -527,7 +527,41 @@ function getAllWin(aOptions) {
 						
 						rezWinArr.push(thisWin);
 					}
-
+					
+					// post analysis
+					// 1) remove all windows who have height and width == to Desktop which is that last entry
+					if (rezWinArr[rezWinArr.length - 1].title != 'Desktop') {
+						console.error('title of last item is not Desktop so this may be a bad assumption that last item is Desktop, but just throwing a warning for right now');
+					}
+					var deskW = rezWinArr[rezWinArr.length - 1].width;
+					var deskH = rezWinArr[rezWinArr.length - 1].height;
+					for (var i = 0; i < rezWinArr.length - 1; i++) { // - 1 as we dont want the very last item
+						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
+							continue;
+						}
+						if (rezWinArr[i].width == deskW && rezWinArr[i].height == deskH) {
+							rezWinArr.splice(i, 1);
+							i--;
+						}
+					}
+					
+					// 2) splice out the editor contextmenu, which will be the first blank titled thing after the first nativeshot_canvas
+					var nativeshotCanvasPID = 0;
+					for (var i = 0; i < rezWinArr.length - 1; i++) { // - 1 as we dont want the very last item
+						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
+							nativeshotCanvasPID = rezWinArr[i].pid;
+						}
+						if (!nativeshotCanvasPID) {
+							continue;
+						} else {
+							if (rezWinArr[i].pid == nativeshotCanvasPID && rezWinArr[i].title == '') {
+								// first non titled thing with same pid after the first nativeshot_canvas should be the right click contextmenu of editor
+								rezWinArr.splice(i, 1);
+								break;
+							}
+						}
+					}
+					// end - post analysis
 				} finally {
 					ostypes.API('CFRelease')(cfarr_win);
 					

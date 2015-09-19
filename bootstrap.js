@@ -455,6 +455,8 @@ function initMacTypes() {
 	}
 	gMacTypes = {};
 	gMacTypes.NIL = ctypes.voidptr_t(ctypes.UInt64('0x0'));
+	gMacTypes.BOOL = ctypes.signed_char;
+	gMacTypes.YES = gMacTypes.BOOL(1);
 	gMacTypes.objc = ctypes.open(ctypes.libraryName("objc"));
 	gMacTypes.id = ctypes.voidptr_t;
 	gMacTypes.SEL = ctypes.voidptr_t;
@@ -1150,11 +1152,34 @@ var gEditor = {
 			do_saveCanToDisk();
 			
 		} else {
+			if (core.os.name == 'darwin') {
+					// can use gMacTypes.setLevel and gMacTypes.NSMainMenuWindowLevel because this only ever triggers after link98476884 runs for sure for sure
+					var aHwndPtrStr = e.view.QueryInterface(Ci.nsIInterfaceRequestor)
+														.getInterface(Ci.nsIWebNavigation)
+														.QueryInterface(Ci.nsIDocShellTreeItem)
+														.treeOwner
+														.QueryInterface(Ci.nsIInterfaceRequestor)
+														.getInterface(Ci.nsIBaseWindow)
+														.nativeHandle;
+					var NSWindowString = aHwndPtrStr;
+					console.info('NSWindowString:', NSWindowString);
+												
+					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+
+					var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.setLevel, gMacTypes.NSInteger(0)); // i guess 0 is NSNormalWindowLevel
+					console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());	
+			}
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 			fp.init(e.view, myServices.sb.GetStringFromName('filepicker-title-save-screenshot'), Ci.nsIFilePicker.modeSave);
 			fp.appendFilter('PNG Image', '*.png');
 			
 			var rv = fp.show();
+			
+			if (core.os.name == 'darwin') {
+				var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.setLevel, gMacTypes.NSInteger(gMacTypes.NSMainMenuWindowLevel + 1)); // link847455111
+				console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());	
+			}
+			
 			if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
 				OSPath_save = fp.file.path.trim();
 				
@@ -1727,6 +1752,7 @@ function gEMouseDown(e) {
 			if (gEditor.winArr) {
 				// go through all windows in z order and draw sel around the window rect that contains cEMDX, cEMDY
 				console.log('ok winArr is populated, lets go throgh and find it');
+				Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(gEditor.winArr)) // :debug:
 				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
 				var first_nativeshot_canvas_found = false;
 				for (var i=0; i<gEditor.winArr.length; i++) {
@@ -1897,7 +1923,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
 	console.info('1st:', aHwndPtrStr);
-	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+	if (core.os.name != 'darwin') {
+		aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+	}
 	
 	aEditorDOMWindow.focus();
 	if (core.os.name != 'darwin') {
@@ -1926,6 +1954,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					if (!gMacTypes) {
 						initMacTypes();
 					}
+					// link98476884
+					gMacTypes.NSMainMenuWindowLevel = aVal;
+					
 					var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
 														.getInterface(Ci.nsIWebNavigation)
 														.QueryInterface(Ci.nsIDocShellTreeItem)
@@ -1943,39 +1974,36 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 					// var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
 					// console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
 					
-					aEditorDOMWindow.setTimeout(function() {
 						var setLevel = gMacTypes.sel_registerName('setLevel:');
-						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, gMacTypes.NSInteger(aVal + 1));
+						gMacTypes.setLevel = setLevel;
+						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, gMacTypes.NSInteger(aVal + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
 						console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());
 						
-						// var newBottomLeft = gMacTypes.NSPoint(100, -100);
-						// var setFrameOrigin = gMacTypes.sel_registerName('setFrameOrigin:');
-						// var rez_setFrameOrigin = gMacTypes.objc_msgSend(NSWindowPtr, setFrameOrigin, newBottomLeft);
-						// aEditorDOMWindow.focus();
-						// aEditorDOMWindow.moveBy(100, 100);
-						
-						
-						// var rez_frame = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.sel_registerName('frame'));
-						// console.info('rez_frame:', rez_frame);
-
 						var newSize = gMacTypes.NSSize(colMon[iMon].w, colMon[iMon].h);
 						var rez_setContentSize = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.sel_registerName('setContentSize:'), newSize);
 						console.info('rez_setContentSize:', rez_setContentSize);
 						
-						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
 						
-						// aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // doesnt work to make take full
-						// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-						// aEditorDOMWindow.resizeBy(-100, -100);
 						console.log('ok resized to and moved to');
-					}, 2000);
-					
+					/*
 					aEditorDOMWindow.setTimeout(function() {
-						aEditorDOMWindow.focus(); // doesnt work to make take full
-						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // doesnt work to make take full
-						aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-						console.log('ok resized by');
-					}, 100);
+							var NSSavePanel = gMacTypes.objc_getClass('NSSavePanel');
+							var savePanel = gMacTypes.sel_registerName('savePanel');
+							var aSavePanel = gMacTypes.objc_msgSend(NSSavePanel, savePanel);
+							
+							// var setFloatingPanel = gMacTypes.sel_registerName('setFloatingPanel:');
+							// var rez_setFloatingPanel = gMacTypes.objc_msgSend(aSavePanel, setFloatingPanel, gMacTypes.YES);
+							// console.log('rez_setFloatingPanel:', rez_setFloatingPanel, rez_setFloatingPanel.toString());
+							
+							var rezFloatingPanel = gMacTypes.objc_msgSend(aSavePanel, setLevel, gMacTypes.NSInteger(3));
+							console.log('rezFloatingPanel:', rezFloatingPanel, rezFloatingPanel.toString());
+							
+							var runModal = gMacTypes.sel_registerName('runModal')
+							var rez_savepanel = gMacTypes.objc_msgSend(aSavePanel, runModal);
+							console.info('rez_savepanel:', rez_savepanel, rez_savepanel.toString());
+					}, 2000);
+					*/
 					
 				}
 				// end - do stuff here - promise_setWinAlwaysTop
@@ -2170,7 +2198,7 @@ function shootAllMons(aDOMWindow) {
 		gEditor.sessionId = new Date().getTime();
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=1,screenX=1,screenY=1', null);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=1,screenY=1', null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working)
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,
