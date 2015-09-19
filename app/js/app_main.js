@@ -34,6 +34,7 @@ const core = {
 const JETPACK_DIR_BASENAME = 'jetpack';
 const OSPath_historyLog = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'history-log.unbracketed.json');
 const TWITTER_URL = 'https://twitter.com/';  // var aTweetUrl = TWITTER_URL + permlink.substr(1); // substr(1) avoids the first slash that permlinks start with
+const TWITTER_IMG_SUFFIX = ':large';
 const IMGUR_DEL_URL_PREFIX = 'https://api.imgur.com/3/image/';
 const IMGUR_IMG_URL_PREFIX = 'http://i.imgur.com/'; // var aImgurImgUrl = IMGUR_IMG_URL_PREFIX + imgurImgId + IMGUR_IMG_URL_SUFFIX
 const IMGUR_IMG_URL_SUFFIX = '.png';
@@ -133,7 +134,7 @@ function getImageURL(aArrEl, nonFileUri) {
 			break;
 		case aTypeStrToTypeInt['twitter']:
 			
-				return aArrEl.l;
+				return aArrEl.l + TWITTER_IMG_SUFFIX;
 			
 			break;
 		case aTypeStrToTypeInt['imgur-anonymous']:

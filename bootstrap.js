@@ -28,7 +28,8 @@ const core = {
 			resources: 'chrome://nativeshot/content/resources/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/',
-		}
+		},
+		cache_key: Math.random() // set to version on release
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -41,7 +42,6 @@ const core = {
 	}
 };
 
-const CACHE_KEY = Math.random(); // set to version on release
 var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
@@ -53,6 +53,7 @@ const OSPath_historyLog = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR
 const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettify on twitter javascript files
 const TWITTER_MAX_UPLOAD_FILE_SIZE = 3145728; // i got this from doing debugger prettify on twitter javascript files
 const TWITTER_URL = 'https://twitter.com/';
+const TWITTER_IMG_SUFFIX = ':large';
 
 const myPrefBranch = 'extensions.' + core.addon.id + '.';
 
@@ -60,7 +61,7 @@ const myPrefBranch = 'extensions.' + core.addon.id + '.';
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + CACHE_KEY); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
@@ -587,6 +588,7 @@ const fsComServer = {
 										console.info('other_info:', other_info);
 										
 										for (var imgId in refUAPEntry.imgDatas) {
+											delete refUAPEntry.imgDatas[imgId].dataURL;
 											refUAPEntry.imgDatas[imgId].uploadedURL = aMsg.json.clips[imgId];
 										}
 										
@@ -629,16 +631,16 @@ const fsComServer = {
 										for (var imgId in refUAPEntry.imgDatas) {
 											arrOfImgUrls.push(aMsg.json.clips[imgId]);
 											// aBtnInfo.popup.push(['xul:menuitem', {label:'Image ' + arrOfImgUrls.length + ' URL', oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId])}]); // :l10n:
-											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-single-image-link', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId])}]);
+											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-single-image-link', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId] + TWITTER_IMG_SUFFIX)}]);
 										}
 										
 										if (arrOfImgUrls.length > 1) {
 											// aBtnInfo.popup.push(['xul:menuitem', {label:'All ' + arrOfImgUrls.length + ' Image URLs', oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'))}]); // :l10n:
-											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-all-image-links', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'))}]);
+											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-all-image-links', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX)}]);
 										}
 										
 										// copy all img urls to clipboard:
-										copyTextToClip(arrOfImgUrls.join('\n'));
+										copyTextToClip(arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX);
 										
 										// get those uploaded urls
 										// add in update to log file
@@ -1339,7 +1341,7 @@ var gEditor = {
 				inBackground: false,
 				relatedToCurrent: false
 			});
-			newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + CACHE_KEY, false);
+			newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + core.addon.cache_key, false);
 			refUAPEntry = refUAP[refUAP.push({
 				gEditorSessionId: gEditor.sessionId,
 				userAckId: Math.random(),
@@ -2211,7 +2213,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 					inBackground: false,
 					relatedToCurrent: false
 				});
-				newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + CACHE_KEY, false);
+				newtab.linkedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fs_twitter.js?' + core.addon.cache_key, false);
 				aUAPEntry.tab = Cu.getWeakReference(newtab);
 				aUAPEntry.tweeted = false; // synonomous with fsActive = false
 				fsComServer.twitterInitFS(aUAPEntry.userAckId);
@@ -2725,7 +2727,7 @@ function shutdown(aData, aReason) {
 	
 	try {
 		Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
-	}
+	} catch (ignore) {}
 	
 	CustomizableUI.destroyWidget('cui_nativeshot');
 	
