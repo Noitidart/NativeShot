@@ -868,15 +868,15 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				var rez_perform = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel('orderFront:'), ostypes.CONST.NIL, ostypes.CONST.YES);
 				*/
 				
-				/*
+				
 				// METHOD: do on main thread with this key
-				var rez_getKey = ostypes.API('CGWindowLevelForKey')(ostypes.CONST.kCGDockWindowLevelKey);
+				var rez_getKey = ostypes.API('CGWindowLevelForKey')(ostypes.CONST.kCGMainMenuWindowLevelKey); // to avoid that constraint issue
 				console.info('got key:', cutils.jscGetDeepest(rez_getKey));
-				return parseInt(cutils.jscGetDeepest(rez_getKey));
-				*/
 				
 				// METHOD: dont set on top just focus app, this has that ugly scroll side affect if user is focused on another desktop on that monitor due to full screen app or something
 				focusSelfApp();
+				
+				return parseInt(cutils.jscGetDeepest(rez_getKey));
 				
 			break;
 		default:
@@ -1437,9 +1437,9 @@ function shootAllMons() {
 						ostypes.TYPE.NSInteger(4),												// samplesPerPixel
 						ostypes.CONST.YES,														// hasAlpha
 						ostypes.CONST.NO,														// isPlanar
-						myNSStrings.get('NSCalibratedRGBColorSpace'),							// colorSpaceName
+						myNSStrings.get('NSDeviceRGBColorSpace'),							// colorSpaceName
 						ostypes.TYPE.NSBitmapFormat(0),											// bitmapFormat
-						ostypes.TYPE.NSInteger(4 * rez_width),												// bytesPerRow
+						ostypes.TYPE.NSInteger(4 * rez_width),									// bytesPerRow
 						ostypes.TYPE.NSInteger(32)												// bitsPerPixel
 					);
 					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));

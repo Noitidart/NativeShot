@@ -188,8 +188,8 @@ var macTypes = function() {
 	
 	// SIMPLE OBJC TYPES
 	this.BOOL = ctypes.signed_char;
-	this.NSInteger = ctypes.long;
-	this.NSUInteger = ctypes.unsigned_long;
+	this.NSInteger = is64bit ? ctypes.long: ctypes.int;
+	this.NSUInteger = is64bit ? ctypes.unsigned_long : ctypes.unsigned_int;
 	
 	// ADV OBJC TYPES
 	this.NSBitmapFormat = this.NSUInteger;

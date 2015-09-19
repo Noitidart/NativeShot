@@ -446,11 +446,33 @@ function notifCB_saveToFile(aOSPath_savedFile) {
 
 var gMacTypes;
 function initMacTypes() {
+	if (ctypes.voidptr_t.size == 4 /* 32-bit */) {
+		var is64bit = false;
+	} else if (ctypes.voidptr_t.size == 8 /* 64-bit */) {
+		var is64bit = true;
+	} else {
+		throw new Error('huh??? not 32 or 64 bit?!?!');
+	}
 	gMacTypes = {};
 	gMacTypes.NIL = ctypes.voidptr_t(ctypes.UInt64('0x0'));
 	gMacTypes.objc = ctypes.open(ctypes.libraryName("objc"));
 	gMacTypes.id = ctypes.voidptr_t;
 	gMacTypes.SEL = ctypes.voidptr_t;
+	gMacTypes.CGFloat = is64bit ? ctypes.double : ctypes.float;
+	gMacTypes.NSInteger = is64bit ? ctypes.long: ctypes.int;
+	
+	gMacTypes.NSPoint = ctypes.StructType('_NSPoint', [
+		{ 'x': gMacTypes.CGFloat },
+		{ 'y': gMacTypes.CGFloat }
+	]);
+	gMacTypes.NSSize = ctypes.StructType('_NSSize', [
+		{ 'width': gMacTypes.CGFloat },
+		{ 'height': gMacTypes.CGFloat }
+	]);
+	gMacTypes.NSRect = ctypes.StructType('_NSRect', [
+		{ 'origin': gMacTypes.NSPoint },
+		{ 'size': gMacTypes.NSSize }
+	]);
 	
 gMacTypes.objc_getClass = gMacTypes.objc.declare("objc_getClass",
 ctypes.default_abi,
@@ -465,6 +487,13 @@ ctypes.char.ptr);
 gMacTypes.objc_msgSend = gMacTypes.objc.declare("objc_msgSend",
 ctypes.default_abi,
 gMacTypes.id,
+gMacTypes.id,
+gMacTypes.SEL,
+"...");
+
+gMacTypes.objc_msgSend_NSRECT = gMacTypes.objc.declare("objc_msgSend",
+ctypes.default_abi,
+gMacTypes.NSRect,
 gMacTypes.id,
 gMacTypes.SEL,
 "...");
@@ -1871,7 +1900,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	
 	aEditorDOMWindow.focus();
-	aEditorDOMWindow.fullScreen = true;
+	if (core.os.name != 'darwin') {
+		aEditorDOMWindow.fullScreen = true;
+	}
 	
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
@@ -1892,7 +1923,6 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
 				// start - do stuff here - promise_setWinAlwaysTop
 				if (core.os.name == 'darwin') {
-					/*
 					if (!gMacTypes) {
 						initMacTypes();
 					}
@@ -1909,23 +1939,43 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 												
 					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
 					
-					var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
-					var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
-					console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+					// var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
+					// var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
+					// console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
 					
 					aEditorDOMWindow.setTimeout(function() {
 						var setLevel = gMacTypes.sel_registerName('setLevel:');
-						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, ctypes.long(aVal));
+						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, gMacTypes.NSInteger(aVal + 1));
 						console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());
+						
+						// var newBottomLeft = gMacTypes.NSPoint(100, -100);
+						// var setFrameOrigin = gMacTypes.sel_registerName('setFrameOrigin:');
+						// var rez_setFrameOrigin = gMacTypes.objc_msgSend(NSWindowPtr, setFrameOrigin, newBottomLeft);
+						// aEditorDOMWindow.focus();
+						// aEditorDOMWindow.moveBy(100, 100);
+						
+						
+						// var rez_frame = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.sel_registerName('frame'));
+						// console.info('rez_frame:', rez_frame);
+
+						var newSize = gMacTypes.NSSize(colMon[iMon].w, colMon[iMon].h);
+						var rez_setContentSize = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.sel_registerName('setContentSize:'), newSize);
+						console.info('rez_setContentSize:', rez_setContentSize);
+						
+						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+						
+						// aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // doesnt work to make take full
+						// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
+						// aEditorDOMWindow.resizeBy(-100, -100);
+						console.log('ok resized to and moved to');
 					}, 2000);
-					*/
 					
-					// aEditorDOMWindow.setTimeout(function() {
-						//aEditorDOMWindow.focus(); // doesnt work to make take full
-						//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
+					aEditorDOMWindow.setTimeout(function() {
+						aEditorDOMWindow.focus(); // doesnt work to make take full
+						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // doesnt work to make take full
 						aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
 						console.log('ok resized by');
-					// }, 10);
+					}, 100);
 					
 				}
 				// end - do stuff here - promise_setWinAlwaysTop
