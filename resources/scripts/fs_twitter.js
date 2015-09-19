@@ -9,7 +9,8 @@ var core = {
 		path: {
 			content_accessible: 'chrome://nativeshot-accessible/content/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/'
-		}
+		},
+		cache_key: Math.random() // set to version on release
 	}
 };
 const gContentFrameMessageManager = this;
@@ -24,6 +25,7 @@ var gTweeted = false; // set to true on succesful tweet
 
 // Lazy Imports
 const myServices = {};
+XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 
 const serverMessageListener = {
 	// listens to messages sent from clients (child framescripts) to me/server
@@ -282,6 +284,7 @@ function listenForTwitterLoad(aEvent) {
 }
 
 // step 1
+var wasFoundNotSignedIn = false;
 function ensureSignedIn() {
 	// test if signed in
 	var aContentWindow = content;
@@ -290,10 +293,15 @@ function ensureSignedIn() {
 	if (!btnNewTweet) {
 		// assume not signed in
 		// add listener listening to sign in
+		wasFoundNotSignedIn = true;
 		addEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
 		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_twitterNotSignedIn', userAckId:userAckId, subServer:'twitter', serverId:serverId});
 		return false;
 	} else {
+		if (wasFoundNotSignedIn) {
+			wasFoundNotSignedIn = false;
+			sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_signedInShowAwaitingMsg', userAckId:userAckId, subServer:'twitter', serverId:serverId}); // cuz if tab doesnt have focus, then it will not get updated to saying waiting for attach, it will stick at "not signed in"
+		}
 		aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
 		doRegisterJqueryScript();
 		return true;
@@ -429,7 +437,7 @@ function do_waitForTabFocus() {
 		
 		var nativeshotText = aContentDocument.createElement('span');
 		nativeshotText.setAttribute('style', 'margin-top:-60px;');
-		nativeshotText.textContent = 'NativeShot will attach images to this tweet when you focus this tab'
+		nativeshotText.textContent = myServices.sb.GetStringFromName('framescript_twitter-will-attach-on-focus')
 		
 		nativeshotNote.appendChild(nativeshotText);
 		
