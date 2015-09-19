@@ -628,7 +628,7 @@ const fsComServer = {
 										// add in update to log file
 										for (var i=0; i<arrOfImgUrls.length; i++) {
 											appendToHistoryLog('twitter', {
-												d: new Date().getTime(),
+												d: new Date().getTime() + i,
 												u: other_info.user_id,
 												// s: other_info.screen_name,
 												p: other_info.permlink,
@@ -1371,7 +1371,8 @@ var gEditor = {
 					break;
 				}
 			}
-			btnEntryInCrossWin.label = 'Images Pending Tweet (' + (refUAPEntry.imgDatasCount + 1) + ')-ID:' + refUAPEntry.userAckId;  // :l10n:
+			// btnEntryInCrossWin.label = 'Images Pending Tweet (' + (refUAPEntry.imgDatasCount + 1) + ')-ID:' + refUAPEntry.userAckId;  // :l10n:
+			btnEntryInCrossWin.label = btnEntryInCrossWin.label.replace(/\(\d+\)$/m, '(' + (refUAPEntry.imgDatasCount + 1) + ')-ID:' + refUAPEntry.userAckId);
 		}
 		
 		// twitter allows maximum 4 attachment, so if 
@@ -2429,6 +2430,7 @@ var NBs = { // short for "notification bars"
 				
 				btns[i].setAttribute('label', label);
 				btns[i].setAttribute('data-btn-id', btn_id);
+				cCrossWin.afterOfficialInit_completedCustInit = true; // cust init is me takng the btn_id out of the label
 				
 				var btn_id_found_in_crossWinBtns = false;
 				for (var j=0; j<cCrossWin.btns.length; j++) {
@@ -2807,6 +2809,10 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 		throw new Error('couldnt find btn info for this tab, this should never happen');
 	}
 	
+	if (!NBs.crossWin[crossWinId].afterOfficialInit_completedCustInit) {
+		// item hasnt been inserted to dom yet, so keep the -ID on it
+		newLabel += '-ID:' + aUAPEntry.userAckId;
+	}
 	aBtnInfo.label = newLabel;
 	aBtnInfo.class = newClass;
 	aUAPEntry.actionOnBtn = newAction;
