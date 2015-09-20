@@ -61,6 +61,7 @@ const myPrefBranch = 'extensions.' + core.addon.id + '.';
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
+XPCOMUtils.defineLazyGetter(myServices, 'mm', function () { return Cc['@mozilla.org/globalmessagemanager;1'].getService(Ci.nsIMessageBroadcaster).QueryInterface(Ci.nsIFrameScriptLoader); });
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 
 function extendCore() {
@@ -729,7 +730,7 @@ const fsComServer = {
 							}
 							if (!untweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
-								Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+								myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
 								console.log('removed message listener for twitter as no other twitter tabs im caring about (meaning that im watching for succesful image attach then tweet) are left open');
 							}
 							
@@ -1388,7 +1389,7 @@ var gEditor = {
 		
 		if (!refUAPEntry) {
 			if (!fsComServer.twitterListenerRegistered) {
-				Services.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+				myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
 				fsComServer.twitterListenerRegistered = true;
 			}
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
@@ -2198,7 +2199,7 @@ function shootAllMons(aDOMWindow) {
 		gEditor.sessionId = new Date().getTime();
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=1,screenY=1', null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working)
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,
@@ -2284,7 +2285,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 				console.info('aUAPEntry:', aUAPEntry);
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				if (!fsComServer.twitterListenerRegistered) {
-					Services.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+					myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
 					fsComServer.twitterListenerRegistered = true;
 				}
 				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
@@ -2804,7 +2805,7 @@ function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
 	
 	try {
-		Services.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
+		myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
 	} catch (ignore) {}
 	
 	CustomizableUI.destroyWidget('cui_nativeshot');
@@ -3017,7 +3018,7 @@ function appendToHistoryLog(aTypeStr, aData) {
 				console.log('Fullfilled - promise_closeHistory - ', aVal);
 				// start - do stuff here - promise_closeHistory
 				// notify any open dashboards that they should reload gui
-				Services.mm.broadcastAsyncMessage(core.addon.id, 'serverCommand_refreshDashboardGuiFromFile');
+				myServices.mm.broadcastAsyncMessage(core.addon.id, 'serverCommand_refreshDashboardGuiFromFile');
 				console.log('Fullfilled - appendToHistoryLog - ', aVal);
 				// end - do stuff here - promise_closeHistory
 			},
