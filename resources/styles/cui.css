@@ -15,6 +15,9 @@
 		list-style-image: url('chrome://nativeshot/content/resources/images/gray32.png');
 	}
 	/*start-non cui stuff*/
+	notification button[class*=nativeshot] .button-icon {
+		display: -moz-box;
+	}
 	notification button.nativeshot-twitter-bad .button-icon {
 		-moz-margin-end: 5px;
 		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_bad16.png');

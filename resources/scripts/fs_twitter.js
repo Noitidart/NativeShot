@@ -261,7 +261,7 @@ function listenForTwitterDOMContentLoad(aEvent) {
 				// twitterReady = true;
 				console.error('ok twitter loaded');
 				removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
-				addEventListener('load', listenForTwitterLoad, true); // need to wait for load, as need to wait for jquery $ to come in // need to use true otherwise load doesnt trigger
+				ensureSignedIn();
 			}
 		} else {
 			console.error('page done loading buts it not twitter, so unregister, location is now:', aContentWindow.location);
@@ -279,7 +279,7 @@ function listenForTwitterLoad(aEvent) {
 		console.warn('frame element loaded, so dont respond yet');
 	} else {
 		removeEventListener('load', listenForTwitterLoad, true);
-		ensureSignedIn();
+		doRegisterJqueryScript();
 	}
 }
 
@@ -291,7 +291,7 @@ function ensureSignedIn() {
 	var aContentDocument = aContentWindow.document;
 	var btnNewTweet = aContentDocument.getElementById('global-new-tweet-button');
 	if (!btnNewTweet) {
-		// assume not signed in
+		// assume missing button means not signed in
 		// add listener listening to sign in
 		wasFoundNotSignedIn = true;
 		addEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
@@ -303,7 +303,11 @@ function ensureSignedIn() {
 			sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_signedInShowAwaitingMsg', userAckId:userAckId, subServer:'twitter', serverId:serverId}); // cuz if tab doesnt have focus, then it will not get updated to saying waiting for attach, it will stick at "not signed in"
 		}
 		aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
-		doRegisterJqueryScript();
+		if (aContentDocument.readyState.state == 'complete') {
+			doRegisterJqueryScript();
+		} else {
+			addEventListener('load', listenForTwitterLoad, true); // need to wait for load, as need to wait for jquery $ to come in // need to use true otherwise load doesnt trigger
+		}
 		return true;
 	}
 }
