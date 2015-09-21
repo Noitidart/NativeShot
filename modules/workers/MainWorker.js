@@ -1633,7 +1633,7 @@ function shootAllMons() {
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				console.time('portion out image data');
 				
-				var portionOutAllToMonFromBgra0ToRgba255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
+				var portionOutAllToMonAnd255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
 					// returns aMonUint
 					var monShotBuf = new ArrayBuffer(cutoutMonW * cutoutMonH * 4);
 					var monShotUint8 = new Uint8Array(monShotBuf);
@@ -1645,10 +1645,9 @@ function shootAllMons() {
 						var pixY = (rez_width * y << 2); // << 2 is same as * 4
 						for (var x=cutoutMonX; x<allShotEndX; x++) {
 							var pixXY = pixY + (x << 2);
-							var B = allShotUint8[pixXY];
-							monShotUint8[si] = allShotUint8[pixXY+2];
+							monShotUint8[si] = allShotUint8[pixXY];
 							monShotUint8[si+1] = allShotUint8[pixXY+1];
-							monShotUint8[si+2] = B;
+							monShotUint8[si+2] = allShotUint8[pixXY+2];
 							monShotUint8[si+3] = 255;
 							si += 4;
 						}
@@ -1661,7 +1660,7 @@ function shootAllMons() {
 					var monUseW = collMonInfos[i].w;
 					var monUseH = collMonInfos[i].h;
 
-					collMonInfos[i].screenshot = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
+					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
 					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
 				console.timeEnd('portion out image data');
