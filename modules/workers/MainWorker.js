@@ -1603,12 +1603,14 @@ function shootAllMons() {
 					// console.info('rgba_arr:', rgba_arr.toString());
 					
 					console.time('init imagedata');
-					var imagedata = new ImageData(rez_width, rez_height);
+					var allShotBuf = new ArrayBuffer(rect.size.width * rec.size.height * 4);
 					console.timeEnd('init imagedata');
 
 					console.time('memcpy');
-					ostypes.API('memcpy')(imagedata.data.buffer, rgba_buf, bitmapByteCount);
+					ostypes.API('memcpy')(allShotBuf, rgba_buf, bitmapByteCount);
 					console.timeEnd('memcpy');
+					
+					var allShotUint8 = new Uint8Array(allShotBuf);
 					// end - try to get byte array
 				} finally {
 					console.error('starting finally block');
