@@ -1627,29 +1627,37 @@ function shootAllMons() {
 				
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				console.time('portion out image data');
-				var iref = imagedata.data;
-				var fullWidth = rez_width;
-				for (var i=0; i<collMonInfos.length; i++) {
-					var screenUseW = collMonInfos[i].w;
-					var screenUseH = collMonInfos[i].h;
+				
+				var portionOutAllToMonFromBgra0ToRgba255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
+					// returns aMonUint
+					var monShotBuf = new ArrayBuffer(cutoutMonW * cutoutMonH * 4);
+					var monShotUint8 = new Uint8Array(monShotBuf);
 					
-					var screnImagedata = new ImageData(screenUseW, screenUseH);
-					var siref = screnImagedata.data;
-					
+					var allShotEndY = cutoutMonY + cutoutMonH;
+					var allShotEndX = cutoutMonX + cutoutMonW;
 					var si = 0;
-					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
-						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
-							var pix1 = (fullWidth*y*4) + (x * 4);
-							//var B = iref[pix1];
-							siref[si] = iref[pix1];
-							siref[si+1] = iref[pix1+1];
-							siref[si+2] = iref[pix1+2];
-							siref[si+3] = 255;
+					for (var y=cutoutMonY; y<allShotEndY; y++) {
+						var pixY = (fullWidth * y << 2); // << 2 is same as * 4
+						for (var x=cutoutMonX; x<allShotEndX; x++) {
+							var pixXY = pixY + (x << 2);
+							var B = allShotUint8[pixXY];
+							monShotUint8[si] = allShotUint8[pixXY+2];
+							monShotUint8[si+1] = allShotUint8[pixXY+1];
+							monShotUint8[si+2] = B;
+							monShotUint8[si+3] = 255;
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = screnImagedata.data.buffer;
-					aScreenshotBuffersToTransfer.push(screnImagedata.data.buffer);
+					
+					return monShotBuf;
+				};
+				
+				for (var i=0; i<collMonInfos.length; i++) {
+					var monUseW = collMonInfos[i].w;
+					var monUseH = collMonInfos[i].h;
+
+					collMonInfos[i].screenshot = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
+					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
