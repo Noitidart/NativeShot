@@ -1539,8 +1539,8 @@ function shootAllMons() {
 					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
 					console.log('did CGContextClearRect');
 					
-					var rectOriginX = cutils.jscGetDeepest(rect.origin.x);
-					var rectOriginY = cutils.jscGetDeepest(rect.origin.y);
+					var rectOriginX = parseInt(cutils.jscGetDeepest(rect.origin.x));
+					var rectOriginY = parseInt(cutils.jscGetDeepest(rect.origin.y));
 					
 					console.info('minScreenX:', minScreenX);
 					console.info('minScreenY:', minScreenY);
@@ -1617,8 +1617,8 @@ function shootAllMons() {
 					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
 					console.info('rgba_buf:', rgba_buf.toString());
 					
-					rez_width = cutils.jscGetDeepest(rez_width);
-					rez_height = cutils.jscGetDeepest(rez_height);
+					rez_width = parseInt(cutils.jscGetDeepest(rez_width));
+					rez_height = parseInt(cutils.jscGetDeepest(rez_height));
 					
 					var bitmapBytesPerRow = rez_width * 4;
 					var bitmapByteCount = bitmapBytesPerRow * rez_height;
