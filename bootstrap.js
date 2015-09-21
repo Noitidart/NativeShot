@@ -1705,7 +1705,7 @@ var gEditor = {
 						
 						attachEventListeners_asSelfRemoveables(iframe, postClickAllow_eventsAndCallbacks);
 						
-						DDDwebsiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
+						websiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
 						
 					} else {
 						// maybe server timed out?
@@ -1724,6 +1724,19 @@ var gEditor = {
 				callback: function(e) {
 					var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
 					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok the page after clicking allow loaded');
+					
+					// get the token
+					var receivedParamsFullStr = aContentWindow.location.hash.substr(1);
+					var receivedParamsPiecesStrArr = receivedParams.split('&');
+					
+					var receivedParamsKeyVal = {};
+					for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
+						var splitPiece = receivedParamsPiecesStrArr[i].split('=');
+						receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+					}
+					
+					console.info('receivedParamsKeyVal:', receivedParamsKeyVal);
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'received params parsed');
 				}
 			}
 		];
