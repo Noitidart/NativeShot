@@ -1409,7 +1409,7 @@ function shootAllMons() {
 					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
 						continue;
 					}
-					i_nonMirror[i] = null;
+					i_nonMirror[i] = collMonInfos.length; // the length here, will be the i index of the CGDisplayBounds in collMonInfos
 					
 					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
 					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds)/*, cutils.jscGetDeepest(rez_CGDisplayBounds)*/); // :todo: fix cutils.jscEqual because its throwing `Error: cannot convert to primitive value` for ctypes.float64_t and ctypes.double ACTUALLY its a struct, so no duhhh so no :todo:
@@ -1527,8 +1527,8 @@ function shootAllMons() {
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
-						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
-						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
+						// var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
+						// console.info('displayRect:', displayRect.toString(), uneval(displayRect));
 						
 						console.warn('pre CGDisplayCreateImage');
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
@@ -1544,10 +1544,10 @@ function shootAllMons() {
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
-							displayRect.origin.x,
-							displayRect.origin.y,
-							displayRect.size.width,
-							displayRect.size.height
+							collMonInfos[i_nonMirror[i]].x - rect.origin.x,
+							collMonInfos[i_nonMirror[i]].y - rect.origin.y,
+							collMonInfos[i_nonMirror[i]].w,
+							collMonInfos[i_nonMirror[i]].h
 						);
 						console.info('dest:', dest.toString(), uneval(dest));
 						
