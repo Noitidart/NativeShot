@@ -1541,6 +1541,10 @@ function shootAllMons() {
 					
 					var rectOriginX = cutils.jscGetDeepest(rect.origin.x);
 					var rectOriginY = cutils.jscGetDeepest(rect.origin.y);
+					
+					console.info('minScreenX:', minScreenX);
+					console.info('minScreenY:', minScreenY);
+					
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
