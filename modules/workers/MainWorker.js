@@ -1549,6 +1549,7 @@ function shootAllMons() {
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
+						console.info('rec:', rect, rect.toString());
 						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
