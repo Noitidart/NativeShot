@@ -1596,6 +1596,9 @@ function shootAllMons() {
 					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
 					console.info('rgba_buf:', rgba_buf.toString());
 					
+					rez_width = cutils.jscGetDeepest(rez_width);
+					rez_height = cutils.jscGetDeepest(rez_height);
+					
 					var bitmapBytesPerRow = rez_width * 4;
 					var bitmapByteCount = bitmapBytesPerRow * rez_height;
 					
@@ -1639,7 +1642,7 @@ function shootAllMons() {
 					var allShotEndX = cutoutMonX + cutoutMonW;
 					var si = 0;
 					for (var y=cutoutMonY; y<allShotEndY; y++) {
-						var pixY = (fullWidth * y << 2); // << 2 is same as * 4
+						var pixY = (rez_width * y << 2); // << 2 is same as * 4
 						for (var x=cutoutMonX; x<allShotEndX; x++) {
 							var pixXY = pixY + (x << 2);
 							var B = allShotUint8[pixXY];
