@@ -1550,7 +1550,6 @@ function shootAllMons() {
 							collMonInfos[i_nonMirror[i]].h
 						);
 						console.info('rect:', rect);
-						console.info('displayRect:', displayRect);
 						console.info('collMonInfos[i_nonMirror[i]]:', collMonInfos[i_nonMirror[i]]);
 						console.info('dest x:', collMonInfos[i_nonMirror[i]].x - rect.origin.x);
 						console.info('dest y:', collMonInfos[i_nonMirror[i]].y - rect.origin.y);
