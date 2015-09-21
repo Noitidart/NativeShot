@@ -1583,10 +1583,10 @@ function shootAllMons() {
 					var data = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('representationUsingType:properties:'), ostypes.CONST.NSPNGFileType, tempDict); // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/representationUsingType:properties:
 					
 					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
-					// var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeTofile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
-					// console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
+					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeToFile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
+					console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
 					// end - write to desktop
-					return;
+	
 					// start - try to get byte array
 					// [imageRep bitmapData]
 					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
