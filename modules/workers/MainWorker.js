@@ -1397,6 +1397,9 @@ function shootAllMons() {
 				console.info('count:', count);
 				var i_nonMirror = {};
 				
+				var minScreenX;
+				var minScreenY;
+				
 				var rect = ostypes.CONST.CGRectNull;
 				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
@@ -1421,6 +1424,18 @@ function shootAllMons() {
 						h: parseInt(cutils.jscGetDeepest(rez_CGDisplayBounds.size.height)),
 						screenshot: null // for darwin, i take the big canvas and protion to each mon
 					});
+					
+					if (minScreenX === undefined) {
+						minScreenX = collMonInfos[i_nonMirror[i]].x;
+						minScreenY = collMonInfos[i_nonMirror[i]].y;
+					} else {
+						if (collMonInfos[i_nonMirror[i]].x < minScreenX) {
+							minScreenX = collMonInfos[i_nonMirror[i]].x;
+						}
+						if (collMonInfos[i_nonMirror[i]].y < minScreenY) {
+							minScreenY = collMonInfos[i_nonMirror[i]].y;
+						}
+					}
 					
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
 					console.info('rect post loop ' + i + ':', rect.toString());
@@ -1524,6 +1539,8 @@ function shootAllMons() {
 					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
 					console.log('did CGContextClearRect');
 					
+					var rectOriginX = cutils.jscGetDeepest(rect.origin.x);
+					var rectOriginY = cutils.jscGetDeepest(rect.origin.y);
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
@@ -1544,15 +1561,13 @@ function shootAllMons() {
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
-							collMonInfos[i_nonMirror[i]].x,
-							collMonInfos[i_nonMirror[i]].y,
+							collMonInfos[i_nonMirror[i]].x + minScreenX,
+							collMonInfos[i_nonMirror[i]].y + minScreenY,
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
 						console.info('rect:', rect);
 						console.info('collMonInfos[i_nonMirror[i]]:', collMonInfos[i_nonMirror[i]]);
-						console.info('dest x:', collMonInfos[i_nonMirror[i]].x - rect.origin.x);
-						console.info('dest y:', collMonInfos[i_nonMirror[i]].y - rect.origin.y);
 						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
