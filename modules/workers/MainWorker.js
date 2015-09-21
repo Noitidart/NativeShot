@@ -1401,6 +1401,7 @@ function shootAllMons() {
 				var minScreenY;
 				
 				var rect = ostypes.CONST.CGRectNull;
+				var primaryDisplayRect;
 				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
 					// if display is secondary mirror of another display, skip it
@@ -1439,6 +1440,12 @@ function shootAllMons() {
 					
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
 					console.info('rect post loop ' + i + ':', rect.toString());
+					
+					if (i == 0) {
+						// i saw @kenThomases do this (in his revision 3 here http://stackoverflow.com/posts/28247749/revisions ), so i think i == 0 is never a mirror, and is always the primary monitor
+						collMonInfos[i_nonMirror[i]].primary = true;
+						primaryDisplayRect = rez_CGDisplayBounds;
+					}
 				}
 				// start - get monitor resolutions
 				
@@ -1562,13 +1569,17 @@ function shootAllMons() {
 							continue;
 						}
 						
+						var primMaxY = ostypes.API('CGRectGetMaxY')(primaryDisplayRect);
+						console.log('primMaxY:', primMaxY);
+						primMaxY = parseInt(cutils.jscGetDeepest(primMaxY));
+						
 						// CGRect dest = CGRectMake(displayRect.origin.x - rect.origin.x,
-						//               displayRect.origin.y - rect.origin.y,
+						//               CGRectGetMaxY(primaryDisplayRect) - (displayRect.origin.y - rect.origin.y),
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
 							collMonInfos[i_nonMirror[i]].x - rectOriginX,
-							collMonInfos[i_nonMirror[i]].y - rectOriginY,
+							primMaxY - (collMonInfos[i_nonMirror[i]].y - rectOriginY),
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
