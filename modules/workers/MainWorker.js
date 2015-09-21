@@ -1571,7 +1571,7 @@ function shootAllMons() {
 						
 						var primMaxY = ostypes.API('CGRectGetMaxY')(primaryDisplayRect);
 						console.log('primMaxY:', primMaxY);
-						primMaxY = parseInt(cutils.jscGetDeepest(primMaxY));
+						primMaxY = 0; //parseInt(cutils.jscGetDeepest(primMaxY));
 						
 						// CGRect dest = CGRectMake(displayRect.origin.x - rect.origin.x,
 						//               CGRectGetMaxY(primaryDisplayRect) - (displayRect.origin.y - rect.origin.y),
