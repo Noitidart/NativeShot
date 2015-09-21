@@ -1603,7 +1603,7 @@ function shootAllMons() {
 					// console.info('rgba_arr:', rgba_arr.toString());
 					
 					console.time('init imagedata');
-					var allShotBuf = new ArrayBuffer(rect.size.width * rec.size.height * 4);
+					var allShotBuf = new ArrayBuffer(bitmapByteCount);
 					console.timeEnd('init imagedata');
 
 					console.time('memcpy');
