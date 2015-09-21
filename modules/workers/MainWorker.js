@@ -1544,8 +1544,8 @@ function shootAllMons() {
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
-							displayRect.origin.x - rect.origin.x,
-							rect.origin.y - displayRect.origin.y,
+							displayRect.origin.x,
+							displayRect.origin.y,
 							displayRect.size.width,
 							displayRect.size.height
 						);
