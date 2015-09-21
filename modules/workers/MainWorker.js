@@ -1527,8 +1527,8 @@ function shootAllMons() {
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
-						// var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
-						// console.info('displayRect:', displayRect.toString(), uneval(displayRect));
+						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
+						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
 						
 						console.warn('pre CGDisplayCreateImage');
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
@@ -1549,7 +1549,11 @@ function shootAllMons() {
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
-						console.info('rec:', rect, rect.toString());
+						console.info('rect:', rect);
+						console.info('displayRect:', displayRect);
+						console.info('collMonInfos[i_nonMirror[i]]:', collMonInfos[i_nonMirror[i]]);
+						console.info('dest x:', collMonInfos[i_nonMirror[i]].x - rect.origin.x);
+						console.info('dest y:', collMonInfos[i_nonMirror[i]].y - rect.origin.y);
 						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
