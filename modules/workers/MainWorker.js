@@ -1544,6 +1544,8 @@ function shootAllMons() {
 					
 					console.info('minScreenX:', minScreenX);
 					console.info('minScreenY:', minScreenY);
+					console.info('rectOriginX:', rectOriginX);
+					console.info('rectOriginY:', rectOriginY);
 					
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
@@ -1565,8 +1567,8 @@ function shootAllMons() {
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
-							collMonInfos[i_nonMirror[i]].x - minScreenX,
-							collMonInfos[i_nonMirror[i]].y - minScreenY,
+							collMonInfos[i_nonMirror[i]].x - rectOriginX,
+							collMonInfos[i_nonMirror[i]].y - rectOriginY,
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
