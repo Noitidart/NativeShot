@@ -1249,6 +1249,7 @@ function shootAllMons() {
 		case 'gtk':
 
 				// start - get all monitor resolutions
+				/*
 				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
 				//console.info('screen:', screen.contents, screen.contents.toString());
 
@@ -1297,6 +1298,38 @@ function shootAllMons() {
 				}
 				
 				console.info('json.stringify post clean:', JSON.stringify(collMonInfos), collMonInfos);
+				*/
+				
+				// XRRScreenResources *xrrr = XRRGetScreenResources(d, w);
+				var xrrr = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
+				// console.info('xrrr:', xrrr.contents, xrrr.contents.toString());
+				
+				// int ncrtc = xrrr->ncrtc;
+				
+				var ncrtc = parseInt(cutils.jscGetDeepest(xrrr.contents.ncrtc));
+				console.log('ncrtc:', ncrtc);
+				
+				var crtcs = ctypes.cast(xrrr.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtc).ptr).contents;
+				for (var i=0; i<ncrtc; i++) {
+					var xrrci = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), xrrr, crtcs[i]);
+					// printf("%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+					
+					collMonInfos.push({
+						x: parseInt(cutils.jscGetDeepest(xrrci.contents.x)),
+						y: parseInt(cutils.jscGetDeepest(xrrci.contents.y)),
+						w: parseInt(cutils.jscGetDeepest(xrrci.contents.width)),
+						h: parseInt(cutils.jscGetDeepest(xrrci.contents.height)),
+						screenshot: null // for x11, i take the big canvas and protion to each mon
+					});
+					
+					console.info(i, 'mon info:', collMonInfos[collMonInfos.length-1]);
+					
+					ostypes.API('XRRFreeCrtcInfo')(xrrci);
+				}
+				ostypes.API('XRRFreeScreenResources')(xrrr);
+				
+				console.info('all mon infos:', collMonInfos);
+				
 				// end - get all monitor resolutions
 				
 				// start - take shot of all monitors and push to just first element of collMonInfos
@@ -1415,11 +1448,13 @@ function shootAllMons() {
 					// if display is secondary mirror of another display, skip it
 					console.info('displays[i]:', displays[i]);
 					
-					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
-					console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
+					if (i != 0) {
+						var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
+						console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
 
-					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
-						continue;
+						if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
+							continue;
+						}
 					}
 					i_nonMirror[i] = collMonInfos.length; // the length here, will be the i index of the CGDisplayBounds in collMonInfos
 					
