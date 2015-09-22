@@ -542,11 +542,14 @@ function getAllWin(aOptions) {
 					}
 					// now splice out all things that have any dimensions matching these EXCEPT the last numMon elements as they will be titled Desktop
 					for (var i=rezWinArr.length-numDesktop-1; i<rezWinArr.length-1; i++) {
-						if (rezWinArr[i].title != 'Desktop') {
+						if (rezWinArr[i].title != 'DesktopAA') {
 							console.error('last', numDesktop, 'elements should have title Desktop, and it was found that title of ' + ((rezWinArr.length-1) - i) + ' to last item is not Desktop so this may be a bad assumption that last item is Desktop, it is:', rezWinArr[i].title, 'but just throwing a warning for right now');
 						}
 					}
 					for (var i=0; i<rezWinArr.length-numDesktop-1; i++) {
+						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
+							continue;
+						}
 						if (desktopDimWxH.indexOf(rezWinArr[i].width + ' x ' + rezWinArr[i].height) > -1) {
 							console.log('found element that has width and height equal to desktop, element is:', i, rezWinArr[i], 'splicing this out');
 							rezWinArr.splice(i, 1);
