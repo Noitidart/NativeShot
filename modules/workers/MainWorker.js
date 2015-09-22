@@ -46,7 +46,7 @@ self.addEventListener('message', msg => worker.handleMessage(msg));
 ////// end of imports and definitions
 
 function init(objCore) {
-
+	//console.log('in worker init');
 	
 	// merge objCore into core
 	// core and objCore is object with main keys, the sub props
@@ -198,7 +198,7 @@ function getAllWin(aOptions) {
 					}
 					
 					/*
-
+					//console.log(['PID.value: ', PID.value, PID.value == aProfilePID].join(' '));
 					if (cutils.jscEqual(PID, tPid)) {
 						var hwndStyle = ostypes.API('GetWindowLongPtr')(hwnd, ostypes.CONST.GWL_STYLE);
 						if (cutils.jscEqual(hwndStyle, 0)) {
@@ -225,7 +225,7 @@ function getAllWin(aOptions) {
 				var wnd = ostypes.TYPE.LPARAM();
 				var rez_EnuMWindows = ostypes.API('EnumWindows')(SearchPD_ptr, wnd);
 			
-
+				console.info('total windows enumed:', f);
 			break;
 		case 'gtk':
 			
@@ -253,7 +253,7 @@ function getAllWin(aOptions) {
 				var processWin = function(w) {
 					if (aOptions.filterVisible) {
 						var rez_WA = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), w, wAttr.address());
-
+						console.info('wAttr.map_state:', wAttr.map_state.toString());
 						if (!cutils.jscEqual(wAttr.map_state, ostypes.CONST.IsViewable)) {
 							return; // continue as this is a hidden window, do not list features, do not dig this window
 						}
@@ -271,7 +271,7 @@ function getAllWin(aOptions) {
 							if (jsN == 0) {
 								thisWin.pid = null; // set to null as this window did not have a pid, but i add the key indicating i tested for it and the window had the proerty
 							} else {
-
+								//console.info('gpItemsArr:', gpItemsArr.toString(), 'casted:', ctypes.cast(gpItemsArr, ostypes.TYPE.CARD32).toString(), 'casted to single el:', ctypes.cast(gpItemsArr, ostypes.TYPE.CARD32.array(1).ptr).contents.toString()); // "gpItemsArr:" "ctypes.unsigned_char.ptr(ctypes.UInt64("0x7f229409d710"))" "casted:" "ctypes.unsigned_int(2483672848)" "casted to single el:" "ctypes.unsigned_int.array(1)([2212])" // showing that it must be cast and not just to type cuz its single element, but to array of 1 element
 								thisWin.pid = parseInt(cutils.jscGetDeepest(ctypes.cast(gpItemsArr, ostypes.TYPE.CARD32.array(1).ptr).contents[0]));
 							}
 							ostypes.API('XFree')(gpItemsArr);
@@ -409,7 +409,7 @@ function getAllWin(aOptions) {
 				}
 				// 2) remove all windows who have height and width == to Desktop which is that last entry
 				if (analyzedArr[analyzedArr.length - 1].title != 'Desktop') {
-
+					console.error('title of last item is not Desktop so this may be a bad assumption that last item is Desktop, but just throwing a warning for right now');
 				}
 				var deskW = analyzedArr[analyzedArr.length - 1].width;
 				var deskH = analyzedArr[analyzedArr.length - 1].height;
@@ -444,9 +444,9 @@ function getAllWin(aOptions) {
 					var myNSStrings = new ostypes.HELPER.nsstringColl();
 					
 					var cnt_win = ostypes.API('CFArrayGetCount')(cfarr_win);
-
+					console.info('cnt_win:', cnt_win);
 					cnt_win = parseInt(cutils.jscGetDeepest(cnt_win));
-
+					console.info('cnt_win:', cnt_win);
 					
 					for (var i=0; i<cnt_win; i++) {
 						var thisWin = {};
@@ -455,39 +455,39 @@ function getAllWin(aOptions) {
 						if (aOptions.getTitle) {
 							var windowName = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowName')); // (NSString *)[window objectForKey:@"kCGWindowName"];
 							var windowNameLen = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('length'));
-
+							// console.info('windowNameLen:', windowNameLen);
 							windowNameLen = ctypes.cast(windowNameLen, ostypes.TYPE.NSUInteger);
-
+							// console.info('windowNameLen casted:', windowNameLen);
 							windowNameLen = parseInt(cutils.jscGetDeepest(windowNameLen));
-
+							// console.info('windowNameLen casted parseInted:', windowNameLen);
 							
 							if (windowNameLen == 0) { // can be 0 as its stated that kCGWindowName is an optional source: https://developer.apple.com/library/mac/documentation/Carbon/Reference/CGWindow_Reference/Constants/Constants.html#//apple_ref/doc/constant_group/Required_Window_List_Keys
 								thisWin.title = '';
 							} else {
 								var utf8str = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('UTF8String'));
 								var str_casted = ctypes.cast(utf8str, ostypes.TYPE.char.array(windowNameLen+1).ptr).contents; // +1 as it doesnt include the null char, and readString needs that
-
+								// console.info('str_casted:', str_casted.toString());
 								thisWin.title = str_casted.readString();
 							}
 						}
 						
 						if (aOptions.getPid) {
 							var rez_pid = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowOwnerPID'));
-
+							console.info('rez_pid:', rez_pid.toString());
 							
 							// rez_pid = ctypes.cast(rez_pid, ostypes.TYPE.NSInteger);
-
+							// console.info('rez_pid casted:', rez_pid);
 							
 							// rez_pid = parseInt(cutils.jscGetDeepest(rez_pid));
-
+							// console.info('rez_pid casted parseInted:', rez_pid);
 							// thisWin.pid = rez_pid;
 							
 							var int_pid = ostypes.API('objc_msgSend')(rez_pid, ostypes.HELPER.sel('integerValue'));
 							int_pid = ctypes.cast(int_pid, ostypes.TYPE.NSInteger);
-
+							// console.info('int_pid casted:', int_pid);
 							
 							int_pid = parseInt(cutils.jscGetDeepest(int_pid));
-
+							// console.info('int_pid casted parseInted:', int_pid);
 							thisWin.pid = int_pid;
 						}
 						
@@ -505,16 +505,16 @@ function getAllWin(aOptions) {
 						
 						if (aOptions.getBounds) {
 							var rez_bs = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowBounds'));
-
+							console.info('rez_bs:', rez_bs);
 							
 							var bounds = ostypes.TYPE.CGRect();
 							rez_bs = ctypes.cast(rez_bs, ostypes.TYPE.CFDictionaryRef);
-
+							console.info('rez_bs casted:', rez_bs);
 							
 							var rez_makeBounds = ostypes.API('CGRectMakeWithDictionaryRepresentation')(rez_bs, bounds.address());
-
+							console.info('rez_makeBounds:', rez_makeBounds.toString());
 							
-
+							console.info('bounds:', bounds.toString());
 							
 							thisWin.left = parseInt(cutils.jscGetDeepest(bounds.origin.x));
 							thisWin.top = parseInt(cutils.jscGetDeepest(bounds.origin.y));
@@ -543,7 +543,7 @@ function getAllWin(aOptions) {
 					// now splice out all things that have any dimensions matching these EXCEPT the last numMon elements as they will be titled Desktop
 					for (var i=rezWinArr.length-numDesktop; i<rezWinArr.length; i++) {
 						if (rezWinArr[i].title != 'DesktopAA') {
-
+							console.error('last', numDesktop, 'elements should have title Desktop, and it was found that title of ' + (rezWinArr.length - i) + ' to last item is not Desktop so this may be a bad assumption that last item is Desktop, it is:', rezWinArr[i], 'but just throwing a warning for right now');
 						}
 					}
 					for (var i=0; i<rezWinArr.length-numDesktop; i++) {
@@ -551,7 +551,7 @@ function getAllWin(aOptions) {
 							continue;
 						}
 						if (desktopDimWxH.indexOf(rezWinArr[i].width + ' x ' + rezWinArr[i].height) > -1) {
-
+							console.log('found element that has width and height equal to desktop, element is:', i, rezWinArr[i], 'splicing this out');
 							rezWinArr.splice(i, 1);
 							i--;
 						}
@@ -584,7 +584,7 @@ function getAllWin(aOptions) {
 			
 			break;
 		default:
-
+			console.error('os not supported');
 	}
 	
 	return rezWinArr;
@@ -606,12 +606,12 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 			
 				
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
-
+					console.error('info:', aArrHwndPtrStr[i]);
 					var hwndPtr = ostypes.TYPE.HWND.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					
 					//var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
 					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, 0, 0, 0, 0, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
-
+					console.info('rez_setTop:', rez_setTop);
 				}
 				
 			break;
@@ -621,16 +621,16 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				// do this stuff up here as if it doesnt exist it will throw now, rather then go through set allocate xevent then find out when setting xevent.xclient data that its not available
 				var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
 				var atom_wmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
-
+				console.log('aArrHwndPtrStr:', aArrHwndPtrStr);
 				
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
-
+					console.error('info:', aArrHwndPtrStr[i]);
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
 					
 					
 					var xevent = ostypes.TYPE.XEvent();
-
+					console.info('xevent:', uneval(xevent));
 					
 					xevent.xclient.type = ostypes.CONST.ClientMessage;
 					xevent.xclient.serial = 0;
@@ -641,26 +641,26 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					xevent.xclient.format = 32; // because xclient.data is long, i defined that in the struct union
 					xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
 					
-
-
+					console.info('xevent.xclient.addressOfField(data):', xevent.xclient.addressOfField('data'));
+					console.info('xevent.xclient.addressOfField(data).addressOfElement(0):', xevent.xclient.data.addressOfElement(0));
 					
 					var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-
+					console.log('rez_SendEv always on top:', rez_SendEv, rez_SendEv.toString());
 
 					// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_STICKY');
 					// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-
+					// console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
 					
 					// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
 					// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-
+					// console.log('rez_SendEv sticky:', rez_SendEv, rez_SendEv.toString());
 
 					/*
 					// testing XListProperties
 					var numAtoms = ostypes.TYPE.int();
 					var rez_ListProp = ostypes.API('XListProperties')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, numAtoms.address());
-
-
+					console.info('rez_ListProp:', rez_ListProp.toString());
+					console.info('numAtoms:', numAtoms);
 					//if (cutils.jscEqual(rez_ListProp, ostypes.CONST.BadWindow)) { // need to figure out how to test this, it seems when rez_ListProp is null, so im not sure how to get BadWindow its just not returning it // throw new Error('XListProperties failed with reason BadWindow'); // }
 					if (rez_ListProp.isNull()) {
 						// then probably failed
@@ -668,7 +668,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					}
 					
 					var atomsJS = ctypes.cast(rez_ListProp, ostypes.TYPE.Atom.array(parseInt(cutils.jscGetDeepest(numAtoms))).ptr).contents;
-
+					console.info('atomsJS:', atomsJS);
 					var atomsC = rez_ListProp;
 					numAtoms = parseInt(cutils.jscGetDeepest(numAtoms));
 					
@@ -686,16 +686,16 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					
 					var atomNames = ostypes.TYPE.char.ptr.array(numAtoms)();
-
+					console.info('atomNames:', atomNames.toString())
 					var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames);
-
+					console.info('rez_GetANames:', rez_GetANames.toString());
 					if (cutils.jscEqual(rez_GetANames, 0)) {
 						throw new Error('failed XGetAtomNames');
 					}
-
+					console.info('atomNames:', atomNames.toString())
 					
 					for (var i=0; i<atomNames.length; i++) {
-
+						console.log('ATOM INFO - ', 'int:', atomsJS[i], 'atom name:', atomNames[i].readString());
 						//ostypes.API('XFree')(atomNames[i]);
 					}
 					
@@ -719,7 +719,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
 					var dataFormat = 32; // cuz unsigned_long
 					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-
+					console.info('rez_XChg:', rez_XChg.toString());
 
 					// make window show on all desktops
 					var dataJS = [
@@ -729,7 +729,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
 					var dataFormat = 32; // cuz unsigned_long
 					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_DESKTOP'), ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-
+					console.info('rez_XChg:', rez_XChg.toString());
 					
 					// // change window title
 					// var dataJS = [
@@ -741,7 +741,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// var dataCCasted = dataC; // no need to cast as it is already 8 byte //ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
 					// var dataFormat = 8; // cuz unsigned_long
 					// var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_NAME'), ostypes.HELPER.cachedAtom('UTF8_STRING'), dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-
+					// console.info('rez_XChg:', rez_XChg.toString());
 					*/
 				}
 				
@@ -749,7 +749,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 				/*
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
-
+					console.error('info:', aArrHwndPtrStr[i]);
 					var gdkWinPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					var gtkWinPtr = ostypes.HELPER.gdkWinPtrToGtkWinPtr(gdkWinPtr);
 					ostypes.API('gtk_window_set_keep_above')(gtkWinPtr, 1);
@@ -775,7 +775,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
 					var dataFormat = 32; // cuz unsigned_long
 					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmStrut, ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-
+					console.info('rez_XChg:', rez_XChg.toString());
 				}
 				*/
 				/*
@@ -794,7 +794,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
 					var dataFormat = 32; // cuz unsigned_long
 					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmWindowType, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-
+					console.info('rez_XChg:', rez_XChg.toString());
 				}
 				*/
 				/*
@@ -817,7 +817,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
 					var dataFormat = 32; // cuz unsigned_long
 					var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmState, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-
+					console.info('rez_XChg:', rez_XChg.toString());
 				}
 				*/
 			break;
@@ -825,12 +825,12 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 				/*
 				// for (var i=0; i<aArrHwndPtrStr.length; i++) {
-
+				// 	console.error('info:', aArrHwndPtrStr[i]);
 				// 	var aNSWindow = ctypes.voidptr_t(ctypes.UInt64(aArrHwndPtrStr[i]));
-
+				// 	console.error('att 6');
 				// 	var nil = ctypes.voidptr_t(ctypes.UInt64('0x0')); // due to 3rd arg of objc_msgSend being variadic i have to set type, i cant just pass null
 				// 	var rez_orderFront = ostypes.API('objc_msgSend')(aNSWindow, ostypes.HELPER.sel('windowNumber'));
-
+				// 	console.info('rez_orderFront:', rez_orderFront);
 				// }
 				
 				// METHOD: performSelectorOnMainThread:withObject:waitUntilDone:
@@ -848,11 +848,11 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var needsRegistration = true;
 					OSStuff.setWinAlwaysOnTop_class = ostypes.API('objc_allocateClassPair')(NSObject, 'setWinAlwaysOnTop_class', 0);
 					if (OSStuff.setWinAlwaysOnTop_class.isNull()) {
-
+						console.info('setWinAlwaysOnTop_class:', class_NoitOnScrnSvrDelgt.toString());
 						throw new Error('setWinAlwaysOnTop_class is null, so objc_allocateClassPair failed');
 					}
 				// } else {
-
+					// console.log('setWinAlwaysOnTop_class already exists');
 					// needsRegistration = false;
 				// }
 								
@@ -861,7 +861,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				var IMP_for_mainThreadSelector = ctypes.FunctionType(ctypes.default_abi, ctypes.void_t, []);
 				
 				OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]] = function() {
-
+					console.log('setWinAlwaysOnTop_jsMethods ' + 0 + ' called');
 					// delete OSStuff.setWinAlwaysOnTop_jsMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
 					// delete OSStuff.setWinAlwaysOnTop_cMethods[aArrHwndPtrStr[0]]; // cuz i made this single shots // i should delete class when no more methods are left
 				};
@@ -881,7 +881,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				}
 				
 				var rez_perform = ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('performSelectorOnMainThread:withObject:waitUntilDone:'), ostypes.HELPER.sel(aArrHwndPtrStr[0]), ostypes.CONST.NIL, ostypes.CONST.YES);
-
+				console.error('perform done!!');
 				
 				// after all callbacks done then clean up class
 				// ostypes.API('objc_msgSend')(OSStuff.setWinAlwaysOnTop_instance, ostypes.HELPER.sel('release'));
@@ -897,10 +897,10 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				/*
 				// METHOD: dispatch_async( dispatch_get_main_queue(), ^(void)
 				var rez_mainQ = ostypes.API('dispatch_get_main_queue'); // do not do () on this one
-
+				console.info('rez_mainQ:', rez_mainQ.toString());
 				
 				OSStuff.js_cb = function() {
-
+					console.error('in js_cb');
 					return undefined;
 				};
 				
@@ -917,7 +917,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 				// METHOD: do on main thread with this key
 				var rez_getKey = ostypes.API('CGWindowLevelForKey')(ostypes.CONST.kCGMainMenuWindowLevelKey); // to avoid that constraint issue
-
+				console.info('got key:', cutils.jscGetDeepest(rez_getKey));
 				
 				// METHOD: dont set on top just focus app, this has that ugly scroll side affect if user is focused on another desktop on that monitor due to full screen app or something
 				focusSelfApp();
@@ -926,7 +926,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 			break;
 		default:
-
+			console.error('os not supported');
 	}
 }
 
@@ -950,7 +950,7 @@ function focusWindows(aArrHwndPtrStr) {
 				
 			break;
 		default:
-
+			console.error('os not supported');
 	}
 }
 
@@ -976,11 +976,11 @@ function focusSelfApp() {
 				
 				// [NSApp activateIgnoringOtherApps:YES];
 				var rez_actIgOthrApps = ostypes.API('objc_msgSend')(NSApp, ostypes.HELPER.sel('activateIgnoringOtherApps:'), ostypes.CONST.YES);
-
+				console.info('rez_actIgOthrApps:', rez_actIgOthrApps);
 				
 			break;
 		default:
-
+			console.error('os not supported');
 	}
 }
 
@@ -1002,7 +1002,7 @@ function shootAllMons() {
 					var lpDisplayDevice = ostypes.TYPE.DISPLAY_DEVICE();
 					lpDisplayDevice.cb = ostypes.TYPE.DISPLAY_DEVICE.size;
 					var rez_EnumDisplayDevices = ostypes.API('EnumDisplayDevices')(null, iDevNum, lpDisplayDevice.address(), 0);
-
+					//console.info('rez_EnumDisplayDevices:', rez_EnumDisplayDevices.toString(), uneval(rez_EnumDisplayDevices), cutils.jscGetDeepest(rez_EnumDisplayDevices));
 					
 					if (cutils.jscEqual(rez_EnumDisplayDevices, 0)) { // ctypes.winLastError != 0
 						// iDevNum is greater than the largest device index.
@@ -1011,24 +1011,24 @@ function shootAllMons() {
 					
 					var StateFlags = parseInt(cutils.jscGetDeepest(lpDisplayDevice.StateFlags));
 					
-
+					console.info('lpDisplayDevice.DeviceName:', lpDisplayDevice.DeviceName.readString()); // "\\.\DISPLAY1" till "\\.\DISPLAY4"
 					if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_MIRRORING_DRIVER) {
 						// skip this one, its a mirror monitor (like vnc or webex)
 					} else if (StateFlags & ostypes.CONST.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) {
-
+						console.log('is monitor');
 						
 						var dm = ostypes.TYPE.DEVMODE(); // SIZEOF_DEVMODE = 220 on 32bit fx Win8.1 64bit when I do insepction though dm.size is set to 188
-
+						console.info('dm.size:', ostypes.TYPE.DEVMODE.size);
 						//dm.dmFields = ostypes.CONST.DM_PELSWIDTH;
 						//dm.dmSize = ostypes.TYPE.DEVMODE.size;
 
-
+						console.log('iDevNum:', iDevNum, lpDisplayDevice.DeviceName.readString());
 						var rez_EnumDisplaySettings = ostypes.API('EnumDisplaySettings')(lpDisplayDevice.DeviceName, ostypes.CONST.ENUM_CURRENT_SETTINGS, dm.address());
-
-
+						//console.info('rez_EnumDisplaySettings:', rez_EnumDisplaySettings.toString(), uneval(rez_EnumDisplaySettings), cutils.jscGetDeepest(rez_EnumDisplaySettings));
+						//console.info('dm:', dm.toString());
 						
-
-
+						console.info('dmDeviceName:', dm.dmDeviceName, 'dmSpecVersion:', dm.dmSpecVersion, 'dmDriverVersion:', dm.dmDriverVersion, 'dmSize:', dm.dmSize, 'dmDriverExtra:', dm.dmDriverExtra, 'dmFields:', dm.dmFields, 'dmColor:', dm.dmColor, 'dmDuplex:', dm.dmDuplex, 'dmYResolution:', dm.dmYResolution, 'dmTTOption:', dm.dmTTOption, 'dmCollate:', dm.dmCollate, 'dmFormName:', dm.dmFormName, 'dmLogPixels:', dm.dmLogPixels, 'dmBitsPerPel:', dm.dmBitsPerPel, 'dmPelsWidth:', dm.dmPelsWidth, 'dmPelsHeight:', dm.dmPelsHeight, 'dmDisplayFlags:', dm.dmDisplayFlags, 'dmDisplayFrequency:', dm.dmDisplayFrequency, 'dmICMMethod:', dm.dmICMMethod, 'dmICMIntent:', dm.dmICMIntent, 'dmMediaType:', dm.dmMediaType, 'dmDitherType:', dm.dmDitherType, 'dmReserved1:', dm.dmReserved1, 'dmReserved2:', dm.dmReserved2, 'dmPanningWidth:', dm.dmPanningWidth, 'dmPanningHeight:', dm.dmPanningHeight, '_END_');
+						console.info('dmPosition:', dm.u.dmPosition, 'dmDisplayOrientation:', dm.u.dmDisplayOrientation, 'dmDisplayFixedOutput:', dm.u.dmDisplayFixedOutput, '_END_');
 						
 						collMonInfos.push({
 							x: parseInt(cutils.jscGetDeepest(dm.u.dmPosition.x)),
@@ -1065,11 +1065,11 @@ function shootAllMons() {
 		
 				// start - take shot of each monitor
 				for (var s=0; s<collMonInfos.length; s++) {
-
+					console.time('shot of screen ' + s);
 					var hdcScreen = ostypes.API('CreateDC')(collMonInfos[s].otherInfo.lpszDriver, collMonInfos[s].otherInfo.lpszDevice, null, null);
-
+					//console.info('hdcScreen:', hdcScreen.toString(), uneval(hdcScreen), cutils.jscGetDeepest(hdcScreen));
 					if (ctypes.winLastError != 0) {
-
+						//console.error('Failed hdcScreen, winLastError:', ctypes.winLastError);
 						throw new Error({
 							name: 'os-api-error',
 							message: 'Failed hdcScreen, winLastError: "' + ctypes.winLastError + '" and hdcScreen: "' + hdcScreen.toString(),
@@ -1092,15 +1092,15 @@ function shootAllMons() {
 					
 					var w = collMonInfos[s].w;
 					var h = collMonInfos[s].h;
-
+					console.error('using w:', w, 'h:', h);
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
-
+					console.log('useW:', useW, 'realW:', w);
 					
 					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
-
+					//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
 					if (ctypes.winLastError != 0) {
-
+						//console.error('Failed hdcMemoryDC, winLastError:', ctypes.winLastError);
 						throw new Error({
 							name: 'os-api-error',
 							message: 'Failed hdcMemoryDC, winLastError: "' + ctypes.winLastError + '" and hdcMemoryDC: "' + hdcMemoryDC.toString(),
@@ -1108,7 +1108,7 @@ function shootAllMons() {
 						});
 					}
 
-
+					console.error('using nBPP:', collMonInfos[s].otherInfo.nBPP);
 					// CreateDIBSection stuff
 					var bmi = ostypes.TYPE.BITMAPINFO();
 					bmi.bmiHeader.biSize = ostypes.TYPE.BITMAPINFOHEADER.size;
@@ -1123,12 +1123,12 @@ function shootAllMons() {
 					// delete collMonInfos[s].nBPP; // mainthread has no more need for this
 					
 					var pixelBuffer = ostypes.TYPE.BYTE.ptr();
-
+					//console.info('PRE pixelBuffer:', pixelBuffer.toString(), 'pixelBuffer.addr:', pixelBuffer.address().toString());
 					// CreateDIBSection stuff
 					
 					var hbmp = ostypes.API('CreateDIBSection')(hdcScreen, bmi.address(), ostypes.CONST.DIB_RGB_COLORS, pixelBuffer.address(), null, 0); 
 					if (hbmp.isNull()) { // do not check winLastError when using v5, it always gives 87 i dont know why, but its working
-
+						console.error('Failed hbmp, winLastError:', ctypes.winLastError, 'hbmp:', hbmp.toString(), uneval(hbmp), cutils.jscGetDeepest(hbmp));
 						throw new Error({
 							name: 'os-api-error',
 							message: 'Failed hbmp, winLastError: "' + ctypes.winLastError + '" and hbmp: "' + hbmp.toString(),
@@ -1137,9 +1137,9 @@ function shootAllMons() {
 					}
 					
 					var rez_SO = ostypes.API('SelectObject')(hdcMemoryDC, hbmp);
-
+					//console.info('rez_SO:', rez_SO.toString(), uneval(rez_SO), cutils.jscGetDeepest(rez_SO));
 					if (ctypes.winLastError != 0) {
-
+						//console.error('Failed rez_SO, winLastError:', ctypes.winLastError);
 						throw new Error({
 							name: 'os-api-error',
 							message: 'Failed rez_SO, winLastError: "' + ctypes.winLastError + '" and rez_SO: "' + rez_SO.toString(),
@@ -1148,9 +1148,9 @@ function shootAllMons() {
 					}
 					
 					var rez_BB = ostypes.API('BitBlt')(hdcMemoryDC, 0, 0, w, h, hdcScreen, 0, 0, ostypes.CONST.SRCCOPY);
-
+					//console.info('rez_BB:', rez_BB.toString(), uneval(rez_BB), cutils.jscGetDeepest(rez_BB));
 					if (ctypes.winLastError != 0) {
-
+						//console.error('Failed rez_BB, winLastError:', ctypes.winLastError);
 						throw new Error({
 							name: 'os-api-error',
 							message: 'Failed rez_BB, winLastError: "' + ctypes.winLastError + '" and rez_BB: "' + rez_BB.toString(),
@@ -1158,23 +1158,23 @@ function shootAllMons() {
 						});
 					}
 					
-
+					console.timeEnd('shot of screen ' + s);
 					
 					var arrLen = useW * h * 4;
 					// var imagedata = new ImageData(useW, h);
 					var monShotBuf = new ArrayBuffer(arrLen);
 					
-
+					console.time('memcpy');
 					ostypes.API('memcpy')(monShotBuf, pixelBuffer, arrLen);
-
+					console.timeEnd('memcpy');
 					
 					var monShotUint8 = new Uint8Array(monShotBuf);
 					
 					// swap bytes to go from BRGA to RGBA
 					// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
-
+					console.time('BGRA -> RGBA');
 					swapBandRinUint8(monShotUint8);
-
+					console.timeEnd('BGRA -> RGBA');
 					
 					collMonInfos[s].screenshot = monShotBuf;
 					aScreenshotBuffersToTransfer.push(collMonInfos[s].screenshot);
@@ -1186,13 +1186,13 @@ function shootAllMons() {
 					// imagedata = null;
 					
 					var rez_DelDc1 = ostypes.API('DeleteDC')(hdcScreen);
-
+					console.log('rez_DelDc1:', rez_DelDc1);
 					
 					var rez_DelDc2 = ostypes.API('DeleteDC')(hdcMemoryDC);
-
+					console.log('rez_DelDc2:', rez_DelDc2);
 					
 					var rez_DelObj1 = ostypes.API('DeleteObject')(hbmp);
-
+					console.log('rez_DelObj1:', rez_DelObj1);
 				}
 				
 				// end - take shot of each monitor
@@ -1200,7 +1200,7 @@ function shootAllMons() {
 				/*
 				// get dpi for all monitors so can draw to canvas properly:
 				var jsMonitorEnumProc = function(hMonitor, hdcMonitor, lprcMonitor, dwData) {
-
+					console.log('in jsMonitorEnumProc', 'hMonitor:', hMonitor.toString(), 'lprcMonitor:', lprcMonitor.contents.toString()); // link3687324
 					// rezArr.push({
 						// xTopLeft: parseInt(cutils.jscGetDeepest(lprcMonitor.contents.left)),
 						// yTopLeft: parseInt(cutils.jscGetDeepest(lprcMonitor.contents.top))
@@ -1212,9 +1212,9 @@ function shootAllMons() {
 					var cMonInfo = ostypes.TYPE.MONITORINFOEX();
 					cMonInfo.cbSize = ostypes.TYPE.MONITORINFOEX.size;
 					var rez_GetMonitorInfo = ostypes.API('GetMonitorInfo')(hMonitor, cMonInfo.address());
-
+					console.info('rez_GetMonitorInfo:', rez_GetMonitorInfo.toString(), uneval(rez_GetMonitorInfo), cutils.jscGetDeepest(rez_GetMonitorInfo));
 					if (cutils.jscEqual(rez_GetMonitorInfo, 0)) {
-
+						console.error('Failed rez_GetMonitorInfo, winLastError:', ctypes.winLastError);
 						throw new Error({
 							name: 'os-api-error',
 							message: 'Failed rez_GetMonitorInfo, winLastError: "' + ctypes.winLastError + '" and rez_GetMonitorInfo: "' + rez_GetMonitorInfo.toString(),
@@ -1229,9 +1229,9 @@ function shootAllMons() {
 					var dpiX = ostypes.TYPE.UINT();
 					var dpiY = ostypes.TYPE.UINT();
 					var rez_GetDPI = ostypes.API('GetDpiForMonitor')(hMonitor, ostypes.CONST.MDT_Raw_DPI, dpiX.address(), dpiY.address());
-
-
-
+					console.info('rez_GetDPI:', rez_GetDPI.toString());
+					console.info('dpiX:', dpiX.toString());
+					console.info('dpiY:', dpiY.toString());
 					
 					var foundLPSZ = false;
 					for (var z=0; z<collMonInfos.length; z++) {
@@ -1243,7 +1243,7 @@ function shootAllMons() {
 						}
 					}
 					if (!foundLPSZ) {
-
+						console.error('warning! could not find item in collMonInfos for lpszDevice of:', cMonInfo.szDevice.toString());
 					}
 					return true; // continue enumeration
 				}
@@ -1251,10 +1251,10 @@ function shootAllMons() {
 				var rez_EnumDisplayMonitors = ostypes.API('EnumDisplayMonitors')(null, null, cMonitorEnumProc, 0);
 				*/
 				
-
+				console.error('going to del');
 				for (var i=0; i<collMonInfos.length; i++) {
 					delete collMonInfos[i].otherInfo;
-
+					console.error('delled otherInfo');
 				}
 				
 			break;
@@ -1263,10 +1263,10 @@ function shootAllMons() {
 				// start - get all monitor resolutions
 				/*
 				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
-
+				//console.info('screen:', screen.contents, screen.contents.toString());
 
 				var noutputs = parseInt(cutils.jscGetDeepest(screen.contents.noutput));
-
+				//console.info('noutputs:', noutputs);
 
 				var screenOutputs = ctypes.cast(screen.contents.outputs, ostypes.TYPE.RROutput.array(noutputs).ptr).contents;
 				for (var i=noutputs-1; i>=0; i--) {
@@ -1276,7 +1276,7 @@ function shootAllMons() {
 						var infoCrtcs = ctypes.cast(info.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtcs).ptr).contents;
 						for (var j=ncrtcs-1; j>=0; j--) {
 							var crtc_info = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, infoCrtcs[j]);
-
+							console.info('screen #' + i + ' mon#' + j + ' details:', crtc_info.contents.x, crtc_info.contents.y, crtc_info.contents.width, crtc_info.contents.height);
 
 							collMonInfos.push({
 								x: parseInt(cutils.jscGetDeepest(crtc_info.contents.x)),
@@ -1292,7 +1292,7 @@ function shootAllMons() {
 					ostypes.API('XRRFreeOutputInfo')(info);
 				}
 				ostypes.API('XRRFreeScreenResources')(screen);
-
+				console.info('json.stringify pre clean:', JSON.stringify(collMonInfos));
 				var monStrs = [];
 				for (var i=0; i<collMonInfos.length; i++) {
 					if (!collMonInfos[i].w || !collMonInfos[i].h)  {// test if 0 width height
@@ -1309,17 +1309,17 @@ function shootAllMons() {
 					}
 				}
 				
-
+				console.info('json.stringify post clean:', JSON.stringify(collMonInfos), collMonInfos);
 				*/
 				
 				// XRRScreenResources *xrrr = XRRGetScreenResources(d, w);
 				var xrrr = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
-
+				// console.info('xrrr:', xrrr.contents, xrrr.contents.toString());
 				
 				// int ncrtc = xrrr->ncrtc;
 				
 				var ncrtc = parseInt(cutils.jscGetDeepest(xrrr.contents.ncrtc));
-
+				console.log('ncrtc:', ncrtc);
 				
 				var crtcs = ctypes.cast(xrrr.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtc).ptr).contents;
 				for (var i=0; i<ncrtc; i++) {
@@ -1334,13 +1334,13 @@ function shootAllMons() {
 						screenshot: null // for x11, i take the big canvas and protion to each mon
 					});
 					
-
+					console.info(i, 'mon info:', collMonInfos[collMonInfos.length-1]);
 					
 					ostypes.API('XRRFreeCrtcInfo')(xrrci);
 				}
 				ostypes.API('XRRFreeScreenResources')(xrrr);
 				
-
+				console.info('all mon infos:', collMonInfos);
 				
 				// end - get all monitor resolutions
 				
@@ -1351,39 +1351,39 @@ function shootAllMons() {
 				// this call to XGetWindowAttributes grab one screenshot of all monitors
 				var gwa = ostypes.TYPE.XWindowAttributes();
 				var rez_XGetWinAttr = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), gwa.address());
-
+				console.info('gwa:', gwa.toString());
 				
 				var fullWidth = parseInt(cutils.jscGetDeepest(gwa.width));
 				var fullHeight = parseInt(cutils.jscGetDeepest(gwa.height));
 				var originX = parseInt(cutils.jscGetDeepest(gwa.x));
 				var originY = parseInt(cutils.jscGetDeepest(gwa.y));
 				
-
+				console.info('fullWidth:', fullWidth, 'fullHeight:', fullHeight, 'originX:', originX, 'originY:', originY, '_END_');
 				
 				// get_pixels
 				var allplanes = ostypes.API('XAllPlanes')();
-
+				console.info('allplanes:', allplanes.toString());
 				
 				var ZPixmap = 2;
 
 				var ximage = ostypes.API('XGetImage')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), originX, originY, fullWidth, fullHeight, allplanes, ZPixmap);
-
+				console.info('width:', ximage.contents.width.toString(), 'height:', ximage.contents.height.toString(), 'xoffset:', ximage.contents.xoffset.toString(), 'format:', ximage.contents.format.toString(), 'data:', ximage.contents.data.toString(), 'byte_order:', ximage.contents.byte_order.toString(), 'bitmap_unit:', ximage.contents.bitmap_unit.toString(), 'bitmap_bit_order:', ximage.contents.bitmap_bit_order.toString(), 'bitmap_pad:', ximage.contents.bitmap_pad.toString(), 'depth:', ximage.contents.depth.toString(), 'bytes_per_line:', ximage.contents.bytes_per_line.toString(), 'bits_per_pixel:', ximage.contents.bits_per_pixel.toString(), 'red_mask:', ximage.contents.red_mask.toString(), 'green_mask:', ximage.contents.green_mask.toString(), 'blue_mask:', ximage.contents.blue_mask.toString(), '_END_');
 
 				var fullLen = 4 * fullWidth * fullHeight;
 				
-
+				console.time('init imagedata');
 				var allShotBuf = new ArrayBuffer(fullWidth * fullHeight * 4);
+				console.timeEnd('init imagedata');
 
-
-
+				console.time('memcpy');
 				ostypes.API('memcpy')(allShotBuf, ximage.contents.data, fullLen);
-
+				console.timeEnd('memcpy');
 				
 				var allShotUint8 = new Uint8Array(allShotBuf);
 				// end - take shot of all monitors and push to just first element of collMonInfos
 				
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
-
+				console.time('portion out image data');
 				
 				// optimized linux from 1900ms down to 45ms from chat on #extdev on sept 18 2015 ~430-630am
 				var portionOutAllToMonFromBgra0ToRgba255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
@@ -1417,7 +1417,7 @@ function shootAllMons() {
 					collMonInfos[i].screenshot = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
 					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
-
+				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
 			
 			break;
@@ -1426,18 +1426,18 @@ function shootAllMons() {
 				// start - get monitor resolutions
 				var displays = ostypes.TYPE.CGDirectDisplayID.array(32)(); // i guess max possible monitors is 32
 				var count = ostypes.TYPE.uint32_t();
-
-
+				console.info('displays.constructor.size:', displays.constructor.size);
+				console.info('ostypes.TYPE.CGDirectDisplayID.size:', ostypes.TYPE.CGDirectDisplayID.size);
 				
 				var maxDisplays = displays.constructor.size / ostypes.TYPE.CGDirectDisplayID.size;
 				var activeDspys = displays; // displays.address() didnt work it threw `expected type pointer, got ctypes.uint32_t.array(32).ptr(ctypes.UInt64("0x11e978080"))` // the arg in declare is `self.TYPE.CGDirectDisplayID.ptr,	// *activeDisplays` // without .address() worked
 				var dspyCnt = count.address();
-
+				console.info('maxDisplays:', maxDisplays);
 				
 				var rez_CGGetActiveDisplayList = ostypes.API('CGGetActiveDisplayList')(maxDisplays, activeDspys, dspyCnt);
-
+				console.info('rez_CGGetActiveDisplayList:', rez_CGGetActiveDisplayList.toString(), uneval(rez_CGGetActiveDisplayList), cutils.jscGetDeepest(rez_CGGetActiveDisplayList));
 				if (!cutils.jscEqual(rez_CGGetActiveDisplayList, ostypes.CONST.kCGErrorSuccess)) {
-
+					console.error('Failed , errno:', ctypes.errno);
 					throw new Error({
 						name: 'os-api-error',
 						message: 'Failed , errno: "' + ctypes.errno + '" and : "' + rez_CGGetActiveDisplayList.toString(),
@@ -1446,7 +1446,7 @@ function shootAllMons() {
 				}
 				
 				count = parseInt(cutils.jscGetDeepest(count));
-
+				console.info('count:', count);
 				var i_nonMirror = {};
 				
 				var minScreenX;
@@ -1455,13 +1455,13 @@ function shootAllMons() {
 				var rect = ostypes.CONST.CGRectNull;
 				// var primaryDisplayRect;
 				var primaryDisplayRectInfo;
-
+				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
 					// if display is secondary mirror of another display, skip it
-
+					console.info('displays[i]:', displays[i]);
 					
 					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
-
+					console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
 
 					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
 						continue;
@@ -1469,7 +1469,7 @@ function shootAllMons() {
 					i_nonMirror[i] = collMonInfos.length; // the length here, will be the i index of the CGDisplayBounds in collMonInfos
 					
 					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
-
+					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds)/*, cutils.jscGetDeepest(rez_CGDisplayBounds)*/); // :todo: fix cutils.jscEqual because its throwing `Error: cannot convert to primitive value` for ctypes.float64_t and ctypes.double ACTUALLY its a struct, so no duhhh so no :todo:
 					
 					collMonInfos.push({
 						x: parseInt(cutils.jscGetDeepest(rez_CGDisplayBounds.origin.x)),
@@ -1503,7 +1503,7 @@ function shootAllMons() {
 					rez_CGDisplayBounds.origin.y = (primaryDisplayRectInfo.y + primaryDisplayRectInfo.h) - (collMonInfos[collMonInfos.length-1].y + collMonInfos[collMonInfos.length-1].h); // because CGRectGetMaxY is just ` rect.origin.y + rect.size.height;` as per https://github.com/joshpc/SBLayoutManager/blob/b899e10834d27f3569b5a8e2de296f19b8f9003d/SBLayoutManager/CGRectHelpers.m#L22 // and also [0] instead of primaryDisplayRect as the first one is primary monitor per link5233423
 					collMonInfos[collMonInfos.length-1].corrected_y = rez_CGDisplayBounds.origin.y;
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
-
+					console.info('rect post loop ' + i + ':', rect.toString());
 				}
 				// start - get monitor resolutions
 				
@@ -1534,14 +1534,14 @@ function shootAllMons() {
 					myNSStrings = new ostypes.HELPER.nsstringColl();
 					
 					var rez_width = ostypes.API('CGRectGetWidth')(rect);
-
+					console.info('rez_width:', rez_width.toString(), uneval(rez_width), cutils.jscGetDeepest(rez_width));
 					
 					var rez_height = ostypes.API('CGRectGetHeight')(rect);
-
+					console.info('rez_height:', rez_height.toString(), uneval(rez_height), cutils.jscGetDeepest(rez_height));
 					
 					var NSBitmapImageRep = ostypes.HELPER.class('NSBitmapImageRep');
 					allocNSBIP = ostypes.API('objc_msgSend')(NSBitmapImageRep, ostypes.HELPER.sel('alloc'));
-
+					console.info('allocNSBIP:', allocNSBIP.toString(), uneval(allocNSBIP));
 		
 					var imageRep = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:'),  // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:
 						ostypes.TYPE.unsigned_char.ptr.ptr(null),								// planes
@@ -1556,7 +1556,7 @@ function shootAllMons() {
 						ostypes.TYPE.NSInteger(4 * rez_width),									// bytesPerRow
 						ostypes.TYPE.NSInteger(32)												// bitsPerPixel
 					);
-
+					console.info('imageRep:', imageRep.toString(), uneval(imageRep), cutils.jscGetDeepest(imageRep));
 					if (imageRep.isNull()) { // im guessing this is how to error check it
 						throw new Error({
 							name: 'os-api-error',
@@ -1568,7 +1568,7 @@ function shootAllMons() {
 					// NSGraphicsContext* context = [NSGraphicsContext graphicsContextWithBitmapImageRep:imageRep];
 					var NSGraphicsContext = ostypes.HELPER.class('NSGraphicsContext');
 					var context = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('graphicsContextWithBitmapImageRep:'), imageRep);
-
+					console.info('context:', context.toString(), uneval(context), cutils.jscGetDeepest(context));
 					if (context.isNull()) { // im guessing this is how to error check it
 						throw new Error({
 							name: 'os-api-error',
@@ -1579,52 +1579,52 @@ function shootAllMons() {
 					
 					// [NSGraphicsContext saveGraphicsState];
 					var rez_saveGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('saveGraphicsState'));
-
+					console.info('rez_saveGraphicsState:', rez_saveGraphicsState.toString(), uneval(rez_saveGraphicsState), cutils.jscGetDeepest(rez_saveGraphicsState));
 					
 					// [NSGraphicsContext setCurrentContext:context];
 					var rez_setCurrentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('setCurrentContext:'), context);
-
+					console.info('rez_setCurrentContext:', rez_setCurrentContext.toString(), uneval(rez_setCurrentContext), cutils.jscGetDeepest(rez_setCurrentContext));
 					
 					// CGContextRef cgcontext = [context graphicsPort];
 					var cgcontext = ostypes.API('objc_msgSend')(context, ostypes.HELPER.sel('graphicsPort'));
-
+					console.info('cgcontext:', cgcontext.toString(), uneval(cgcontext), cutils.jscGetDeepest(cgcontext));
 					
 					// CGContextClearRect(cgcontext, CGRectMake(0, 0, CGRectGetWidth(rect), CGRectGetHeight(rect)));
 					var rez_width2 = ostypes.API('CGRectGetWidth')(rect);
-
+					console.info('rez_width2:', rez_width2.toString(), uneval(rez_width2), cutils.jscGetDeepest(rez_width2));
 					
 					var rez_height2 = ostypes.API('CGRectGetHeight')(rect);
-
+					console.info('rez_height2:', rez_height2.toString(), uneval(rez_height2), cutils.jscGetDeepest(rez_height2));
 					
 					var rez_CGRectMake = ostypes.API('CGRectMake')(0, 0, rez_width2, rez_height2);
-
+					console.info('rez_CGRectMake:', rez_CGRectMake.toString(), uneval(rez_CGRectMake)/*, cutils.jscGetDeepest(rez_CGRectMake)*/);
 					
 					var casted_cgcontext = ctypes.cast(cgcontext, ostypes.TYPE.CGContextRef);
 					var rez_CGContextClearRect = ostypes.API('CGContextClearRect')(casted_cgcontext, rez_CGRectMake); // returns void
-
-
+					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
+					console.log('did CGContextClearRect');
 					
 					var rectOriginX = parseInt(cutils.jscGetDeepest(rect.origin.x));
 					var rectOriginY = parseInt(cutils.jscGetDeepest(rect.origin.y));
 					
-
-
-
-
+					console.info('minScreenX:', minScreenX);
+					console.info('minScreenY:', minScreenY);
+					console.info('rectOriginX:', rectOriginX);
+					console.info('rectOriginY:', rectOriginY);
 					
 					// note: i_nonMirror, keys are the i value it corresponds to in displays Array, and value is the i value it corresponds to in collMonInfos Array
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
-
+						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
 						// var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
-
+						// console.info('displayRect:', displayRect.toString(), uneval(displayRect));
 						
-
+						console.warn('pre CGDisplayCreateImage');
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
 						var image = ostypes.API('CGDisplayCreateImage')(displays[i]);
-
+						console.info('image:', image.toString(), uneval(image));
 						if (image.isNull()) {
-
+							console.warn('no image so continuing');
 							continue;
 						}
 						
@@ -1638,30 +1638,30 @@ function shootAllMons() {
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
-
-
-
+						console.info('rect:', rect);
+						console.info('collMonInfos[i_nonMirror[i]]:', collMonInfos[i_nonMirror[i]]);
+						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
 						ostypes.API('CGContextDrawImage')(casted_cgcontext, dest, image); // reutrns void
-
+						console.info('did CGContextDrawImage');
 						
 						// CGImageRelease(image);
 						ostypes.API('CGImageRelease')(image); // returns void
-
+						console.info('did CGImageRelease');
 						
 					}
 					
 					// [[NSGraphicsContext currentContext] flushGraphics];
 					var rez_currentContext = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('currentContext'));
-
+					console.info('rez_currentContext:', rez_currentContext.toString(), uneval(rez_currentContext));
 					
 					var rez_flushGraphics = ostypes.API('objc_msgSend')(rez_currentContext, ostypes.HELPER.sel('flushGraphics'));
-
+					console.info('rez_flushGraphics:', rez_flushGraphics.toString(), uneval(rez_flushGraphics));
 					
 					// [NSGraphicsContext restoreGraphicsState];
 					var rez_restoreGraphicsState = ostypes.API('objc_msgSend')(NSGraphicsContext, ostypes.HELPER.sel('restoreGraphicsState'));
-
+					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState));
 					// end - take one big screenshot of all monitors
 					
 					// start - write to desktop
@@ -1669,19 +1669,19 @@ function shootAllMons() {
 					
 					var NSDictionary = ostypes.HELPER.class('NSDictionary');
 					var tempDict = ostypes.API('objc_msgSend')(NSDictionary, ostypes.HELPER.sel('dictionary')); //gives us temporary dicationary, one that gets auto released? well whatever its something not allocated so we dont have to release it
-
+					console.info('tempDict:', tempDict.toString(), uneval(tempDict));
 					
 					var data = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('representationUsingType:properties:'), ostypes.CONST.NSPNGFileType, tempDict); // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/representationUsingType:properties:
 					
 					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
 					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeToFile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
-
+					console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
 					// end - write to desktop
 	
 					// start - try to get byte array
 					// [imageRep bitmapData]
 					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
-
+					console.info('rgba_buf:', rgba_buf.toString());
 					
 					rez_width = parseInt(cutils.jscGetDeepest(rez_width));
 					rez_height = parseInt(cutils.jscGetDeepest(rez_height));
@@ -1690,35 +1690,35 @@ function shootAllMons() {
 					var bitmapByteCount = bitmapBytesPerRow * rez_height;
 					
 					// var rgba_arr = ctypes.cast(rgba_buf, ostypes.TYPE.unsigned_char.array(bitmapByteCount).ptr).contents;
-
+					// console.info('rgba_arr:', rgba_arr.toString());
 					
-
+					console.time('init imagedata');
 					var allShotBuf = new ArrayBuffer(bitmapByteCount);
+					console.timeEnd('init imagedata');
 
-
-
+					console.time('memcpy');
 					ostypes.API('memcpy')(allShotBuf, rgba_buf, bitmapByteCount);
-
+					console.timeEnd('memcpy');
 					
 					var allShotUint8 = new Uint8Array(allShotBuf);
 					// end - try to get byte array
 				} finally {
-
+					console.error('starting finally block');
 					var rez_showCursor = ostypes.API('CGDisplayShowCursor')(ostypes.CONST.kCGNullDirectDisplay);
 					
 					if (allocNSBIP) {
 						var rez_relNSBPI = ostypes.API('objc_msgSend')(allocNSBIP, ostypes.HELPER.sel('release'));
-
+						console.info('rez_relNSBPI:', rez_relNSBPI.toString());
 					}
 					if (myNSStrings) {
 						myNSStrings.releaseAll()
 					}
-
+					console.info('released things, i want to know if it gets here even if return was called within the try block');
 				}
 				// end - take one big screenshot of all monitors
 				
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
-
+				console.time('portion out image data');
 				
 				var portionOutAllToMonAnd255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
 					// returns aMonUint
@@ -1747,11 +1747,11 @@ function shootAllMons() {
 					var monUseW = collMonInfos[i].w;
 					var monUseH = collMonInfos[i].h;
 
-
+					console.log('will use this y for canvas portion:', (collMonInfos[i].y - minScreenY));
 					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x - minScreenX, collMonInfos[i].y - minScreenY);
 					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
-
+				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				
 			break;

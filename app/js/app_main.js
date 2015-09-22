@@ -18,7 +18,7 @@ const core = {
 			resources: 'chrome://nativeshot/content/resources/',
 			images: 'chrome://nativeshot/content/resources/images/'
 		},
-		cache_key: 'v1.1'
+		cache_key: Math.random()
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -83,7 +83,7 @@ function updateCountsToSkillBars() {
 		}
 	}
 	
-
+	console.log('nativeshot_log_counts:', nativeshot_log_counts);
 	
 		// mod biggest count so its percent obeys biggest_count_should_be_percent
 		// alert('biggest count: ' + nativeshot_biggest_count);
@@ -150,7 +150,7 @@ function getImageURL(aArrEl, nonFileUri) {
 
 function izoView(aEvent, aGettime) {
 	// alert(aEvent);
-
+	// console.info('aEvent:', aEvent);
 	if (aEvent.ctrlKey || aEvent.altKey || aEvent.metaKey || aEvent.shiftKey) {
 		// let default browse action happen, which is open in new tab focused, new tab background, or new window
 	} else {
@@ -211,21 +211,21 @@ function izoDelete(aGettime) {
 				var promise_moveToRecylingBin = OS.File.remove(getImageURL(aArrEl, true), {ignoreAbsent:false});
 				promise_moveToRecylingBin.then(
 					function(aVal) {
-
+						console.log('Fullfilled - promise_moveToRecylingBin - ', aVal);
 						// start - do stuff here - promise_moveToRecylingBin
 						removeEntryOrEntriesFromFileJson(aGettime);
 						// end - do stuff here - promise_moveToRecylingBin
 					},
 					function(aReason) {
 						var rejObj = {name:'promise_moveToRecylingBin', aReason:aReason};
-
+						console.error('Rejected - promise_moveToRecylingBin - ', rejObj);
 						alert('Failed to delete file from computer, reload the page and try again');
 						// deferred_createProfile.reject(rejObj);
 					}
 				).catch(
 					function(aCaught) {
 						var rejObj = {name:'promise_moveToRecylingBin', aCaught:aCaught};
-
+						console.error('Caught - promise_moveToRecylingBin - ', rejObj);
 						// deferred_createProfile.reject(rejObj);
 					}
 				);
@@ -252,27 +252,27 @@ function izoDelete(aGettime) {
 					});
 					promise_delOnServ.then(
 						function(aVal) {
-
+							console.log('Fullfilled - promise_delOnServ - ', aVal);
 							// start - do stuff here - promise_delOnServ
 							if (aVal.response.success) {
 								removeEntryOrEntriesFromFileJson(aGettime);
 							} else {
-
+								console.error('Failed to delete image from Imgur servers, response received was:', aVal.responseText);
 								alert(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_delete-fail-server-body'));
 							}
 							// end - do stuff here - promise_delOnServ
 						},
 						function(aReason) {
 							var rejObj = {name:'promise_delOnServ', aReason:aReason};
-
-
+							console.error('Rejected - promise_delOnServ - ', rejObj);
+							// console.error('Failed to connect to Imgur servers, debug object:', aVal);
 							alert(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_delete-fail-connect-body'));
 							//deferred_createProfile.reject(rejObj);
 						}
 					).catch(
 						function(aCaught) {
 							var rejObj = {name:'promise_delOnServ', aCaught:aCaught};
-
+							console.error('Caught - promise_delOnServ - ', rejObj);
 							alert('devleoper you did something stupid check your browser console - this error should never happen in released addon');
 							//deferred_createProfile.reject(rejObj);
 						}
@@ -308,20 +308,20 @@ function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
 		var promise_readAndParse = readInAndParseFileJson();
 		promise_readAndParse.then(
 			function(aVal) {
-
+				console.log('Fullfilled - promise_readAndParse - ', aVal);
 				// start - do stuff here - promise_readAndParse
 				step2();
 				// end - do stuff here - promise_readAndParse
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_readAndParse', aReason:aReason};
-
+				console.error('Rejected - promise_readAndParse - ', rejObj);
 				// deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_readAndParse', aCaught:aCaught};
-
+				console.error('Caught - promise_readAndParse - ', rejObj);
 				// deferred_createProfile.reject(rejObj);
 			}
 		);
@@ -419,11 +419,11 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		
 		var aTypeInt;
 		var domElItem = $(this).closest('.item')[0];
-
+		console.log('domElItem:', domElItem);
 		var classList = domElItem.classList; // gets 
 		for (var i=0; i<classList.length; i++) {
 			if (classList[i].indexOf('nativeshot-') == 0) {
-
+				// console.log('aTypeStr:', classList[i].substr(11));
 				aTypeInt = aTypeStrToTypeInt[classList[i].substr(11)]; // 11 is 'nativeshot-'.length
 				break;
 			}
@@ -437,7 +437,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		objOfImagePathsInIsotope[imgSrc].domElItem = domElItem;
 	});
 	
-
+	console.log('objOfImagePathsInIsotope:', objOfImagePathsInIsotope);
 	
 	var imgsAdded = false;
 	var imgsRemoved = false;
@@ -485,7 +485,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 						imgsAdded = true;
 						
 						var createdEl = jsonToDOM(slipCoverJson, document, {});
-
+						console.log('createdEl:', createdEl);
 						ic.insertBefore(createdEl, ic.firstChild.nextSibling);
 						if (isNotInit) {
 							izotopeContainer.isotope('addItems', createdEl);
@@ -499,7 +499,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 	}
 
 
-
+	console.log('fileJsonAsIzotopeEls:', fileJsonAsIzotopeEls);
 	if (isNotInit) {
 		// check if need to remove anything, and remove it
 		// check if any of the isotope srcs that were present when i started this function, need to not be there (meaning they are not in the fileJsonAsIzotopeEls obj)
@@ -513,7 +513,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 				}
 			}
 			if (!found) {
-
+				console.log('need to remove from isotope this img src:', isotopeImgSrc);
 				imgsRemoved = true;
 				izotopeContainer.isotope('remove', objOfImagePathsInIsotope[isotopeImgSrc].domElItem);
 			}
@@ -567,7 +567,7 @@ function readInAndParseFileJson() {
 	var promise_read = read_encoded(OSPath_historyLog, {encoding:'utf-8'});
 	promise_read.then(
 		function(aVal) {
-
+			console.log('Fullfilled - promise_read - ', aVal);
 			// start - do stuff here - promise_read
 			gFileJson = JSON.parse('[' + aVal.substr(1) + ']'); // because its saved as unbracketed with a leading comma
 			gFileJson.sort(function(a, b) {
@@ -582,14 +582,14 @@ function readInAndParseFileJson() {
 				gFileJson = [];
 				deferredMain_readInAndParseFileJson.resolve();
 			} else {
-
+				console.warn('Rejected - promise_read - ', rejObj);
 				deferredMain_readInAndParseFileJson.reject(rejObj);
 			}
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_read', aCaught:aCaught};
-
+			console.error('Caught - promise_read - ', rejObj);
 			deferredMain_readInAndParseFileJson.reject(rejObj);
 		}
 	);
@@ -603,7 +603,7 @@ function writeFileJsonToFile() {
 	if (writeTxt == ',') {
 		writeTxt = ''; // as we dont want to write justa comma
 	}
-
+	console.log('writing to file:', writeTxt);
 	
 	tryOsFile_ifDirsNoExistMakeThenRetry('writeAtomic', [OSPath_historyLog, writeTxt, {
 		encoding: 'utf-8',
@@ -700,21 +700,21 @@ function readFileAndUpdateGUI(isNotInit) {
 		
 		promise_bringInFile.then(
 			function(aVal) {
-
+				console.log('Fullfilled - promise_bringInFile - ', aVal);
 				// start - do stuff here - promise_bringInFile
 				step2();
 				// end - do stuff here - promise_bringInFile
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_bringInFile', aReason:aReason};
-
+				console.warn('Rejected - promise_bringInFile - ', rejObj);
 				alert('An error occured when trying to read the history, please reload the page');
 				// deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_bringInFile', aCaught:aCaught};
-
+				console.error('Caught - promise_bringInFile - ', rejObj);
 				// deferred_createProfile.reject(rejObj);
 				alert('deverror on history read');
 			}
@@ -732,11 +732,11 @@ function readFileAndUpdateGUI(isNotInit) {
 
 var serverMessageListener = {
 	receiveMessage: function(aMsg) {
-
+		console.error('DASHBOARD client recieving msg:', 'aMsg:', aMsg);
 		if (aMsg.json == 'serverCommand_refreshDashboardGuiFromFile') {
 			readFileAndUpdateGUI(true);
 		} else {
-
+			console.error('DASHBAORD client unrecognized aMasg:', aMsg);
 		}
 	}
 };
@@ -754,7 +754,7 @@ function onPageReady() {
 	/**********************************/
 	$('.skill-block').on('click', function(event) {
 		event.stopPropagation();
-
+		console.log('event:', event);
 		var typeStr = $(event.target).closest('.skill-block').find('.skill-line').attr('data-nativeshot-category');
 		// alert(['clicked ' + typeStr, 'clicked x:'+event.offsetX,'el left:'+event.target.offsetLeft,'el right:' + (event.target.offsetLeft + event.target.offsetWidth)].join('\n'));
 		if (event.offsetX > event.target.offsetLeft + event.target.offsetWidth || event.offsetX < 0) {
@@ -798,11 +798,11 @@ function onPageReady() {
 			duration: 300,
 			easing: 'ease-in-out', 
 			opener: function(openerElement) {
-
+			  console.info('openerElement:', openerElement);
 			  var aGettime = openerElement[0].getAttribute('data-card-gettime');
-
+			  console.log('aGettime:', '"'+aGettime+'"');
 			  var relatedImg = $('.det-img[data-gettime="' + aGettime + '"] img');
-
+			  console.info('relatedImg:', relatedImg);
 			  return relatedImg;
 			}
 		},
@@ -848,9 +848,9 @@ function extendCore() {
 			
 		case 'darwin':
 			var userAgent = myServices.hph.userAgent;
-
+			//console.info('userAgent:', userAgent);
 			var version_osx = userAgent.match(/Mac OS X 10\.([\d\.]+)/);
-
+			//console.info('version_osx matched:', version_osx);
 			
 			if (!version_osx) {
 				throw new Error('Could not identify Mac OS X version.');
@@ -877,7 +877,7 @@ function extendCore() {
 			// nothing special
 	}
 	
-
+	console.log('done adding to core, it is now:', core);
 }
 function Deferred() {
 	if (Promise && Promise.defer) {
@@ -915,7 +915,7 @@ function Deferred() {
 			}.bind(this));
 			Object.freeze(this);
 		} catch (ex) {
-
+			console.error('Promise not available!', ex);
 			throw new Error('Promise not available!');
 		}
 	} else {
@@ -960,7 +960,7 @@ function xhr(aStr, aOptions={}) {
 	// Note: When using XMLHttpRequest to access a file:// URL the request.status is not properly set to 200 to indicate success. In such cases, request.readyState == 4, request.status == 0 and request.response will evaluate to true.
 	
 	var deferredMain_xhr = new Deferred();
-
+	console.log('here222');
 	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
 
 	var handler = ev => {
@@ -1057,7 +1057,7 @@ function xhr(aStr, aOptions={}) {
 		for (var pd in aOptions.aPostData) {
 			aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
 		}
-
+		console.info('aPostStr:', aPostStr.join('&'));
 		xhr.send(aPostStr.join('&'));
 	} else {
 		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'GET', aStr, true);
@@ -1103,7 +1103,7 @@ function read_encoded(path, options) {
 	
 	promise_readIt.then(
 		function(aVal) {
-
+			console.log('Fullfilled - promise_readIt - ', {a:{a:aVal}});
 			// start - do stuff here - promise_readIt
 			var readStr;
 			if (Services.vc.compare(Services.appinfo.version, 30) < 0) { // tests if version is less then 30
@@ -1116,13 +1116,13 @@ function read_encoded(path, options) {
 		},
 		function(aReason) {
 			var rejObj = {name:'promise_readIt', aReason:aReason};
-
+			console.error('Rejected - promise_readIt - ', rejObj);
 			deferred_read_encoded.reject(rejObj);
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_readIt', aCaught:aCaught};
-
+			console.error('Caught - promise_readIt - ', rejObj);
 			deferred_read_encoded.reject(rejObj);
 		}
 	);
@@ -1150,22 +1150,22 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 	
 	// setup retry
 	var retryIt = function() {
-
+		console.info('tryosFile_ retryIt', 'nameOfOsFileFunc:', nameOfOsFileFunc, 'argsOfOsFileFunc:', argsOfOsFileFunc);
 		var promise_retryAttempt = OS.File[nameOfOsFileFunc].apply(OS.File, argsOfOsFileFunc);
 		promise_retryAttempt.then(
 			function(aVal) {
-
+				console.log('Fullfilled - promise_retryAttempt - ', aVal);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.resolve('retryAttempt succeeded');
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_retryAttempt', aReason:aReason};
-
+				console.error('Rejected - promise_retryAttempt - ', rejObj);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); //throw rejObj;
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_retryAttempt', aCaught:aCaught};
-
+				console.error('Caught - promise_retryAttempt - ', rejObj);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -1201,15 +1201,15 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		var promise_makeDirsRecurse = makeDir_Bug934283(toDir, {from: fromDir});
 		promise_makeDirsRecurse.then(
 			function(aVal) {
-
+				console.log('Fullfilled - promise_makeDirsRecurse - ', aVal);
 				retryIt();
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_makeDirsRecurse', aReason:aReason};
-
+				console.error('Rejected - promise_makeDirsRecurse - ', rejObj);
 				/*
 				if (aReason.becauseNoSuchFile) {
-
+					console.log('make dirs then do retryAttempt');
 					makeDirs();
 				} else {
 					// did not get becauseNoSuchFile, which means the dirs exist (from my testing), so reject with this error
@@ -1222,7 +1222,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_makeDirsRecurse', aCaught:aCaught};
-
+				console.error('Caught - promise_makeDirsRecurse - ', rejObj);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -1230,17 +1230,17 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 
 	var doInitialAttempt = function() {
 		var promise_initialAttempt = OS.File[nameOfOsFileFunc].apply(OS.File, argsOfOsFileFunc);
-
+		console.info('tryosFile_ initial', 'nameOfOsFileFunc:', nameOfOsFileFunc, 'argsOfOsFileFunc:', argsOfOsFileFunc);
 		promise_initialAttempt.then(
 			function(aVal) {
-
+				console.log('Fullfilled - promise_initialAttempt - ', aVal);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.resolve('initialAttempt succeeded');
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_initialAttempt', aReason:aReason};
-
+				console.error('Rejected - promise_initialAttempt - ', rejObj);
 				if (aReason.becauseNoSuchFile) { // this is the flag that gets set to true if parent dir(s) dont exist, i saw this from experience
-
+					console.log('make dirs then do secondAttempt');
 					makeDirs();
 				} else {
 					deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); //throw rejObj;
@@ -1249,7 +1249,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_initialAttempt', aCaught:aCaught};
-
+				console.error('Caught - promise_initialAttempt - ', rejObj);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -1263,7 +1263,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		var promise_checkDirExistsFirstAsCausesNeutering = OS.File.exists(toDir);
 		promise_checkDirExistsFirstAsCausesNeutering.then(
 			function(aVal) {
-
+				console.log('Fullfilled - promise_checkDirExistsFirstAsCausesNeutering - ', aVal);
 				// start - do stuff here - promise_checkDirExistsFirstAsCausesNeutering
 				if (!aVal) {
 					makeDirs();
@@ -1274,13 +1274,13 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_checkDirExistsFirstAsCausesNeutering', aReason:aReason};
-
+				console.warn('Rejected - promise_checkDirExistsFirstAsCausesNeutering - ', rejObj);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_checkDirExistsFirstAsCausesNeutering', aCaught:aCaught};
-
+				console.error('Caught - promise_checkDirExistsFirstAsCausesNeutering - ', rejObj);
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj);
 			}
 		);
