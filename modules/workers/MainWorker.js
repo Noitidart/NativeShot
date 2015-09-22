@@ -1489,7 +1489,9 @@ function shootAllMons() {
 					}
 					
 					// rez_CGDisplayBounds.origin.y = ostypes.API('CGRectGetMaxY')(primaryDisplayRect) - ostypes.API('CGRectGetMaxY')(displayRect);
+					// need to do correction just on Y and not on X because "Y coordinate because that's the only difference between Cocoa's coordinate system and Core Graphics' coordinate system" // http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac/28247749#comment53248403_28247749
 					rez_CGDisplayBounds.origin.y = (primaryDisplayRectInfo.y + primaryDisplayRectInfo.h) - (collMonInfos[collMonInfos.length-1].y + collMonInfos[collMonInfos.length-1].h); // because CGRectGetMaxY is just ` rect.origin.y + rect.size.height;` as per https://github.com/joshpc/SBLayoutManager/blob/b899e10834d27f3569b5a8e2de296f19b8f9003d/SBLayoutManager/CGRectHelpers.m#L22 // and also [0] instead of primaryDisplayRect as the first one is primary monitor per link5233423
+					collMonInfos[collMonInfos.length-1].corrected_y = rez_CGDisplayBounds.origin.y;
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
 					console.info('rect post loop ' + i + ':', rect.toString());
 				}
@@ -1621,7 +1623,7 @@ function shootAllMons() {
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
 							collMonInfos[i_nonMirror[i]].x - rectOriginX,
-							collMonInfos[i_nonMirror[i]].y - rectOriginY,
+							collMonInfos[i_nonMirror[i]].corrected_y - rectOriginY,
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
