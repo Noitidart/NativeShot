@@ -10,4 +10,4 @@
 <!ENTITY nativeshot.app-main.category-all 'All'>
 
 <!ENTITY nativeshot.app-main.category-desc 'select a category to filter'>
-<!ENTITY nativeshot.app-main.isotope-no-results 'no images in this category yet'>
+<!ENTITY nativeshot.app-main.isotope-no-results 'no images in this category'>

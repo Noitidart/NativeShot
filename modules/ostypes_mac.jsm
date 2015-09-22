@@ -550,6 +550,18 @@ var macInit = function() {
 				self.TYPE.CGRect
 			);
 		},
+		CGRectGetMaxX: function() {
+			return lib('CoreGraphics').declare('CGRectGetMaxX', ctypes.default_abi,
+				self.TYPE.CGFloat,
+				self.TYPE.CGRect
+			);
+		},
+		CGRectGetMaxY: function() {
+			return lib('CoreGraphics').declare('CGRectGetMaxY', ctypes.default_abi,
+				self.TYPE.CGFloat,
+				self.TYPE.CGRect
+			);
+		},
 		CGRectGetWidth: function() {
 			return lib('CoreGraphics').declare('CGRectGetWidth', self.TYPE.ABI,
 				self.TYPE.CGFloat,

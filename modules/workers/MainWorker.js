@@ -530,16 +530,28 @@ function getAllWin(aOptions) {
 					
 					// post analysis
 					// 1) remove all windows who have height and width == to Desktop which is that last entry
-					if (rezWinArr[rezWinArr.length - 1].title != 'Desktop') {
-						console.error('title of last item is not Desktop so this may be a bad assumption that last item is Desktop, but just throwing a warning for right now');
+					// osx has multiple desktop elements, if two mon, then two desktops, i can know number of mon by counting number of "nativeshot_canvas" titled windows
+					// and nativeshot_canvas width and height is equal to that of its respective desktop width and height
+					var numDesktop = 0;
+					var desktopDimWxH = [];
+					for (var i=0; i<rezWinArr.length-1; i++) {
+						if (rezWinArr[i].title == 'nativeshot_canvas') {
+							numDesktop++;
+							desktopDimWxH.push(rezWinArr[i].width + ' x ' + rezWinArr[i].height);
+						}
 					}
-					var deskW = rezWinArr[rezWinArr.length - 1].width;
-					var deskH = rezWinArr[rezWinArr.length - 1].height;
-					for (var i = 0; i < rezWinArr.length - 1; i++) { // - 1 as we dont want the very last item
+					// now splice out all things that have any dimensions matching these EXCEPT the last numMon elements as they will be titled Desktop
+					for (var i=rezWinArr.length-numDesktop; i<rezWinArr.length; i++) {
+						if (rezWinArr[i].title != 'DesktopAA') {
+							console.error('last', numDesktop, 'elements should have title Desktop, and it was found that title of ' + (rezWinArr.length - i) + ' to last item is not Desktop so this may be a bad assumption that last item is Desktop, it is:', rezWinArr[i], 'but just throwing a warning for right now');
+						}
+					}
+					for (var i=0; i<rezWinArr.length-numDesktop; i++) {
 						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
 							continue;
 						}
-						if (rezWinArr[i].width == deskW && rezWinArr[i].height == deskH) {
+						if (desktopDimWxH.indexOf(rezWinArr[i].width + ' x ' + rezWinArr[i].height) > -1) {
+							console.log('found element that has width and height equal to desktop, element is:', i, rezWinArr[i], 'splicing this out');
 							rezWinArr.splice(i, 1);
 							i--;
 						}
@@ -1038,6 +1050,19 @@ function shootAllMons() {
 				}
 				// end - get all monitor resolutions
 		
+				var swapBandRinUint8 = function(aUint8) {
+					var pos = 0;
+					var cArrLen = aUint8.length;
+					while (pos < cArrLen) {
+						var B = aUint8[pos];
+
+						aUint8[pos] = aUint8[pos+2];
+						aUint8[pos+2] = B;
+
+						pos += 4;
+					}
+				};
+		
 				// start - take shot of each monitor
 				for (var s=0; s<collMonInfos.length; s++) {
 					console.time('shot of screen ' + s);
@@ -1071,9 +1096,6 @@ function shootAllMons() {
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
 					console.log('useW:', useW, 'realW:', w);
-					
-					var arrLen = useW * h * 4;
-					var imagedata = new ImageData(useW, h);
 					
 					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
 					//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
@@ -1138,27 +1160,24 @@ function shootAllMons() {
 					
 					console.timeEnd('shot of screen ' + s);
 					
+					var arrLen = useW * h * 4;
+					// var imagedata = new ImageData(useW, h);
+					var monShotBuf = new ArrayBuffer(arrLen);
+					
 					console.time('memcpy');
-					ostypes.API('memcpy')(imagedata.data, pixelBuffer, arrLen);
+					ostypes.API('memcpy')(monShotBuf, pixelBuffer, arrLen);
 					console.timeEnd('memcpy');
+					
+					var monShotUint8 = new Uint8Array(monShotBuf);
 					
 					// swap bytes to go from BRGA to RGBA
 					// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
 					console.time('BGRA -> RGBA');
-					var dataRef = imagedata.data;
-					var pos = 0;
-					while (pos < arrLen) {
-						var B = dataRef[pos];
-
-						dataRef[pos] = dataRef[pos+2];
-						dataRef[pos+2] = B;
-
-						pos += 4;
-					}
+					swapBandRinUint8(monShotUint8);
 					console.timeEnd('BGRA -> RGBA');
 					
-					collMonInfos[s].screenshot = imagedata.data.buffer;
-					aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
+					collMonInfos[s].screenshot = monShotBuf;
+					aScreenshotBuffersToTransfer.push(collMonInfos[s].screenshot);
 					
 					// release memory of screenshot stuff
 					//delete collMonInfos[s].otherInfo;
@@ -1242,6 +1261,7 @@ function shootAllMons() {
 		case 'gtk':
 
 				// start - get all monitor resolutions
+				/*
 				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
 				//console.info('screen:', screen.contents, screen.contents.toString());
 
@@ -1290,6 +1310,38 @@ function shootAllMons() {
 				}
 				
 				console.info('json.stringify post clean:', JSON.stringify(collMonInfos), collMonInfos);
+				*/
+				
+				// XRRScreenResources *xrrr = XRRGetScreenResources(d, w);
+				var xrrr = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
+				// console.info('xrrr:', xrrr.contents, xrrr.contents.toString());
+				
+				// int ncrtc = xrrr->ncrtc;
+				
+				var ncrtc = parseInt(cutils.jscGetDeepest(xrrr.contents.ncrtc));
+				console.log('ncrtc:', ncrtc);
+				
+				var crtcs = ctypes.cast(xrrr.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtc).ptr).contents;
+				for (var i=0; i<ncrtc; i++) {
+					var xrrci = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), xrrr, crtcs[i]);
+					// printf("%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+					
+					collMonInfos.push({
+						x: parseInt(cutils.jscGetDeepest(xrrci.contents.x)),
+						y: parseInt(cutils.jscGetDeepest(xrrci.contents.y)),
+						w: parseInt(cutils.jscGetDeepest(xrrci.contents.width)),
+						h: parseInt(cutils.jscGetDeepest(xrrci.contents.height)),
+						screenshot: null // for x11, i take the big canvas and protion to each mon
+					});
+					
+					console.info(i, 'mon info:', collMonInfos[collMonInfos.length-1]);
+					
+					ostypes.API('XRRFreeCrtcInfo')(xrrci);
+				}
+				ostypes.API('XRRFreeScreenResources')(xrrr);
+				
+				console.info('all mon infos:', collMonInfos);
+				
 				// end - get all monitor resolutions
 				
 				// start - take shot of all monitors and push to just first element of collMonInfos
@@ -1397,7 +1449,12 @@ function shootAllMons() {
 				console.info('count:', count);
 				var i_nonMirror = {};
 				
+				var minScreenX;
+				var minScreenY;
+				
 				var rect = ostypes.CONST.CGRectNull;
+				// var primaryDisplayRect;
+				var primaryDisplayRectInfo;
 				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
 					// if display is secondary mirror of another display, skip it
@@ -1409,7 +1466,7 @@ function shootAllMons() {
 					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
 						continue;
 					}
-					i_nonMirror[i] = null;
+					i_nonMirror[i] = collMonInfos.length; // the length here, will be the i index of the CGDisplayBounds in collMonInfos
 					
 					var rez_CGDisplayBounds = ostypes.API('CGDisplayBounds')(displays[i]);
 					console.info('rez_CGDisplayBounds:', rez_CGDisplayBounds.toString(), uneval(rez_CGDisplayBounds)/*, cutils.jscGetDeepest(rez_CGDisplayBounds)*/); // :todo: fix cutils.jscEqual because its throwing `Error: cannot convert to primitive value` for ctypes.float64_t and ctypes.double ACTUALLY its a struct, so no duhhh so no :todo:
@@ -1422,6 +1479,29 @@ function shootAllMons() {
 						screenshot: null // for darwin, i take the big canvas and protion to each mon
 					});
 					
+					if (minScreenX === undefined) {
+						minScreenX = collMonInfos[i_nonMirror[i]].x;
+						minScreenY = collMonInfos[i_nonMirror[i]].y;
+					} else {
+						if (collMonInfos[i_nonMirror[i]].x < minScreenX) {
+							minScreenX = collMonInfos[i_nonMirror[i]].x;
+						}
+						if (collMonInfos[i_nonMirror[i]].y < minScreenY) {
+							minScreenY = collMonInfos[i_nonMirror[i]].y;
+						}
+					}
+					
+					if (!primaryDisplayRectInfo) {
+						// assuming the first non mirror is primary per http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac/28247749#comment53261634_28247749
+						collMonInfos[collMonInfos.length-1].primary = true;
+						// primaryDisplayRect = rez_CGDisplayBounds;
+						primaryDisplayRectInfo = collMonInfos[collMonInfos.length-1];
+					}
+					
+					// rez_CGDisplayBounds.origin.y = ostypes.API('CGRectGetMaxY')(primaryDisplayRect) - ostypes.API('CGRectGetMaxY')(displayRect);
+					// need to do correction just on Y and not on X because "Y coordinate because that's the only difference between Cocoa's coordinate system and Core Graphics' coordinate system" // http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac/28247749#comment53248403_28247749
+					rez_CGDisplayBounds.origin.y = (primaryDisplayRectInfo.y + primaryDisplayRectInfo.h) - (collMonInfos[collMonInfos.length-1].y + collMonInfos[collMonInfos.length-1].h); // because CGRectGetMaxY is just ` rect.origin.y + rect.size.height;` as per https://github.com/joshpc/SBLayoutManager/blob/b899e10834d27f3569b5a8e2de296f19b8f9003d/SBLayoutManager/CGRectHelpers.m#L22 // and also [0] instead of primaryDisplayRect as the first one is primary monitor per link5233423
+					collMonInfos[collMonInfos.length-1].corrected_y = rez_CGDisplayBounds.origin.y;
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
 					console.info('rect post loop ' + i + ':', rect.toString());
 				}
@@ -1524,11 +1604,20 @@ function shootAllMons() {
 					//console.info('rez_CGContextClearRect:', rez_CGContextClearRect.toString(), uneval(rez_CGContextClearRect), cutils.jscGetDeepest(rez_CGContextClearRect));
 					console.log('did CGContextClearRect');
 					
+					var rectOriginX = parseInt(cutils.jscGetDeepest(rect.origin.x));
+					var rectOriginY = parseInt(cutils.jscGetDeepest(rect.origin.y));
+					
+					console.info('minScreenX:', minScreenX);
+					console.info('minScreenY:', minScreenY);
+					console.info('rectOriginX:', rectOriginX);
+					console.info('rectOriginY:', rectOriginY);
+					
+					// note: i_nonMirror, keys are the i value it corresponds to in displays Array, and value is the i value it corresponds to in collMonInfos Array
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
-						var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
-						console.info('displayRect:', displayRect.toString(), uneval(displayRect));
+						// var displayRect = ostypes.API('CGDisplayBounds')(displays[i]);
+						// console.info('displayRect:', displayRect.toString(), uneval(displayRect));
 						
 						console.warn('pre CGDisplayCreateImage');
 						// CGImageRef image = CGDisplayCreateImage(displays[i]);
@@ -1544,11 +1633,13 @@ function shootAllMons() {
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
-							displayRect.origin.x - rect.origin.x,
-							displayRect.origin.y - rect.origin.y,
-							displayRect.size.width,
-							displayRect.size.height
+							collMonInfos[i_nonMirror[i]].x - rectOriginX,
+							collMonInfos[i_nonMirror[i]].corrected_y - rectOriginY,
+							collMonInfos[i_nonMirror[i]].w,
+							collMonInfos[i_nonMirror[i]].h
 						);
+						console.info('rect:', rect);
+						console.info('collMonInfos[i_nonMirror[i]]:', collMonInfos[i_nonMirror[i]]);
 						console.info('dest:', dest.toString(), uneval(dest));
 						
 						// CGContextDrawImage(cgcontext, dest, image);
@@ -1573,10 +1664,27 @@ function shootAllMons() {
 					console.info('rez_restoreGraphicsState:', rez_restoreGraphicsState.toString(), uneval(rez_restoreGraphicsState));
 					// end - take one big screenshot of all monitors
 					
+					// start - write to desktop
+					// NSData* data = [imageRep representationUsingType:NSPNGFileType properties:@{ }];
+					
+					var NSDictionary = ostypes.HELPER.class('NSDictionary');
+					var tempDict = ostypes.API('objc_msgSend')(NSDictionary, ostypes.HELPER.sel('dictionary')); //gives us temporary dicationary, one that gets auto released? well whatever its something not allocated so we dont have to release it
+					console.info('tempDict:', tempDict.toString(), uneval(tempDict));
+					
+					var data = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('representationUsingType:properties:'), ostypes.CONST.NSPNGFileType, tempDict); // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBitmapImageRep_Class/index.html#//apple_ref/occ/instm/NSBitmapImageRep/representationUsingType:properties:
+					
+					// [data writeToFile:@"/tmp/screenshot.png" atomically:YES];
+					var rez_writeToFile = ostypes.API('objc_msgSend')(data, ostypes.HELPER.sel('writeToFile:atomically:'), myNSStrings.get(OS.Path.join(OS.Constants.Path.desktopDir, 'full_ss.png')), ostypes.CONST.YES);
+					console.info('rez_writeToFile:', rez_writeToFile.toString(), uneval(rez_writeToFile), cutils.jscGetDeepest(rez_writeToFile));
+					// end - write to desktop
+	
 					// start - try to get byte array
 					// [imageRep bitmapData]
 					var rgba_buf = ostypes.API('objc_msgSend')(imageRep, ostypes.HELPER.sel('bitmapData'));
 					console.info('rgba_buf:', rgba_buf.toString());
+					
+					rez_width = parseInt(cutils.jscGetDeepest(rez_width));
+					rez_height = parseInt(cutils.jscGetDeepest(rez_height));
 					
 					var bitmapBytesPerRow = rez_width * 4;
 					var bitmapByteCount = bitmapBytesPerRow * rez_height;
@@ -1585,12 +1693,14 @@ function shootAllMons() {
 					// console.info('rgba_arr:', rgba_arr.toString());
 					
 					console.time('init imagedata');
-					var imagedata = new ImageData(rez_width, rez_height);
+					var allShotBuf = new ArrayBuffer(bitmapByteCount);
 					console.timeEnd('init imagedata');
 
 					console.time('memcpy');
-					ostypes.API('memcpy')(imagedata.data.buffer, rgba_buf, bitmapByteCount);
+					ostypes.API('memcpy')(allShotBuf, rgba_buf, bitmapByteCount);
 					console.timeEnd('memcpy');
+					
+					var allShotUint8 = new Uint8Array(allShotBuf);
 					// end - try to get byte array
 				} finally {
 					console.error('starting finally block');
@@ -1609,29 +1719,37 @@ function shootAllMons() {
 				
 				// start - because took a single screenshot of alllll put togather, lets portion out the imagedata
 				console.time('portion out image data');
-				var iref = imagedata.data;
-				var fullWidth = rez_width;
-				for (var i=0; i<collMonInfos.length; i++) {
-					var screenUseW = collMonInfos[i].w;
-					var screenUseH = collMonInfos[i].h;
+				
+				var portionOutAllToMonAnd255 = function(cutoutMonW, cutoutMonH, cutoutMonX, cutoutMonY) {
+					// returns aMonUint
+					var monShotBuf = new ArrayBuffer(cutoutMonW * cutoutMonH * 4);
+					var monShotUint8 = new Uint8Array(monShotBuf);
 					
-					var screnImagedata = new ImageData(screenUseW, screenUseH);
-					var siref = screnImagedata.data;
-					
+					var allShotEndY = cutoutMonY + cutoutMonH;
+					var allShotEndX = cutoutMonX + cutoutMonW;
 					var si = 0;
-					for (var y=collMonInfos[i].y; y<collMonInfos[i].y+screenUseH; y++) {
-						for (var x=collMonInfos[i].x; x<collMonInfos[i].x+screenUseW; x++) {
-							var pix1 = (fullWidth*y*4) + (x * 4);
-							//var B = iref[pix1];
-							siref[si] = iref[pix1];
-							siref[si+1] = iref[pix1+1];
-							siref[si+2] = iref[pix1+2];
-							siref[si+3] = 255;
+					for (var y=cutoutMonY; y<allShotEndY; y++) {
+						var pixY = (rez_width * y << 2); // << 2 is same as * 4
+						for (var x=cutoutMonX; x<allShotEndX; x++) {
+							var pixXY = pixY + (x << 2);
+							monShotUint8[si] = allShotUint8[pixXY];
+							monShotUint8[si+1] = allShotUint8[pixXY+1];
+							monShotUint8[si+2] = allShotUint8[pixXY+2];
+							monShotUint8[si+3] = 255;
 							si += 4;
 						}
 					}
-					collMonInfos[i].screenshot = screnImagedata.data.buffer;
-					aScreenshotBuffersToTransfer.push(screnImagedata.data.buffer);
+					
+					return monShotBuf;
+				};
+				
+				for (var i=0; i<collMonInfos.length; i++) {
+					var monUseW = collMonInfos[i].w;
+					var monUseH = collMonInfos[i].h;
+
+					console.log('will use this y for canvas portion:', (collMonInfos[i].y - minScreenY));
+					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x - minScreenX, collMonInfos[i].y - minScreenY);
+					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
 				console.timeEnd('portion out image data');
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
