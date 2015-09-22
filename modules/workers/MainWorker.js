@@ -535,7 +535,7 @@ function getAllWin(aOptions) {
 					var numDesktop = 0;
 					var desktopDimWxH = [];
 					for (var i=0; i<rezWinArr.length-1; i++) {
-						if (rezWinArr[i].tile == 'nativeshot_canvas') {
+						if (rezWinArr[i].title == 'nativeshot_canvas') {
 							numDesktop++;
 							desktopDimWxH.push(rezWinArr[i].width + ' x ' + rezWinArr[i].height);
 						}
