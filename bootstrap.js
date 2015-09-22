@@ -1651,42 +1651,32 @@ var gEditor = {
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		
-		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
-			// let file = new FileUtils.File('C:\\Users\\Vayeate\\Pictures\\imglogo.jpg');
-			console.log('blob ready:', b);
-			
-			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
-			fileReader.addEventListener('load', function (event) {
-				var buffer = event.target.result;
-				// console.error('buffer ready:', buffer.constructor.name);
-				
-				var postData;
-				var serviceSearchUrl;
-				if (serviceType == 0) {
-					// tineye
-					serviceSearchUrl = TINEYE_REV_SEARCH_URL;
-					postData = encodeFormData({
-					  "image": buffer
-					}, "iso8859-1", 'myimg.png', 'image/png');
-				} else if (serviceType == 1) {
-					// google images
-					serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
-					postData = encodeFormData({
-					  "image_url": 'myimg.png',
-					  "encoded_image": buffer
-					}, "iso8859-1", 'myimg.png', 'image/png');
-				} else {
-					throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
-				}
+		this.canComp.mozFetchAsStream(function(is) {
 
-				cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
-				  inBackground: false,
-				  postData: postData
-				});
+			var postData;
+			var serviceSearchUrl;
+			if (serviceType == 0) {
+				// tineye
+				serviceSearchUrl = TINEYE_REV_SEARCH_URL;
+				postData = encodeFormData({
+					"image": is
+				}, "iso8859-1", 'myimg.png', 'image/png', 'image');
+			} else if (serviceType == 1) {
+				// google images
+				serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
+				postData = encodeFormData({
+					"image_url": 'myimg.png',
+					"encoded_image": is
+				}, "iso8859-1", 'myimg.png', 'image/png', 'encoded_image');
+			} else {
+				throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
+			}
+
+			cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
+			  inBackground: false,
+			  postData: postData
 			});
-			fileReader.readAsArrayBuffer(b);
 			
-
 		}, 'image/png');
 			
 		this.closeOutEditor(e);
@@ -3747,7 +3737,7 @@ function copyTextToClip(aTxt) {
 	trans.setTransferData('text/unicode', SupportsString(aTxt), aTxt.length * 2); // We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
 	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 }
-function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType) {
+function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType, forMozStream_keyHoldingStream) {
 	// http://stackoverflow.com/a/25020668/1828637
 
 	let encoder = Cc["@mozilla.org/intl/saveascharset;1"].createInstance(Ci.nsISaveAsCharset);
@@ -3816,6 +3806,16 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 
 			item = "";
 
+		} else if (k == forMozStream_keyHoldingStream) {
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"\r\n";
+			item += "Content-Type: " + forArrBuf_mimeType + "\r\n\r\n";
+			let ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			ss.data = item;
+
+			mpis.appendStream(ss);
+			mpis.appendStream(v);
+
+			item = "";
 		} else {
 			
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
