@@ -233,8 +233,8 @@ function izoDelete(aGettime) {
 			break;
 		case aTypeStrToTypeInt['imgur-anonymous']:
 			
-				var rez_conf = confirm(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_confirm-body'));
-				if (rez_conf) {
+				// var rez_conf = confirm(myServices.sb_app_main.GetStringFromName('img-host-anon-imgur_confirm-body'));
+				// if (rez_conf) {
 						
 					var sliptarg = $('div[data-gettime=' + aGettime + ']');
 					$('.izotope-container').css('pointer-events', 'none').isotope('remove', sliptarg.closest('.item')[0]).isotope('layout');
@@ -278,7 +278,8 @@ function izoDelete(aGettime) {
 						}
 					);
 					
-				}
+				// }
+
 			break;
 		default:
 			throw new Error('this type does not have a open method, aTypeInt: ' + aArrEl.t);
