@@ -578,7 +578,6 @@ const fsComServer = {
 											refUAPEntry.imgDatas[imgId].attachedToTweet = false;
 										}
 										
-										var aMsg;
 										switch (aMsg.json.unregReason) {
 											case 'error-loading':
 													
