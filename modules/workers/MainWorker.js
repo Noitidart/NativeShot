@@ -1460,13 +1460,11 @@ function shootAllMons() {
 					// if display is secondary mirror of another display, skip it
 					console.info('displays[i]:', displays[i]);
 					
-					if (i != 0) {
-						var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
-						console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
+					var rez_CGDisplayMirrorsDisplay = ostypes.API('CGDisplayMirrorsDisplay')(displays[i]);					
+					console.info('rez_CGDisplayMirrorsDisplay:', rez_CGDisplayMirrorsDisplay.toString(), uneval(rez_CGDisplayMirrorsDisplay), cutils.jscGetDeepest(rez_CGDisplayMirrorsDisplay));
 
-						if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
-							continue;
-						}
+					if (!cutils.jscEqual(rez_CGDisplayMirrorsDisplay, ostypes.CONST.kCGNullDirectDisplay)) { // If CGDisplayMirrorsDisplay() returns 0 (a.k.a. kCGNullDirectDisplay), then that means the display is not mirrored.
+						continue;
 					}
 					i_nonMirror[i] = collMonInfos.length; // the length here, will be the i index of the CGDisplayBounds in collMonInfos
 					
@@ -1493,8 +1491,8 @@ function shootAllMons() {
 						}
 					}
 					
-					if (i == 0) {
-						// i saw @kenThomases do this (in his revision 3 here http://stackoverflow.com/posts/28247749/revisions ), so i think i == 0 is never a mirror, and is always the primary monitor // link5233423
+					if (!primaryDisplayRectInfo) {
+						// assuming the first non mirror is primary per http://stackoverflow.com/questions/28216681/how-can-i-get-screenshot-from-all-displays-on-mac/28247749#comment53261634_28247749
 						collMonInfos[collMonInfos.length-1].primary = true;
 						// primaryDisplayRect = rez_CGDisplayBounds;
 						primaryDisplayRectInfo = collMonInfos[collMonInfos.length-1];
