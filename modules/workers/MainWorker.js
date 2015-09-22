@@ -1038,6 +1038,19 @@ function shootAllMons() {
 				}
 				// end - get all monitor resolutions
 		
+				var swapBandRinUint8 = function(aUint8) {
+					var pos = 0;
+					var cArrLen = aUint8.length;
+					while (pos < cArrLen) {
+						var B = aUint8[pos];
+
+						aUint8[pos] = aUint8[pos+2];
+						aUint8[pos+2] = B;
+
+						pos += 4;
+					}
+				};
+		
 				// start - take shot of each monitor
 				for (var s=0; s<collMonInfos.length; s++) {
 					console.time('shot of screen ' + s);
@@ -1071,9 +1084,6 @@ function shootAllMons() {
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
 					console.log('useW:', useW, 'realW:', w);
-					
-					var arrLen = useW * h * 4;
-					var imagedata = new ImageData(useW, h);
 					
 					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
 					//console.info('hdcMemoryDC:', hdcMemoryDC.toString(), uneval(hdcMemoryDC), cutils.jscGetDeepest(hdcMemoryDC));
@@ -1138,27 +1148,24 @@ function shootAllMons() {
 					
 					console.timeEnd('shot of screen ' + s);
 					
+					var arrLen = useW * h * 4;
+					// var imagedata = new ImageData(useW, h);
+					var monShotBuf = new ArrayBuffer(arrLen);
+					
 					console.time('memcpy');
-					ostypes.API('memcpy')(imagedata.data, pixelBuffer, arrLen);
+					ostypes.API('memcpy')(monShotBuf, pixelBuffer, arrLen);
 					console.timeEnd('memcpy');
+					
+					var monShotUint8 = new Uint8Array(monShotBuf);
 					
 					// swap bytes to go from BRGA to RGBA
 					// Reorganizing the byte-order is necessary as canvas can only hold data in RGBA format (little-endian, ie. ABGR in the buffer). Here is one way to do this:
 					console.time('BGRA -> RGBA');
-					var dataRef = imagedata.data;
-					var pos = 0;
-					while (pos < arrLen) {
-						var B = dataRef[pos];
-
-						dataRef[pos] = dataRef[pos+2];
-						dataRef[pos+2] = B;
-
-						pos += 4;
-					}
+					swapBandRinUint8(monShotUint8);
 					console.timeEnd('BGRA -> RGBA');
 					
-					collMonInfos[s].screenshot = imagedata.data.buffer;
-					aScreenshotBuffersToTransfer.push(imagedata.data.buffer);
+					collMonInfos[s].screenshot = monShotBuf;
+					aScreenshotBuffersToTransfer.push(collMonInfos[s].screenshot);
 					
 					// release memory of screenshot stuff
 					//delete collMonInfos[s].otherInfo;
@@ -1401,7 +1408,8 @@ function shootAllMons() {
 				var minScreenY;
 				
 				var rect = ostypes.CONST.CGRectNull;
-				var primaryDisplayRect;
+				// var primaryDisplayRect;
+				var primaryDisplayRectInfo;
 				console.info('rect preloop:', rect.toString()); // "CGRect({"x": Infinity, "y": Infinity}, {"width": 0, "height": 0})"
 				for (var i=0; i<count; i++) {
 					// if display is secondary mirror of another display, skip it
@@ -1438,14 +1446,17 @@ function shootAllMons() {
 						}
 					}
 					
+					if (i == 0) {
+						// i saw @kenThomases do this (in his revision 3 here http://stackoverflow.com/posts/28247749/revisions ), so i think i == 0 is never a mirror, and is always the primary monitor // link5233423
+						collMonInfos[collMonInfos.length-1].primary = true;
+						// primaryDisplayRect = rez_CGDisplayBounds;
+						primaryDisplayRectInfo = collMonInfos[collMonInfos.length-1];
+					}
+					
+					// rez_CGDisplayBounds.origin.y = ostypes.API('CGRectGetMaxY')(primaryDisplayRect) - ostypes.API('CGRectGetMaxY')(displayRect);
+					rez_CGDisplayBounds.origin.y = (primaryDisplayRectInfo.y + primaryDisplayRectInfo.h) - (collMonInfos[collMonInfos.length-1].y + collMonInfos[collMonInfos.length-1].h); // because CGRectGetMaxY is just ` rect.origin.y + rect.size.height;` as per https://github.com/joshpc/SBLayoutManager/blob/b899e10834d27f3569b5a8e2de296f19b8f9003d/SBLayoutManager/CGRectHelpers.m#L22 // and also [0] instead of primaryDisplayRect as the first one is primary monitor per link5233423
 					rect = ostypes.API('CGRectUnion')(rect, rez_CGDisplayBounds);
 					console.info('rect post loop ' + i + ':', rect.toString());
-					
-					if (i == 0) {
-						// i saw @kenThomases do this (in his revision 3 here http://stackoverflow.com/posts/28247749/revisions ), so i think i == 0 is never a mirror, and is always the primary monitor
-						collMonInfos[i_nonMirror[i]].primary = true;
-						primaryDisplayRect = rez_CGDisplayBounds;
-					}
 				}
 				// start - get monitor resolutions
 				
@@ -1569,17 +1580,13 @@ function shootAllMons() {
 							continue;
 						}
 						
-						var primMaxY = ostypes.API('CGRectGetMaxY')(primaryDisplayRect);
-						console.log('primMaxY:', primMaxY);
-						primMaxY = 0; //parseInt(cutils.jscGetDeepest(primMaxY));
-						
 						// CGRect dest = CGRectMake(displayRect.origin.x - rect.origin.x,
-						//               CGRectGetMaxY(primaryDisplayRect) - (displayRect.origin.y - rect.origin.y),
+						//               displayRect.origin.y - rect.origin.y,
 						//               displayRect.size.width,
 						//               displayRect.size.height);
 						var dest = ostypes.API('CGRectMake')(
 							collMonInfos[i_nonMirror[i]].x - rectOriginX,
-							primMaxY - (collMonInfos[i_nonMirror[i]].y - rectOriginY),
+							collMonInfos[i_nonMirror[i]].y - rectOriginY,
 							collMonInfos[i_nonMirror[i]].w,
 							collMonInfos[i_nonMirror[i]].h
 						);
