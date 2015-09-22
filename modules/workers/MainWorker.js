@@ -1738,7 +1738,7 @@ function shootAllMons() {
 					var monUseH = collMonInfos[i].h;
 
 					console.log('will use this y for canvas portion:', (collMonInfos[i].y - minScreenY));
-					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y + minScreenY);
+					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y - minScreenY);
 					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
 				console.timeEnd('portion out image data');
