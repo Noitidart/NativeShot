@@ -530,16 +530,25 @@ function getAllWin(aOptions) {
 					
 					// post analysis
 					// 1) remove all windows who have height and width == to Desktop which is that last entry
-					if (rezWinArr[rezWinArr.length - 1].title != 'Desktop') {
-						console.error('title of last item is not Desktop so this may be a bad assumption that last item is Desktop, but just throwing a warning for right now');
-					}
-					var deskW = rezWinArr[rezWinArr.length - 1].width;
-					var deskH = rezWinArr[rezWinArr.length - 1].height;
-					for (var i = 0; i < rezWinArr.length - 1; i++) { // - 1 as we dont want the very last item
-						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
-							continue;
+					// osx has multiple desktop elements, if two mon, then two desktops, i can know number of mon by counting number of "nativeshot_canvas" titled windows
+					// and nativeshot_canvas width and height is equal to that of its respective desktop width and height
+					var numDesktop = 0;
+					var desktopDimWxH = [];
+					for (var i=0; i<rezWinArr.length-1; i++) {
+						if (rezWinArr[i].tile == 'nativeshot_canvas') {
+							numDesktop++;
+							desktopDimWxH.push(rezWinArr[i].width + ' x ' + rezWinArr[i].height);
 						}
-						if (rezWinArr[i].width == deskW && rezWinArr[i].height == deskH) {
+					}
+					// now splice out all things that have any dimensions matching these EXCEPT the last numMon elements as they will be titled Desktop
+					for (var i=rezWinArr.length-numDesktop-1; i<rezWinArr.length-1; i++) {
+						if (rezWinArr[i].title != 'Desktop') {
+							console.error('last', numDesktop, 'elements should have title Desktop, and it was found that title of ' + ((rezWinArr.length-1) - i) + ' to last item is not Desktop so this may be a bad assumption that last item is Desktop, it is:', rezWinArr[i].title, 'but just throwing a warning for right now');
+						}
+					}
+					for (var i=0; i<rezWinArr.length-numDesktop-1; i++) {
+						if (desktopDimWxH.indexOf(rezWinArr[i].width + ' x ' + rezWinArr[i].height) > -1) {
+							console.log('found element that has width and height equal to desktop, element is:', i, rezWinArr[i], 'splicing this out');
 							rezWinArr.splice(i, 1);
 							i--;
 						}
