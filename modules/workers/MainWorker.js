@@ -1602,6 +1602,7 @@ function shootAllMons() {
 					console.info('rectOriginX:', rectOriginX);
 					console.info('rectOriginY:', rectOriginY);
 					
+					// note: i_nonMirror, keys are the i value it corresponds to in displays Array, and value is the i value it corresponds to in collMonInfos Array
 					for (var i in i_nonMirror) { // if display is secondary mirror of another display, skip it
 						console.log('entering nonMirror');
 						// CGRect displayRect = CGDisplayBounds(displays[i]);
@@ -1736,7 +1737,7 @@ function shootAllMons() {
 					var monUseW = collMonInfos[i].w;
 					var monUseH = collMonInfos[i].h;
 
-					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
+					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].corrected_y);
 					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
 				}
 				console.timeEnd('portion out image data');
