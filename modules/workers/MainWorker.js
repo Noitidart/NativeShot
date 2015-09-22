@@ -541,9 +541,9 @@ function getAllWin(aOptions) {
 						}
 					}
 					// now splice out all things that have any dimensions matching these EXCEPT the last numMon elements as they will be titled Desktop
-					for (var i=rezWinArr.length-numDesktop; i<rezWinArr.length-1; i++) {
+					for (var i=rezWinArr.length-numDesktop; i<rezWinArr.length; i++) {
 						if (rezWinArr[i].title != 'DesktopAA') {
-							console.error('last', numDesktop, 'elements should have title Desktop, and it was found that title of ' + (rezWinArr.length - i) + ' to last item is not Desktop so this may be a bad assumption that last item is Desktop, it is:', rezWinArr[i].title, 'but just throwing a warning for right now');
+							console.error('last', numDesktop, 'elements should have title Desktop, and it was found that title of ' + (rezWinArr.length - i) + ' to last item is not Desktop so this may be a bad assumption that last item is Desktop, it is:', rezWinArr[i], 'but just throwing a warning for right now');
 						}
 					}
 					for (var i=0; i<rezWinArr.length-numDesktop; i++) {
