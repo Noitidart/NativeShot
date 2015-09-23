@@ -271,8 +271,8 @@ function get_gEMenuDomJson() {
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_search-reverse')},
 						['xul:menupopup', {},
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_tineye'), oncommand:function(e){ gEditor.searchSimilar(e, 0) }}],
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-images'), oncommand:function(e){ gEditor.searchSimilar(e, 1) }}]
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_tineye'), oncommand:function(e){ gEditor.reverseSearch(e, 0) }}],
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-images'), oncommand:function(e){ gEditor.reverseSearch(e, 1) }}]
 						]
 					],
 					['xul:menuseparator', {}],
@@ -1649,17 +1649,34 @@ var gEditor = {
 		
 		this.closeOutEditor(e);
 	},
-	searchSimilar: function(e, serviceType) {
+	reverseSearch: function(e, serviceType) {
 		// serviceType
 			// 0 - tineye
 			// 1 - google images
+		
+		var serviceTypeStr; // for use with appendToHistoryLog
+		switch (serviceType) {
+			case 0:
+			
+					serviceTypeStr = 'tineye';
+			
+				break;
+			case 1:
+			
+					serviceTypeStr = 'google-images';
+			
+				break;
+			default:
+				throw new Error('devuser error serviceType is unknonw:' + serviceType);
+		}
 		
 		this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		
 		this.canComp.mozFetchAsStream(function(is) {
-
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+			
 			var postData;
 			var serviceSearchUrl;
 			if (serviceType == 0) {
@@ -1675,8 +1692,6 @@ var gEditor = {
 					"image_url": 'myimg.png',
 					"encoded_image": is
 				}, "iso8859-1", 'myimg.png', 'image/png', 'encoded_image');
-			} else {
-				throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
 			}
 
 			cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
@@ -1685,20 +1700,29 @@ var gEditor = {
 			});
 			
 		}, 'image/png');
-			
-		this.closeOutEditor(e);
+		
+		
+		appendToHistoryLog(serviceTypeStr, {
+			d: new Date().getTime()
+		});
+		
 	},
 	uploadToDropbox: function(e) {
+		// uses OAuth2 OAuth 2.0
+		
 		this.compositeSelection();
+		
+		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		
 		var appKey = 'nzyavm88qlxp6dz';
 		var appSecret = '9nr700erdpf4jxg';
+		var appRedirectUri = 'data:text/html,auth_dropbox';
 		
-		var authorizeApp = function() {
+		var authorizeApp = function(aCBFulfill) {
 			// start authorize
 			var authParam_client_id = appKey;
 			var authParam_response_type = 'token';
-			var authParam_redirect_uri = 'data:text/html,auth_dropbox'; // required for A redirect URI is required for a token flow, but optional for code. 
+			var authParam_redirect_uri = appRedirectUri; // required for A redirect URI is required for a token flow, but optional for code. 
 			var authParam_force_reapprove = 'false';
 			var authParam_disable_signup = 'true';
 			var authURL = 'https://www.dropbox.com/1/oauth2/authorize?client_id=' + authParam_client_id + '&response_type=' + authParam_response_type + '&redirect_uri=' + authParam_redirect_uri + '&force_reapprove=' + authParam_force_reapprove + '&disable_signup=' + authParam_disable_signup;
@@ -1752,6 +1776,13 @@ var gEditor = {
 							
 							attachEventListeners_asSelfRemoveables(iframe, postClickAllow_eventsAndCallbacks);
 							
+							// var clickEvent = new aContentWindow.MouseEvent('click', {
+								// 'view': aContentWindow,
+								// 'bubbles': true,
+								// 'cancelable': true
+							// });
+							// websiteDomEls.allowBtn.domEl.dispatchEvent(clickEvent);
+							
 							websiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
 							
 						} else {
@@ -1773,8 +1804,8 @@ var gEditor = {
 						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok the page after clicking allow loaded');
 						
 						// get the token
-						var receivedParamsFullStr = aContentWindow.location.hash.substr(1);
-						var receivedParamsPiecesStrArr = receivedParams.split('&');
+						var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+						var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
 						
 						var receivedParamsKeyVal = {};
 						for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
@@ -1782,8 +1813,16 @@ var gEditor = {
 							receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
 						}
 						
+						gEditor.dropboxOauth = receivedParamsKeyVal;
+						
 						console.info('receivedParamsKeyVal:', receivedParamsKeyVal);
 						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'received params parsed');
+						
+						iframe.parentNode.removeChild(iframe);
+						
+						if (aCBFulfill) {
+							aCBFulfill();
+						}
 					}
 				}
 			];
@@ -1791,11 +1830,11 @@ var gEditor = {
 			
 			// set up the hidden iframe
 
-			var win = gEditor.gBrowserDOMWindow;
+			var win = cDOMWindow;
 			var doc = win.document;
 			var iframe = doc.createElementNS(NS_XUL, 'browser');
 			iframe.setAttribute('type', 'content');
-			iframe.setAttribute('style', 'height:400px; border:10px solid steelblue;'); // :debug:
+			iframe.setAttribute('style', 'height:0;border:0;margin:0;padding:0;width:0;'); // :debug:
 			// iframe.setAttribute('style', 'display:none'); // :debug:
 			
 
@@ -1815,25 +1854,107 @@ var gEditor = {
 			doc.documentElement.appendChild(iframe); // i think src only takes affect after appending
 		};
 		
-		var getToken = function() {
-			
-		};
-		
+		var dropboxUploadResponseJSON;
 		var sendToDropbox = function() {
 			
+			if (!gEditor.dropboxOauth) {
+				authorizeApp(sendToDropbox);
+				return;
+			}
+			
+			var promise_uploadDropbox = xhr('https://content.dropboxapi.com/1/files_put/auto/Screenshot.png?overwrite=false', {
+				aMethod: 'PUT',
+				Headers: {
+					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
+					'Content-Type': myBlob.type,
+					'Content-Length': myBlob.size
+				},
+				aPostData: myBlob,
+				aResponseType: 'json'
+			});
+			promise_uploadDropbox.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_uploadDropbox - ', aVal);
+					// start - do stuff here - promise_uploadDropbox
+					dropboxUploadResponseJSON = aVal.response;
+					getShareLink();
+					// end - do stuff here - promise_uploadDropbox
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_uploadDropbox', aReason:aReason};
+					console.error('Rejected - promise_uploadDropbox - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_uploadDropbox', aCaught:aCaught};
+					console.error('Caught - promise_uploadDropbox - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			);
 		};
-		/*
-		var promise_uploadAnonImgur = xhr(authURL, {
-			Headers: {
-				Authorization: 'Client-ID fa64a66080ca868',
-				'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
-			},
-			aResponseType: 'json'
-		});
-		*/
 		
-		// end authorize
-		this.closeOutEditor(e);
+		var dropboxLinkResponseJSON;
+		var getShareLink = function() {
+			// get share link for the just uploaded file
+			var promise_getLink = xhr('https://api.dropboxapi.com/1/shares/auto' + dropboxUploadResponseJSON.path, { // removed the trailing / from auto as the .path starts with it
+				aMethod: 'POST',
+				Headers: {
+					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
+					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont include this, none of my params go through and the defaults are used
+				},
+				aPostData: {
+					locale: 'en-US',
+					short_url: false
+				},
+				aResponseType: 'json'
+			});
+			promise_getLink.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_getLink - ', aVal);
+					// start - do stuff here - promise_getLink
+					dropboxLinkResponseJSON = aVal.response;
+					copyLinkToClipboardAndAppendToHistory();
+					// end - do stuff here - promise_getLink
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_getLink', aReason:aReason};
+					console.error('Rejected - promise_getLink - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_getLink', aCaught:aCaught};
+					console.error('Caught - promise_getLink - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			);
+		};
+		
+		var copyLinkToClipboardAndAppendToHistory = function() {
+					
+					var shareUrl = dropboxLinkResponseJSON.url;
+					var permImgUrl = shareUrl.substr(0, shareUrl.lastIndexOf('?')+1) + 'raw=1'; // per http://stackoverflow.com/a/29689807/1828637
+					copyTextToClip(permImgUrl, cDOMWindow);
+					
+					/* // not yet, waiting for dropbox api v2 due to the need for delete url: http://stackoverflow.com/a/32746355/1828637
+					// add in update to log file
+					appendToHistoryLog('dropbox', {
+						d: new Date().getTime(),
+						l: permImgUrl,
+						n: imgId
+					});
+					*/
+		};
+		
+		var myBlob;
+		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+			myBlob = b;
+			sendToDropbox();
+			
+		}, 'image/png');
+		
 	}
 };
 
@@ -3139,7 +3260,10 @@ const aTypeStrToTypeInt = {
 	'copy': 2,
 	'print': 3,
 	'save-quick': 4,
-	'save-browse': 5
+	'save-browse': 5,
+	'dropbox': 6,
+	'tineye': 7,
+	'google-images': 8
 };
 
 function appendToHistoryLog(aTypeStr, aData) {
@@ -3169,11 +3293,17 @@ function appendToHistoryLog(aTypeStr, aData) {
 			// s: 'user_screen_name uploaded too', // maybe not necessary // for now no, because its at the start of `p` anyways which is `other_info.permlink`
 			p: 'post, p stands for post which stands for tweet, id. so post id. so tweet id.' // a link is made by going https://twitter.com/USSER_NAME_HERE/status/TWEET_ID // althought USSER_NAME_HERE seems like it can be anything and it gets fixed to the right one
 			l: 'link/url to imaage' // i expected imags to be "https://pbs.twimg.com/media/CO0xs-vVAAEJHqP.png" however im not sure so saving whole url for now
+			
+			// dropbox
+			n: the file name on upload, dropboxLinkResponseJSON.path IN V2 API get the image id here
+			l: permImgUrl which is extracted and made from dropboxLinkResponseJSON.url,
+			r: dropboxLinkResponseJSON.rev // this is used for me to search dropbox in case user renamed file, so i can find it and delete it when they click delete
 		}
 	*/
 	
 	// start - validating arguments provided by devuser
 	
+	// link872132154 cross file
 	var dataKeysForTypeId = {}; // these and no more and no less keys should be found in aData
 	dataKeysForTypeId[aTypeStrToTypeInt['imgur-anonymous']] = ['d', 'x', 'n'];
 	dataKeysForTypeId[aTypeStrToTypeInt['twitter']] = ['d', 'u', 'p', 'l'];
@@ -3181,6 +3311,8 @@ function appendToHistoryLog(aTypeStr, aData) {
 	dataKeysForTypeId[aTypeStrToTypeInt['print']] = ['d'];
 	dataKeysForTypeId[aTypeStrToTypeInt['save-browse']] = ['d', 'n', 'f'];
 	dataKeysForTypeId[aTypeStrToTypeInt['save-quick']] = ['d', 'n', 'f'];
+	dataKeysForTypeId[aTypeStrToTypeInt['tineye']] = ['d'];
+	dataKeysForTypeId[aTypeStrToTypeInt['google-images']] = ['d'];
 	
 	if (!(aTypeStr in aTypeStrToTypeInt)) {
 		throw new Error('unidentified aTypeStr: ' + aTypeStr);
@@ -3503,6 +3635,8 @@ function getSafedForOSPath(aStr, useNonDefaultRepChar) {
 	}
 }
 function xhr(aStr, aOptions={}) {
+	// update 092315 - added support for aMethod when posting data, so like we can use PUT and still post data
+	// update 092315 - also am now testing if aOptions.aPostData is a key value pair by testing aOptions.aPostData.consturctor.name == 'Object'. if its Object then i assume its key  value pair, else its a blob or something so i just do xhr.send with it
 	// update 072615 - added support for aOptions.aMethod
 	// currently only setup to support GET and POST
 	// does an async request
@@ -3620,7 +3754,7 @@ function xhr(aStr, aOptions={}) {
 	};
 	
 	if (aOptions.aPostData) {
-		xhr.open('POST', aStr, true);
+		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'POST', aStr, true);
 		do_setHeaders();
 		xhr.channel.loadFlags |= aOptions.aLoadFlags;
 		xhr.responseType = aOptions.aResponseType;
@@ -3632,12 +3766,16 @@ function xhr(aStr, aOptions={}) {
 		}
 		xhr.send(aFormData);
 		*/
-		var aPostStr = [];
-		for (var pd in aOptions.aPostData) {
-			aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
+		if (aOptions.aPostData.constructor.name == 'Object') {
+			var aPostStr = [];
+			for (var pd in aOptions.aPostData) {
+				aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
+			}
+			console.info('aPostStr:', aPostStr.join('&'));
+			xhr.send(aPostStr.join('&'));
+		} else {
+			xhr.send(aOptions.aPostData);
 		}
-		console.info('aPostStr:', aPostStr.join('&'));
-		xhr.send(aPostStr.join('&'));
 	} else {
 		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'GET', aStr, true);
 		do_setHeaders();
@@ -3885,8 +4023,8 @@ function showFileInOSExplorer(aNsiFile) {
 		aNsiFile.reveal();
 	}
 }
-function copyTextToClip(aTxt) {
-	var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
+function copyTextToClip(aTxt, aDOMWindow) {
+	var trans = Transferable(aDOMWindow ? aDOMWindow : Services.wm.getMostRecentWindow('navigator:browser'));
 	trans.addDataFlavor('text/unicode');
 	trans.setTransferData('text/unicode', SupportsString(aTxt), aTxt.length * 2); // We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
 	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
