@@ -258,8 +258,15 @@ function get_gEMenuDomJson() {
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_share-to-social')},
 						['xul:menupopup', {},
-							/*['xul:menuitem', {label:'Facebook'}],*/
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_twitter'), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
+							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_facebook'), oncommand:function(e){ gEditor.shareToFacebook(e) }}]
+						]
+					],
+					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-cloud')},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_dropbox'), oncommand:function(e){ gEditor.uploadToDropbox(e) }}]
+							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_onedrive'), oncommand:function(e){ gEditor.uploadToOnedrive(e) }}],
+							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-drive'), oncommand:function(e){ gEditor.uploadToGoogleDrive(e) }}],
 						]
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_search-reverse')},
@@ -1679,6 +1686,153 @@ var gEditor = {
 			
 		}, 'image/png');
 			
+		this.closeOutEditor(e);
+	},
+	uploadToDropbox: function(e) {
+		this.compositeSelection();
+		
+		var appKey = 'nzyavm88qlxp6dz';
+		var appSecret = '9nr700erdpf4jxg';
+		
+		var authorizeApp = function() {
+			// start authorize
+			var authParam_client_id = appKey;
+			var authParam_response_type = 'token';
+			var authParam_redirect_uri = 'data:text/html,auth_dropbox'; // required for A redirect URI is required for a token flow, but optional for code. 
+			var authParam_force_reapprove = 'false';
+			var authParam_disable_signup = 'true';
+			var authURL = 'https://www.dropbox.com/1/oauth2/authorize?client_id=' + authParam_client_id + '&response_type=' + authParam_response_type + '&redirect_uri=' + authParam_redirect_uri + '&force_reapprove=' + authParam_force_reapprove + '&disable_signup=' + authParam_disable_signup;
+
+			// load callbacks:
+			var iframe;
+			var setSrcToAuthUrl_eventsAndCallbacks = [
+				// first event with callback
+				{
+					eventType: 'DOMContentLoaded',
+					useCapture: false,
+					dontRemoveAllAttached: false,
+					callback: function(e) {
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in callbck now');
+						// do error handling, like if user is not signed in
+						var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
+						var aContentDocument = aContentWindow.document;
+						var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+						var docuri = webnav.document.documentURI;
+						
+						var websiteDomEls = { // :maintain-per-website: // add multiple selectors for test, in case they change something, so this adds robustness // :maintain-per-website: as its site dependent stuff
+							allowBtn: {
+								domEl: null,
+								selectorsToTry: [ // :maintain-per-website:
+									{method:'querySelector', arg:'.auth-button.button-primary'}
+								]
+							},
+							notSignedIn: {
+								selectorsToTry: [ // :maintain-per-website:
+									{method:'getElementById', arg:'regular-login-forms'},
+									{method: 'querySelector', arg:'.login-form-container'}
+								]
+							}
+						};
+						
+						if (docuri.indexOf('about:') == 0) {
+							// error-loading
+							// one of the following happend:
+								// are working offline
+								// users local network is not responding
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not load auth page, you may be working offline or your network is down, the docuri is:\n' + docuri);
+							throw new Error('dropbox-auth-failed');
+						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.notSignedIn.selectorsToTry)) {
+							// test for not signed in
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: not signed into dropbox');
+							throw new Error('dropbox-auth-failed');
+						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.allowBtn.selectorsToTry, websiteDomEls.allowBtn)) {
+							// test for allow button
+							// click allow button
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now allow');
+							
+							attachEventListeners_asSelfRemoveables(iframe, postClickAllow_eventsAndCallbacks);
+							
+							websiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
+							
+						} else {
+							// maybe server timed out?
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not identify the loaded auth page, maybe server timed out?');
+							throw new Error('dropbox-auth-failed');
+						}
+					}
+				}
+				// second event with callback
+			];
+
+			var postClickAllow_eventsAndCallbacks = [
+				{
+					eventType: 'DOMContentLoaded',
+					useCapture: false,
+					callback: function(e) {
+						var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok the page after clicking allow loaded');
+						
+						// get the token
+						var receivedParamsFullStr = aContentWindow.location.hash.substr(1);
+						var receivedParamsPiecesStrArr = receivedParams.split('&');
+						
+						var receivedParamsKeyVal = {};
+						for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
+							var splitPiece = receivedParamsPiecesStrArr[i].split('=');
+							receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+						}
+						
+						console.info('receivedParamsKeyVal:', receivedParamsKeyVal);
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'received params parsed');
+					}
+				}
+			];
+			// load auth page into frame
+			
+			// set up the hidden iframe
+
+			var win = gEditor.gBrowserDOMWindow;
+			var doc = win.document;
+			var iframe = doc.createElementNS(NS_XUL, 'browser');
+			iframe.setAttribute('type', 'content');
+			iframe.setAttribute('style', 'height:400px; border:10px solid steelblue;'); // :debug:
+			// iframe.setAttribute('style', 'display:none'); // :debug:
+			
+
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will now wait for about:blank to finish loading');
+			
+			// wait for about:blank to load, then kick off auth process
+			iframe.addEventListener('load', function() {
+				iframe.removeEventListener('load', arguments.callee, true);
+				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok about:blank loaded: ' + iframe.contentWindow.location);
+				
+				// kick of the auth process
+				iframe.setAttribute('src', authURL); // on load it will remove all the attached event listeners
+				attachEventListeners_asSelfRemoveables(iframe, setSrcToAuthUrl_eventsAndCallbacks);
+			}, true);
+
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now append it');
+			doc.documentElement.appendChild(iframe); // i think src only takes affect after appending
+		};
+		
+		var getToken = function() {
+			
+		};
+		
+		var sendToDropbox = function() {
+			
+		};
+		/*
+		var promise_uploadAnonImgur = xhr(authURL, {
+			Headers: {
+				Authorization: 'Client-ID fa64a66080ca868',
+				'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
+			},
+			aResponseType: 'json'
+		});
+		*/
+		
+		// end authorize
 		this.closeOutEditor(e);
 	}
 };
@@ -3737,6 +3891,7 @@ function copyTextToClip(aTxt) {
 	trans.setTransferData('text/unicode', SupportsString(aTxt), aTxt.length * 2); // We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
 	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 }
+
 function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType, forMozStream_keyHoldingStream) {
 	// http://stackoverflow.com/a/25020668/1828637
 
@@ -3836,5 +3991,67 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType,
 	postStream.addContentLength = true;
   
 	return postStream;
+}
+
+function testAndFindDomEl(targetDocument, selectorsToTry, ifFound_setKeyDomEl_inThisObj_toFoundElement, throwOnNotFound) {
+	// targetDocument is like aContentDocument
+	// selectorsToTry is an array of objects, with key method being a document method, and arg being the first arg to pass to it
+	// returns true if it finds any of the selectors >= 0
+	// ifFound_setKeyDomEl_inThisObj_toFoundElement must be an object, with key domEl
+	var foundDomEl;
+	for (var i=0; i<selectorsToTry.length; i++) {
+		foundDomEl = targetDocument[selectorsToTry[i].method](selectorsToTry[i].arg);
+		if (foundDomEl) {
+			if (ifFound_setKeyDomEl_inThisObj_toFoundElement) {
+				ifFound_setKeyDomEl_inThisObj_toFoundElement.domEl = foundDomEl;
+			}
+			return true;
+		}
+	}
+	
+	if (throwOnNotFound) {
+		throw new Error('none of the selectors found the allow btn, needs :maintain-per-website:');
+	} else {
+		return false;
+	}
+}
+
+function attachEventListeners_asSelfRemoveables(iframeDomEl, arrOfEventsWithCallbacks) {
+	// call this on an iframe, before doing action to make the iframe change page, like setting src or clicking a btn in a form in that iframe
+	// to the iframe attaches the events, with callbacks, in your arrOfEventsWithCallbacks
+		// on load of any one of the events that was added, it removes all the added events then calls your callback
+		// arrOfEventsWithCallbacks is an array with objects holding three keys:
+			// eventType - 'load', 'DOMContentLoaded', etc etc
+			// callback - function()
+			// useCapture - true/false
+			// dontRemoveAllAttached - true/false (defautlt false)
+	// both arguments are required
+
+	var arrOfWrappedCbsAroundOrigCbs = []; // as i wrap them with a self remover func
+	// the i in arrOfWrappedCbsAroundOrigCbs matches i in arrOfEventsWithCallbacks, well it should as i push to it as i iterate through arrOfEventsWithCallbacks when adding
+	var removeAllAttached = function() {
+		for (var i=0; i<arrOfEventsWithCallbacks.length; i++) {
+			var evWithCb = arrOfEventsWithCallbacks[i];
+			iframeDomEl.removeEventListener(evWithCb.eventType, arrOfWrappedCbsAroundOrigCbs[i], evWithCb.useCapture);
+		}
+	};
+	
+	for (var i=0; i<arrOfEventsWithCallbacks.length; i++) {
+		var evWithCb = arrOfEventsWithCallbacks[i];
+		
+		var devuserDefinedCB_wrappedWithRemover = function(aOrigDontRemoveAllAttached, aOrigEventType, aOrigUseCapture, aOrigCallback, e) {
+			if (!aOrigDontRemoveAllAttached) {
+				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok removed all attached callbacks. will call orig call back of this single event type');
+				removeAllAttached();
+			} else {
+				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will call callback for this single event. did not remove attached as when this event triggered devuser specified not to remove any');
+			}
+			aOrigCallback(e);
+		}.bind(null, evWithCb.dontRemoveAllAttached, evWithCb.eventType, evWithCb.useCapture, evWithCb.callback);
+		
+		arrOfWrappedCbsAroundOrigCbs.push(devuserDefinedCB_wrappedWithRemover);
+		
+		iframeDomEl.addEventListener(evWithCb.eventType, devuserDefinedCB_wrappedWithRemover, evWithCb.useCapture);
+	}
 }
 // end - common helper functions
