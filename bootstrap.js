@@ -264,9 +264,9 @@ function get_gEMenuDomJson() {
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-cloud')},
 						['xul:menupopup', {},
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_dropbox'), oncommand:function(e){ gEditor.uploadToDropbox(e) }}]
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_dropbox'), oncommand:function(e){ gEditor.uploadToDropbox(e) }}],
 							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_onedrive'), oncommand:function(e){ gEditor.uploadToOnedrive(e) }}],
-							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-drive'), oncommand:function(e){ gEditor.uploadToGoogleDrive(e) }}],
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-drive'), oncommand:function(e){ gEditor.uploadToGoogleDrive(e) }}]
 						]
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_search-reverse')},
@@ -1734,7 +1734,6 @@ var gEditor = {
 				{
 					eventType: 'DOMContentLoaded',
 					useCapture: false,
-					dontRemoveAllAttached: false,
 					callback: function(e) {
 						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in callbck now');
 						// do error handling, like if user is not signed in
@@ -1955,6 +1954,290 @@ var gEditor = {
 			
 		}, 'image/png');
 		
+	},
+	uploadToGoogleDrive: function(e) {
+		// uses OAuth2 OAuth 2.0
+		
+		this.compositeSelection();
+		
+		var cDOMWindow = gEditor.gBrowserDOMWindow;
+		var cSessionId = gEditor.sessionId;
+		
+		var appKey = 'nzyavm88qlxp6dz';
+		var appSecret = '9nr700erdpf4jxg';
+		var appRedirectUri = 'data:text/html,auth_dropbox';
+		
+		var authorizeApp = function(aCBFulfill) {
+			// start authorize
+			
+			var client_id = '737749060525-398usuo4pvj1a3m9kcbs36ngjnh2q1v3.apps.googleusercontent.com';
+			var auth_uri = 'https://accounts.google.com/o/oauth2/auth';
+			var token_uri = 'https://accounts.google.com/o/oauth2/token';
+			var auth_provider_x509_cert_url = 'https://www.googleapis.com/oauth2/v1/certs';
+			var client_secret = 'iUhqmH5qyw9MxGCmFr07PiuO';
+			var redirect_uri = 'http://www.nativeshot-for-addon.co';
+			var scope = ['https://www.googleapis.com/auth/drive.file'].join('%20');
+			var response_type = 'token';
+			
+			var authURL = auth_uri + '?client_id=' + client_id + '&redirect_uri=' + redirect_uri + '&scope=' + scope +  '&response_type=' + response_type;
+			// load callbacks:
+			var iframe;
+			var setSrcToAuthUrl_eventsAndCallbacks = [
+				// first event with callback
+				{
+					eventType: 'DOMContentLoaded',
+					useCapture: false,
+					funcRetTrueIfShouldRemAll: function(e) {
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in funcRetTrueIfShouldRemAll');
+						var aContentWindow = e.originalTarget.defaultView;
+						if (aContentWindow.frameElement) {
+							console.warn('warn: frameleement loaded so will tell not to remove:' + aContentWindow.location.href);
+							return false;
+						} else {
+							return true;
+						}
+					},
+					callback: function(e) {
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in callbck now');
+						// do error handling, like if user is not signed in
+						var aContentWindow = e.originalTarget.defaultView;
+						if (aContentWindow.frameElement) {
+							//Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'warn: frameleement loaded so will not do anything:' + aContentWindow.location.href);
+							console.warn('in cb ut its a frameElement so will not exec:', aContentWindow.location.href);
+							return;
+						}
+						var aContentDocument = aContentWindow.document;
+						var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+						var docuri = webnav.document.documentURI;
+						
+						var websiteDomEls = { // :maintain-per-website: // add multiple selectors for test, in case they change something, so this adds robustness // :maintain-per-website: as its site dependent stuff
+							allowBtn: {
+								domEl: null,
+								selectorsToTry: [ // :maintain-per-website:
+									{method:'getElementById', arg:'submit_approve_access'}
+								]
+							},
+							notSignedIn: {
+								selectorsToTry: [ // :maintain-per-website:
+									{method:'getElementById', arg:'gaia_loginform'}
+								]
+							},
+							multiAccounts: {
+								domEl: null,
+								selectorsToTry: [ // :maintain-per-website:
+									{method: 'querySelectorAll', arg:'#account-list span'}
+								]
+							}
+						};
+						
+						if (docuri.indexOf('about:') == 0) {
+							// error-loading
+							// one of the following happend:
+								// are working offline
+								// users local network is not responding
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not load auth page, you may be working offline or your network is down, the docuri is:\n' + docuri);
+							throw new Error('gdrive-auth-failed');
+						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.multiAccounts.selectorsToTry, websiteDomEls.multiAccounts)) {
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'warn: multi accounts found');
+							console.info('websiteDomEls.multiAccounts:', websiteDomEls.multiAccounts);
+						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.notSignedIn.selectorsToTry)) {
+							// test for not signed in
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: not signed into gdrive');
+							
+							// find refUAPEntry, update its count in label, push to pending
+							appendNeedsUserAttn(cSessionId, 'gdrive', 'not-signed-in', myBlob);
+							
+							
+							throw new Error('gdrive-auth-failed');
+						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.allowBtn.selectorsToTry, websiteDomEls.allowBtn)) {
+							// test for allow button
+							// click allow button
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now allow');
+							
+							attachEventListeners_asSelfRemoveables(iframe, postClickAllow_eventsAndCallbacks);
+							
+							var clickEvent = new aContentWindow.MouseEvent('click', {
+								'view': aContentWindow,
+								'bubbles': true,
+								'cancelable': true
+							});
+							var cancelled = websiteDomEls.allowBtn.domEl.dispatchEvent(clickEvent);
+							
+							console.error('cancelled:', cancelled);
+							
+							// websiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
+							
+						} else {
+							// maybe server timed out?
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not identify the loaded auth page, maybe server timed out?');
+							throw new Error('gdrive-auth-failed-unknown');
+						}
+					}
+				}
+				// second event with callback
+			];
+
+			var postClickAllow_eventsAndCallbacks = [
+				{
+					eventType: 'DOMContentLoaded',
+					useCapture: false,
+					callback: function(e) {
+						var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok the page after clicking allow loaded');
+						
+						// get the token
+						var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+						var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
+						
+						var receivedParamsKeyVal = {};
+						for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
+							var splitPiece = receivedParamsPiecesStrArr[i].split('=');
+							receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+						}
+						
+						gEditor.dropboxOauth = receivedParamsKeyVal;
+						
+						console.info('receivedParamsKeyVal:', receivedParamsKeyVal);
+						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'received params parsed');
+						
+						iframe.parentNode.removeChild(iframe);
+						
+						if (aCBFulfill) {
+							aCBFulfill();
+						}
+					}
+				}
+			];
+			// load auth page into frame
+			
+			// set up the hidden iframe
+
+			var win = cDOMWindow;
+			var doc = win.document;
+			var iframe = doc.createElementNS(NS_XUL, 'browser');
+			iframe.setAttribute('type', 'content');
+			iframe.setAttribute('style', 'height:400px;border:10px solid steelblue;'); // :debug:
+			// iframe.setAttribute('style', 'height:0;border:0;margin:0;padding:0;width:0;'); // :debug:
+			// iframe.setAttribute('style', 'display:none'); // if display none then click events dont work
+			
+
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will now wait for about:blank to finish loading');
+			
+			// wait for about:blank to load, then kick off auth process
+			iframe.addEventListener('load', function() {
+				iframe.removeEventListener('load', arguments.callee, true);
+				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok about:blank loaded: ' + iframe.contentWindow.location);
+				
+				// kick of the auth process
+				iframe.setAttribute('src', authURL); // on load it will remove all the attached event listeners
+				attachEventListeners_asSelfRemoveables(iframe, setSrcToAuthUrl_eventsAndCallbacks);
+			}, true);
+
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now append it');
+			doc.documentElement.appendChild(iframe); // i think src only takes affect after appending
+		};
+		
+		var dropboxUploadResponseJSON;
+		var sendToGdrive = function() {
+			
+			if (!gEditor.gdriveOauth) {
+				authorizeApp(sendToGdrive);
+				return;
+			}
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok now sending to gdrive - but exiting for now during debug');
+			return;
+			var promise_uploadDropbox = xhr('https://content.dropboxapi.com/1/files_put/auto/Screenshot.png?overwrite=false', {
+				aMethod: 'PUT',
+				Headers: {
+					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
+					'Content-Type': myBlob.type,
+					'Content-Length': myBlob.size
+				},
+				aPostData: myBlob,
+				aResponseType: 'json'
+			});
+			promise_uploadDropbox.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_uploadDropbox - ', aVal);
+					// start - do stuff here - promise_uploadDropbox
+					dropboxUploadResponseJSON = aVal.response;
+					getShareLink();
+					// end - do stuff here - promise_uploadDropbox
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_uploadDropbox', aReason:aReason};
+					console.error('Rejected - promise_uploadDropbox - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_uploadDropbox', aCaught:aCaught};
+					console.error('Caught - promise_uploadDropbox - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			);
+		};
+		
+		var dropboxLinkResponseJSON;
+		var getShareLink = function() {
+			// get share link for the just uploaded file
+			var promise_getLink = xhr('https://api.dropboxapi.com/1/shares/auto' + dropboxUploadResponseJSON.path, { // removed the trailing / from auto as the .path starts with it
+				aMethod: 'POST',
+				Headers: {
+					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
+					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont include this, none of my params go through and the defaults are used
+				},
+				aPostData: {
+					locale: 'en-US',
+					short_url: false
+				},
+				aResponseType: 'json'
+			});
+			promise_getLink.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_getLink - ', aVal);
+					// start - do stuff here - promise_getLink
+					dropboxLinkResponseJSON = aVal.response;
+					copyLinkToClipboardAndAppendToHistory();
+					// end - do stuff here - promise_getLink
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_getLink', aReason:aReason};
+					console.error('Rejected - promise_getLink - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_getLink', aCaught:aCaught};
+					console.error('Caught - promise_getLink - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+				}
+			);
+		};
+		
+		var copyLinkToClipboardAndAppendToHistory = function() {
+					
+					var shareUrl = dropboxLinkResponseJSON.url;
+					var permImgUrl = shareUrl.substr(0, shareUrl.lastIndexOf('?')+1) + 'raw=1'; // per http://stackoverflow.com/a/29689807/1828637
+					copyTextToClip(permImgUrl, cDOMWindow);
+					
+					/* // not yet, waiting for dropbox api v2 due to the need for delete url: http://stackoverflow.com/a/32746355/1828637
+					// add in update to log file
+					appendToHistoryLog('dropbox', {
+						d: new Date().getTime(),
+						l: permImgUrl,
+						n: imgId
+					});
+					*/
+		};
+		
+		var myBlob;
+		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+			myBlob = b;
+			sendToGdrive();
+			
+		}, 'image/png');
 	}
 };
 
@@ -2769,6 +3052,23 @@ var NBs = { // short for "notification bars"
 	closeGlobal: function(aGroupId) {
 		
 		delete NBs.crossWin[aGroupId];
+		// todo: probably should delete from userAckPending as well
+		// aGroupId is always in format gEditorSessionId-category
+		var firstDashPos = aGroupId.indexOf('-'); // get first index of -, as category may contain dashses
+		var aGEditorSessionId = aGroupId.substr(0, firstDashPos);
+		var aCategory = aGroupId.substr(firstDashPos + 1);
+		if (aCategory != 'twitter') { // temp until i hook up twitter to the new generic method. right now twitter is very specific/custom
+			for (var i=0; i<userAckPending.length; i++) {
+				if (userAckPending[i].gEditorSessionId == aGEditorSessionId && userAckPending[i].uaGroup == aCategory) {
+					// :todo: call the userAckPending[i].onRemoveFromUserAckPending callback if there is one, this can like for instance when i support twitter, if its still in process it can unregister the framescripts etc
+					if (userAckPending[i].callbacks && userAckPending[i].callbacks.onRemoveFromUserAckPending) {
+						userAckPending[i].callbacks.onRemoveFromUserAckPending();
+					}
+					userAckPending.splice(i, 1); // note: there must only be one entry in userAckPending per gEditorSessionId-category combo
+					break;
+				}
+			}
+		}
 		
 		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
 		while (DOMWindows.hasMoreElements()) {
@@ -3448,6 +3748,129 @@ function appendToHistoryLog(aTypeStr, aData) {
 	};
 	
 	do_openHistory(); // starts the papend to history process
+}
+
+var dataPushers = { // holds funcHandlingEntryIntoDataArr for different aCategory
+	'gdrive': function(aData, aDataArr, aEntryIn_userAckPending) { // aDataArr is the dataArr key from userAckPending[i]
+		// because a btn in notif bar is created per element in aDataArr, and for gdrive i only want one button, i push into it a subarray
+		if (aDataArr.length == 0) {
+			aDataArr.push([]);
+		}
+		aDataArr[0].push(aData);
+	}
+};
+
+var notifBarBtn_callbackHandlers = { // these callback handlers are attached to each button a notif bar
+	'gdrive': function(aBtnEntryInANotifBarJson, aDataArr, aNotifBarJson, aEntryIn_userAckPending) { // aNotifBarJson is the entry in NBs.crossWin[aGroupId]
+		// aBtnEntryInANotifBarJson is the json entry of this btn in aNotifBarJson // i can get current btn label from this arg
+		// aDataArr is the dataArr key from userAckPending[i]
+		// aDataArr can also be gotten from aEntryIn_userAckPending, its same, i just pass it in for convenience
+		// aBtnEntryInANotifBarJson cannot be gotten from aNotifBarJson, cuz what if there were multi buttons, this guy wouldnt know which one he is in aNotifBarJson
+	}
+}
+
+var notifbarJsonMaintainers_andHintProviderForUpdateGlobal = {  // holds funcHandlingUpdateNotifBar for different aCategory
+	'gdrive': function(aEntryIn_userAckPending, aNotifBarJson, aReason) { // aNotifBarJson is the entry in NBs.crossWin[aGroupId]
+		// aReason can also be gotten from aEntryIn_userAckPending, its same, i just pass it in for convenience
+		if (aNotifBarJson.uninitted) { // need to do first time population
+			delte aNotifBarJson.uninitted;
+			// need to provide keys:
+				// msg - notifbar label
+				// p - priority, this is styling of the notifbar
+				// etc
+			aNotifBarJson.msg = 'The upload to Google Drive could not be completed wholly automatically, your attention is needed to complete the process'; // :l10n:
+			aNotifBarJson.img = core.addon.path.images + 'gdrive16.png';
+			
+			// gdrive notifbar gets only one btn
+			var btnId = Math.random();
+			var btnEntry = {
+				label: 'Generic-ID:' + btnId, // :l10n:
+				btn_id: btnId,
+				class: 'nativeshot-twitter-neutral',
+				accessKey: 'G',
+				callback: notifBarBtn_callbackHandlers.bind(null, btnEntry, aEntryIn_userAckPending.dataArr, aNotifBarJson, aEntryIn_userAckPending) // :todo: test what the arguments on click of button are
+			};
+			aNotifBarJson.btns = [];
+			aNotifBarJson.btns.push(btnEntry);
+			
+			
+			switch (aReason) { // aReasons are determiend by whatever i as devuser pass to appendNeedsUserAttn
+				case 'not-signed-in': 
+
+						aNotifBarJson.img = core.addon.path.images + 'gdrive_bad16.png';
+						btns = [
+						
+						];
+						
+					break;
+				default:
+					// do nothing
+					console.warn('unrecognized aReason in funcHandlingUpdateNotifBar, warning? throw? i dont know:', aReason);
+			};
+			
+			aNotifBarJson = {
+				msg: aReason, // myServices.sb.GetStringFromName('notif-bar_' + aCategory + '-bar-label-' + aReason), // note: this is a possible way to handle automated localization but not really auto but you know what i mean
+				img: core.addon.path.images + 'twitter16.png',
+				p: 6,
+				btns: [{
+					// label: 'Image Pending Tweet (1)-ID:' + refUAPEntry.userAckId,
+					// label: 'Waiting to for progrmattic attach (1)-ID:' + refUAPEntry.userAckId,
+					label: myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + 1 + ')' + '-ID:' + refUAPEntry.userAckId,
+					btn_id: refUAPEntry.userAckId,
+					class: 'nativeshot-twitter-neutral',
+					accessKey: 'T',
+					callback: twitterNotifBtnCB.bind(null, refUAPEntry) // :todo: test what the arguments on click of button are
+				}]
+			};
+		}
+	}
+}
+
+function appendNeedsUserAttn(aGEditorSessionId, aCategory, aReason, aData, funcHandlingEntryIntoDataArr, funcHandlingUpdateNotifBar) {
+	// this function will create a notification bar, and work with the user to get aData succesfully submitted
+	
+	// aCategory is like gdrive or twitter - this is used for to determine what to do with aData, and call right callbacks on click of btn, and what labels to get for btn and notifbar
+	// aReason is the reason for needing user attention, will use this to get appropriate labels for button label or notifbar label
+	// aData is anything, what i initialy decided i need
+		// for gdrive aData should be blob
+	// funcHandlingEntryIntoDataArr is responsible for placing aData into dataArr. it must take two arguments, the first is aData, second is aDataArr
+	// funcHandlingUpdateNotifBar is responsible for updating the json then providing the aHints param for NBs.updateGlobal. if aHints is null, then NBs.updateGlobal is not called. it takes arguments: aNotifBarJson, aReason
+	
+	// a notifbar is created per aGEditorSessionId + '-' + aCategory combination
+	// a btn on the notifbar is created per element in dataArr
+	
+	var iInUserAckPending = -1;
+	for (var i=0; i<userAckPending.length; i++) {
+		if (userAckPending[i].gEditorSessionId == aGEditorSessionId && userAckPending[i].category == aCategory) {
+			iInUserAckPending = i;
+			break;
+		}
+	}
+	
+	if (iInUserAckPending == -1) {
+		iInUserAckPending = userAckPending.push(
+			{
+				gEditorSessionId: aGEditorSessionId,
+				category: aCategory,
+				notifBarGroupId: aGEditorSessionId + '-' + aCategory, // note: each userAckPending entry has an associated notifbar, this line is where i decided and implement the aGroupId format all will have
+				dataArr: [],
+				// reason: aReason
+			}
+		) - 1;
+	}
+	userAckPending[iInUserAckPending].reason = aReason;
+	funcHandlingEntryIntoDataArr(aData, userAckPending[iInUserAckPending].dataArr, userAckPending[iInUserAckPending]);
+	
+	// find the aGroupId for the notifbar out there
+	var notifBarJson = NBs.crossWin[userAckPending[iInUserAckPending].notifBarGroupId];
+	if (!notifBarJson) {
+		NBs.crossWin[userAckPending[iInUserAckPending].notifBarGroupId] = {uninitted:true}; // note: this is bad, cannot have blank, therefore funcHandlingUpdateNotifBar MUST MUST populate it properly // uninnited means that it hasnt been populated, this is to help funcHandlingEntryIntoDataArr identify its not yet inited, funcHandlingEntryIntoDataArr should delete this key and update it accordingly
+	}
+	var useHints = funcHandlingUpdateNotifBar(userAckPending[iInUserAckPending], notifBarJson, aReason); // funcHandlingEntryIntoDataArr should return an array of hints to use for NBs.updateGlobal
+	// if useHints is ! then it doesnt call to NBs.updateGlobal
+	if (useHints) {
+		NBs.updateGlobal(notifBarGroupId, useHints);
+	}
 }
 
 // start - common helper functions
@@ -4139,6 +4562,11 @@ function testAndFindDomEl(targetDocument, selectorsToTry, ifFound_setKeyDomEl_in
 	var foundDomEl;
 	for (var i=0; i<selectorsToTry.length; i++) {
 		foundDomEl = targetDocument[selectorsToTry[i].method](selectorsToTry[i].arg);
+		if (selectorsToTry[i].method == 'querySelectorAll') {
+			if (foundDomEl.length == 0) {
+				foundDomEl = null;
+			}
+		}
 		if (foundDomEl) {
 			if (ifFound_setKeyDomEl_inThisObj_toFoundElement) {
 				ifFound_setKeyDomEl_inThisObj_toFoundElement.domEl = foundDomEl;
@@ -4162,7 +4590,8 @@ function attachEventListeners_asSelfRemoveables(iframeDomEl, arrOfEventsWithCall
 			// eventType - 'load', 'DOMContentLoaded', etc etc
 			// callback - function()
 			// useCapture - true/false
-			// dontRemoveAllAttached - true/false (defautlt false)
+			// funcRetTrueIfShouldRemAll - function, return true, if you want it to remove listeners return true
+				// if no funcRetTrueIfShouldRemAll is set, then it will remove all
 	// both arguments are required
 
 	var arrOfWrappedCbsAroundOrigCbs = []; // as i wrap them with a self remover func
@@ -4177,15 +4606,20 @@ function attachEventListeners_asSelfRemoveables(iframeDomEl, arrOfEventsWithCall
 	for (var i=0; i<arrOfEventsWithCallbacks.length; i++) {
 		var evWithCb = arrOfEventsWithCallbacks[i];
 		
-		var devuserDefinedCB_wrappedWithRemover = function(aOrigDontRemoveAllAttached, aOrigEventType, aOrigUseCapture, aOrigCallback, e) {
-			if (!aOrigDontRemoveAllAttached) {
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok removed all attached callbacks. will call orig call back of this single event type');
-				removeAllAttached();
+		var devuserDefinedCB_wrappedWithRemover = function(aOrigFuncRetTrueIfShouldRemAll, aOrigEventType, aOrigUseCapture, aOrigCallback, e) {
+			if (aOrigFuncRetTrueIfShouldRemAll) {
+				if (aOrigFuncRetTrueIfShouldRemAll(e)) {
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'aOrigFuncRetTrueIfShouldRemAll was true so ok removed all attached callbacks. will call orig call back of this single event type');
+					removeAllAttached();
+				} else {
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will not remove as aOrigFuncRetTrueIfShouldRemAll returned false, but will call callback');
+				}
 			} else {
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will call callback for this single event. did not remove attached as when this event triggered devuser specified not to remove any');
+				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'aOrigFuncRetTrueIfShouldRemAll not defined so will remove all');
+				removeAllAttached();
 			}
 			aOrigCallback(e);
-		}.bind(null, evWithCb.dontRemoveAllAttached, evWithCb.eventType, evWithCb.useCapture, evWithCb.callback);
+		}.bind(null, evWithCb.funcRetTrueIfShouldRemAll, evWithCb.eventType, evWithCb.useCapture, evWithCb.callback);
 		
 		arrOfWrappedCbsAroundOrigCbs.push(devuserDefinedCB_wrappedWithRemover);
 		
