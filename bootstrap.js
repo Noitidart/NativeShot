@@ -2076,10 +2076,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// os specific special stuff
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
-				
+				console.error('in here core.os.version:', core.os.version);
 				if (core.os.version >= 6.3) { // win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
 					var win81ScaleX = colMon[iMon].win81ScaleX;
 					var win81ScaleY = colMon[iMon].win81ScaleY;
+					console.log('win81ScaleX:,' win81ScaleX, 'win81ScaleY:', win81ScaleY);
 					if (win81ScaleX || win81ScaleY) {
 						json.push(['html:canvas', {id:'canDum',style:'display:none;',width:w,height:h}]);
 						w = Math.ceil(w / win81ScaleX);
@@ -2142,6 +2143,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		
 		ctxDim.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
 	} else {
+		console.error('drawing NON scaled');
 		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
 	}
 	
