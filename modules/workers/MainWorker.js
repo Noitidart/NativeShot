@@ -1083,11 +1083,13 @@ function shootAllMons() {
 							var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
 							var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
 							console.log('dpiX:', dpiX, 'dpiY:', dpiY);
+							var dpiScaleX = dpiX / 96; // because 96 is default which is 1
+							var dpiScaleY = dpiY / 96;
 						}
 						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
-						var win81ScaleX = (collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth) * dpiX;
-						var win81ScaleY = (collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight) * dpiY;
+						var win81ScaleX = (collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth) * dpiScaleX;
+						var win81ScaleY = (collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight) * dpiScaleY;
 						if (win81ScaleX != 1) {
 							collMonInfos[s].win81ScaleX = win81ScaleX;
 						}
