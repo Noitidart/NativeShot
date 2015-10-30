@@ -1086,8 +1086,8 @@ function shootAllMons() {
 						}
 						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
-						var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
-						var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
+						var win81ScaleX = (collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth) * dpiX;
+						var win81ScaleY = (collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight) * dpiY;
 						if (win81ScaleX != 1) {
 							collMonInfos[s].win81ScaleX = win81ScaleX;
 						}
