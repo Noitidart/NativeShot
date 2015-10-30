@@ -1931,6 +1931,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	if (core.os.name != 'darwin' && core.os.name != 'winnt') {
 		aEditorDOMWindow.fullScreen = true;
 	}
+	if (core.os.name == 'winnt') {
+		aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
+	}
 	
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
