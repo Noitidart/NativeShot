@@ -1064,6 +1064,7 @@ function shootAllMons() {
 				};
 		
 				// start - take shot of each monitor
+				// in multimon system this is same for all mon
 				for (var s=0; s<collMonInfos.length; s++) {
 					console.time('shot of screen ' + s);
 					var hdcScreen = ostypes.API('CreateDC')(collMonInfos[s].otherInfo.lpszDriver, collMonInfos[s].otherInfo.lpszDevice, null, null);
@@ -1078,9 +1079,13 @@ function shootAllMons() {
 					}
 					
 					if (core.os.version >= 6.3) { // for scale purposes for non dpi aware process due to bug 890156
+						if (s == 0) {
+							var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
+							var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
+							console.log('dpiX:', dpiX, 'dpiY:', dpiY);
+						}
 						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
-						console.info('scaledWidth:', collMonInfos[s].otherInfo.scaledWidth, 'scaledHeight:', collMonInfos[s].otherInfo.scaledHeight);
 						var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
 						var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
 						if (win81ScaleX != 1) {
