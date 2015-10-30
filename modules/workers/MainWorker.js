@@ -1080,6 +1080,7 @@ function shootAllMons() {
 					if (core.os.version >= 6.3) { // for scale purposes for non dpi aware process due to bug 890156
 						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
+						console.info('scaledWidth:', collMonInfos[s].otherInfo.scaledWidth, 'scaledHeight:', collMonInfos[s].otherInfo.scaledHeight);
 						var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
 						var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
 						if (win81ScaleX != 1) {
