@@ -221,8 +221,8 @@ function init(aCore, aUserAckId, aServerId) {
 	
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
-	console.info('aContentDocument.readyState.state:', aContentDocument.readyState.state);
-	if (aContentDocument.readyState.state == 'complete') {
+	console.info('aContentDocument.readyState:', aContentDocument.readyState);
+	if (aContentDocument.readyState == 'complete') {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			ensureSignedIn();
 		} else {
@@ -231,7 +231,7 @@ function init(aCore, aUserAckId, aServerId) {
 			unregister();
 		}
 	} else {
-		// aContentDocument.readyState.state == undefined //is undefined as asoon as framescript loaded as no page has lodaed yet, but also when get "problem loading page" like for offline, it stays undefined
+		// aContentDocument.readyState == undefined //is undefined as asoon as framescript loaded as no page has lodaed yet, but also when get "problem loading page" like for offline, it stays undefined
 		console.error('adding listener for twitter load');
 		addEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false); // add listener to listen to page loads  till it finds twitter page // if i use third argument of false, load doenst trigger, so had to make it true. if false then i can use DOMContentLoaded however at DOMContentLoaded $ is not defined so had to switch to $
 	}
@@ -303,7 +303,7 @@ function ensureSignedIn() {
 			sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_signedInShowAwaitingMsg', userAckId:userAckId, subServer:'twitter', serverId:serverId}); // cuz if tab doesnt have focus, then it will not get updated to saying waiting for attach, it will stick at "not signed in"
 		}
 		aContentWindow.addEventListener('unload', listenForTwittterUnload, false);
-		if (aContentDocument.readyState.state == 'complete') {
+		if (aContentDocument.readyState == 'complete') {
 			doRegisterJqueryScript();
 		} else {
 			addEventListener('load', listenForTwitterLoad, true); // need to wait for load, as need to wait for jquery $ to come in // need to use true otherwise load doesnt trigger

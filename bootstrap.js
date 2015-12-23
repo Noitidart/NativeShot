@@ -2940,9 +2940,10 @@ var NBs = { // short for "notification bars"
 		///// btns Array
 		// [{
 		// 	label: 'Button-ID:String', // nativeshot custom, append -ID: and whatever string you want, this is how it recognizes button future updates, this is converted to custom attribute on the element //CHANGABLE, RESPECTED BY updateGlobal // after item is appended it doesnt use the '-ID:' anymore so when update it, no need to add in the -ID: link64798787
-		// 	accessKey: 'B', //CHANGABLE, RESPECTED BY updateGlobal // should be optional but its a bug i need to file on bugzilla, if dont set, then its undefined and accesskey is set to u as thats first letter of undefined
-		// 	popup: null,  //NOT changeable, by updateGlobal yet // ON creation, this must be either string of id of existing popup OR an xul element ready to append, and if it is xul element, then TYPE must set type to menu or menu-button // for update though this should be json array for jsonToDOM OR null if you want it removed  // SOOO for ease, dont ever set this on create, only go for update // see this image for on creation styles: C:\Users\Vayeate\Documents\GitHub\AwesomeBar-Power-Tip\popup is string and type is null, popup is getElementById of xul el and type is menu, popup is getElementById of xul and el is menu-button.png
-		//  type: String // optional  //NOT changeable, by updateGlobal yet //menu or menu-button are special, it causes popup to be required to be an XUL element. // for update though, this should be whatever // SOOO for ease, dont ever set this on create, only go for update
+		// 	accessKey: 'B', //CHANGABLE, RESPECTED BY updateGlobal // should be optional but its a bug i need to file on bugzilla, if dont set, then its undefined and accesskey is set to u as thats first letter of undefined // set to null if you want it removed
+		// 	image: 'string', //CHANGABLE, RESPECTED BY updateGlobal // official notificationbox api doesnt support it, i add it in here // set to null if you want it removed
+		// 	popup: null,  //NOT changeable, by updateGlobal yet // ON creation, this must be either string of id of existing popup OR an xul element ready to append, and if it is xul element, then TYPE must set type to menu or menu-button // for update though this should be json array for jsonToDOM OR null if you want it removed  // SOOO for ease, dont ever set this on create, only go for update // see this image for on creation styles: C:\Users\Vayeate\Documents\GitHub\AwesomeBar-Power-Tip\popup is string and type is null, popup is getElementById of xul el and type is menu, popup is getElementById of xul and el is menu-button.png /// :todo: if set on create, and its an array, then it unsets it then does api insert, then adds it back and does update with hints for tihs
+		//  type: String // optional  //CHANGEABLE, RESPECTED BY updateGlobal //menu or menu-button are special, it causes popup to be required to be an XUL element. // for update though, this should be whatever // SOOO for ease, dont ever set this on create, only go for update // set to null to remove /// :todo: if set on create, and its an array, then it unsets it then does api insert, then adds it back and does update with hints for tihs
 		//  anchor: String // optional  //NOT changeable, by updateGlobal yet
 		//  isDefault: String // optional, if none of your buttons have this, then button at position 0 is made default
 		//  class: 'blah1 blah2 blah3', // nativeshot custom, setAttribute('class')  //CHANGABLE, RESPECTED BY updateGlobal
@@ -3015,7 +3016,20 @@ var NBs = { // short for "notification bars"
 					}
 					if (aHints.btns.akey) {
 						for (var i=0; i<aHints.btns.akey.length; i++) {
-							allBtnsEl[aHints.btns.akey[i]].setAttribute('accesskey', allBtnsInfo[aHints.btns.akey[i]].accessKey);
+							if (allBtnsInfo[aHints.btns.akey[i]].accessKey === null) {
+								allBtnsEl[aHints.btns.akey[i]].removeAttribute('accesskey');
+							} else {
+								allBtnsEl[aHints.btns.akey[i]].setAttribute('accesskey', allBtnsInfo[aHints.btns.akey[i]].accessKey);
+							}
+						}
+					}
+					if (aHints.btns.image) {
+						for (var i=0; i<aHints.btns.image.length; i++) {
+							if (allBtnsInfo[aHints.btns.image[i]].image === null) {
+								allBtnsEl[aHints.btns.image[i]].removeAttribute('image');
+							} else {
+								allBtnsEl[aHints.btns.image[i]].setAttribute('image', allBtnsInfo[aHints.btns.image[i]].image);
+							}
 						}
 					}
 					if (aHints.btns.class) {
@@ -3138,6 +3152,21 @@ var NBs = { // short for "notification bars"
 			}
 			
 			// https://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/notification.xml#79
+			
+			var jsonToDomPopup = {};
+			for (var i=0; i<btns.length; i++) {
+				// test if any jsonToDOM is found in popup, and if it is, then remove, then add it back after api insert (appendNotification)
+				if (btns[i].popup && Array.isArray(btns[i].popup)) {
+					// devuser must have supplied btns[i].type too if he supplied popup
+					jsonToDomPopup[i] = {
+						popup: btns[i].popup,
+						type: btns[i].type,
+					};
+					delete btns[i].popup;
+					delete btns[i].type;
+				}
+			}
+			
 			cNB = nb.appendNotification(
 				cCrossWin.msg,
 				aGroupId,
@@ -3146,6 +3175,12 @@ var NBs = { // short for "notification bars"
 				cCrossWin.btns,
 				notifCallback
 			);
+			
+			// restore the jsonToDomPopup and then be sure to call NBs.updateGlobal
+			for (var i in jsonToDomPopup) { // i is index in btns arr, it doubles
+				btns[i].popup = jsonToDomPopup[i].popup;
+				btns[i].type = jsonToDomPopup[i].type;
+			}
 			var btns = cNB.querySelectorAll('button.notification-button');
 			for (var i=0; i<btns.length; i++) {
 				var label_with_id = btns[i].getAttribute('label');
@@ -3750,13 +3785,42 @@ function appendToHistoryLog(aTypeStr, aData) {
 	do_openHistory(); // starts the papend to history process
 }
 
+function gDrivePickAccountThenTriggerAll(aEntryIn_userAckPending, aNotifBarJson, aBtnEntry) {
+	aBtnEntry.type = 
+	console.log('user picked acount:', '?');
+}
+
+// note: elements n aDataArr MUST be an object. as each element in the dataArr is a button in the notifbar, the btn id will be linked to the dataArr element, therefore on push to dataArr i decide the btnId
+// note: so therefore dataPushers should determine initial label, and btn_id
 var dataPushers = { // holds funcHandlingEntryIntoDataArr for different aCategory
-	'gdrive': function(aData, aDataArr, aEntryIn_userAckPending) { // aDataArr is the dataArr key from userAckPending[i]
+	'gdrive': function(aData, aDataArr, aEntryIn_userAckPending, aReason) { // aDataArr is the dataArr key from userAckPending[i]
 		// because a btn in notif bar is created per element in aDataArr, and for gdrive i only want one button, i push into it a subarray
 		if (aDataArr.length == 0) {
-			aDataArr.push([]);
+			aDataArr.push({
+				blobs: [], // blobsAwaitingUpload
+				btnId: Math.random()
+			});
 		}
-		aDataArr[0].push(aData);
+		aDataArr[0].blobs.push(aData);
+		switch (aReason) {
+			case 'not-signed-in':
+				
+					aDataArr[0].btnLabel = 'Not Signed In';
+				
+				break;
+			case 'multi-account':
+				
+					aDataArr[0].btnLabel = 'Multiple Accounts Found - Pick';
+					aDataArr[0].accounts = {
+						'name_here': 'email_here',
+					};
+					aDataArr[0].reason = aReason;
+					
+				break;
+			default:
+				aDataArr[0].btnLabel = 'huh???';
+				console.error('waht no label??? aReason:', aReason);
+		}
 	}
 };
 
@@ -3770,10 +3834,10 @@ var notifBarBtn_callbackHandlers = { // these callback handlers are attached to 
 }
 
 var notifbarJsonMaintainers_andHintProviderForUpdateGlobal = {  // holds funcHandlingUpdateNotifBar for different aCategory
-	'gdrive': function(aEntryIn_userAckPending, aNotifBarJson, aReason) { // aNotifBarJson is the entry in NBs.crossWin[aGroupId]
+	'gdrive': function(aEntryIn_userAckPending, aNotifBarJson, aDataArr, aReason) { // aNotifBarJson is the entry in NBs.crossWin[aGroupId]
 		// aReason can also be gotten from aEntryIn_userAckPending, its same, i just pass it in for convenience
 		if (aNotifBarJson.uninitted) { // need to do first time population
-			delte aNotifBarJson.uninitted;
+			delete aNotifBarJson.uninitted;
 			// need to provide keys:
 				// msg - notifbar label
 				// p - priority, this is styling of the notifbar
@@ -3784,29 +3848,50 @@ var notifbarJsonMaintainers_andHintProviderForUpdateGlobal = {  // holds funcHan
 			// gdrive notifbar gets only one btn
 			var btnId = Math.random();
 			var btnEntry = {
-				label: 'Generic-ID:' + btnId, // :l10n:
+				label: 'Generic-ID:' + btnId, // :l10n: // -ID: is required, because on initial insert it doesnt have id attribute, after insert, it takes the id from the label and sets it as attribute
 				btn_id: btnId,
-				class: 'nativeshot-twitter-neutral',
-				accessKey: 'G',
-				callback: notifBarBtn_callbackHandlers.bind(null, btnEntry, aEntryIn_userAckPending.dataArr, aNotifBarJson, aEntryIn_userAckPending) // :todo: test what the arguments on click of button are
+				image: core.addon.path.images + 'gdrive_neutral16.png';
+				accessKey: null,
+				callback: notifBarBtn_callbackHandlers['gdrive'].bind(null, btnEntry, aEntryIn_userAckPending.dataArr, aNotifBarJson, aEntryIn_userAckPending) // :todo: test what the arguments on click of button are
 			};
 			aNotifBarJson.btns = [];
-			aNotifBarJson.btns.push(btnEntry);
-			
-			
-			switch (aReason) { // aReasons are determiend by whatever i as devuser pass to appendNeedsUserAttn
-				case 'not-signed-in': 
+			for (var i=0; i<aDataArr.length; i++) {
+				var thisBtnJsonParamsEntry = {
+					// label: 'Generic-ID:' + btnId, // :l10n: // -ID: is required, because on initial insert it doesnt have id attribute, after insert, it takes the id from the label and sets it as attribute
+					btn_id: aDataArr[i].btnId,
+					// image: core.addon.path.images + 'gdrive_neutral16.png';
+					accessKey: null,
+					callback: notifBarBtn_callbackHandlers['gdrive'].bind(null, thisBtnJsonParamsEntry, aEntryIn_userAckPending.dataArr, aNotifBarJson, aEntryIn_userAckPending) // :todo: test what the arguments on click of button are
+				};
+				
+				switch (aDataArr[i].reason) { // aReasons are determiend by whatever i as devuser pass to appendNeedsUserAttn
+					case 'not-signed-in': 
+					
+							btnEntry.image = core.addon.path.images + 'gdrive_bad16.png';
+							btnEntry.label = updatePossibleIdBtnLabel('Not Signed In', btnEntry.label);  // :l10n:
+							
+						break;
+					case 'multi-account': 
+					
+							btnEntry.image = core.addon.path.images + 'gdrive_neutral16.png';
+							btnEntry.label = updatePossibleIdBtnLabel('Pick an Account', btnEntry.label); // :l10n:
+							btnEntry.type = 'menu';
+							btnEntry.popup = ['xul:menupopup', {}];
 
-						aNotifBarJson.img = core.addon.path.images + 'gdrive_bad16.png';
-						btns = [
-						
-						];
-						
-					break;
-				default:
-					// do nothing
-					console.warn('unrecognized aReason in funcHandlingUpdateNotifBar, warning? throw? i dont know:', aReason);
-			};
+							var arrOfImgUrls = [];
+							for (var aAccount in aEntryIn_userAckPending.accounts) {
+								aBtnInfo.popup.push(['xul:menuitem', {label:aAccount.name, oncommand:gDrivePickAccountThenTriggerAll.bind(null, aEntryIn_userAckPending, aNotifBarJson, btnEntry)}]);
+							}
+							
+						break;
+					default:
+						// do nothing
+						console.warn('unrecognized aReason in funcHandlingUpdateNotifBar, warning? throw? i dont know:', aReason);
+				};
+				
+				aNotifBarJson.btns.push(thisBtnJsonParamsEntry);
+			}
+			aNotifBarJson.btns.push(btnEntry);
 			
 			aNotifBarJson = {
 				msg: aReason, // myServices.sb.GetStringFromName('notif-bar_' + aCategory + '-bar-label-' + aReason), // note: this is a possible way to handle automated localization but not really auto but you know what i mean
@@ -3826,6 +3911,16 @@ var notifbarJsonMaintainers_andHintProviderForUpdateGlobal = {  // holds funcHan
 	}
 }
 
+function updatePossibleIdBtnLabel(newLabel, oldLabel) {
+	var indexOfLast = oldLabel.lastIndexOf('-ID:');
+	if (indexOfLast > -1) {
+		return newLabel + oldLabel.substr(indexOfLast);
+	} else {
+		return newLabel;
+	}
+}
+
+// note: the whole point of userAckPending is to hold the data, as i keep data seperate from the NBs[crossWinId] which holds the json info for notifbar
 function appendNeedsUserAttn(aGEditorSessionId, aCategory, aReason, aData, funcHandlingEntryIntoDataArr, funcHandlingUpdateNotifBar) {
 	// this function will create a notification bar, and work with the user to get aData succesfully submitted
 	
@@ -3859,14 +3954,14 @@ function appendNeedsUserAttn(aGEditorSessionId, aCategory, aReason, aData, funcH
 		) - 1;
 	}
 	userAckPending[iInUserAckPending].reason = aReason;
-	funcHandlingEntryIntoDataArr(aData, userAckPending[iInUserAckPending].dataArr, userAckPending[iInUserAckPending]);
+	funcHandlingEntryIntoDataArr(aData, userAckPending[iInUserAckPending].dataArr, userAckPending[iInUserAckPending], aReason);
 	
 	// find the aGroupId for the notifbar out there
 	var notifBarJson = NBs.crossWin[userAckPending[iInUserAckPending].notifBarGroupId];
 	if (!notifBarJson) {
 		NBs.crossWin[userAckPending[iInUserAckPending].notifBarGroupId] = {uninitted:true}; // note: this is bad, cannot have blank, therefore funcHandlingUpdateNotifBar MUST MUST populate it properly // uninnited means that it hasnt been populated, this is to help funcHandlingEntryIntoDataArr identify its not yet inited, funcHandlingEntryIntoDataArr should delete this key and update it accordingly
 	}
-	var useHints = funcHandlingUpdateNotifBar(userAckPending[iInUserAckPending], notifBarJson, aReason); // funcHandlingEntryIntoDataArr should return an array of hints to use for NBs.updateGlobal
+	var useHints = funcHandlingUpdateNotifBar(userAckPending[iInUserAckPending], notifBarJson, userAckPending[iInUserAckPending].dataArr, aReason); // funcHandlingEntryIntoDataArr should return an array of hints to use for NBs.updateGlobal
 	// if useHints is ! then it doesnt call to NBs.updateGlobal
 	if (useHints) {
 		NBs.updateGlobal(notifBarGroupId, useHints);
