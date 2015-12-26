@@ -28,7 +28,7 @@
 /*-------------------------------------------------------------------------------------------------------------------------------*/
 
 @import url(chrome://nativeshot/content/app/css/font-roboto-slab.css); /* http://fonts.googleapis.com/css?family=Roboto+Slab:400,100,300,700 */
-
+html {overflow-y: scroll;}
 body {margin:0px; padding:0px; font-size:100%; height:100%; width:100%; font-family: 'Roboto Slab', serif; color:#222; background-color: #fff; font-weight: 300; font-style: normal; backface-visibility: hidden;}
 a {text-decoration:none; color: inherit; outline:none; transition: all 0.3s ease-in; -moz-transition: all 0.3s ease-in;-o-transition: all 0.3s ease-in;-webkit-transition: all 0.3s ease-in;-ms-transition: all 0.3s ease-in;}
 a:hover {text-decoration: none;}

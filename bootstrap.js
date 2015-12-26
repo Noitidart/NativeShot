@@ -29,7 +29,7 @@ const core = {
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/',
 		},
-		cache_key: 'v1.1' // set to version on release
+		cache_key: 'v1.1.1' // set to version on release
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -54,6 +54,9 @@ const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettif
 const TWITTER_MAX_UPLOAD_FILE_SIZE = 3145728; // i got this from doing debugger prettify on twitter javascript files
 const TWITTER_URL = 'https://twitter.com/';
 const TWITTER_IMG_SUFFIX = ':large';
+
+const TINEYE_REV_SEARCH_URL = 'http://tineye.com/search';
+const GOOGLEIMAGES_REV_SEARCH_URL = 'https://images.google.com/searchbyimage/upload';
 
 const myPrefBranch = 'extensions.' + core.addon.id + '.';
 
@@ -226,6 +229,7 @@ function get_gEMenuDomJson() {
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-quick'), oncommand:function(e){ gEditor.saveToFile(e, true) }}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-browse'), oncommand:function(e){ gEditor.saveToFile(e) }}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_copy'), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
+					['xul:menuitem', {id:'print_menuitem', label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
 					/*
 					['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
 						['xul:menupopup', {},
@@ -259,7 +263,12 @@ function get_gEMenuDomJson() {
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_twitter'), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
 						]
 					],
-					['xul:menuitem', {id:'print_menuitem', label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
+					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_search-reverse')},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_tineye'), oncommand:function(e){ gEditor.reverseSearch(e, 0) }}],
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-images'), oncommand:function(e){ gEditor.reverseSearch(e, 1) }}]
+						]
+					],
 					['xul:menuseparator', {}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-clear'), oncommand:function(e){ gEditor.clearSelection(e) }}],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_select-fullscreen')},
@@ -1633,6 +1642,76 @@ var gEditor = {
 		do_xhrToImgur();
 		
 		this.closeOutEditor(e);
+	},
+	reverseSearch: function(e, serviceType) {
+		// serviceType
+			// 0 - tineye
+			// 1 - google images
+
+		var serviceTypeStr; // for use with appendToHistoryLog
+		switch (serviceType) {
+			case 0:
+			
+					serviceTypeStr = 'tineye';
+			
+				break;
+			case 1:
+			
+					serviceTypeStr = 'google-images';
+			
+				break;
+			default:
+				throw new Error('devuser error serviceType is unknonw:' + serviceType);
+		}
+
+		this.compositeSelection();
+		
+		var cDOMWindow = gEditor.gBrowserDOMWindow;
+		
+		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
+			// let file = new FileUtils.File('C:\\Users\\Vayeate\\Pictures\\imglogo.jpg');
+			console.log('blob ready:', b);
+			
+			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
+			fileReader.addEventListener('load', function (event) {
+				var buffer = event.target.result;
+				// console.error('buffer ready:', buffer.constructor.name);
+				
+				var postData;
+				var serviceSearchUrl;
+				if (serviceType == 0) {
+					// tineye
+					serviceSearchUrl = TINEYE_REV_SEARCH_URL;
+					postData = encodeFormData({
+					  'image': buffer
+					}, 'iso8859-1', 'myimg.png', 'image/png');
+				} else if (serviceType == 1) {
+					// google images
+					serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
+					postData = encodeFormData({
+					  'image_url': 'myimg.png',
+					  'encoded_image': buffer
+					}, 'iso8859-1', 'myimg.png', 'image/png');
+				} else {
+					throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
+				}
+
+				cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
+				  inBackground: false,
+				  postData: postData
+				});
+			});
+			fileReader.readAsArrayBuffer(b);
+			
+
+		}, 'image/png');
+			
+		// this.closeOutEditor(e);// as i cant close out yet link374748304
+		
+		appendToHistoryLog(serviceTypeStr, {
+			d: new Date().getTime()
+		});
 	}
 };
 
@@ -1928,9 +2007,13 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	}
 	
 	aEditorDOMWindow.focus();
+	// if (core.os.name != 'darwin' && core.os.name != 'winnt') {
 	if (core.os.name != 'darwin') {
 		aEditorDOMWindow.fullScreen = true;
 	}
+	// if (core.os.name == 'winnt') {
+		// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
+	// }
 	
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
@@ -2077,7 +2160,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 				
-				if (core.os.version >= 6.3) { // win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
+				if (colMon[iMon].win81ScaleX || colMon[iMon].win81ScaleY) { // 122315 - this is no longer just win81, this is also if on // priror to 122315 - win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
 					var win81ScaleX = colMon[iMon].win81ScaleX;
 					var win81ScaleY = colMon[iMon].win81ScaleY;
 					if (win81ScaleX || win81ScaleY) {
@@ -2214,7 +2297,7 @@ function shootAllMons(aDOMWindow) {
 
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
-			
+
 			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 				gPostPrintRemovalFunc();
 			}
@@ -2938,7 +3021,9 @@ const aTypeStrToTypeInt = {
 	'copy': 2,
 	'print': 3,
 	'save-quick': 4,
-	'save-browse': 5
+	'save-browse': 5,
+	'tineye': 7,
+	'google-images': 8
 };
 
 function appendToHistoryLog(aTypeStr, aData) {
@@ -2980,6 +3065,9 @@ function appendToHistoryLog(aTypeStr, aData) {
 	dataKeysForTypeId[aTypeStrToTypeInt['print']] = ['d'];
 	dataKeysForTypeId[aTypeStrToTypeInt['save-browse']] = ['d', 'n', 'f'];
 	dataKeysForTypeId[aTypeStrToTypeInt['save-quick']] = ['d', 'n', 'f'];
+	// link872132154 - cross file
+	dataKeysForTypeId[aTypeStrToTypeInt['tineye']] = ['d'];
+	dataKeysForTypeId[aTypeStrToTypeInt['google-images']] = ['d'];
 	
 	if (!(aTypeStr in aTypeStrToTypeInt)) {
 		throw new Error('unidentified aTypeStr: ' + aTypeStr);
@@ -3684,10 +3772,135 @@ function showFileInOSExplorer(aNsiFile) {
 		aNsiFile.reveal();
 	}
 }
-function copyTextToClip(aTxt) {
-	var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
+function copyTextToClip(aTxt, aDOMWindow) {
+	var trans = Transferable(aDOMWindow ? aDOMWindow : Services.wm.getMostRecentWindow('navigator:browser'));
 	trans.addDataFlavor('text/unicode');
 	trans.setTransferData('text/unicode', SupportsString(aTxt), aTxt.length * 2); // We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
 	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+}
+function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType) {
+	// http://stackoverflow.com/a/25020668/1828637
+
+	var encoder = Cc["@mozilla.org/intl/saveascharset;1"].createInstance(Ci.nsISaveAsCharset);
+	encoder.Init(charset || "utf-8", Ci.nsISaveAsCharset.attr_EntityAfterCharsetConv + Ci.nsISaveAsCharset.attr_FallbackDecimalNCR, 0);
+	var encode = function(val, header) {
+		val = encoder.Convert(val);
+		if (header) {
+			val = val.replace(/\r\n/g, " ").replace(/"/g, "\\\"");
+		}
+		return val;
+	}
+
+	var boundary = "----boundary--" + Date.now();
+	var mpis = Cc['@mozilla.org/io/multiplex-input-stream;1'].createInstance(Ci.nsIMultiplexInputStream);
+
+	var item = "";
+	for (var k of Object.keys(data)) {
+		item += "--" + boundary + "\r\n";
+		var v = data[k];
+		
+		if (v instanceof Ci.nsIFile) {
+			
+			var fstream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
+			fstream.init(v, -1, -1, Ci.nsIFileInputStream.DEFER_OPEN);
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + encode(file.leafName, true) + "\"\r\n";
+
+			var ctype = "application/octet-stream";
+			try {
+				var mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
+				ctype = mime.getTypeFromFile(v) || ctype;
+			} catch (ex) {
+				console.warn("failed to get type", ex);
+			}
+			item += "Content-Type: " + ctype + "\r\n\r\n";
+
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			ss.data = item;
+
+			mpis.appendStream(ss);
+			mpis.appendStream(fstream);
+
+			item = "";
+
+		} else if (v.constructor.name == 'Blob') {
+			console.log('its a blob!');
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + Math.round(Math.random() * 10000) + "." + v.type.substr(v.type.indexOf('/') + 1) + "\"\r\n";
+			item += "Content-Type: " + v.type + "\r\n\r\n";
+
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			ss.data = item;
+
+			// i dont know how to add this to mpis
+			item = "";
+
+		} else if (v.constructor.name == 'ArrayBuffer') {
+
+			console.error('v.byteLength:', v.byteLength);
+
+			
+			/*
+			// 7960 - good
+			// 8461 - bad
+			var cByteLen = 0;
+			var chunkSize = 7000;
+			while (cByteLen < v.byteLength) {
+				var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
+				var thisChunkSize = cByteLen + chunkSize < v.byteLength ? cByteLen + chunkSize : v.byteLength - cByteLen;
+				console.error('thisChunkSize:', thisChunkSize);
+				abstream.setData(v, cByteLen, thisChunkSize);
+				cByteLen = cByteLen + thisChunkSize;
+				mpis.appendStream(abstream);
+			}
+			*/
+			
+			
+			// // method 1
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"\r\n";
+			item += "Content-Type: " + forArrBuf_mimeType + "\r\n\r\n";
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			ss.data = item;
+			mpis.appendStream(ss);
+			
+			var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
+			abstream.setData(v, 0, v.byteLength);
+			mpis.appendStream(abstream);
+
+			
+			// method 2
+			// var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			// ss.data = item;
+			// mpis.appendStream(ss);
+			
+			// var mstream = Cc['@mozilla.org/network/mime-input-stream;1'].createInstance(Ci.nsIMIMEInputStream);
+			// mstream.addHeader('Content-Type', forArrBuf_mimeType);
+			// mstream.addHeader('Content-Disposition', "form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"");
+
+			// var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
+			// abstream.setData(v, 0, v.byteLength);
+			// mstream.setData(abstream);
+			// mpis.appendStream(mstream);
+			
+			item = "";
+
+		} else {
+			console.error('in else');
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
+			item += encode(v);
+			
+		}
+		item += "\r\n";
+	}
+
+	item += "--" + boundary + "--\r\n";
+	var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+	ss.data = item;
+	mpis.appendStream(ss);
+  
+	var postStream = Cc["@mozilla.org/network/mime-input-stream;1"].createInstance(Ci.nsIMIMEInputStream);
+	postStream.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
+	postStream.setData(mpis);
+	postStream.addContentLength = true;
+  
+	return postStream;
 }
 // end - common helper functions

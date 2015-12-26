@@ -1,0 +1,8 @@
+RELASE
+
+* Due to rejection of v1.0 on AMO this had to be created
+* I cannot merge this branch to master branch as that already has some commits so is ahead in 1.2-night
+* Took this chance to fix some issues:
+  * Issue #21 - The twitter undefined URL && reduced size image issue. I leave this open as it has not been landed on master branch.
+  * Issue #20 - fixed
+  * Issue #19 - fixed

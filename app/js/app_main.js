@@ -18,7 +18,7 @@ const core = {
 			resources: 'chrome://nativeshot/content/resources/',
 			images: 'chrome://nativeshot/content/resources/images/'
 		},
-		cache_key: 'v1.1'
+		cache_key: 'v1.1.1'
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -46,7 +46,9 @@ const aTypeStrToTypeInt = {
 	'copy': 2,
 	'print': 3,
 	'save-quick': 4,
-	'save-browse': 5
+	'save-browse': 5,
+	'tineye': 7,
+	'google-images': 8
 };
 var aTypeIntToTypeStr = {}; // dynamically generated on page load
 const biggest_count_should_be_percent = 90; // for skill bars
@@ -761,8 +763,11 @@ function onPageReady() {
 			// alert(['clicked pseudo el'].join('\n'));
 			// remove all history from log
 			switch (typeStr) {
+				// link872132154 cross file
 				case 'print':
 				case 'copy':
+				case 'tineye':
+				case 'google-images':
 					removeEntryOrEntriesFromFileJson(undefined, aTypeStrToTypeInt[typeStr]);
 					break; // these support remove all
 				default:
@@ -771,8 +776,11 @@ function onPageReady() {
 		} else {
 			// apply filter
 			switch (typeStr) {
+				// link872132154 cross file
 				case 'print':
 				case 'copy':
+				case 'tineye':
+				case 'google-images':
 					break; // these arent filterable
 				default:
 					// $('.izotope-container').isotope({filter: '.nativeshot-' + typeStr});

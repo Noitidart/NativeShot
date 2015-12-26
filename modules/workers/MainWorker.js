@@ -1058,12 +1058,15 @@ function shootAllMons() {
 
 						aUint8[pos] = aUint8[pos+2];
 						aUint8[pos+2] = B;
+						aUint8[pos+3] = 255;
 
 						pos += 4;
 					}
 				};
 		
 				// start - take shot of each monitor
+				var dpiScaleX;
+				var dpiScaleY;
 				for (var s=0; s<collMonInfos.length; s++) {
 
 					var hdcScreen = ostypes.API('CreateDC')(collMonInfos[s].otherInfo.lpszDriver, collMonInfos[s].otherInfo.lpszDevice, null, null);
@@ -1077,17 +1080,32 @@ function shootAllMons() {
 						});
 					}
 					
+					if (s == 0) {
+						var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
+						var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
+						// console.log('dpiX:', dpiX, 'dpiY:', dpiY);
+						dpiScaleX = dpiX / 96; // because 96 is default which is 1
+						dpiScaleY = dpiY / 96;
+					}
+					
 					if (core.os.version >= 6.3) { // for scale purposes for non dpi aware process due to bug 890156
 						collMonInfos[s].otherInfo.scaledWidth = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.HORZRES)));
 						collMonInfos[s].otherInfo.scaledHeight = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.VERTRES)));
-						var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
-						var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
+						// var win81ScaleX = collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth;
+						// var win81ScaleY = collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight;
+						var win81ScaleX = (collMonInfos[s].w / collMonInfos[s].otherInfo.scaledWidth) * dpiScaleX;
+						var win81ScaleY = (collMonInfos[s].h / collMonInfos[s].otherInfo.scaledHeight) * dpiScaleY;
 						if (win81ScaleX != 1) {
 							collMonInfos[s].win81ScaleX = win81ScaleX;
 						}
 						if (win81ScaleY != 1) {
 							collMonInfos[s].win81ScaleY = win81ScaleY;
 						}
+					} else if (dpiScaleX != 1 || dpiScaleY != 1) {
+						// console.log('dpiScaleX, dpiScaleY', dpiScaleX, dpiScaleY);
+						collMonInfos[s].win81ScaleX = dpiScaleX;
+						collMonInfos[s].win81ScaleY = dpiScaleY;
+						// console.log('win81ScaleX, win81ScaleY', collMonInfos[s].win81ScaleX, collMonInfos[s].win81ScaleY);
 					}
 					
 					var w = collMonInfos[s].w;

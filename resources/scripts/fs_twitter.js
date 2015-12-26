@@ -10,7 +10,7 @@ var core = {
 			content_accessible: 'chrome://nativeshot-accessible/content/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/'
 		},
-		cache_key: 'v1.1' // set to version on release
+		cache_key: 'v1.1.1' // set to version on release
 	}
 };
 const gContentFrameMessageManager = this;
@@ -169,14 +169,22 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	
 	var parser = Cc['@mozilla.org/xmlextras/domparser;1'].createInstance(Ci.nsIDOMParser);
 	var parsedDocument = parser.parseFromString(refDetails.tweet_html, 'text/html');
-
+	console.error('refDetails.tweet_html:', refDetails.tweet_html);
 	
-	var photos = parsedDocument.querySelectorAll('div[data-img-src]');
+	var photos = [];
+	var pattPhotoUrl = /data-(?:image-url|img-src)=["']?([^"' >]+)/g; // https://github.com/Noitidart/NativeShot/wiki/Twitter-Response-HTML
+	var matchPhotoUrl;
+	console.log('ok looping');
+	while (matchPhotoUrl = pattPhotoUrl.exec(refDetails.tweet_html)) {
+		console.log('matchPhotoUrl:', matchPhotoUrl);
+		photos.push(matchPhotoUrl[1]);
+	}
+
 	for (var i=0; i<photos.length; i++) {
 		for (var imgId in imgIdsAttached_andPreviewIndex) {
 			if (imgIdsAttached_andPreviewIndex[imgId] == i) {
 				// index is i, and it was found that at this preview index, was this imgId
-				clips[imgId] = photos[i].getAttribute('data-img-src');
+				clips[imgId] = photos[i];
 				break;
 			}
 		}
