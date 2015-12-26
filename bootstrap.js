@@ -1706,8 +1706,50 @@ var gEditor = {
 			
 
 		}, 'image/png');
+		/*
+		var datauri = this.canComp.toDataURL('image/png', '');
+		console.log('datauri:', datauri);
+
+
+		console.warn('post replace:', datauri);
+		var postData;
+		var serviceSearchUrl;
+		if (serviceType == 0) {
+			// tineye
+			serviceSearchUrl = TINEYE_REV_SEARCH_URL;
+			// postData = generatePostStream({
+			  // 'url': datauri
+			// });
+			postData = encodeFormData({
+					  'url': datauri
+			});
+		} else if (serviceType == 1) {
+			// google images
+			serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
 			
-		// this.closeOutEditor(e);// as i cant close out yet link374748304
+			datauri = datauri.replace(/^[^,]+,/, '')
+								.replace(/\+/g, '-')
+								.replace(/\//g, '_')
+								.replace(/\./g, '=');
+			// datauri = escape(datauri.substr(datauri.indexOf(',') + 1));
+								
+			
+			postData = generatePostStream({
+			  'image_content': datauri,
+			  'filename': '',
+			  'image_url': ''
+			});
+		} else {
+			throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
+		}
+
+		cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
+		  inBackground: false,
+		  postData: postData
+		});
+		
+		this.closeOutEditor(e);// as i cant close out yet link374748304
+		*/
 		
 		appendToHistoryLog(serviceTypeStr, {
 			d: new Date().getTime()
@@ -3903,4 +3945,32 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
   
 	return postStream;
 }
+/*
+function generatePostStream(aPostData) {
+	 
+	    var data = '';
+	    var boundary = '---------------------------' + Date.now();
+	    var stream = aPostData;
+	 
+	    for (var name in stream) {
+	 
+	      data += '--' + boundary + '\r\n' +
+	              'Content-Disposition: form-data; name="' + name + '"\r\n\r\n' +
+	              stream[name] + '\r\n';
+	    }
+	    data += '--' + boundary + '--\r\n';
+	 
+	    var stringStream = Components.classes['@mozilla.org/io/string-input-stream;1']
+	                      .createInstance(Components.interfaces.nsIStringInputStream);
+	    stringStream.data = data;
+	 
+	    var postStream = Components.classes['@mozilla.org/network/mime-input-stream;1']
+	                      .createInstance(Components.interfaces.nsIMIMEInputStream);
+	    postStream.addHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
+	    postStream.addContentLength = true;
+	    postStream.setData(stringStream);
+	 
+	    return postStream;
+}
+*/
 // end - common helper functions
