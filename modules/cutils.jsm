@@ -17,20 +17,20 @@ function utilsInit() {
 	this.jscGetDeepest = function(obj) {
 		/*
 		if (obj !== null && obj !== undefined) {
-			console.log('trying on:', obj.toString())
+
 		}
 		*/
 		while (obj && isNaN(obj) && ('contents' in obj || 'value' in obj)) {
 			if ('contents' in obj) {
 				if (obj.constructor.targetType && obj.constructor.targetType.size === undefined) {
-					//console.error('breaking as no targetType.size on obj level:', obj.toString());
+
 					break;
 				} else {
 					obj = obj.contents;
 				}
 			} else if ('value' in obj) {
 				if (obj.constructor.targetType && obj.constructor.targetType.size === undefined) {
-					//console.error('breaking as no targetType.size on obj level:', obj.toString());
+
 					break;
 				} else {
 					obj = obj.value;
@@ -55,7 +55,7 @@ function utilsInit() {
 		var str1 = this.jscGetDeepest(str1); //cuz apparently its not passing by reference
 		var str2 = this.jscGetDeepest(str2); //cuz apparently its not passing by reference
 		
-		//console.info('comparing:', str1, str2);
+
 		
 		if (str1 == str2) {
 			return true;
@@ -149,34 +149,34 @@ function utilsInit() {
 		var readJSCharString = function() {
 			var assumption_max_len = known_len ? known_len : 500;
 			var ptrAsArr = ctypes.cast(stringPtr, ctypes.unsigned_char.array(assumption_max_len).ptr).contents; // MUST cast to unsigned char (not ctypes.jschar, or ctypes.char) as otherwise i dont get foreign characters, as they are got as negative values, and i should read till i find a 0 which is null terminator which will have unsigned_char code of 0 // can test this by reading a string like this: "_scratchpad/EnTeHandle.js at master · Noitidart/_scratchpad - Mozilla Firefox" at js array position 36 (so 37 if count from 1), we see 183, and at 77 we see char code of 0 IF casted to unsigned_char, if casted to char we see -73 at pos 36 but pos 77 still 0, if casted to jschar we see chineese characters in all spots expect spaces even null terminator is a chineese character
-			//console.info('ptrAsArr.length:', ptrAsArr.length);
-			//console.log('debug-msg :: dataCasted:', dataCasted, uneval(dataCasted), dataCasted.toString());
+
+
 			var charCode = [];
 			var fromCharCode = []
 			for (var i=0; i<ptrAsArr.length; i++) { //if known_len is correct, then will not hit null terminator so like in example of "_scratchpad/EnTeHandle.js at master · Noitidart/_scratchpad - Mozilla Firefox" if you pass length of 77, then null term will not get hit by this loop as null term is at pos 77 and we go till `< known_len`
 				var thisUnsignedCharCode = ptrAsArr.addressOfElement(i).contents;
 				if (thisUnsignedCharCode == 0) {
 					// reached null terminator, break
-					//console.log('reached null terminator, at pos: ', i);
+
 					break;
 				}
 				charCode.push(thisUnsignedCharCode);
 				fromCharCode.push(String.fromCharCode(thisUnsignedCharCode));
 			}
-			//console.info('charCode:', charCode);
-			//console.info('fromCharCode:', fromCharCode);
+
+
 			var char16_val = fromCharCode.join('');
-			//console.info('char16_val:', char16_val);
+
 			return char16_val;
 		}
 
 		if (!jschar) {
 			try {
 				var char8_val = stringPtr.readString();
-				//console.info('stringPtr.readString():', char8_val);
+
 				return char8_val;
 			} catch (ex if ex.message.indexOf('malformed UTF-8 character sequence at offset ') == 0) {
-				//console.warn('ex of offset utf8 read error when trying to do readString so using alternative method, ex:', ex);
+
 				return readJSCharString();
 			}
 		} else {
@@ -245,7 +245,7 @@ function utilsInit() {
 			throw new Error('not enough room in ctypesCharArr for the newStr_js and its null terminator');
 		}
 		
-		//console.info('pre mod readString():', ctypesCharArr.readString().toString());
+
 		
 		for (var i=0; i<ctypesCharArr.length; i++) {
 			var charCodeAtCurrentPosition = ctypesCharArr.addressOfElement(i).contents;
@@ -261,7 +261,7 @@ function utilsInit() {
 			ctypesCharArr.addressOfElement(i).contents = newStr_js.charCodeAt(i);
 		}
 		
-		//console.info('post mod readString():', ctypesCharArr.readString().toString());
+
 	};
 	this.typeOfField = function(structDef, fieldName) {
 		for (var i=0; i<structDef.fields.length; i++) {

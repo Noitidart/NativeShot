@@ -30,7 +30,7 @@ XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.stri
 const serverMessageListener = {
 	// listens to messages sent from clients (child framescripts) to me/server
 	receiveMessage: function(aMsg) {
-		console.error('CLIENT recieving msg:', 'this client id:', userAckId, 'aMsg:', aMsg);
+
 		if (!userAckId || !aMsg.json.userAckId || (aMsg.json.userAckId && userAckId && aMsg.json.userAckId == userAckId)) {
 			switch (aMsg.json.aTopic) {
 				case 'serverCommand_clientInit':
@@ -47,7 +47,7 @@ const serverMessageListener = {
 					break;
 				case 'serverCommand_attachImgToTweet':
 				
-						console.error('incoming serverCommand_attachImgToTweet');
+
 						do_openTweetModal(aMsg.json.imgId, aMsg.json.dataURL);
 				
 					break;
@@ -57,16 +57,16 @@ const serverMessageListener = {
 					do_focusContentWindow();
 					
 				default:
-					console.error('CLIENT unrecognized aTopic:', aMsg.json.aTopic, 'aMsg:', aMsg);
+
 			}
 		} else {
-			console.warn('incoming msg to twitter client but its userAckId are not for this client, not an error, althugh I never do send to other clients, aMsg:', aMsg);
+
 		}
 	}
 };
 
 function fsUnloaded(aEvent) {
-	// console.error('in fs unloaded, aEvent.target:', aEvent.target, 'aEvent:', aEvent);;
+
 	if (aEvent.target == gContentFrameMessageManager) {
 		// frame script unloaded, tab was closed
 		// :todo: check if the tweet was submitted, if it wasnt, then notif parent to make the notification-bar button to a "open new tab and reattach"
@@ -87,7 +87,7 @@ function register() {
 var unregReason;
 function unregister() {
 	FSRegistered = false;
-	console.error('unregistering!!!!! unregReason:', unregReason);
+
 	
 	removeEventListener('unload', fsUnloaded, false);
 	removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
@@ -96,7 +96,7 @@ function unregister() {
 	try {
 		removeMessageListener(core.addon.id, serverMessageListener);
 	} catch(ignore) {
-		console.info('failed to removeMessageListener probably because tab is already dead, ex:', ignore);
+
 	}
 	
 	try {
@@ -128,7 +128,7 @@ function unregister() {
 	}
 	//contentMMFromContentWindow_Method2(content, true).
 	sendAsyncMessage(core.addon.id, sendAsyncJson);
-	console.error('client sending server msg with json:', sendAsyncJson);
+
 }
 
 function on_nativeShot_notifyDataTweetError(aEvent) {
@@ -136,7 +136,7 @@ function on_nativeShot_notifyDataTweetError(aEvent) {
 	var a = aEvent.detail.a;
 	var b = aEvent.detail.b;
 	
-	console.error('tweet submission came back error, aEvent:', {aEvent: aEvent,a: a, b: b});
+
 	
 	var refDetails;
 	if (b.tweetboxId) {
@@ -155,7 +155,7 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	var a = aEvent.detail.a;
 	var b = aEvent.detail.b;
 	
-	console.error('tweet success baby, aEvent:', {aEvent: aEvent,a: a, b: b});
+
 	
 	var refDetails;
 	if (b.tweetboxId) {
@@ -169,14 +169,22 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	
 	var parser = Cc['@mozilla.org/xmlextras/domparser;1'].createInstance(Ci.nsIDOMParser);
 	var parsedDocument = parser.parseFromString(refDetails.tweet_html, 'text/html');
-	console.info('parsedDocument:', parsedDocument);
+	console.error('refDetails.tweet_html:', refDetails.tweet_html);
 	
-	var photos = parsedDocument.querySelectorAll('div[data-img-src]');
+	var photos = [];
+	var pattPhotoUrl = /data-(?:image-url|img-src)=["']?([^"' >]+)/g; // https://github.com/Noitidart/NativeShot/wiki/Twitter-Response-HTML
+	var matchPhotoUrl;
+	console.log('ok looping');
+	while (matchPhotoUrl = pattPhotoUrl.exec(refDetails.tweet_html)) {
+		console.log('matchPhotoUrl:', matchPhotoUrl);
+		photos.push(matchPhotoUrl[1]);
+	}
+
 	for (var i=0; i<photos.length; i++) {
 		for (var imgId in imgIdsAttached_andPreviewIndex) {
 			if (imgIdsAttached_andPreviewIndex[imgId] == i) {
 				// index is i, and it was found that at this preview index, was this imgId
-				clips[imgId] = photos[i].getAttribute('data-img-src');
+				clips[imgId] = photos[i];
 				break;
 			}
 		}
@@ -189,13 +197,13 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	try {
 		clips.other_info.user_id = refDetails.profile_stats[0].user_id;
 	} catch (ex) {
-		console.warn('ex when trying to read from profile_stats so using querySelector method');
+
 		clips.other_info.user_id = parsedDocument.querySelector('div[data-permalink-path]').getAttribute('data-permalink-path');
 	}
 	clips.other_info.permlink = parsedDocument.querySelector('div[data-permalink-path]').getAttribute('data-permalink-path');
 	clips.other_info.screen_name = parsedDocument.querySelector('div[data-screen-name]').getAttribute('data-screen-name');
 	// clips.other_info.full_name = parsedDocument.querySelector('div[data-name]').getAttribute('data-name');
-	console.info('clips:', clips);
+
 	
 	succesfullyTweetedClips = clips;
 	unregReason = 'tweet-success';
@@ -203,7 +211,7 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 }
 
 function on_nativeShot_notifyDialogClosed(aEvent) {
-	console.error('tweet dialog closed, aEvent:', aEvent);
+
 	if (!gTweeted) {
 		// :todo: tell notification-bar that tweet was lost due to closed tweet, offer on click to openTweetModal and reattach
 		sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_tweetClosedWithoutSubmit', userAckId:userAckId, subServer:'twitter', serverId:serverId});
@@ -221,18 +229,18 @@ function init(aCore, aUserAckId, aServerId) {
 	
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
-	console.info('aContentDocument.readyState.state:', aContentDocument.readyState.state);
+
 	if (aContentDocument.readyState.state == 'complete') {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			ensureSignedIn();
 		} else {
-			console.error('landing page done loading, but its not twitter:', aContentWindow.location);
+
 			unregReason = 'non-twitter-load';
 			unregister();
 		}
 	} else {
 		// aContentDocument.readyState.state == undefined //is undefined as asoon as framescript loaded as no page has lodaed yet, but also when get "problem loading page" like for offline, it stays undefined
-		console.error('adding listener for twitter load');
+
 		addEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false); // add listener to listen to page loads  till it finds twitter page // if i use third argument of false, load doenst trigger, so had to make it true. if false then i can use DOMContentLoaded however at DOMContentLoaded $ is not defined so had to switch to $
 	}
 	
@@ -245,26 +253,26 @@ function listenForTwitterDOMContentLoad(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
 	var aContentDocument = aContentWindow.document;
 	if (aContentWindow.frameElement) {
-		console.warn('frame element DOMContentLoaded, so dont respond yet');
+
 	} else {
 		if (aContentWindow.location.hostname == TWITTER_HOSTNAME) {
 			// check if got error loading page:
 			var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 			var docuri = webnav.document.documentURI;
-			console.info('docuri:', docuri);
+
 			if (docuri.indexOf('about:') == 0) {
 				// twitter didnt really load, it was an error page
-				console.error('twitter loaded but an error page loaded, so like offline or something:', aContentWindow.location, 'docuri:', docuri);
+
 				unregReason = 'error-loading';
 				unregister();
 			} else {
 				// twitterReady = true;
-				console.error('ok twitter loaded');
+
 				removeEventListener('DOMContentLoaded', listenForTwitterDOMContentLoad, false);
 				ensureSignedIn();
 			}
 		} else {
-			console.error('page done loading buts it not twitter, so unregister, location is now:', aContentWindow.location);
+
 			unregReason = 'non-twitter-load';
 			unregister();
 			//sendAsyncMessage(core.addon.id, {aTopic:'clientNotify_nonTwitterPage_onLoadComplete', userAckId:userAckId, subServer:'twitter', serverId:serverId});
@@ -276,7 +284,7 @@ function listenForTwitterLoad(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
 	var aContentDocument = aContentWindow.document;
 	if (aContentWindow.frameElement) {
-		console.warn('frame element loaded, so dont respond yet');
+
 	} else {
 		removeEventListener('load', listenForTwitterLoad, true);
 		doRegisterJqueryScript();
@@ -324,7 +332,7 @@ function doRegisterJqueryScript() {
 		wantXrays: false
 	};
 	var principal = docShell.chromeEventHandler.contentPrincipal; // aContentWindow.location.origin;
-	console.log('principal:', principal);
+
 	aSandbox = Cu.Sandbox(principal, options);
 
 	// load in twitter_inlay.js // per https://developer.mozilla.org/en-US/Add-ons/Overlay_Extensions/XUL_School/Appendix_D:_Loading_Scripts#Examples_2
@@ -334,7 +342,7 @@ function doRegisterJqueryScript() {
 	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'contentScript_twitterRegisterJquery.js', aSandbox, 'UTF-8');
 	
 	// Cu.evalInSandbox(registerJqueryScript, aSandbox);
-	console.error('is this true: does it fire after the loadSubScript?: if this log happens after last log in that script then yes:', 'no sync stuff in my registerJqueryScript so i dont have to wait, i can continue immediately')
+
 	// no sync stuff in my registerJqueryScript so i dont have to wait, i can continue immediately
 	do_clientNotify_FSReadyToAttach();
 }
@@ -342,7 +350,7 @@ function doRegisterJqueryScript() {
 // step 3 - skipping step3 no longer used
 /*
 function on_nativeShot_notifyJqueryRegistered(aEvent) {
-	console.error('ok good jquery registered, aEvent:', aEvent);
+
 	var aContentWindow = content;
 	var aContentDocument = aContentWindow.document;
 	jqueryScriptRegistered = true;
@@ -354,7 +362,7 @@ function on_nativeShot_notifyJqueryRegistered(aEvent) {
 // step 4 and step 10
 function do_clientNotify_FSReadyToAttach(aJustAttachedImgId) {
 	FSReadyToAttach = true;
-	console.error('sending FSReady from client');
+
 	var sendAsyncJson = {aTopic:'clientNotify_FSReadyToAttach', userAckId:userAckId, subServer:'twitter', serverId:serverId};
 	if (aJustAttachedImgId) {
 		sendAsyncJson.justAttachedImgId = aJustAttachedImgId;
@@ -396,7 +404,7 @@ function do_openTweetModal(aImgId, aImgDataUrl) {
 		
 		var event = new aContentWindow.CustomEvent('nativeShot_clickNewTweetBtn');
 		aContentDocument.dispatchEvent(event);
-		console.log('should have dispatched event');
+
 		
 	}
 	
@@ -411,10 +419,10 @@ function do_waitForTweetDialogToOpen() {
 	
 	tweetDialogDialog = aContentDocument.getElementById('global-tweet-dialog-dialog'); // :maintain: with twitter updates
 	if (tweetDialogDialog) {
-		console.log('PASSED found test 0');
+
 		do_waitForTabFocus();
 	} else {
-		console.log('not yet found test 0');
+
 		setTimeout(do_waitForTweetDialogToOpen, waitForInterval_ms);
 	}
 }
@@ -428,7 +436,7 @@ function do_waitForTabFocus() {
 	var isFocused_aContentWindow = isFocused(aContentWindow);
 	if (!isFocused_aContentWindow) {
 		// insert note telling them something will happen
-		console.log('it does NOT have focus so wait for focus');
+
 		try {
 			modalTweet = tweetDialogDialog.querySelector('.modal-tweet-form-container'); // :maintain: with twitter updates
 		} catch(ignore) {}
@@ -458,7 +466,7 @@ function do_waitForTabFocus() {
 		
 		// insert note telling them something will happen
 	} else {
-		console.log('it has focus so attach it');
+
 		attachSentImgData();
 	}	
 }
@@ -477,10 +485,10 @@ function attachSentImgData() {
 	
 	countPreview = richInputTweetMsg.parentNode.querySelectorAll('.previews .preview').length;
 	
-	console.log('countPreview pre attach:', countPreview);
+
 	
 	var img = aContentDocument.createElement('img');
-	console.info('will attach dataurl:', currentlyAttaching.imgDataURL);
+
 	img.setAttribute('src', currentlyAttaching.imgDataURL);
 	currentlyAttaching.imgDataURL = null; // memperf
 	richInputTweetMsg.appendChild(img);
@@ -503,14 +511,14 @@ function waitForAttachToFinish() {
 		currentlyAttaching = {};
 		imgIdsAttached_andPreviewIndex[justAttachedImgId] = countPreview;
 		countPreview = null;
-		console.log('PASSED img attach test', 'took this much seconds:', ((new Date().getTime() - timeStartedAttach)/1000));
+
 		do_clientNotify_FSReadyToAttach(justAttachedImgId);
 	} else {
-		console.log('NOT yet img attach test passed, nowCountPreview:', nowCountPreview);
+
 		if (new Date().getTime() - timeStartedAttach < waitForAttach_maxMsWait) {
 			setTimeout(waitForAttachToFinish, waitForInterval_ms);
 		} else {
-			console.error('max time reached when trying to attach, this should never happen!!!');
+
 			throw new Error('max time reached when trying to attach, this should never happen!!!');
 		}
 	}
@@ -522,7 +530,7 @@ function listenForTwittterUnload(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
 	var aContentDocument = aContentWindow.document;
 	if (aContentWindow.frameElement) {
-		//console.warn('frame element loaded, so dont respond yet');
+
 	} else {
 		unregReason = 'twitter-page-unloaded';
 		unregister();
@@ -540,7 +548,7 @@ var waitForFocus_forAttach;
 
 function do_focusContentWindow() {
 	content.focus();
-	console.log('ok content window focused');
+
 }
 
 // :todo: once image is attached, add event listener to the on delete of it, to sendAsyncMessage to server saying it was deleted
@@ -575,5 +583,5 @@ function contentMMFromContentWindow_Method2(aContentWindow, refreshCache) {
 }
 // END - helper functions
 
-console.error('ContentFrameMessageManager:', gContentFrameMessageManager);
+
 register();

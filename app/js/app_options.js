@@ -109,11 +109,11 @@ function updateNg_v_lu_au() {
 
 function setAutoUpdateOn() {
 	if (_cache_fetchAddon_v_lu_au.autoUpdateDefault) {
-		console.log('default is on, so set to default');
+
 		_cache_gAddon.applyBackgroundUpdates = 1; // set it to default as default is on
 		_cache_fetchAddon_v_lu_au.auto_update = 1;
 	} else {
-		console.log('set to on');
+
 		_cache_gAddon.applyBackgroundUpdates = 2;
 		_cache_fetchAddon_v_lu_au.auto_update = 2;
 	}
@@ -123,11 +123,11 @@ function setAutoUpdateOn() {
 function setAutoUpdateOff() {
 	_cache_fetchAddon_v_lu_au.autoUpdateDefault = AddonManager.autoUpdateDefault;
 	if (!_cache_fetchAddon_v_lu_au.autoUpdateDefault) {
-		console.log('default is off, so set to default');
+
 		_cache_gAddon.applyBackgroundUpdates = 1; // set it to default as default is off
 		_cache_fetchAddon_v_lu_au.auto_update = 1;
 	} else {
-		console.log('set to off');
+
 		_cache_gAddon.applyBackgroundUpdates = 0;
 		_cache_fetchAddon_v_lu_au.auto_update = 0;
 	}
@@ -135,7 +135,7 @@ function setAutoUpdateOff() {
 }
 
 function readInPrefsToNg() {
-	console.log('reading in prefs to gui');
+
 	// reads prefs and updates gui
 	
 	// quick_save_dir
@@ -203,11 +203,11 @@ function getPref(aPrefName, doSetPrefWithVal) {
 					try {
 						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
 					} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-						// console.warn('ex:', ex);
+
 						try {
 							return Services.dirsvc.get('Pict', Ci.nsIFile).path;
 						} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-							// console.warn('ex:', ex);
+
 							return OS.Constants.Path.desktopDir;
 						}
 					}
@@ -285,9 +285,9 @@ function extendCore() {
 			
 		case 'darwin':
 			var userAgent = myServices.hph.userAgent;
-			//console.info('userAgent:', userAgent);
+
 			var version_osx = userAgent.match(/Mac OS X 10\.([\d\.]+)/);
-			//console.info('version_osx matched:', version_osx);
+
 			
 			if (!version_osx) {
 				throw new Error('Could not identify Mac OS X version.');
@@ -314,7 +314,7 @@ function extendCore() {
 			// nothing special
 	}
 	
-	console.log('done adding to core, it is now:', core);
+
 }
 // end - common helper functions
 

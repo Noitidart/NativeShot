@@ -4,7 +4,7 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 const { BasePromiseWorker } = Cu.import('resource://gre/modules/PromiseWorker.jsm', {});
 Cu.import('resource:///modules/CustomizableUI.jsm');
-Cu.import('resource://gre/modules/devtools/Console.jsm');
+
 Cu.import('resource://gre/modules/ctypes.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
@@ -54,6 +54,7 @@ const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettif
 const TWITTER_MAX_UPLOAD_FILE_SIZE = 3145728; // i got this from doing debugger prettify on twitter javascript files
 const TWITTER_URL = 'https://twitter.com/';
 const TWITTER_IMG_SUFFIX = ':large';
+
 const TINEYE_REV_SEARCH_URL = 'http://tineye.com/search';
 const GOOGLEIMAGES_REV_SEARCH_URL = 'https://images.google.com/searchbyimage/upload';
 
@@ -87,9 +88,9 @@ function extendCore() {
 			
 		case 'darwin':
 			var userAgent = myServices.hph.userAgent;
-			//console.info('userAgent:', userAgent);
+
 			var version_osx = userAgent.match(/Mac OS X 10\.([\d\.]+)/);
-			//console.info('version_osx matched:', version_osx);
+
 			
 			if (!version_osx) {
 				throw new Error('Could not identify Mac OS X version.');
@@ -116,7 +117,7 @@ function extendCore() {
 			// nothing special
 	}
 	
-	console.log('done adding to core, it is now:', core);
+
 }
 
 //start obs stuff
@@ -258,15 +259,8 @@ function get_gEMenuDomJson() {
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_share-to-social')},
 						['xul:menupopup', {},
+							/*['xul:menuitem', {label:'Facebook'}],*/
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_twitter'), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
-							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_facebook'), oncommand:function(e){ gEditor.shareToFacebook(e) }}]
-						]
-					],
-					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-cloud')},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_dropbox'), oncommand:function(e){ gEditor.uploadToDropbox(e) }}],
-							// ['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_onedrive'), oncommand:function(e){ gEditor.uploadToOnedrive(e) }}],
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-drive'), oncommand:function(e){ gEditor.uploadToGoogleDrive(e) }}]
 						]
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_search-reverse')},
@@ -317,7 +311,7 @@ var gCanDim = {
 			// throw new Error('aArrFuncArgs must be an array');
 		// }
 		// executes the ctx function across all ctx's
-		// if (aObjConvertScreenToLayer) { console.error('start exec'); } // :debug:
+
 		// identify replace indiices and its val
 		var specials = {
 			'{{W}}': '{{W}}', // can dependent
@@ -361,13 +355,13 @@ var gCanDim = {
 				// start - block link6587436215
 				// check if intersection
 				var rectIntersecting = colMon[i].rect.intersect(cRect);
-				// console.info('iMon:', i, 'rectIntersecting:', rectIntersecting, 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect)
+
 				if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 					// does not intersect, continue to next monitor
-					// console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', cRect, 'colMon[i].rect:', colMon[i].rect);
+
 					continue;
 				} else {
-					//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
+
 					// convert screen xy of rect to layer xy
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = rectIntersecting.left - colMon[i].x;
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = rectIntersecting.top - colMon[i].y;
@@ -375,14 +369,14 @@ var gCanDim = {
 					// adjust width and height, needed for multi monitor selection correction
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.w] = rectIntersecting.width;
 					clone_aArrFuncArgs[aObjConvertScreenToLayer.h] = rectIntersecting.height;
-					//console.log('args converted from screen to layer xy:', 'from:', JSON.parse(orig), 'to:', clone_aArrFuncArgs);
+
 				}
 				// end - block link6587436215
 			}
 			
 			var aCtxDim = colMon[i].E.ctxDim;
 
-			//console.log('applying arr:', clone_aArrFuncArgs);
+
 			aCtxDim[aStrFuncName].apply(aCtxDim, clone_aArrFuncArgs);
 		}
 	},
@@ -406,9 +400,9 @@ var gENotifListener = {
 		// aSubject is always null
 		// aData is the aClickCookie, i set aClickCookie to notif id. if its not clickable aClickCookie is not set
 		// aTopic is: alertfinished, alertclickcallback, alertshow
-		console.error('incoming notification observer:', aSubject, aTopic, aData);
+
 		if (aTopic == 'alertclickcallback')	{
-			console.error('user clicked trying to throw click');
+
 			if (gNotifClickCallback[aData]) {
 				gNotifClickCallback[aData]();
 				delete gNotifClickCallback[aData];
@@ -416,13 +410,13 @@ var gENotifListener = {
 		} else if (aTopic == 'alertshow') {
 			//gENotifPending[0].shown = true;
 			var shown = gENotifPending.splice(0, 1);
-			console.log('just showed:', shown);
+
 			gNotifierStrRandomizer = gNotifierStrRandomizer == ' ' ? '' : ' ';
 		} else if (aTopic == 'alertfinished') {
-			console.log('just alertfinished')
+
 			if (gNotifClickCallback[aData]) {
 				// user didnt click it
-				console.warn('user didnt click it man');
+
 				delete gNotifClickCallback[aData];
 			}
 		}
@@ -436,10 +430,10 @@ var gNotifTimerRunning = false;
 const gNotifTimerInterval = 1000; //ms
 var gENotifCallback = {
 	notify: function() {
-		console.log('triggered notif callback, this is the arr:', JSON.stringify(gENotifPending));
+
 		if (gENotifPending.length > 0) {
 			if (gENotifPending[0].aClickCookie !== null) {
-				console.warn('doing showAlert with CLICK cookie');
+
 				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
 			} else {
 				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
@@ -455,7 +449,7 @@ var gPostPrintRemovalFunc;
 const reuploadTimerInterval = 10000;
 
 function notifCB_saveToFile(aOSPath_savedFile) {
-	console.error('in the click thingy baby');
+
 	var nsifile = FileUtils.File(aOSPath_savedFile);
 	showFileInOSExplorer(nsifile);
 }
@@ -529,7 +523,7 @@ const fsComServer = {
 		// listens to messages sent from clients (child framescripts) to me/server
 		// also from old server, to listen when to trigger updated register
 		receiveMessage: function(aMsg) {
-			console.error('SERVER recieving msg:', aMsg.json);
+
 			if ((aMsg.json.subServer == 'twitter') && (!('serverId' in aMsg.json) || aMsg.json.serverId == fsComServer.serverId)) {
 				switch (aMsg.json.aTopic) {
 					/* // i dont need this because the sendMessage is sync event though sendAsync, so if i do load and do sendAsync message it will get that message
@@ -580,7 +574,7 @@ const fsComServer = {
 						break;
 					case 'clientNotify_clientUnregistered':
 					
-							console.error('ok in SERVER SIDE clientNotify_clientUnregistered');
+
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							switch (aMsg.json.unregReason) {
 								case 'error-loading':
@@ -618,7 +612,7 @@ const fsComServer = {
 										}
 										
 										NBs_updateGlobal_updateTwitterBtn(refUAPEntry, aMsg + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'open-new-tab');
-										console.error('should have set action btn to open-new-tab');
+
 										
 									break;
 								case 'tweet-success':
@@ -631,7 +625,7 @@ const fsComServer = {
 										
 										refUAPEntry.tweetURL = TWITTER_URL + other_info.permlink.substr(1); // because permlink is preceded by slash
 										
-										console.info('other_info:', other_info);
+
 										
 										for (var imgId in refUAPEntry.imgDatas) {
 											delete refUAPEntry.imgDatas[imgId].dataURL;
@@ -658,7 +652,7 @@ const fsComServer = {
 										}
 										
 										if (!aBtnInfo) {
-											console.error('this should never happend, btn for userAckId was not found, userAckId', userAckId, 'aBtnInfos:', aBtnInfos, 'NBs.crossWin:', NBs.crossWin);
+
 											throw new Error('this should never happen');
 										}
 										
@@ -734,7 +728,7 @@ const fsComServer = {
 							// check if any other twitter fs are active (meaning a succesful tweet is pending), if none found remove the twitterClientMessageListener
 							var refUAP = userAckPending;
 							var untweetedUAPFound = false;
-							console.log('checking if any untweeted tabs are open, and if they are then it wont remove listener:', refUAP);
+
 							for (var i=0; i<refUAP.length; i++) {
 								// :todo: apparently i found here somethign that had no refUAP.uaGroup, investigate why this was - i was just getting back to nativeshot after doing other work so i dont recall at this time what all intricacies
 								if (refUAP[i].uaGroup && refUAP[i].uaGroup == 'twitter' && !refUAP[i].tweeted) {
@@ -745,7 +739,7 @@ const fsComServer = {
 							if (!untweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
 								myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
-								console.log('removed message listener for twitter as no other twitter tabs im caring about (meaning that im watching for succesful image attach then tweet) are left open');
+
 							}
 							
 						break;
@@ -760,7 +754,7 @@ const fsComServer = {
 							}
 							
 							refUAPEntry.FSReadyToAttach = true; // short for frameScript_isReadyToAttachAnother, basically ready to accept another send
-							console.error('just set FSReadyToAttach to true in refUAPEntry:', refUAPEntry);
+
 							
 							fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(aMsg.json.userAckId);
 							
@@ -779,10 +773,10 @@ const fsComServer = {
 						
 					// end - devuser edit - add your personal message topics to listen to from clients
 					default:
-						console.error('SERVER unrecognized aTopic:', aMsg.json.aTopic, aMsg, 'server id:', fsComServer.serverId);
+
 				}
 			} // else {
-				// console.warn('incoming message to server but it has an id and it is not of this so ignore it', 'this server id:', fsComServer.id, 'msg target server is:', aMsg.json.serverId, 'aMsg:', aMsg);
+
 			//}
 		}
 	},
@@ -804,17 +798,17 @@ const fsComServer = {
 	twitter_IfFSReadyToAttach_sendNextUnattached: function(userAckId) {
 		// returns true, if something was found unattached and sent, returns false if nothing found unnatached or FS wasnt ready
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
-		console.error('in here ok good h0, refUAPEntry:', refUAPEntry);
+
 		if (refUAPEntry.FSReadyToAttach) {
-			console.error('in here ok good h1');
+
 			// its available to attach, so send it
 			// check if any imgs are waiting to be attached
 			for (var imgId in refUAPEntry.imgDatas) {
-				console.log('checking:', refUAPEntry.imgDatas[imgId]);
+
 				if (!refUAPEntry.imgDatas[imgId].attachedToTweet) {
 					// send command to client to attached
 					refUAPEntry.FSReadyToAttach = false;
-					console.log('ok found img that was not yet attached to tweet, sending it, it is:', refUAPEntry.imgDatas[imgId]);
+
 					refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
 						aTopic: 'serverCommand_attachImgToTweet',
 						serverId: fsComServer.serverId,
@@ -825,11 +819,11 @@ const fsComServer = {
 					return true;
 				}
 			}
-			console.log('all imgs are attached');
+
 			// NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Tweet dialog opened and images attached - awaiting user input', 'nativeshot-twitter-neutral', 'focus-tab'); // i can show this, but i am not showing "'Waiting to for progrmattic attach'" so not for right now, but i guess would be nice maybe, but maybe too much info
 			NBs_updateGlobal_updateTwitterBtn(refUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab'); // this is good, because if was found not signed in, then on signed in load it opens up and is waiting for attach, but needs user focus
 		} else {
-			console.error('in here ok good h1');
+
 			// not yet availble to attach so do nothing. because when fs is ready to attach it will send me a clientNotify_readyToAttach, and i run this function of twitter_IfFSReadyToAttach_sendNextUnattached there
 			return false;
 		}
@@ -846,7 +840,7 @@ function getUAPEntry_byUserAckId(userAckId) {
 			return refUAP[i];
 		}
 	}
-	console.error('could not find aUAPEntry with userAckId of', userAckId, 'this is UAP:', refUAP);
+
 	throw new Error('could not find aUAPEntry with userAckId - should not happen i think');
 }
 /* // used only in one place so removed this
@@ -860,7 +854,7 @@ function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
 		}
 	}
 	if (throwOnNotFound) {
-		console.error('could not find aUAPEntry with userAckId of', userAckId, 'this is UAP:', refUAP);
+
 		throw new Error('could not find aUAPEntry with userAckId - should not happen i think');
 	}
 }
@@ -876,7 +870,7 @@ var gEditor = {
 	forceFocus: null, // set to true like when user does twitter as that needs user focus
 	cleanUp: function() {
 		// reset all globals
-		console.error('doing cleanup');
+
 		
 		colMon = null;
 		this.lastCompositedRect = null;
@@ -908,7 +902,7 @@ var gEditor = {
 	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
 		for (var i=0; i<colMon.length; i++) {
 			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
-			console.log('added ', evName, 'to iMon:', i);
+
 		}
 	},
 	removeEventListener: function(keyNameInColMonE, evName, func, aBool) {
@@ -937,7 +931,7 @@ var gEditor = {
 		switch (iMon) {
 			case -2:
 			
-					console.error('selecting all monitors');
+
 					for (var i=0; i<colMon.length; i++) {
 						gESelectedRect = gESelectedRect.union(colMon[i].rect);
 					}
@@ -946,7 +940,7 @@ var gEditor = {
 				break;
 			case -1:
 					iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-					console.error('selecting current monitor which is:', iMon);
+
 					// intionally no break here so iMon is set to current monitor and it goes on to the default selection part
 			default:
 					try {
@@ -965,7 +959,7 @@ var gEditor = {
 		} catch(ignore) {}
 		
 		if (!gEditor.winArr) {
-			console.time('getAllWin');
+
 			var promise_fetchWin = MainWorker.post('getAllWin', [{
 				getPid: true,
 				getBounds: true,
@@ -974,22 +968,22 @@ var gEditor = {
 			}])
 			promise_fetchWin.then(
 				function(aVal) {
-					console.log('Fullfilled - promise_fetchWin - ', aVal);
+
 					// start - do stuff here - promise_fetchWin
-					console.timeEnd('getAllWin');
+
 					gEditor.winArr = aVal;
 					// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
 					// end - do stuff here - promise_fetchWin
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_fetchWin', aReason:aReason};
-					console.warn('Rejected - promise_fetchWin - ', rejObj);
+
 					// deferred_createProfile.reject(rejObj);
 				}
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_fetchWin', aCaught:aCaught};
-					console.error('Caught - promise_fetchWin - ', rejObj);
+
 					// deferred_createProfile.reject(rejObj);
 				}
 			);
@@ -1001,13 +995,13 @@ var gEditor = {
 	},
 	compositeSelection: function() {
 		// creates a canvas holding a composite of the current selection
-		console.error('starting compositing');
+
 		if (!gESelected) {
 			throw new Error('no selection to composite!');
 		}
 		
 		if (this.lastCompositedRect && this.lastCompositedRect.equals(gESelectedRect)) {
-			console.log('no need to composite as compositing was already done so is cached');
+
 			return;
 		}
 		
@@ -1035,10 +1029,10 @@ var gEditor = {
 			var rectIntersecting = colMon[i].rect.intersect(this.lastCompositedRect);
 			if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
 				// does not intersect, continue to next monitor
-				console.warn('iMon:', i,'no intersect, contin to next mon', 'cRect:', this.lastCompositedRect, 'colMon[i].rect:', colMon[i].rect);
+
 				continue;
 			} else {
-				//console.info('due to interesect here is comparison of x y w h:', rectIntersecting.left, rectIntersecting.right, rectIntersecting.left == rectIntersecting.right, rectIntersecting.top == rectIntersecting.bottom, rectIntersecting.top, rectIntersecting.bottom)
+
 				// convert screen xy of rect to layer xy
 				rectIntersecting.left -= colMon[i].x;
 				rectIntersecting.top -= colMon[i].y;
@@ -1050,20 +1044,20 @@ var gEditor = {
 			// end - mod of copied block link6587436215
 			
 			// this.canComp.style.position = 'fixed'; // :debug:
-			console.info('i:', i, 'colMon:', colMon, 'this.lastCompositedRect.left:', this.lastCompositedRect.left, 'this.lastCompositedRect.top:', this.lastCompositedRect.top, 'rectIntersecting.left:', rectIntersecting.left, 'rectIntersecting.top:', rectIntersecting.top, 'rectIntersecting.width:', rectIntersecting.width, 'rectIntersecting.height:', rectIntersecting.height);
-			console.info(colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
+
+
 			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			
 			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
 			
-			console.error('composited');
+
 		}
 	},
 	closeOutEditor: function(e) {
 		// if e.shiftKey then it doesnt do anything, else it closes it out and cleans up (in future maybe possibility to cache? maybe... so in this case would just hide window, but im thinking no dont do this)
-		console.error('in close out editor, e.shiftKey:', e.shiftKey);
+
 		if (e.shiftKey) {
-			console.log('will not close out editor as shift key was held, user wants to do more actions')
+
 		} else {
 			for (var p in NBs.crossWin) {
 				if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
@@ -1094,7 +1088,7 @@ var gEditor = {
 		});
 		if (aClickCallback) {
 			gNotifClickCallback[gNotifLastId] = aClickCallback;
-			console.log('registered this notif with a CLICK callback, gNotifClickCallback:', gNotifClickCallback);
+
 		}
 		if (!gNotifTimerRunning) {
 			gENotifCallback.notify(gNotifTimer);
@@ -1115,7 +1109,7 @@ var gEditor = {
 					var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
 					promise_saveToDisk.then(
 						function(aVal) {
-							console.log('Fullfilled - promise_saveToDisk - ', aVal);
+
 							// start - do stuff here - promise_saveToDisk
 							var trans = Transferable(gEditor.gBrowserDOMWindow);
 							trans.addDataFlavor('text/unicode');
@@ -1136,14 +1130,14 @@ var gEditor = {
 						},
 						function(aReason) {
 							var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-							console.error('Rejected - promise_saveToDisk - ', rejObj);
+
 							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
 							//deferred_createProfile.reject(rejObj);
 						}
 					).catch(
 						function(aCaught) {
 							var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-							console.error('Caught - promise_saveToDisk - ', rejObj);
+
 							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 							//deferred_createProfile.reject(rejObj);
 						}
@@ -1177,12 +1171,12 @@ var gEditor = {
 														.getInterface(Ci.nsIBaseWindow)
 														.nativeHandle;
 					var NSWindowString = aHwndPtrStr;
-					console.info('NSWindowString:', NSWindowString);
+
 												
 					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
 
 					var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.setLevel, gMacTypes.NSInteger(0)); // i guess 0 is NSNormalWindowLevel
-					console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());	
+
 			}
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 			fp.init(e.view, myServices.sb.GetStringFromName('filepicker-title-save-screenshot'), Ci.nsIFilePicker.modeSave);
@@ -1192,7 +1186,7 @@ var gEditor = {
 			
 			if (core.os.name == 'darwin') {
 				var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.setLevel, gMacTypes.NSInteger(gMacTypes.NSMainMenuWindowLevel + 1)); // link847455111
-				console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());	
+
 			}
 			
 			if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
@@ -1204,7 +1198,7 @@ var gEditor = {
 				do_saveCanToDisk();
 			} else {
 				 // user canceled
-				console.error('rv was not ok or replace:', rv);
+
 				//gEditor.closeOutEditor(e);
 			}
 		}
@@ -1228,7 +1222,7 @@ var gEditor = {
 		wrapped.data = container.value;
 		
 		var trans = Transferable(this.gBrowserDOMWindow);
-		console.info('channel.contentType:', channel.contentType);
+
 		trans.addDataFlavor(channel.contentType);
 		
 		trans.setTransferData(channel.contentType, wrapped, -1);
@@ -1273,16 +1267,16 @@ var gEditor = {
 			var iframe = doc.createElementNS(NS_HTML, 'iframe');
 			iframe.addEventListener('load', function() {
 				iframe.removeEventListener('load', arguments.callee, true);
-				console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
-				console.error('iframe loaded, print it', iframe.contentWindow.print);
+
+
 				gPostPrintRemovalFunc = function() {
 					iframe.parentNode.removeChild(iframe);
-					console.error('ok removed iframe that i added to hiddenDOMWindow')
+
 					gPostPrintRemovalFunc = null;
 				};
 				iframe.contentWindow.addEventListener('afterprint', function() {
 					// iframe.parentNode.removeChild(iframe);
-					// console.error('ok removed iframe that i added to hiddenDOMWindow')
+
 					//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
 					iframe.setAttribute('src', 'about:blank');
 				}, false);
@@ -1308,7 +1302,7 @@ var gEditor = {
 			// i dont do it that way because i want the available rect so i do this way:
 			// var sDims = {x:{},y:{},w:{},h:{}};
 			// Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager).screenForRect(1,1,1,1).GetAvailRect(sDims.x, sDims.y, sDims.w, sDims.h);
-			// console.info('chrome,width=' + sDims.w.value + ',height=' + sDims.h.value + ',screenX=' + sDims.x.value + ',screenY=' + sDims.y.value);
+
 			var aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
 			if (this.printPrevWins) {
 				this.printPrevWins.push(aPrintPrevWin);
@@ -1325,8 +1319,8 @@ var gEditor = {
 				var iframe = doc.createElementNS(NS_XUL, 'browser');
 				iframe.addEventListener('load', function() {
 					iframe.removeEventListener('load', arguments.callee, true);
-					console.error('ok should have removed load listener from iframe, iframe.src:', iframe.getAttribute('src'));
-					console.error('iframe loaded, print preview it');
+
+
 					
 					var aPPListener = win.PrintPreviewListener;
 					var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
@@ -1488,10 +1482,10 @@ var gEditor = {
 		this.compositeSelection();
 		
 		var data = this.canComp.toDataURL('image/png'); // returns `data:image/png;base64,iVBORw.....`
-		console.info('base64 data pre trim:', data);
+
 		data = data.substr('data:image/png;base64,'.length); // imgur wants without this
 		
-		console.info('base64 data:', data);
+
 		
 		var abortReuploadAndToFile = function() {
 			// turn data url to file and do quick save
@@ -1500,14 +1494,14 @@ var gEditor = {
 
 			// save data url to file
 			// http://stackoverflow.com/questions/25145792/write-a-data-uri-to-a-file-in-a-firefox-extension/25148685#25148685
-			console.time('charCodeAt method');
+
 			var dataAtob = atob(data);
 			// Decode to an Uint8Array, because OS.File.writeAtomic expects an ArrayBuffer(View).
 			var byteArr = new Uint8Array(dataAtob.length);
 			for (var i = 0, e = dataAtob.length; i < e; ++i) {
 			  byteArr[i] = dataAtob.charCodeAt(i);
 			}
-			console.timeEnd('charCodeAt method');
+
 			
 			// start - copy block link7984654 - slight modificaiton
 			// get save path
@@ -1515,11 +1509,11 @@ var gEditor = {
 			try {
 				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
 			} catch (ex) {
-				console.warn('ex:', ex);
+
 				try {
 					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
 				} catch (ex) {
-					console.warn('ex:', ex);
+
 					OSPath_saveDir = OS.Constants.Path.desktopDir;
 				}
 			}
@@ -1533,7 +1527,7 @@ var gEditor = {
 			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, byteArr, { tmpPath: OSPath_save + '.tmp' });
 			promise_saveToDisk.then(
 				function(aVal) {
-					console.log('Fullfilled - promise_saveToDisk - ', aVal);
+
 					// start - do stuff here - promise_saveToDisk
 					var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
 					trans.addDataFlavor('text/unicode');
@@ -1547,14 +1541,14 @@ var gEditor = {
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-					console.error('Rejected - promise_saveToDisk - ', rejObj);
+
 					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
 					//deferred_createProfile.reject(rejObj);
 				}
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-					console.error('Caught - promise_saveToDisk - ', rejObj);
+
 					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 					//deferred_createProfile.reject(rejObj);
 				}
@@ -1595,7 +1589,7 @@ var gEditor = {
 			
 			promise_uploadAnonImgur.then(
 				function(aVal) {
-					console.log('Fullfilled - promise_uploadAnonImgur - ', aVal);
+
 					// start - do stuff here - promise_uploadAnonImgur
 					if (!aVal.response.success) {
 						reuploadFunc();
@@ -1628,7 +1622,7 @@ var gEditor = {
 				},
 				function(aReason) {
 					var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
-					console.error('Rejected - promise_uploadAnonImgur - ', rejObj);
+
 					// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
 					reuploadFunc();
 					//deferred_createProfile.reject(rejObj);
@@ -1636,7 +1630,7 @@ var gEditor = {
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
-					console.error('Caught - promise_uploadAnonImgur - ', rejObj);
+
 					//deferred_createProfile.reject(rejObj);
 					//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
 					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
@@ -1653,7 +1647,7 @@ var gEditor = {
 		// serviceType
 			// 0 - tineye
 			// 1 - google images
-		
+
 		var serviceTypeStr; // for use with appendToHistoryLog
 		switch (serviceType) {
 			case 0:
@@ -1669,575 +1663,55 @@ var gEditor = {
 			default:
 				throw new Error('devuser error serviceType is unknonw:' + serviceType);
 		}
-		
+
 		this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		
-		this.canComp.mozFetchAsStream(function(is) {
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
+			// let file = new FileUtils.File('C:\\Users\\Vayeate\\Pictures\\imglogo.jpg');
+			console.log('blob ready:', b);
 			
-			var postData;
-			var serviceSearchUrl;
-			if (serviceType == 0) {
-				// tineye
-				serviceSearchUrl = TINEYE_REV_SEARCH_URL;
-				postData = encodeFormData({
-					"image": is
-				}, "iso8859-1", 'myimg.png', 'image/png', 'image');
-			} else if (serviceType == 1) {
-				// google images
-				serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
-				postData = encodeFormData({
-					"image_url": 'myimg.png',
-					"encoded_image": is
-				}, "iso8859-1", 'myimg.png', 'image/png', 'encoded_image');
-			}
+			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
+			fileReader.addEventListener('load', function (event) {
+				var buffer = event.target.result;
+				// console.error('buffer ready:', buffer.constructor.name);
+				
+				var postData;
+				var serviceSearchUrl;
+				if (serviceType == 0) {
+					// tineye
+					serviceSearchUrl = TINEYE_REV_SEARCH_URL;
+					postData = encodeFormData({
+					  'image': buffer
+					}, 'iso8859-1', 'myimg.png', 'image/png');
+				} else if (serviceType == 1) {
+					// google images
+					serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
+					postData = encodeFormData({
+					  'image_url': 'myimg.png',
+					  'encoded_image': buffer
+					}, 'iso8859-1', 'myimg.png', 'image/png');
+				} else {
+					throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
+				}
 
-			cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
-			  inBackground: false,
-			  postData: postData
+				cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
+				  inBackground: false,
+				  postData: postData
+				});
 			});
+			fileReader.readAsArrayBuffer(b);
 			
+
 		}, 'image/png');
-		
+			
+		// this.closeOutEditor(e);// as i cant close out yet link374748304
 		
 		appendToHistoryLog(serviceTypeStr, {
 			d: new Date().getTime()
 		});
-		
-	},
-	uploadToDropbox: function(e) {
-		// uses OAuth2 OAuth 2.0
-		
-		this.compositeSelection();
-		
-		var cDOMWindow = gEditor.gBrowserDOMWindow;
-		
-		var appKey = 'nzyavm88qlxp6dz';
-		var appSecret = '9nr700erdpf4jxg';
-		var appRedirectUri = 'data:text/html,auth_dropbox';
-		
-		var authorizeApp = function(aCBFulfill) {
-			// start authorize
-			var authParam_client_id = appKey;
-			var authParam_response_type = 'token';
-			var authParam_redirect_uri = appRedirectUri; // required for A redirect URI is required for a token flow, but optional for code. 
-			var authParam_force_reapprove = 'false';
-			var authParam_disable_signup = 'true';
-			var authURL = 'https://www.dropbox.com/1/oauth2/authorize?client_id=' + authParam_client_id + '&response_type=' + authParam_response_type + '&redirect_uri=' + authParam_redirect_uri + '&force_reapprove=' + authParam_force_reapprove + '&disable_signup=' + authParam_disable_signup;
-
-			// load callbacks:
-			var iframe;
-			var setSrcToAuthUrl_eventsAndCallbacks = [
-				// first event with callback
-				{
-					eventType: 'DOMContentLoaded',
-					useCapture: false,
-					callback: function(e) {
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in callbck now');
-						// do error handling, like if user is not signed in
-						var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
-						var aContentDocument = aContentWindow.document;
-						var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
-						var docuri = webnav.document.documentURI;
-						
-						var websiteDomEls = { // :maintain-per-website: // add multiple selectors for test, in case they change something, so this adds robustness // :maintain-per-website: as its site dependent stuff
-							allowBtn: {
-								domEl: null,
-								selectorsToTry: [ // :maintain-per-website:
-									{method:'querySelector', arg:'.auth-button.button-primary'}
-								]
-							},
-							notSignedIn: {
-								selectorsToTry: [ // :maintain-per-website:
-									{method:'getElementById', arg:'regular-login-forms'},
-									{method: 'querySelector', arg:'.login-form-container'}
-								]
-							}
-						};
-						
-						if (docuri.indexOf('about:') == 0) {
-							// error-loading
-							// one of the following happend:
-								// are working offline
-								// users local network is not responding
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not load auth page, you may be working offline or your network is down, the docuri is:\n' + docuri);
-							throw new Error('dropbox-auth-failed');
-						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.notSignedIn.selectorsToTry)) {
-							// test for not signed in
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: not signed into dropbox');
-							throw new Error('dropbox-auth-failed');
-						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.allowBtn.selectorsToTry, websiteDomEls.allowBtn)) {
-							// test for allow button
-							// click allow button
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now allow');
-							
-							attachEventListeners_asSelfRemoveables(iframe, postClickAllow_eventsAndCallbacks);
-							
-							// var clickEvent = new aContentWindow.MouseEvent('click', {
-								// 'view': aContentWindow,
-								// 'bubbles': true,
-								// 'cancelable': true
-							// });
-							// websiteDomEls.allowBtn.domEl.dispatchEvent(clickEvent);
-							
-							websiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
-							
-						} else {
-							// maybe server timed out?
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not identify the loaded auth page, maybe server timed out?');
-							throw new Error('dropbox-auth-failed');
-						}
-					}
-				}
-				// second event with callback
-			];
-
-			var postClickAllow_eventsAndCallbacks = [
-				{
-					eventType: 'DOMContentLoaded',
-					useCapture: false,
-					callback: function(e) {
-						var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok the page after clicking allow loaded');
-						
-						// get the token
-						var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
-						var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
-						
-						var receivedParamsKeyVal = {};
-						for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
-							var splitPiece = receivedParamsPiecesStrArr[i].split('=');
-							receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
-						}
-						
-						gEditor.dropboxOauth = receivedParamsKeyVal;
-						
-						console.info('receivedParamsKeyVal:', receivedParamsKeyVal);
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'received params parsed');
-						
-						iframe.parentNode.removeChild(iframe);
-						
-						if (aCBFulfill) {
-							aCBFulfill();
-						}
-					}
-				}
-			];
-			// load auth page into frame
-			
-			// set up the hidden iframe
-
-			var win = cDOMWindow;
-			var doc = win.document;
-			var iframe = doc.createElementNS(NS_XUL, 'browser');
-			iframe.setAttribute('type', 'content');
-			iframe.setAttribute('style', 'height:0;border:0;margin:0;padding:0;width:0;'); // :debug:
-			// iframe.setAttribute('style', 'display:none'); // :debug:
-			
-
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will now wait for about:blank to finish loading');
-			
-			// wait for about:blank to load, then kick off auth process
-			iframe.addEventListener('load', function() {
-				iframe.removeEventListener('load', arguments.callee, true);
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok about:blank loaded: ' + iframe.contentWindow.location);
-				
-				// kick of the auth process
-				iframe.setAttribute('src', authURL); // on load it will remove all the attached event listeners
-				attachEventListeners_asSelfRemoveables(iframe, setSrcToAuthUrl_eventsAndCallbacks);
-			}, true);
-
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now append it');
-			doc.documentElement.appendChild(iframe); // i think src only takes affect after appending
-		};
-		
-		var dropboxUploadResponseJSON;
-		var sendToDropbox = function() {
-			
-			if (!gEditor.dropboxOauth) {
-				authorizeApp(sendToDropbox);
-				return;
-			}
-			
-			var promise_uploadDropbox = xhr('https://content.dropboxapi.com/1/files_put/auto/Screenshot.png?overwrite=false', {
-				aMethod: 'PUT',
-				Headers: {
-					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
-					'Content-Type': myBlob.type,
-					'Content-Length': myBlob.size
-				},
-				aPostData: myBlob,
-				aResponseType: 'json'
-			});
-			promise_uploadDropbox.then(
-				function(aVal) {
-					console.log('Fullfilled - promise_uploadDropbox - ', aVal);
-					// start - do stuff here - promise_uploadDropbox
-					dropboxUploadResponseJSON = aVal.response;
-					getShareLink();
-					// end - do stuff here - promise_uploadDropbox
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_uploadDropbox', aReason:aReason};
-					console.error('Rejected - promise_uploadDropbox - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_uploadDropbox', aCaught:aCaught};
-					console.error('Caught - promise_uploadDropbox - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			);
-		};
-		
-		var dropboxLinkResponseJSON;
-		var getShareLink = function() {
-			// get share link for the just uploaded file
-			var promise_getLink = xhr('https://api.dropboxapi.com/1/shares/auto' + dropboxUploadResponseJSON.path, { // removed the trailing / from auto as the .path starts with it
-				aMethod: 'POST',
-				Headers: {
-					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
-					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont include this, none of my params go through and the defaults are used
-				},
-				aPostData: {
-					locale: 'en-US',
-					short_url: false
-				},
-				aResponseType: 'json'
-			});
-			promise_getLink.then(
-				function(aVal) {
-					console.log('Fullfilled - promise_getLink - ', aVal);
-					// start - do stuff here - promise_getLink
-					dropboxLinkResponseJSON = aVal.response;
-					copyLinkToClipboardAndAppendToHistory();
-					// end - do stuff here - promise_getLink
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_getLink', aReason:aReason};
-					console.error('Rejected - promise_getLink - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_getLink', aCaught:aCaught};
-					console.error('Caught - promise_getLink - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			);
-		};
-		
-		var copyLinkToClipboardAndAppendToHistory = function() {
-					
-					var shareUrl = dropboxLinkResponseJSON.url;
-					var permImgUrl = shareUrl.substr(0, shareUrl.lastIndexOf('?')+1) + 'raw=1'; // per http://stackoverflow.com/a/29689807/1828637
-					copyTextToClip(permImgUrl, cDOMWindow);
-					
-					/* // not yet, waiting for dropbox api v2 due to the need for delete url: http://stackoverflow.com/a/32746355/1828637
-					// add in update to log file
-					appendToHistoryLog('dropbox', {
-						d: new Date().getTime(),
-						l: permImgUrl,
-						n: imgId
-					});
-					*/
-		};
-		
-		var myBlob;
-		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-			myBlob = b;
-			sendToDropbox();
-			
-		}, 'image/png');
-		
-	},
-	uploadToGoogleDrive: function(e) {
-		// uses OAuth2 OAuth 2.0
-		
-		this.compositeSelection();
-		
-		var cDOMWindow = gEditor.gBrowserDOMWindow;
-		var cSessionId = gEditor.sessionId;
-		
-		var appKey = 'nzyavm88qlxp6dz';
-		var appSecret = '9nr700erdpf4jxg';
-		var appRedirectUri = 'data:text/html,auth_dropbox';
-		
-		var authorizeApp = function(aCBFulfill) {
-			// start authorize
-			
-			var client_id = '737749060525-398usuo4pvj1a3m9kcbs36ngjnh2q1v3.apps.googleusercontent.com';
-			var auth_uri = 'https://accounts.google.com/o/oauth2/auth';
-			var token_uri = 'https://accounts.google.com/o/oauth2/token';
-			var auth_provider_x509_cert_url = 'https://www.googleapis.com/oauth2/v1/certs';
-			var client_secret = 'iUhqmH5qyw9MxGCmFr07PiuO';
-			var redirect_uri = 'http://www.nativeshot-for-addon.co';
-			var scope = ['https://www.googleapis.com/auth/drive.file'].join('%20');
-			var response_type = 'token';
-			
-			var authURL = auth_uri + '?client_id=' + client_id + '&redirect_uri=' + redirect_uri + '&scope=' + scope +  '&response_type=' + response_type;
-			// load callbacks:
-			var iframe;
-			var setSrcToAuthUrl_eventsAndCallbacks = [
-				// first event with callback
-				{
-					eventType: 'DOMContentLoaded',
-					useCapture: false,
-					funcRetTrueIfShouldRemAll: function(e) {
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in funcRetTrueIfShouldRemAll');
-						var aContentWindow = e.originalTarget.defaultView;
-						if (aContentWindow.frameElement) {
-							console.warn('warn: frameleement loaded so will tell not to remove:' + aContentWindow.location.href);
-							return false;
-						} else {
-							return true;
-						}
-					},
-					callback: function(e) {
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'in callbck now');
-						// do error handling, like if user is not signed in
-						var aContentWindow = e.originalTarget.defaultView;
-						if (aContentWindow.frameElement) {
-							//Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'warn: frameleement loaded so will not do anything:' + aContentWindow.location.href);
-							console.warn('in cb ut its a frameElement so will not exec:', aContentWindow.location.href);
-							return;
-						}
-						var aContentDocument = aContentWindow.document;
-						var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
-						var docuri = webnav.document.documentURI;
-						
-						var websiteDomEls = { // :maintain-per-website: // add multiple selectors for test, in case they change something, so this adds robustness // :maintain-per-website: as its site dependent stuff
-							allowBtn: {
-								domEl: null,
-								selectorsToTry: [ // :maintain-per-website:
-									{method:'getElementById', arg:'submit_approve_access'}
-								]
-							},
-							notSignedIn: {
-								selectorsToTry: [ // :maintain-per-website:
-									{method:'getElementById', arg:'gaia_loginform'}
-								]
-							},
-							multiAccounts: {
-								domEl: null,
-								selectorsToTry: [ // :maintain-per-website:
-									{method: 'querySelectorAll', arg:'#account-list span'}
-								]
-							}
-						};
-						
-						if (docuri.indexOf('about:') == 0) {
-							// error-loading
-							// one of the following happend:
-								// are working offline
-								// users local network is not responding
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not load auth page, you may be working offline or your network is down, the docuri is:\n' + docuri);
-							throw new Error('gdrive-auth-failed');
-						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.multiAccounts.selectorsToTry, websiteDomEls.multiAccounts)) {
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'warn: multi accounts found');
-							console.info('websiteDomEls.multiAccounts:', websiteDomEls.multiAccounts);
-						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.notSignedIn.selectorsToTry)) {
-							// test for not signed in
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: not signed into gdrive');
-							
-							// find refUAPEntry, update its count in label, push to pending
-							appendNeedsUserAttn(cSessionId, 'gdrive', 'not-signed-in', myBlob);
-							
-							
-							throw new Error('gdrive-auth-failed');
-						} else if (testAndFindDomEl(aContentDocument, websiteDomEls.allowBtn.selectorsToTry, websiteDomEls.allowBtn)) {
-							// test for allow button
-							// click allow button
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now allow');
-							
-							attachEventListeners_asSelfRemoveables(iframe, postClickAllow_eventsAndCallbacks);
-							
-							var clickEvent = new aContentWindow.MouseEvent('click', {
-								'view': aContentWindow,
-								'bubbles': true,
-								'cancelable': true
-							});
-							var cancelled = websiteDomEls.allowBtn.domEl.dispatchEvent(clickEvent);
-							
-							console.error('cancelled:', cancelled);
-							
-							// websiteDomEls.allowBtn.domEl.click(); // test if it works will iframe is display none
-							
-						} else {
-							// maybe server timed out?
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'error: could not identify the loaded auth page, maybe server timed out?');
-							throw new Error('gdrive-auth-failed-unknown');
-						}
-					}
-				}
-				// second event with callback
-			];
-
-			var postClickAllow_eventsAndCallbacks = [
-				{
-					eventType: 'DOMContentLoaded',
-					useCapture: false,
-					callback: function(e) {
-						var aContentWindow = iframe.contentWindow; //e.originalTarget.defaultView;
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok the page after clicking allow loaded');
-						
-						// get the token
-						var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
-						var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
-						
-						var receivedParamsKeyVal = {};
-						for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
-							var splitPiece = receivedParamsPiecesStrArr[i].split('=');
-							receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
-						}
-						
-						gEditor.dropboxOauth = receivedParamsKeyVal;
-						
-						console.info('receivedParamsKeyVal:', receivedParamsKeyVal);
-						Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'received params parsed');
-						
-						iframe.parentNode.removeChild(iframe);
-						
-						if (aCBFulfill) {
-							aCBFulfill();
-						}
-					}
-				}
-			];
-			// load auth page into frame
-			
-			// set up the hidden iframe
-
-			var win = cDOMWindow;
-			var doc = win.document;
-			var iframe = doc.createElementNS(NS_XUL, 'browser');
-			iframe.setAttribute('type', 'content');
-			iframe.setAttribute('style', 'height:400px;border:10px solid steelblue;'); // :debug:
-			// iframe.setAttribute('style', 'height:0;border:0;margin:0;padding:0;width:0;'); // :debug:
-			// iframe.setAttribute('style', 'display:none'); // if display none then click events dont work
-			
-
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will now wait for about:blank to finish loading');
-			
-			// wait for about:blank to load, then kick off auth process
-			iframe.addEventListener('load', function() {
-				iframe.removeEventListener('load', arguments.callee, true);
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok about:blank loaded: ' + iframe.contentWindow.location);
-				
-				// kick of the auth process
-				iframe.setAttribute('src', authURL); // on load it will remove all the attached event listeners
-				attachEventListeners_asSelfRemoveables(iframe, setSrcToAuthUrl_eventsAndCallbacks);
-			}, true);
-
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok will now append it');
-			doc.documentElement.appendChild(iframe); // i think src only takes affect after appending
-		};
-		
-		var dropboxUploadResponseJSON;
-		var sendToGdrive = function() {
-			
-			if (!gEditor.gdriveOauth) {
-				authorizeApp(sendToGdrive);
-				return;
-			}
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'ok now sending to gdrive - but exiting for now during debug');
-			return;
-			var promise_uploadDropbox = xhr('https://content.dropboxapi.com/1/files_put/auto/Screenshot.png?overwrite=false', {
-				aMethod: 'PUT',
-				Headers: {
-					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
-					'Content-Type': myBlob.type,
-					'Content-Length': myBlob.size
-				},
-				aPostData: myBlob,
-				aResponseType: 'json'
-			});
-			promise_uploadDropbox.then(
-				function(aVal) {
-					console.log('Fullfilled - promise_uploadDropbox - ', aVal);
-					// start - do stuff here - promise_uploadDropbox
-					dropboxUploadResponseJSON = aVal.response;
-					getShareLink();
-					// end - do stuff here - promise_uploadDropbox
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_uploadDropbox', aReason:aReason};
-					console.error('Rejected - promise_uploadDropbox - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_uploadDropbox', aCaught:aCaught};
-					console.error('Caught - promise_uploadDropbox - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			);
-		};
-		
-		var dropboxLinkResponseJSON;
-		var getShareLink = function() {
-			// get share link for the just uploaded file
-			var promise_getLink = xhr('https://api.dropboxapi.com/1/shares/auto' + dropboxUploadResponseJSON.path, { // removed the trailing / from auto as the .path starts with it
-				aMethod: 'POST',
-				Headers: {
-					Authorization: 'Bearer ' + gEditor.dropboxOauth.access_token,
-					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont include this, none of my params go through and the defaults are used
-				},
-				aPostData: {
-					locale: 'en-US',
-					short_url: false
-				},
-				aResponseType: 'json'
-			});
-			promise_getLink.then(
-				function(aVal) {
-					console.log('Fullfilled - promise_getLink - ', aVal);
-					// start - do stuff here - promise_getLink
-					dropboxLinkResponseJSON = aVal.response;
-					copyLinkToClipboardAndAppendToHistory();
-					// end - do stuff here - promise_getLink
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_getLink', aReason:aReason};
-					console.error('Rejected - promise_getLink - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_getLink', aCaught:aCaught};
-					console.error('Caught - promise_getLink - ', rejObj);
-					// deferred_createProfile.reject(rejObj);
-				}
-			);
-		};
-		
-		var copyLinkToClipboardAndAppendToHistory = function() {
-					
-					var shareUrl = dropboxLinkResponseJSON.url;
-					var permImgUrl = shareUrl.substr(0, shareUrl.lastIndexOf('?')+1) + 'raw=1'; // per http://stackoverflow.com/a/29689807/1828637
-					copyTextToClip(permImgUrl, cDOMWindow);
-					
-					/* // not yet, waiting for dropbox api v2 due to the need for delete url: http://stackoverflow.com/a/32746355/1828637
-					// add in update to log file
-					appendToHistoryLog('dropbox', {
-						d: new Date().getTime(),
-						l: permImgUrl,
-						n: imgId
-					});
-					*/
-		};
-		
-		var myBlob;
-		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-			myBlob = b;
-			sendToGdrive();
-			
-		}, 'image/png');
 	}
 };
 
@@ -2250,14 +1724,14 @@ function gEMouseMove(e) {
 			break;
 		}
 	}
-	//console.log('mousemove imon:', iMon, e.screenX, e.screenY);
+
 	if (gESelecting) {
 		var cEMMX = colMon[iMon].win81ScaleX ? Math.floor(colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX)) : e.screenX;
 		var cEMMY = colMon[iMon].win81ScaleY ? Math.floor(colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY)) : e.screenY;
 		// var cEMMX = e.screenX;
 		// var cEMMY = e.screenY;
 		
-		// console.info('PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMMX, cEMMY);
+
 		var newW = cEMMX - gEMDX;
 		var newH = cEMMY - gEMDY;
 		
@@ -2281,7 +1755,7 @@ function gEMouseMove(e) {
 				gESelectedRect.height = newH;
 			}
 			//gESelectedRect.setRect(gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height); // no need
-			//console.error('x y w h:', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+
 			gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 			
 			// gCanDim.execFunc('translate', [0.5, 0.5]);
@@ -2305,7 +1779,7 @@ function gEMouseUp(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
 
 	if (gESelecting) {
-		console.error('MOUSED UP iMon:', iMon);
+
 		gESelecting = false;
 		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
 		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
@@ -2330,33 +1804,33 @@ function gEMouseUp(e) {
 }
 function gEMouseDown(e) {
 	var iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-	//console.info('mousedown, e:', e);
 
-	// console.info('you moved on x:', (e.screenX - colMon[iMon].x))
-	// console.info('add this to e.screenX:', ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX));
+
+
+
 	if (e.button != 0) { return } // only repsond to primary click
 	if (e.target.id != 'canDim') { return } // only repsond to primary click on canDim so this makes it ignore menu clicks etc
 	
 	var cEMDX = colMon[iMon].win81ScaleX ? colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX) : e.screenX;
 	var cEMDY = colMon[iMon].win81ScaleY ? colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY) : e.screenY;
-	console.info('MOUSEDOWN', 'PREmod:', e.screenX, e.screenY, 'POSTmod:', cEMDX, cEMDY);
+
 	
 	// var cEMDX = e.screenX;
 	// var cEMDY = e.screenY;
 	
-	//console.info('pre mod', e.screenX, 'post mod:', cEMDX);
+
 	
 	// check if mouse downed on move selection hit box
 	if (gEditor.pendingWinSelect) {
 		gEditor.pendingWinSelect = false;
 		gCanDim.execStyle('cursor', 'crosshair');
 		
-		console.log('user made win sel at point:', cEMDX, cEMDY);
+
 		
 		var do_selWinAtPt = function() {
 			if (gEditor.winArr) {
 				// go through all windows in z order and draw sel around the window rect that contains cEMDX, cEMDY
-				console.log('ok winArr is populated, lets go throgh and find it');
+
 				Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(gEditor.winArr)) // :debug:
 				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
 				var first_nativeshot_canvas_found = false;
@@ -2368,7 +1842,7 @@ function gEMouseDown(e) {
 						var skipThisWinArrI_AsItIsNSWin = false;
 						for (var j=0; j<colMon.length; j++) {
 							if (i == 0) {
-								console.log('colMon[j].hwndPtrStr', j, colMon[j].hwndPtrStr);
+
 							}
 							if (colMon[j].hwndPtrStr == gEditor.winArr[i].hwnd) {
 								// this is a nativeshot canvas window, skip it
@@ -2384,7 +1858,7 @@ function gEMouseDown(e) {
 						continue; // find nativeshot_canvas first then start paying attention to windows, as context menu is above, on osx also the cursor gets a window and its element 0
 					}
 					if (cEMDX >= gEditor.winArr[i].left && cEMDX <= gEditor.winArr[i].right && cEMDY >= gEditor.winArr[i].top && cEMDY <= gEditor.winArr[i].bottom) {
-						console.log('selecting winArr element i:', i);
+
 
 						gIMonMouseDownedIn = iMon;
 						gESelecting = false;
@@ -2423,7 +1897,7 @@ function gEMouseDown(e) {
 			// if user mouses down within selected area, then dont start new selection
 			var cPoint = new Rect(cEMDX, cEMDY, 1, 1);
 			if (gESelectedRect.contains(cPoint)) {
-				console.error('clicked within selected so dont do anything', 'point:', cPoint, 'gESelectedRect', JSON.parse(JSON.stringify(gESelectedRect)));
+
 				return; // he clicked within it, dont do anything
 			}
 		}
@@ -2465,9 +1939,9 @@ function gEMouseDown(e) {
 }
 
 function gEUnload(e) {
-	//console.info('unload e:', e);
+
 	var iMon = parseInt(e.currentTarget.location.search.substr('?iMon='.length));
-	//console.error('editor window unloading iMon:', iMon);
+
 
 	
 	// close all other windows
@@ -2499,7 +1973,7 @@ function gEPopupHiding(e) {
 	// e.view.setTimeout(function() {
 		// e.view.addEventListener('keyup', gEKeyUp, false);
 	// }, 1000);
-	console.error('e:', e);
+
 }
 
 function gEPopupShowing(e) {
@@ -2510,7 +1984,7 @@ function gEPopupShowing(e) {
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	var iMon = aData; //parseInt(aEditorDOMWindow.location.search.substr('?iMon='.length)); // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-	//console.error('loaded window for iMon:', iMon);
+
 	
 	var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
 	
@@ -2527,15 +2001,19 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										.nativeHandle;
 	
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
-	console.info('1st:', aHwndPtrStr);
+
 	if (core.os.name != 'darwin') {
 		aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 	}
 	
 	aEditorDOMWindow.focus();
+	// if (core.os.name != 'darwin' && core.os.name != 'winnt') {
 	if (core.os.name != 'darwin') {
 		aEditorDOMWindow.fullScreen = true;
 	}
+	// if (core.os.name == 'winnt') {
+		// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
+	// }
 	
 	// set window on top:
 	var aArrHwndPtr = [aHwndPtrStr];
@@ -2553,7 +2031,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
 		promise_setWinAlwaysTop.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal);
+
 				// start - do stuff here - promise_setWinAlwaysTop
 				if (core.os.name == 'darwin') {
 					if (!gMacTypes) {
@@ -2571,26 +2049,26 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 														.nativeHandle;
 
 					var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-					console.info('NSWindowString:', NSWindowString);
+
 												
 					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
 					
 					// var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
 					// var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
-					// console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+
 					
 						var setLevel = gMacTypes.sel_registerName('setLevel:');
 						gMacTypes.setLevel = setLevel;
 						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, gMacTypes.NSInteger(aVal + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
-						console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString());
+
 						
 						var newSize = gMacTypes.NSSize(colMon[iMon].w, colMon[iMon].h);
 						var rez_setContentSize = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.sel_registerName('setContentSize:'), newSize);
-						console.info('rez_setContentSize:', rez_setContentSize);
+
 						
 						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
 						
-						console.log('ok resized to and moved to');
+
 					/*
 					aEditorDOMWindow.setTimeout(function() {
 							var NSSavePanel = gMacTypes.objc_getClass('NSSavePanel');
@@ -2599,14 +2077,14 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 							
 							// var setFloatingPanel = gMacTypes.sel_registerName('setFloatingPanel:');
 							// var rez_setFloatingPanel = gMacTypes.objc_msgSend(aSavePanel, setFloatingPanel, gMacTypes.YES);
-							// console.log('rez_setFloatingPanel:', rez_setFloatingPanel, rez_setFloatingPanel.toString());
+
 							
 							var rezFloatingPanel = gMacTypes.objc_msgSend(aSavePanel, setLevel, gMacTypes.NSInteger(3));
-							console.log('rezFloatingPanel:', rezFloatingPanel, rezFloatingPanel.toString());
+
 							
 							var runModal = gMacTypes.sel_registerName('runModal')
 							var rez_savepanel = gMacTypes.objc_msgSend(aSavePanel, runModal);
-							console.info('rez_savepanel:', rez_savepanel, rez_savepanel.toString());
+
 					}, 2000);
 					*/
 					
@@ -2615,13 +2093,13 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
-				console.error('Rejected - promise_setWinAlwaysTop - ', rejObj);
+
 				//deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
-				console.error('Caught - promise_setWinAlwaysTop - ', rejObj);
+
 				//deferred_createProfile.reject(rejObj);
 			}
 		);
@@ -2634,9 +2112,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			}
 			// var NSWindow = ctypes.voidptr_t(ctypes.UInt64(aHwndPtrStr));
 			// // var rez_setLevel = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('setLevel:'), ctypes.long(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
-			// // console.info('rez_setLevel:', rez_setLevel.toString());
+
 			// var rez_orderFront = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('orderFrontRegardless'));
-			// console.info('rez_orderFront:', rez_orderFront.toString());
+
 	
 			var baseWindow = Services.wm.getMostRecentWindow('navigator:browser').QueryInterface(Ci.nsIInterfaceRequestor)
 										  .getInterface(Ci.nsIWebNavigation)
@@ -2646,7 +2124,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 										  .getInterface(Ci.nsIBaseWindow);
 
 			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-			console.info('NSWindowString:', NSWindowString);
+
 			
 			var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
 												.getInterface(Ci.nsIWebNavigation)
@@ -2657,12 +2135,12 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 												.nativeHandle;
 
 			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-			console.info('NSWindowString:', NSWindowString);
+
 										
 			var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
 			var orderFront = gMacTypes.sel_registerName('setLevel:');
 			var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFront, ctypes.long(3));
-			console.log('rez_orderFront:', rez_orderFront, rez_orderFront.toString());
+
 		}, 5000);
 		*/
 	// }
@@ -2682,14 +2160,14 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 				
-				if (core.os.version >= 6.3) { // win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
+				if (colMon[iMon].win81ScaleX || colMon[iMon].win81ScaleY) { // 122315 - this is no longer just win81, this is also if on // priror to 122315 - win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
 					var win81ScaleX = colMon[iMon].win81ScaleX;
 					var win81ScaleY = colMon[iMon].win81ScaleY;
 					if (win81ScaleX || win81ScaleY) {
 						json.push(['html:canvas', {id:'canDum',style:'display:none;',width:w,height:h}]);
 						w = Math.ceil(w / win81ScaleX);
 						h = Math.ceil(h / win81ScaleY);
-						console.warn('modified w and h:', w, h);
+
 						
 						json[2][1].width = w;
 						json[2][1].height = h;
@@ -2699,7 +2177,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 						json[3][1].height = h;
 						json[3][1].style += 'position:fixed;';
 						
-						console.warn('scale moded:', json);
+
 					}				
 				}
 			
@@ -2733,10 +2211,10 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	colMon[iMon].E.ctxBase = ctxBase;
 	colMon[iMon].E.ctxDim = ctxDim;
 	
-	//console.error('colMon[iMon].screenshot:', colMon[iMon].screenshot)
+
 	if (win81ScaleX || win81ScaleY) {
 		// rescaled for Win81 DPI non aware bug
-		console.warn('drawing rescaled');
+
 		var ctxDum = elRef.canDum.getContext('2d');
 		ctxDum.putImageData(colMon[iMon].screenshot, 0, 0);
 		ctxBase.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
@@ -2754,9 +2232,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 
 	var menuElRef = {};
-	//console.error('ok going to append');
+
 	doc.documentElement.appendChild(jsonToDOM(get_gEMenuDomJson(), doc, menuElRef));
-	//console.error('ok APPENDED??');
+
 	doc.documentElement.setAttribute('context', 'myMenu1');
 	menuElRef.myMenu1.addEventListener('popupshowing', gEPopupShowing, false);
 	menuElRef.myMenu1.addEventListener('popuphiding', gEPopupHiding, false);
@@ -2789,7 +2267,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 			
 			break;
 		default:
-			console.error('os not supported');
+
 	}
 	// }, 1000);
 	// end - postStuff
@@ -2809,17 +2287,17 @@ function shootAllMons(aDOMWindow) {
 				docEl: aEditorDOMWindow.document.documentElement,
 				doc: aEditorDOMWindow.document,
 			};
-			//console.info('aEditorDOMWindow:', aEditorDOMWindow);
+
 		}
 	};
 	
 	var promise_shoot = MainWorker.post('shootAllMons', []);
 	promise_shoot.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_shoot - ', aVal);
+
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
-			
+
 			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 				gPostPrintRemovalFunc();
 			}
@@ -2862,31 +2340,31 @@ function shootAllMons(aDOMWindow) {
 		},
 		function(aReason) {
 			var rejObj = {name:'promise_shoot', aReason:aReason};
-			console.warn('Rejected - promise_shoot - ', rejObj);
+
 			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), myServices.sb.GetStringFromName('addon_name') + ' - ' + myServices.sb.GetStringFromName('error-title_screenshot-internal'), myServices.sb.GetStringFromName('error-body_screenshot-internal'));
 		}
 	).catch(
 		function(aCaught) {
 			var rejObj = {name:'promise_shoot', aCaught:aCaught};
-			console.error('Caught - promise_shoot - ', rejObj);
+
 			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
 		}
 	);
 }
 
 function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
-	console.info('notifBtn clicked, arguments:', arguments);
-	// console.info('notifBtn clicked, this:', this); // this is bootstrap sandbox, interesting
+
+
 	switch (aUAPEntry.actionOnBtn) {
 		case 'show-clips-popup':
 			
-				console.log('show popup so user can copy stuff to clipboard');
+
 			
 			break;
 		case 'open-new-tab':
 
 				// NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab'); // not showing for right now, i think too much info
-				console.info('aUAPEntry:', aUAPEntry);
+
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				if (!fsComServer.twitterListenerRegistered) {
 					myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
@@ -2906,7 +2384,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 		case 'reopen-tweet-modal':
 			
 				// NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab'); // not showing for right now, i think too much info
-				console.info('aUAPEntry:', aUAPEntry);
+
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				// need to focus for that paste event thingy work around
 				var tab = aUAPEntry.tab.get();
@@ -2919,7 +2397,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 		case 'focus-tab':
 		default:
 			
-				console.log('doing default as aUAPEntry.actionOnBtn:', aUAPEntry.actionOnBtn);
+
 				var tab = aUAPEntry.tab.get();
 				tab.ownerDocument.defaultView.focus(); // focus browser window
 				tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get(); // focus tab
@@ -2949,7 +2427,7 @@ var NBs = { // short for "notification bars"
 		//  btn_id: String, // nativeshot custom same string set in label // only has to be unique per notification notifcation, not per deck
 		// 	callback: function(blah) {  //NOT changable, updateGlobal doesnt set this yet, ill have to learn how, im sure its possible, as of aug 13 2015
 		// 	  _actionTaken = true;
-		// 	  console.log('blah:', blah);
+
 		// 	}
 		// ]
 		///
@@ -2991,7 +2469,7 @@ var NBs = { // short for "notification bars"
 						allBtnsEl[cBtnId] = allBtnsQ[i];
 					}
 					allBtnsQ = null;
-					console.info('allBtnsEl:', allBtnsEl);
+
 					
 					var allBtnsInfo = {};
 					for (var i=0; i<cCrossWin.btns.length; i++) {
@@ -3001,7 +2479,7 @@ var NBs = { // short for "notification bars"
 							allBtnsInfo[cBtnInfo.btn_id][p] = cBtnInfo[p];
 						}
 					}
-					console.info('allBtnsInfo:', allBtnsInfo);
+
 					
 					if (aHints.btns.removed) {
 						for (var i=0; i<aHints.btns.removed.length; i++) {
@@ -3043,7 +2521,7 @@ var NBs = { // short for "notification bars"
 					}
 				}
 			} else {
-				console.error('doesnt exist in this window, this is weird, maybe should insertGlobalToWin');
+
 			}
 		}
 	
@@ -3052,23 +2530,6 @@ var NBs = { // short for "notification bars"
 	closeGlobal: function(aGroupId) {
 		
 		delete NBs.crossWin[aGroupId];
-		// todo: probably should delete from userAckPending as well
-		// aGroupId is always in format gEditorSessionId-category
-		var firstDashPos = aGroupId.indexOf('-'); // get first index of -, as category may contain dashses
-		var aGEditorSessionId = aGroupId.substr(0, firstDashPos);
-		var aCategory = aGroupId.substr(firstDashPos + 1);
-		if (aCategory != 'twitter') { // temp until i hook up twitter to the new generic method. right now twitter is very specific/custom
-			for (var i=0; i<userAckPending.length; i++) {
-				if (userAckPending[i].gEditorSessionId == aGEditorSessionId && userAckPending[i].uaGroup == aCategory) {
-					// :todo: call the userAckPending[i].onRemoveFromUserAckPending callback if there is one, this can like for instance when i support twitter, if its still in process it can unregister the framescripts etc
-					if (userAckPending[i].callbacks && userAckPending[i].callbacks.onRemoveFromUserAckPending) {
-						userAckPending[i].callbacks.onRemoveFromUserAckPending();
-					}
-					userAckPending.splice(i, 1); // note: there must only be one entry in userAckPending per gEditorSessionId-category combo
-					break;
-				}
-			}
-		}
 		
 		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
 		while (DOMWindows.hasMoreElements()) {
@@ -3080,7 +2541,7 @@ var NBs = { // short for "notification bars"
 					n.close();
 				}
 			} else {
-				console.warn('very werid, it didnt even have it, it was global nb it should have had it');
+
 			}
 		}
 	},
@@ -3102,28 +2563,28 @@ var NBs = { // short for "notification bars"
 		
 		var deck = aDOMDocument.getElementById('content-deck');
 		var btmDeckBox = aDOMDocument.getElementById('nativeshotDeck' + aGroupId);
-		console.info('btmDeckBox:', btmDeckBox);
+
 		if (!btmDeckBox) {
-		  console.log('created new btm deck');
+
 		  btmDeckBox = aDOMDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'notificationbox');
 		  btmDeckBox.setAttribute('id', 'nativeshotDeck' + aGroupId);
 		  // deck.parentNode.insertBefore(btmDeckBox, deck); // for top
 		  deck.parentNode.appendChild(btmDeckBox); // for bottom
 		} else {
-			console.log('already there');
+
 		}
 
 		var nb = btmDeckBox; //win.gBrowser.getNotificationBox(); //use _gNB for window level notification. use `win.gBrowser.getNotificationBox()` for tab level
 		var n = btmDeckBox.getNotificationWithValue(aGroupId);
-		console.log('nb:', nb, 'n:', n);
+
 
 		if (n) {
-			console.log('global nb already in this window, so not adding');
+
 		} else {
 			
 			var cNB;
 			var notifCallback = function(what) {
-				console.log('what:', what);
+
 				if (what == 'removed') {
 					// btmDeckBox.removeNotification(cNB, false); // close just hides it, so we do removeNotification to remove it. otherwise if same groupid, nativeshot will find it already exists and then not create another one
 					aDOMWindow.setTimeout(function() {
@@ -3132,7 +2593,7 @@ var NBs = { // short for "notification bars"
 					if (aGroupId in NBs.crossWin) {
 						NBs.closeGlobal(aGroupId);
 					} else {
-						console.log('aGroupId no longer in crossWin so this is probably a global close');
+
 					}
 				}
 			}
@@ -3153,8 +2614,8 @@ var NBs = { // short for "notification bars"
 				var btn_id = label_with_id.substr(id_index + '-ID:'.length);
 				var label = label_with_id.substr(0, id_index);
 				
-				console.info('btn_id:', btn_id);
-				console.info('label:', label);
+
+
 				
 				btns[i].setAttribute('label', label);
 				btns[i].setAttribute('data-btn-id', btn_id);
@@ -3269,16 +2730,16 @@ var windowListener = {
 				NBs.insertGlobalToWin(aGroupId, aDOMWindow);
 			}
 		}/* else if (aDOMWindow.document.location.href == 'chrome://global/content/printProgress.xul') {
-			//console.error('got incoming print progress window here! opener:', aDOMWindow.opener);
+
 			if (!aDOMWindow.opener) {
 				// this is my print window so lets set opener
 				// for some reason whenever i do print() from hiddenDOMWindow iframe it doesnt get an opener
 				// i have set opener this cuz window.opener is null so it doesnt close: `TypeError: opener is null printProgress.js:83:10`
 				// as whenever i print from my hidden frame on link678321212 it opens the print dialog with opener set to null, and then it tries opener.focus() and it then leaves the window open
 				// :todo: i should maybe target specifically my printer window, as if other people open up with opener null then i dont know if i should fix for them from here, but right now it is, and if opener ever is null then they'll run into that problem of window not closing (at least for me as tested on win81)
-				console.error('going to set opener to wm! as it was null');
+
 				//aDOMWindow.opener = Services.wm.getMostRecentWindow(null); // { focus: function() { } };
-				//console.error('ok set opener! it is:', aDOMWindow.opener);
+
 			}
 		}*/
 	},
@@ -3354,7 +2815,7 @@ function startup(aData, aReason) {
 	var promise_getMainWorker = SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js');
 	promise_getMainWorker.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_getMainWorker - ', aVal);
+
 			// start - do stuff here - promise_getMainWorker
 			// end - do stuff here - promise_getMainWorker
 		},
@@ -3363,7 +2824,7 @@ function startup(aData, aReason) {
 				name: 'promise_getMainWorker',
 				aReason: aReason
 			};
-			console.warn('Rejected - promise_getMainWorker - ', rejObj);
+
 		}
 	).catch(
 		function(aCaught) {
@@ -3371,7 +2832,7 @@ function startup(aData, aReason) {
 				name: 'promise_getMainWorker',
 				aCaught: aCaught
 			};
-			console.error('Caught - promise_getMainWorker - ', rejObj);
+
 		}
 	);
 	
@@ -3459,7 +2920,7 @@ function shutdown(aData, aReason) {
 	
 	// destroy worker
 	MainWorker._worker.terminate();
-	console.error('worker should have termed');
+
 }
 
 function getPrefNoSetStuff(aPrefName) {
@@ -3473,11 +2934,11 @@ function getPrefNoSetStuff(aPrefName) {
 					try {
 						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
 					} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-						// console.warn('ex:', ex);
+
 						try {
 							return Services.dirsvc.get('Pict', Ci.nsIFile).path;
 						} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-							// console.warn('ex:', ex);
+
 							return OS.Constants.Path.desktopDir;
 						}
 					}
@@ -3542,7 +3003,7 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 	aBtnInfo.label = newLabel;
 	aBtnInfo.class = newClass;
 	aUAPEntry.actionOnBtn = newAction;
-	console.error('set actionOnBtn to newAction of:', newAction);
+
 	
 	NBs.updateGlobal(crossWinId, {
 		lbl: 1, // label was updated for sure
@@ -3561,7 +3022,6 @@ const aTypeStrToTypeInt = {
 	'print': 3,
 	'save-quick': 4,
 	'save-browse': 5,
-	'dropbox': 6,
 	'tineye': 7,
 	'google-images': 8
 };
@@ -3593,17 +3053,11 @@ function appendToHistoryLog(aTypeStr, aData) {
 			// s: 'user_screen_name uploaded too', // maybe not necessary // for now no, because its at the start of `p` anyways which is `other_info.permlink`
 			p: 'post, p stands for post which stands for tweet, id. so post id. so tweet id.' // a link is made by going https://twitter.com/USSER_NAME_HERE/status/TWEET_ID // althought USSER_NAME_HERE seems like it can be anything and it gets fixed to the right one
 			l: 'link/url to imaage' // i expected imags to be "https://pbs.twimg.com/media/CO0xs-vVAAEJHqP.png" however im not sure so saving whole url for now
-			
-			// dropbox
-			n: the file name on upload, dropboxLinkResponseJSON.path IN V2 API get the image id here
-			l: permImgUrl which is extracted and made from dropboxLinkResponseJSON.url,
-			r: dropboxLinkResponseJSON.rev // this is used for me to search dropbox in case user renamed file, so i can find it and delete it when they click delete
 		}
 	*/
 	
 	// start - validating arguments provided by devuser
 	
-	// link872132154 cross file
 	var dataKeysForTypeId = {}; // these and no more and no less keys should be found in aData
 	dataKeysForTypeId[aTypeStrToTypeInt['imgur-anonymous']] = ['d', 'x', 'n'];
 	dataKeysForTypeId[aTypeStrToTypeInt['twitter']] = ['d', 'u', 'p', 'l'];
@@ -3611,6 +3065,7 @@ function appendToHistoryLog(aTypeStr, aData) {
 	dataKeysForTypeId[aTypeStrToTypeInt['print']] = ['d'];
 	dataKeysForTypeId[aTypeStrToTypeInt['save-browse']] = ['d', 'n', 'f'];
 	dataKeysForTypeId[aTypeStrToTypeInt['save-quick']] = ['d', 'n', 'f'];
+	// link872132154 - cross file
 	dataKeysForTypeId[aTypeStrToTypeInt['tineye']] = ['d'];
 	dataKeysForTypeId[aTypeStrToTypeInt['google-images']] = ['d'];
 	
@@ -3647,22 +3102,22 @@ function appendToHistoryLog(aTypeStr, aData) {
 		var promise_closeHistory = hOpen.close();
 		promise_closeHistory.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_closeHistory - ', aVal);
+
 				// start - do stuff here - promise_closeHistory
 				// notify any open dashboards that they should reload gui
 				myServices.mm.broadcastAsyncMessage(core.addon.id, 'serverCommand_refreshDashboardGuiFromFile');
-				console.log('Fullfilled - appendToHistoryLog - ', aVal);
+
 				// end - do stuff here - promise_closeHistory
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_closeHistory', aReason:aReason};
-				console.error('Rejected - promise_closeHistory - ', rejObj);
+
 				// deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_closeHistory', aCaught:aCaught};
-				console.error('Caught - promise_closeHistory - ', rejObj);
+
 				// deferred_createProfile.reject(rejObj);
 			}
 		);
@@ -3674,20 +3129,20 @@ function appendToHistoryLog(aTypeStr, aData) {
 		var promise_writeHistory = hOpen.write(txtEncoded);
 		promise_writeHistory.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_writeHistory - ', aVal);
+
 				// start - do stuff here - promise_writeHistory
 				do_closeHistory(hOpen);
 				// end - do stuff here - promise_writeHistory
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_writeHistory', aReason:aReason};
-				console.error('Rejected - promise_writeHistory - ', rejObj);
+
 				// deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_writeHistory', aCaught:aCaught};
-				console.error('Caught - promise_writeHistory - ', rejObj);
+
 				// deferred_createProfile.reject(rejObj);
 			}
 		);
@@ -3697,20 +3152,20 @@ function appendToHistoryLog(aTypeStr, aData) {
 		var promise_makeDirsToHistory = makeDir_Bug934283(OS.Path.dirname(OSPath_historyLog), {from:OS.Constants.Path.profileDir})
 		promise_makeDirsToHistory.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_makeDirsToHistory - ', aVal);
+
 				// start - do stuff here - promise_makeDirsToHistory
 				do_openHistory();
 				// end - do stuff here - promise_makeDirsToHistory
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_makeDirsToHistory', aReason:aReason};
-				console.error('Rejected - promise_makeDirsToHistory - ', rejObj);
+
 				// deferred_createProfile.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_makeDirsToHistory', aCaught:aCaught};
-				console.error('Caught - promise_makeDirsToHistory - ', rejObj);
+
 				// deferred_createProfile.reject(rejObj);
 			}
 		);
@@ -3721,7 +3176,7 @@ function appendToHistoryLog(aTypeStr, aData) {
 		var promise_openHistory = OS.File.open(OSPath_historyLog, {write: true, append: true}); // creates file if it wasnt there, but if folder paths dont exist it throws unixErrno=2 winLastError=3
 		promise_openHistory.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_openHistory - ', aVal);
+
 				// start - do stuff here - promise_openHistory
 				do_writeHistory(aVal);
 				// end - do stuff here - promise_openHistory
@@ -3734,143 +3189,20 @@ function appendToHistoryLog(aTypeStr, aData) {
 					do_makeDirsToHistory();
 					rejObj.openHistoryAttempt = openHistoryAttempt;
 				} else {
-					console.error('Rejected - promise_openHistory - ', rejObj);
+
 					//deferred_createProfile.reject(rejObj);
 				}
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_openHistory', aCaught:aCaught};
-				console.error('Caught - promise_openHistory - ', rejObj);
+
 				//deferred_createProfile.reject(rejObj);
 			}
 		);
 	};
 	
 	do_openHistory(); // starts the papend to history process
-}
-
-var dataPushers = { // holds funcHandlingEntryIntoDataArr for different aCategory
-	'gdrive': function(aData, aDataArr, aEntryIn_userAckPending) { // aDataArr is the dataArr key from userAckPending[i]
-		// because a btn in notif bar is created per element in aDataArr, and for gdrive i only want one button, i push into it a subarray
-		if (aDataArr.length == 0) {
-			aDataArr.push([]);
-		}
-		aDataArr[0].push(aData);
-	}
-};
-
-var notifBarBtn_callbackHandlers = { // these callback handlers are attached to each button a notif bar
-	'gdrive': function(aBtnEntryInANotifBarJson, aDataArr, aNotifBarJson, aEntryIn_userAckPending) { // aNotifBarJson is the entry in NBs.crossWin[aGroupId]
-		// aBtnEntryInANotifBarJson is the json entry of this btn in aNotifBarJson // i can get current btn label from this arg
-		// aDataArr is the dataArr key from userAckPending[i]
-		// aDataArr can also be gotten from aEntryIn_userAckPending, its same, i just pass it in for convenience
-		// aBtnEntryInANotifBarJson cannot be gotten from aNotifBarJson, cuz what if there were multi buttons, this guy wouldnt know which one he is in aNotifBarJson
-	}
-}
-
-var notifbarJsonMaintainers_andHintProviderForUpdateGlobal = {  // holds funcHandlingUpdateNotifBar for different aCategory
-	'gdrive': function(aEntryIn_userAckPending, aNotifBarJson, aReason) { // aNotifBarJson is the entry in NBs.crossWin[aGroupId]
-		// aReason can also be gotten from aEntryIn_userAckPending, its same, i just pass it in for convenience
-		if (aNotifBarJson.uninitted) { // need to do first time population
-			delte aNotifBarJson.uninitted;
-			// need to provide keys:
-				// msg - notifbar label
-				// p - priority, this is styling of the notifbar
-				// etc
-			aNotifBarJson.msg = 'The upload to Google Drive could not be completed wholly automatically, your attention is needed to complete the process'; // :l10n:
-			aNotifBarJson.img = core.addon.path.images + 'gdrive16.png';
-			
-			// gdrive notifbar gets only one btn
-			var btnId = Math.random();
-			var btnEntry = {
-				label: 'Generic-ID:' + btnId, // :l10n:
-				btn_id: btnId,
-				class: 'nativeshot-twitter-neutral',
-				accessKey: 'G',
-				callback: notifBarBtn_callbackHandlers.bind(null, btnEntry, aEntryIn_userAckPending.dataArr, aNotifBarJson, aEntryIn_userAckPending) // :todo: test what the arguments on click of button are
-			};
-			aNotifBarJson.btns = [];
-			aNotifBarJson.btns.push(btnEntry);
-			
-			
-			switch (aReason) { // aReasons are determiend by whatever i as devuser pass to appendNeedsUserAttn
-				case 'not-signed-in': 
-
-						aNotifBarJson.img = core.addon.path.images + 'gdrive_bad16.png';
-						btns = [
-						
-						];
-						
-					break;
-				default:
-					// do nothing
-					console.warn('unrecognized aReason in funcHandlingUpdateNotifBar, warning? throw? i dont know:', aReason);
-			};
-			
-			aNotifBarJson = {
-				msg: aReason, // myServices.sb.GetStringFromName('notif-bar_' + aCategory + '-bar-label-' + aReason), // note: this is a possible way to handle automated localization but not really auto but you know what i mean
-				img: core.addon.path.images + 'twitter16.png',
-				p: 6,
-				btns: [{
-					// label: 'Image Pending Tweet (1)-ID:' + refUAPEntry.userAckId,
-					// label: 'Waiting to for progrmattic attach (1)-ID:' + refUAPEntry.userAckId,
-					label: myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + 1 + ')' + '-ID:' + refUAPEntry.userAckId,
-					btn_id: refUAPEntry.userAckId,
-					class: 'nativeshot-twitter-neutral',
-					accessKey: 'T',
-					callback: twitterNotifBtnCB.bind(null, refUAPEntry) // :todo: test what the arguments on click of button are
-				}]
-			};
-		}
-	}
-}
-
-function appendNeedsUserAttn(aGEditorSessionId, aCategory, aReason, aData, funcHandlingEntryIntoDataArr, funcHandlingUpdateNotifBar) {
-	// this function will create a notification bar, and work with the user to get aData succesfully submitted
-	
-	// aCategory is like gdrive or twitter - this is used for to determine what to do with aData, and call right callbacks on click of btn, and what labels to get for btn and notifbar
-	// aReason is the reason for needing user attention, will use this to get appropriate labels for button label or notifbar label
-	// aData is anything, what i initialy decided i need
-		// for gdrive aData should be blob
-	// funcHandlingEntryIntoDataArr is responsible for placing aData into dataArr. it must take two arguments, the first is aData, second is aDataArr
-	// funcHandlingUpdateNotifBar is responsible for updating the json then providing the aHints param for NBs.updateGlobal. if aHints is null, then NBs.updateGlobal is not called. it takes arguments: aNotifBarJson, aReason
-	
-	// a notifbar is created per aGEditorSessionId + '-' + aCategory combination
-	// a btn on the notifbar is created per element in dataArr
-	
-	var iInUserAckPending = -1;
-	for (var i=0; i<userAckPending.length; i++) {
-		if (userAckPending[i].gEditorSessionId == aGEditorSessionId && userAckPending[i].category == aCategory) {
-			iInUserAckPending = i;
-			break;
-		}
-	}
-	
-	if (iInUserAckPending == -1) {
-		iInUserAckPending = userAckPending.push(
-			{
-				gEditorSessionId: aGEditorSessionId,
-				category: aCategory,
-				notifBarGroupId: aGEditorSessionId + '-' + aCategory, // note: each userAckPending entry has an associated notifbar, this line is where i decided and implement the aGroupId format all will have
-				dataArr: [],
-				// reason: aReason
-			}
-		) - 1;
-	}
-	userAckPending[iInUserAckPending].reason = aReason;
-	funcHandlingEntryIntoDataArr(aData, userAckPending[iInUserAckPending].dataArr, userAckPending[iInUserAckPending]);
-	
-	// find the aGroupId for the notifbar out there
-	var notifBarJson = NBs.crossWin[userAckPending[iInUserAckPending].notifBarGroupId];
-	if (!notifBarJson) {
-		NBs.crossWin[userAckPending[iInUserAckPending].notifBarGroupId] = {uninitted:true}; // note: this is bad, cannot have blank, therefore funcHandlingUpdateNotifBar MUST MUST populate it properly // uninnited means that it hasnt been populated, this is to help funcHandlingEntryIntoDataArr identify its not yet inited, funcHandlingEntryIntoDataArr should delete this key and update it accordingly
-	}
-	var useHints = funcHandlingUpdateNotifBar(userAckPending[iInUserAckPending], notifBarJson, aReason); // funcHandlingEntryIntoDataArr should return an array of hints to use for NBs.updateGlobal
-	// if useHints is ! then it doesnt call to NBs.updateGlobal
-	if (useHints) {
-		NBs.updateGlobal(notifBarGroupId, useHints);
-	}
 }
 
 // start - common helper functions
@@ -3923,7 +3255,7 @@ function Deferred() {
 			}.bind(this));
 			Object.freeze(this);
 		} catch (ex) {
-			console.error('Promise not available!', ex);
+
 			throw new Error('Promise not available!');
 		}
 	} else {
@@ -3952,20 +3284,20 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 		var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
 		promise_initWorker.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_initWorker - ', aVal);
+
 				// start - do stuff here - promise_initWorker
 				deferredMain_SIPWorker.resolve(true);
 				// end - do stuff here - promise_initWorker
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_initWorker', aReason:aReason};
-				console.warn('Rejected - promise_initWorker - ', rejObj);
+
 				deferredMain_SIPWorker.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_initWorker', aCaught:aCaught};
-				console.error('Caught - promise_initWorker - ', rejObj);
+
 				deferredMain_SIPWorker.reject(rejObj);
 			}
 		);
@@ -4058,8 +3390,6 @@ function getSafedForOSPath(aStr, useNonDefaultRepChar) {
 	}
 }
 function xhr(aStr, aOptions={}) {
-	// update 092315 - added support for aMethod when posting data, so like we can use PUT and still post data
-	// update 092315 - also am now testing if aOptions.aPostData is a key value pair by testing aOptions.aPostData.consturctor.name == 'Object'. if its Object then i assume its key  value pair, else its a blob or something so i just do xhr.send with it
 	// update 072615 - added support for aOptions.aMethod
 	// currently only setup to support GET and POST
 	// does an async request
@@ -4096,7 +3426,7 @@ function xhr(aStr, aOptions={}) {
 	// Note: When using XMLHttpRequest to access a file:// URL the request.status is not properly set to 200 to indicate success. In such cases, request.readyState == 4, request.status == 0 and request.response will evaluate to true.
 	
 	var deferredMain_xhr = new Deferred();
-	console.log('here222');
+
 	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
 
 	var handler = ev => {
@@ -4177,7 +3507,7 @@ function xhr(aStr, aOptions={}) {
 	};
 	
 	if (aOptions.aPostData) {
-		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'POST', aStr, true);
+		xhr.open('POST', aStr, true);
 		do_setHeaders();
 		xhr.channel.loadFlags |= aOptions.aLoadFlags;
 		xhr.responseType = aOptions.aResponseType;
@@ -4189,16 +3519,12 @@ function xhr(aStr, aOptions={}) {
 		}
 		xhr.send(aFormData);
 		*/
-		if (aOptions.aPostData.constructor.name == 'Object') {
-			var aPostStr = [];
-			for (var pd in aOptions.aPostData) {
-				aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
-			}
-			console.info('aPostStr:', aPostStr.join('&'));
-			xhr.send(aPostStr.join('&'));
-		} else {
-			xhr.send(aOptions.aPostData);
+		var aPostStr = [];
+		for (var pd in aOptions.aPostData) {
+			aPostStr.push(pd + '=' + encodeURIComponent(aOptions.aPostData[pd])); // :todo: figure out if should encodeURIComponent `pd` also figure out if encodeURIComponent is the right way to do this
 		}
+
+		xhr.send(aPostStr.join('&'));
 	} else {
 		xhr.open(aOptions.aMethod ? aOptions.aMethod : 'GET', aStr, true);
 		do_setHeaders();
@@ -4223,12 +3549,12 @@ function makeDir_Bug934283(path, options) {
 	// options of like ignoreExisting is exercised on final dir
 	
 	if (!options || !('from' in options)) {
-		console.error('you have no need to use this, as this is meant to allow creation from a folder that you know for sure exists, you must provide options arg and the from key');
+
 		throw new Error('you have no need to use this, as this is meant to allow creation from a folder that you know for sure exists, you must provide options arg and the from key');
 	}
 
 	if (path.toLowerCase().indexOf(options.from.toLowerCase()) == -1) {
-		console.error('The `from` string was not found in `path` string');
+
 		throw new Error('The `from` string was not found in `path` string');
 	}
 
@@ -4236,7 +3562,7 @@ function makeDir_Bug934283(path, options) {
 	delete options.from;
 
 	var dirsToMake = OS.Path.split(path).components.slice(OS.Path.split(options_from).components.length);
-	console.log('dirsToMake:', dirsToMake);
+
 
 	var deferred_makeDir_Bug934283 = new Deferred();
 	var promise_makeDir_Bug934283 = deferred_makeDir_Bug934283.promise;
@@ -4248,7 +3574,7 @@ function makeDir_Bug934283(path, options) {
 		var promise_makeDir = OS.File.makeDir(pathExistsForCertain, options);
 		promise_makeDir.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_makeDir - ', 'ensured/just made:', pathExistsForCertain, aVal);
+
 				if (dirsToMake.length > 0) {
 					makeDirRecurse();
 				} else {
@@ -4261,13 +3587,13 @@ function makeDir_Bug934283(path, options) {
 					aReason: aReason,
 					curPath: pathExistsForCertain
 				};
-				console.error('Rejected - ' + rejObj.promiseName + ' - ', rejObj);
+
 				deferred_makeDir_Bug934283.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_makeDir', aCaught:aCaught};
-				console.error('Caught - promise_makeDir - ', rejObj);
+
 				deferred_makeDir_Bug934283.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -4297,22 +3623,22 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 	
 	// setup retry
 	var retryIt = function() {
-		console.info('tryosFile_ retryIt', 'nameOfOsFileFunc:', nameOfOsFileFunc, 'argsOfOsFileFunc:', argsOfOsFileFunc);
+
 		var promise_retryAttempt = OS.File[nameOfOsFileFunc].apply(OS.File, argsOfOsFileFunc);
 		promise_retryAttempt.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_retryAttempt - ', aVal);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.resolve('retryAttempt succeeded');
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_retryAttempt', aReason:aReason};
-				console.error('Rejected - promise_retryAttempt - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); //throw rejObj;
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_retryAttempt', aCaught:aCaught};
-				console.error('Caught - promise_retryAttempt - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -4348,15 +3674,15 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		var promise_makeDirsRecurse = makeDir_Bug934283(toDir, {from: fromDir});
 		promise_makeDirsRecurse.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_makeDirsRecurse - ', aVal);
+
 				retryIt();
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_makeDirsRecurse', aReason:aReason};
-				console.error('Rejected - promise_makeDirsRecurse - ', rejObj);
+
 				/*
 				if (aReason.becauseNoSuchFile) {
-					console.log('make dirs then do retryAttempt');
+
 					makeDirs();
 				} else {
 					// did not get becauseNoSuchFile, which means the dirs exist (from my testing), so reject with this error
@@ -4369,7 +3695,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_makeDirsRecurse', aCaught:aCaught};
-				console.error('Caught - promise_makeDirsRecurse - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -4377,17 +3703,17 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 
 	var doInitialAttempt = function() {
 		var promise_initialAttempt = OS.File[nameOfOsFileFunc].apply(OS.File, argsOfOsFileFunc);
-		console.info('tryosFile_ initial', 'nameOfOsFileFunc:', nameOfOsFileFunc, 'argsOfOsFileFunc:', argsOfOsFileFunc);
+
 		promise_initialAttempt.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_initialAttempt - ', aVal);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.resolve('initialAttempt succeeded');
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_initialAttempt', aReason:aReason};
-				console.error('Rejected - promise_initialAttempt - ', rejObj);
+
 				if (aReason.becauseNoSuchFile) { // this is the flag that gets set to true if parent dir(s) dont exist, i saw this from experience
-					console.log('make dirs then do secondAttempt');
+
 					makeDirs();
 				} else {
 					deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); //throw rejObj;
@@ -4396,7 +3722,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_initialAttempt', aCaught:aCaught};
-				console.error('Caught - promise_initialAttempt - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj); // throw aCaught;
 			}
 		);
@@ -4410,7 +3736,7 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 		var promise_checkDirExistsFirstAsCausesNeutering = OS.File.exists(toDir);
 		promise_checkDirExistsFirstAsCausesNeutering.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_checkDirExistsFirstAsCausesNeutering - ', aVal);
+
 				// start - do stuff here - promise_checkDirExistsFirstAsCausesNeutering
 				if (!aVal) {
 					makeDirs();
@@ -4421,13 +3747,13 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 			},
 			function(aReason) {
 				var rejObj = {name:'promise_checkDirExistsFirstAsCausesNeutering', aReason:aReason};
-				console.warn('Rejected - promise_checkDirExistsFirstAsCausesNeutering - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promise_checkDirExistsFirstAsCausesNeutering', aCaught:aCaught};
-				console.error('Caught - promise_checkDirExistsFirstAsCausesNeutering - ', rejObj);
+
 				deferred_tryOsFile_ifDirsNoExistMakeThenRetry.reject(rejObj);
 			}
 		);
@@ -4452,13 +3778,12 @@ function copyTextToClip(aTxt, aDOMWindow) {
 	trans.setTransferData('text/unicode', SupportsString(aTxt), aTxt.length * 2); // We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
 	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 }
-
-function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType, forMozStream_keyHoldingStream) {
+function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType) {
 	// http://stackoverflow.com/a/25020668/1828637
 
-	let encoder = Cc["@mozilla.org/intl/saveascharset;1"].createInstance(Ci.nsISaveAsCharset);
+	var encoder = Cc["@mozilla.org/intl/saveascharset;1"].createInstance(Ci.nsISaveAsCharset);
 	encoder.Init(charset || "utf-8", Ci.nsISaveAsCharset.attr_EntityAfterCharsetConv + Ci.nsISaveAsCharset.attr_FallbackDecimalNCR, 0);
-	let encode = function(val, header) {
+	var encode = function(val, header) {
 		val = encoder.Convert(val);
 		if (header) {
 			val = val.replace(/\r\n/g, " ").replace(/"/g, "\\\"");
@@ -4466,29 +3791,30 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType,
 		return val;
 	}
 
-	let boundary = "----boundary--" + Date.now();
-	let mpis = Cc['@mozilla.org/io/multiplex-input-stream;1'].createInstance(Ci.nsIMultiplexInputStream);
+	var boundary = "----boundary--" + Date.now();
+	var mpis = Cc['@mozilla.org/io/multiplex-input-stream;1'].createInstance(Ci.nsIMultiplexInputStream);
 
-	let item = "";
-	for (let k of Object.keys(data)) {
+	var item = "";
+	for (var k of Object.keys(data)) {
 		item += "--" + boundary + "\r\n";
-		let v = data[k];
+		var v = data[k];
+		
 		if (v instanceof Ci.nsIFile) {
-
-			let fstream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
+			
+			var fstream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
 			fstream.init(v, -1, -1, Ci.nsIFileInputStream.DEFER_OPEN);
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + encode(file.leafName, true) + "\"\r\n";
 
-			let ctype = "application/octet-stream";
+			var ctype = "application/octet-stream";
 			try {
-				let mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
+				var mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
 				ctype = mime.getTypeFromFile(v) || ctype;
 			} catch (ex) {
 				console.warn("failed to get type", ex);
 			}
 			item += "Content-Type: " + ctype + "\r\n\r\n";
 
-			let ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
 			ss.data = item;
 
 			mpis.appendStream(ss);
@@ -4497,11 +3823,11 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType,
 			item = "";
 
 		} else if (v.constructor.name == 'Blob') {
-
+			console.log('its a blob!');
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + Math.round(Math.random() * 10000) + "." + v.type.substr(v.type.indexOf('/') + 1) + "\"\r\n";
 			item += "Content-Type: " + v.type + "\r\n\r\n";
 
-			let ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
 			ss.data = item;
 
 			// i dont know how to add this to mpis
@@ -4509,31 +3835,55 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType,
 
 		} else if (v.constructor.name == 'ArrayBuffer') {
 
+			console.error('v.byteLength:', v.byteLength);
+
+			
+			/*
+			// 7960 - good
+			// 8461 - bad
+			var cByteLen = 0;
+			var chunkSize = 7000;
+			while (cByteLen < v.byteLength) {
+				var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
+				var thisChunkSize = cByteLen + chunkSize < v.byteLength ? cByteLen + chunkSize : v.byteLength - cByteLen;
+				console.error('thisChunkSize:', thisChunkSize);
+				abstream.setData(v, cByteLen, thisChunkSize);
+				cByteLen = cByteLen + thisChunkSize;
+				mpis.appendStream(abstream);
+			}
+			*/
+			
+			
+			// // method 1
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"\r\n";
 			item += "Content-Type: " + forArrBuf_mimeType + "\r\n\r\n";
-			let ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
 			ss.data = item;
-
-			let abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
-			abstream.setData(v, 0, v.byteLength);
-
 			mpis.appendStream(ss);
+			
+			var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
+			abstream.setData(v, 0, v.byteLength);
 			mpis.appendStream(abstream);
 
-			item = "";
-
-		} else if (k == forMozStream_keyHoldingStream) {
-			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"\r\n";
-			item += "Content-Type: " + forArrBuf_mimeType + "\r\n\r\n";
-			let ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
-			ss.data = item;
-
-			mpis.appendStream(ss);
-			mpis.appendStream(v);
-
-			item = "";
-		} else {
 			
+			// method 2
+			// var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			// ss.data = item;
+			// mpis.appendStream(ss);
+			
+			// var mstream = Cc['@mozilla.org/network/mime-input-stream;1'].createInstance(Ci.nsIMIMEInputStream);
+			// mstream.addHeader('Content-Type', forArrBuf_mimeType);
+			// mstream.addHeader('Content-Disposition', "form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"");
+
+			// var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
+			// abstream.setData(v, 0, v.byteLength);
+			// mstream.setData(abstream);
+			// mpis.appendStream(mstream);
+			
+			item = "";
+
+		} else {
+			console.error('in else');
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
 			item += encode(v);
 			
@@ -4542,88 +3892,15 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType,
 	}
 
 	item += "--" + boundary + "--\r\n";
-	let ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+	var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
 	ss.data = item;
 	mpis.appendStream(ss);
   
-	let postStream = Cc["@mozilla.org/network/mime-input-stream;1"].createInstance(Ci.nsIMIMEInputStream);
+	var postStream = Cc["@mozilla.org/network/mime-input-stream;1"].createInstance(Ci.nsIMIMEInputStream);
 	postStream.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
 	postStream.setData(mpis);
 	postStream.addContentLength = true;
   
 	return postStream;
-}
-
-function testAndFindDomEl(targetDocument, selectorsToTry, ifFound_setKeyDomEl_inThisObj_toFoundElement, throwOnNotFound) {
-	// targetDocument is like aContentDocument
-	// selectorsToTry is an array of objects, with key method being a document method, and arg being the first arg to pass to it
-	// returns true if it finds any of the selectors >= 0
-	// ifFound_setKeyDomEl_inThisObj_toFoundElement must be an object, with key domEl
-	var foundDomEl;
-	for (var i=0; i<selectorsToTry.length; i++) {
-		foundDomEl = targetDocument[selectorsToTry[i].method](selectorsToTry[i].arg);
-		if (selectorsToTry[i].method == 'querySelectorAll') {
-			if (foundDomEl.length == 0) {
-				foundDomEl = null;
-			}
-		}
-		if (foundDomEl) {
-			if (ifFound_setKeyDomEl_inThisObj_toFoundElement) {
-				ifFound_setKeyDomEl_inThisObj_toFoundElement.domEl = foundDomEl;
-			}
-			return true;
-		}
-	}
-	
-	if (throwOnNotFound) {
-		throw new Error('none of the selectors found the allow btn, needs :maintain-per-website:');
-	} else {
-		return false;
-	}
-}
-
-function attachEventListeners_asSelfRemoveables(iframeDomEl, arrOfEventsWithCallbacks) {
-	// call this on an iframe, before doing action to make the iframe change page, like setting src or clicking a btn in a form in that iframe
-	// to the iframe attaches the events, with callbacks, in your arrOfEventsWithCallbacks
-		// on load of any one of the events that was added, it removes all the added events then calls your callback
-		// arrOfEventsWithCallbacks is an array with objects holding three keys:
-			// eventType - 'load', 'DOMContentLoaded', etc etc
-			// callback - function()
-			// useCapture - true/false
-			// funcRetTrueIfShouldRemAll - function, return true, if you want it to remove listeners return true
-				// if no funcRetTrueIfShouldRemAll is set, then it will remove all
-	// both arguments are required
-
-	var arrOfWrappedCbsAroundOrigCbs = []; // as i wrap them with a self remover func
-	// the i in arrOfWrappedCbsAroundOrigCbs matches i in arrOfEventsWithCallbacks, well it should as i push to it as i iterate through arrOfEventsWithCallbacks when adding
-	var removeAllAttached = function() {
-		for (var i=0; i<arrOfEventsWithCallbacks.length; i++) {
-			var evWithCb = arrOfEventsWithCallbacks[i];
-			iframeDomEl.removeEventListener(evWithCb.eventType, arrOfWrappedCbsAroundOrigCbs[i], evWithCb.useCapture);
-		}
-	};
-	
-	for (var i=0; i<arrOfEventsWithCallbacks.length; i++) {
-		var evWithCb = arrOfEventsWithCallbacks[i];
-		
-		var devuserDefinedCB_wrappedWithRemover = function(aOrigFuncRetTrueIfShouldRemAll, aOrigEventType, aOrigUseCapture, aOrigCallback, e) {
-			if (aOrigFuncRetTrueIfShouldRemAll) {
-				if (aOrigFuncRetTrueIfShouldRemAll(e)) {
-					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'aOrigFuncRetTrueIfShouldRemAll was true so ok removed all attached callbacks. will call orig call back of this single event type');
-					removeAllAttached();
-				} else {
-					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'will not remove as aOrigFuncRetTrueIfShouldRemAll returned false, but will call callback');
-				}
-			} else {
-				Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'msg', 'aOrigFuncRetTrueIfShouldRemAll not defined so will remove all');
-				removeAllAttached();
-			}
-			aOrigCallback(e);
-		}.bind(null, evWithCb.funcRetTrueIfShouldRemAll, evWithCb.eventType, evWithCb.useCapture, evWithCb.callback);
-		
-		arrOfWrappedCbsAroundOrigCbs.push(devuserDefinedCB_wrappedWithRemover);
-		
-		iframeDomEl.addEventListener(evWithCb.eventType, devuserDefinedCB_wrappedWithRemover, evWithCb.useCapture);
-	}
 }
 // end - common helper functions
