@@ -362,17 +362,159 @@ function removeEntryOrEntriesFromFileJson(aGettime, aTypeInt) {
 	step1();
 }
 
+var gHoverEl = {};
+var gHoverId = -1;
 function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 	// September 12, 2015 - 7:41 PM
 	switch (aTypeInt) {
 		case aTypeStrToTypeInt['imgur-anonymous']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+		
+				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
+										['h4', {},
+											aTitle
+										],
+										['span', {class:'pr-sutitle'},
+											aSubtitle
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
+											['span', {class:'fa fa-eye'}],
+											myServices.sb_app_main.GetStringFromName('view')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
+											['span', {class:'fa fa-link'}],
+											myServices.sb_app_main.GetStringFromName('copy')
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
+											['span', {class:'fa fa-remove'}],
+											myServices.sb_app_main.GetStringFromName('delete')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
+											['span', {class:'fa fa-history'}],
+											myServices.sb_app_main.GetStringFromName('remove')
+										]
+									 ];
+				 
+			break;
 		case aTypeStrToTypeInt['twitter']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>" + myServices.sb_app_main.GetStringFromName('open-tweet') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+		
+				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>" + myServices.sb_app_main.GetStringFromName('open-tweet') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
+										['h4', {},
+											aTitle
+										],
+										['span', {class:'pr-sutitle'},
+											aSubtitle
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
+											['span', {class:'fa fa-eye'}],
+											myServices.sb_app_main.GetStringFromName('view')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
+											['span', {class:'fa fa-link'}],
+											myServices.sb_app_main.GetStringFromName('copy')
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:'#', class:'card-button', onclick:'izoOpen(' + aGettime + ')'},
+											['span', {class:'fa fa-ttttttt'}],
+											myServices.sb_app_main.GetStringFromName('open-tweet')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
+											['span', {class:'fa fa-history'}],
+											myServices.sb_app_main.GetStringFromName('remove')
+										]
+									 ];
+				 
+			break;
 		case aTypeStrToTypeInt['save-browse']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + myServices.sb_app_main.GetStringFromName('open') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+		
+				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + myServices.sb_app_main.GetStringFromName('open') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
+										['h4', {},
+											aTitle
+										],
+										['span', {class:'pr-sutitle'},
+											aSubtitle
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
+											['span', {class:'fa fa-eye'}],
+											myServices.sb_app_main.GetStringFromName('view')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
+											['span', {class:'fa fa-link'}],
+											myServices.sb_app_main.GetStringFromName('copy')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoOpen(' + aGettime + ')'},
+											['span', {class:'fa fa-folder-open'}],
+											myServices.sb_app_main.GetStringFromName('open')
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
+											['span', {class:'fa fa-trash'}],
+											myServices.sb_app_main.GetStringFromName('delete')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
+											['span', {class:'fa fa-history'}],
+											myServices.sb_app_main.GetStringFromName('remove')
+										]
+									 ];
+				 
+			break;
 		case aTypeStrToTypeInt['save-quick']:
-			return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + myServices.sb_app_main.GetStringFromName('open') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+		
+				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + myServices.sb_app_main.GetStringFromName('view') + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + myServices.sb_app_main.GetStringFromName('copy') + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + myServices.sb_app_main.GetStringFromName('open') + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + myServices.sb_app_main.GetStringFromName('delete') + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + myServices.sb_app_main.GetStringFromName('remove') + "</a></span>";
+				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
+										['h4', {},
+											aTitle
+										],
+										['span', {class:'pr-sutitle'},
+											aSubtitle
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
+											['span', {class:'fa fa-eye'}],
+											myServices.sb_app_main.GetStringFromName('view')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
+											['span', {class:'fa fa-link'}],
+											myServices.sb_app_main.GetStringFromName('copy')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoOpen(' + aGettime + ')'},
+											['span', {class:'fa fa-folder-open'}],
+											myServices.sb_app_main.GetStringFromName('open')
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
+											['span', {class:'fa fa-trash'}],
+											myServices.sb_app_main.GetStringFromName('delete')
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
+											['span', {class:'fa fa-history'}],
+											myServices.sb_app_main.GetStringFromName('remove')
+										]
+									 ];
+
+			break;
 		default:
 			throw new Error('unrecognized aTypeInt: ' + aTypeInt);
 	}
@@ -469,7 +611,9 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 					dataCaptionREF['data-gettime'] = gFileJson[i].d;
 					imgREF.src = getImageURL(gFileJson[i]);
 					aREF.href = imgREF.src;
-					dataCaptionREF['data-caption'] = templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb_app_main.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d, imgREF.src);
+					gHoverId++;
+					dataCaptionREF['data-caption'] = gHoverId;
+					templatedDataCaption(gFileJson[i].t, formattedDate, myServices.sb_app_main.GetStringFromName('type' + gFileJson[i].t), gFileJson[i].d, imgREF.src);
 					
 					
 					var foundAlreadyInIzotope = false;
