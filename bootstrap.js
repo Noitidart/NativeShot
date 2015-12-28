@@ -29,7 +29,7 @@ const core = {
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/',
 		},
-		cache_key: Math.random() // set to version on release
+		cache_key: 'v1.2' // set to version on release
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -1671,12 +1671,12 @@ var gEditor = {
 		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
 			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
 			// let file = new FileUtils.File('C:\\Users\\Vayeate\\Pictures\\imglogo.jpg');
-			console.log('blob ready:', b);
+
 			
 			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
 			fileReader.addEventListener('load', function (event) {
 				var buffer = event.target.result;
-				// console.error('buffer ready:', buffer.constructor.name);
+
 				
 				var pathToRevImg = OS.Path.join(OS.Constants.Path.tmpDir, 'nativeshot_revsearch-' + Date.now() + '.png');
 				var promise_writeRevImg = OS.File.writeAtomic(pathToRevImg, new Uint8Array(buffer));
@@ -1717,7 +1717,7 @@ var gEditor = {
 							name: 'promise_writeRevImg',
 							aReason: aReason
 						};
-						console.error(rejObj);
+
 					}
 				).catch(
 					function(aCaught) {
@@ -1725,7 +1725,7 @@ var gEditor = {
 							name: 'promise_writeRevImg',
 							aCaught: aCaught
 						};
-						console.error(rejObj);
+
 					}
 				);
 				
@@ -3837,7 +3837,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 				var mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
 				ctype = mime.getTypeFromFile(v) || ctype;
 			} catch (ex) {
-				console.warn("failed to get type", ex);
+
 			}
 			item += "Content-Type: " + ctype + "\r\n\r\n";
 
@@ -3850,7 +3850,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 			item = "";
 
 		} else {
-			console.error('in else');
+
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
 			item += encode(v);
 			
