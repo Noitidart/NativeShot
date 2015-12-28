@@ -1678,29 +1678,84 @@ var gEditor = {
 				var buffer = event.target.result;
 				// console.error('buffer ready:', buffer.constructor.name);
 				
-				var postData;
-				var serviceSearchUrl;
-				if (serviceType == 0) {
-					// tineye
-					serviceSearchUrl = TINEYE_REV_SEARCH_URL;
-					postData = encodeFormData({
-					  'image': buffer
-					}, 'iso8859-1', 'myimg.png', 'image/png');
-				} else if (serviceType == 1) {
-					// google images
-					serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
-					postData = encodeFormData({
-					  'image_url': 'myimg.png',
-					  'encoded_image': buffer
-					}, 'iso8859-1', 'myimg.png', 'image/png');
-				} else {
-					throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
-				}
+				var pathToRevImg = OS.Path.join(OS.Constants.Path.tmpDir, 'nativeshot_revsearch-' + Date.now() + '.png');
+				var promise_writeRevImg = OS.File.writeAtomic(pathToRevImg, new Uint8Array(buffer));
+				
+				var ansifile = new FileUtils.File(pathToRevImg);
+				promise_writeRevImg.then(
+					function(aVal) {
+						// start - do stuff here - promise_writeRevImg
+						var postData;
+						var serviceSearchUrl;
+						if (serviceType == 0) {
+							// tineye
+							serviceSearchUrl = TINEYE_REV_SEARCH_URL;
+							postData = encodeFormData({
+							  'image': ansifile
+							}, 'iso8859-1');
+						} else if (serviceType == 1) {
+							// google images
+							serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
+							postData = encodeFormData({
+							  'image_url': 'myimg.png',
+							  'encoded_image': ansifile
+							}, 'iso8859-1');
+						} else {
+							throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
+						}
 
-				cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
-				  inBackground: false,
-				  postData: postData
-				});
+						cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
+						  inBackground: false,
+						  postData: postData
+						});
+						
+						ansifile.reveal();
+						/*
+						// delete that file
+						var promise_delRevImg = OS.File.remove(pathToRevImg, {ignoreAbsent:true});
+						promise_delRevImg.then(
+							function(aVal) {
+								// start - do stuff here - promise_delRevImg
+								console.log('succesfully deleted');
+								// end - do stuff here - promise_delRevImg
+							},
+							function(aReason) {
+								var rejObj = {
+									name: 'promise_delRevImg',
+									aReason: aReason
+								};
+								console.error(rejObj);
+							}
+						).catch(
+							function(aCaught) {
+								var rejObj = {
+									name: 'promise_delRevImg',
+									aCaught: aCaught
+								};
+								console.error(rejObj);
+							}
+						);
+						*/
+						// end - do stuff here - promise_writeRevImg
+					},
+					function(aReason) {
+						var rejObj = {
+							name: 'promise_writeRevImg',
+							aReason: aReason
+						};
+						console.error(rejObj);
+					}
+				).catch(
+					function(aCaught) {
+						var rejObj = {
+							name: 'promise_writeRevImg',
+							aCaught: aCaught
+						};
+						console.error(rejObj);
+					}
+				);
+				
+
 			});
 			fileReader.readAsArrayBuffer(b);
 			
@@ -3844,8 +3899,8 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 		if (v instanceof Ci.nsIFile) {
 			
 			var fstream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
-			fstream.init(v, -1, -1, Ci.nsIFileInputStream.DEFER_OPEN);
-			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + encode(file.leafName, true) + "\"\r\n";
+			fstream.init(v, -1, -1, Ci.nsIFileInputStream.DELETE_ON_CLOSE);
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + encode(v.leafName, true) + "\"\r\n";
 
 			var ctype = "application/octet-stream";
 			try {
