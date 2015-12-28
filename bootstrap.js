@@ -1709,33 +1709,7 @@ var gEditor = {
 						  postData: postData
 						});
 						
-						ansifile.reveal();
-						/*
-						// delete that file
-						var promise_delRevImg = OS.File.remove(pathToRevImg, {ignoreAbsent:true});
-						promise_delRevImg.then(
-							function(aVal) {
-								// start - do stuff here - promise_delRevImg
-								console.log('succesfully deleted');
-								// end - do stuff here - promise_delRevImg
-							},
-							function(aReason) {
-								var rejObj = {
-									name: 'promise_delRevImg',
-									aReason: aReason
-								};
-								console.error(rejObj);
-							}
-						).catch(
-							function(aCaught) {
-								var rejObj = {
-									name: 'promise_delRevImg',
-									aCaught: aCaught
-								};
-								console.error(rejObj);
-							}
-						);
-						*/
+						// ansifile is automatically deleted
 						// end - do stuff here - promise_writeRevImg
 					},
 					function(aReason) {
@@ -1761,50 +1735,6 @@ var gEditor = {
 			
 
 		}, 'image/png');
-		/*
-		var datauri = this.canComp.toDataURL('image/png', '');
-		console.log('datauri:', datauri);
-
-
-		console.warn('post replace:', datauri);
-		var postData;
-		var serviceSearchUrl;
-		if (serviceType == 0) {
-			// tineye
-			serviceSearchUrl = TINEYE_REV_SEARCH_URL;
-			// postData = generatePostStream({
-			  // 'url': datauri
-			// });
-			postData = encodeFormData({
-					  'url': datauri
-			});
-		} else if (serviceType == 1) {
-			// google images
-			serviceSearchUrl = GOOGLEIMAGES_REV_SEARCH_URL;
-			
-			datauri = datauri.replace(/^[^,]+,/, '')
-								.replace(/\+/g, '-')
-								.replace(/\//g, '_')
-								.replace(/\./g, '=');
-			// datauri = escape(datauri.substr(datauri.indexOf(',') + 1));
-								
-			
-			postData = generatePostStream({
-			  'image_content': datauri,
-			  'filename': '',
-			  'image_url': ''
-			});
-		} else {
-			throw new Error('devuser made an error, unrecognized serviceType:' + serviceType);
-		}
-
-		cDOMWindow.gBrowser.loadOneTab(serviceSearchUrl, {
-		  inBackground: false,
-		  postData: postData
-		});
-		
-		this.closeOutEditor(e);// as i cant close out yet link374748304
-		*/
 		
 		appendToHistoryLog(serviceTypeStr, {
 			d: new Date().getTime()
@@ -3919,66 +3849,6 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 
 			item = "";
 
-		} else if (v.constructor.name == 'Blob') {
-			console.log('its a blob!');
-			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + Math.round(Math.random() * 10000) + "." + v.type.substr(v.type.indexOf('/') + 1) + "\"\r\n";
-			item += "Content-Type: " + v.type + "\r\n\r\n";
-
-			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
-			ss.data = item;
-
-			// i dont know how to add this to mpis
-			item = "";
-
-		} else if (v.constructor.name == 'ArrayBuffer') {
-
-			console.error('v.byteLength:', v.byteLength);
-
-			
-			/*
-			// 7960 - good
-			// 8461 - bad
-			var cByteLen = 0;
-			var chunkSize = 7000;
-			while (cByteLen < v.byteLength) {
-				var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
-				var thisChunkSize = cByteLen + chunkSize < v.byteLength ? cByteLen + chunkSize : v.byteLength - cByteLen;
-				console.error('thisChunkSize:', thisChunkSize);
-				abstream.setData(v, cByteLen, thisChunkSize);
-				cByteLen = cByteLen + thisChunkSize;
-				mpis.appendStream(abstream);
-			}
-			*/
-			
-			
-			// // method 1
-			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"\r\n";
-			item += "Content-Type: " + forArrBuf_mimeType + "\r\n\r\n";
-			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
-			ss.data = item;
-			mpis.appendStream(ss);
-			
-			var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
-			abstream.setData(v, 0, v.byteLength);
-			mpis.appendStream(abstream);
-
-			
-			// method 2
-			// var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
-			// ss.data = item;
-			// mpis.appendStream(ss);
-			
-			// var mstream = Cc['@mozilla.org/network/mime-input-stream;1'].createInstance(Ci.nsIMIMEInputStream);
-			// mstream.addHeader('Content-Type', forArrBuf_mimeType);
-			// mstream.addHeader('Content-Disposition', "form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + forArrBuf_nameDotExt + "\"");
-
-			// var abstream = Cc["@mozilla.org/io/arraybuffer-input-stream;1"].createInstance(Ci.nsIArrayBufferInputStream);
-			// abstream.setData(v, 0, v.byteLength);
-			// mstream.setData(abstream);
-			// mpis.appendStream(mstream);
-			
-			item = "";
-
 		} else {
 			console.error('in else');
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
@@ -4000,32 +3870,4 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
   
 	return postStream;
 }
-/*
-function generatePostStream(aPostData) {
-	 
-	    var data = '';
-	    var boundary = '---------------------------' + Date.now();
-	    var stream = aPostData;
-	 
-	    for (var name in stream) {
-	 
-	      data += '--' + boundary + '\r\n' +
-	              'Content-Disposition: form-data; name="' + name + '"\r\n\r\n' +
-	              stream[name] + '\r\n';
-	    }
-	    data += '--' + boundary + '--\r\n';
-	 
-	    var stringStream = Components.classes['@mozilla.org/io/string-input-stream;1']
-	                      .createInstance(Components.interfaces.nsIStringInputStream);
-	    stringStream.data = data;
-	 
-	    var postStream = Components.classes['@mozilla.org/network/mime-input-stream;1']
-	                      .createInstance(Components.interfaces.nsIMIMEInputStream);
-	    postStream.addHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
-	    postStream.addContentLength = true;
-	    postStream.setData(stringStream);
-	 
-	    return postStream;
-}
-*/
 // end - common helper functions
