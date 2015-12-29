@@ -663,20 +663,20 @@ const fsComServer = {
 										aBtnInfo.class = 'nativeshot-twitter-good';
 										aBtnInfo.type = 'menu';
 										aBtnInfo.popup = ['xul:menupopup', {},
-															// ['xul:menuitem', {label:'Tweet URL', oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL) }] // :l10n:
-															['xul:menuitem', {label:myServices.sb.GetStringFromName('notif-bar_twitter-menu-copy-tweet-link'), oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL) }]
+															// ['xul:menuitem', {label:'Tweet URL', oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL, null) }] // :l10n:
+															['xul:menuitem', {label:myServices.sb.GetStringFromName('notif-bar_twitter-menu-copy-tweet-link'), oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL, null) }]
 														 ];
 
 										var arrOfImgUrls = [];
 										for (var imgId in refUAPEntry.imgDatas) {
 											arrOfImgUrls.push(aMsg.json.clips[imgId]);
-											// aBtnInfo.popup.push(['xul:menuitem', {label:'Image ' + arrOfImgUrls.length + ' URL', oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId])}]); // :l10n:
-											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-single-image-link', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId] + TWITTER_IMG_SUFFIX)}]);
+											// aBtnInfo.popup.push(['xul:menuitem', {label:'Image ' + arrOfImgUrls.length + ' URL', oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId], null)}]); // :l10n:
+											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-single-image-link', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId] + TWITTER_IMG_SUFFIX, null)}]);
 										}
 										
 										if (arrOfImgUrls.length > 1) {
-											// aBtnInfo.popup.push(['xul:menuitem', {label:'All ' + arrOfImgUrls.length + ' Image URLs', oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'))}]); // :l10n:
-											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-all-image-links', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX)}]);
+											// aBtnInfo.popup.push(['xul:menuitem', {label:'All ' + arrOfImgUrls.length + ' Image URLs', oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'), null)}]); // :l10n:
+											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-all-image-links', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX, null)}]);
 										}
 										
 										// copy all img urls to clipboard:
