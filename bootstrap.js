@@ -2,7 +2,7 @@
 const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
 Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
-const { BasePromiseWorker } = Cu.import('resource://gre/modules/PromiseWorker.jsm', {});
+const PromiseWorker = Cu.import('resource://gre/modules/PromiseWorker.jsm').BasePromiseWorker;
 Cu.import('resource:///modules/CustomizableUI.jsm');
 
 Cu.import('resource://gre/modules/ctypes.jsm');
@@ -267,6 +267,13 @@ function get_gEMenuDomJson() {
 						['xul:menupopup', {},
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_tineye'), oncommand:function(e){ gEditor.reverseSearch(e, 0) }}],
 							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-images'), oncommand:function(e){ gEditor.reverseSearch(e, 1) }}]
+						]
+					],
+					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_ocr')},
+						['xul:menupopup', {},
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_gocr'), oncommand:function(e){ gEditor.ocr(e, 'gocr') }}],
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_ocrad'), oncommand:function(e){ gEditor.ocr(e, 'ocrad') }}],
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_ocr-all'), oncommand:function(e){ gEditor.ocr(e, 'all') }}]
 						]
 					],
 					['xul:menuseparator', {}],
@@ -1739,6 +1746,80 @@ var gEditor = {
 		appendToHistoryLog(serviceTypeStr, {
 			d: new Date().getTime()
 		});
+	},
+	ocr: function(e, serviceTypeStr) {
+		// serviceTypeStr valid values
+		//	gocr
+		//	ocrad
+		//	all
+
+
+		
+		this.compositeSelection();
+		
+		var cDOMWindow = gEditor.gBrowserDOMWindow;
+		var cWidth = gEditor.canComp.width;
+		var cHeight = gEditor.canComp.height;
+			
+		var serviceTypeFunc = {
+			'gocr': function(aByteArr) {
+				if (!bootstrap.GOCRWorker) {
+					bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
+				}
+				// return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
+				return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
+			},
+			'ocrad': function(aByteArr) {
+				if (!bootstrap.OCRADWorker) {
+					bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
+				}
+				
+				// return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
+				return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
+			}
+		};
+			
+		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
+
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
+			
+			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
+			fileReader.addEventListener('load', function (event) {
+				var buffer = event.target.result;
+				// console.error('buffer ready:', buffer.constructor.name);
+				
+				var promiseAllArr_ocr = [];
+				var allArr_serviceTypeStr = [];
+				if (serviceTypeStr == 'all') {
+					for (var p in serviceTypeFunc) {
+						promiseAllArr_ocr.push(serviceTypeFunc[p](buffer));
+						allArr_serviceTypeStr.push(p);
+					}
+				} else {
+					promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](buffer));
+					allArr_serviceTypeStr.push(p);
+				}
+				
+				var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
+				promiseAll_ocr.then(
+					function(aTxtArr) {
+						console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
+						var alertStrArr = [];
+						for (var i=0; i<allArr_serviceTypeStr.length; i++) {
+							alertStrArr.push(allArr_serviceTypeStr[i]);
+							alertStrArr.push();
+							alertStrArr.push();
+							alertStrArr.push(aTxtArr[i]);
+						}
+						Services.prompt.alert(cDOMWindow, 'NativeShot - OCR Results', alertStrArr.join('\n')); // :todo: hook this up to the notif-bar system once i rework it
+					},
+					genericReject.bind(null, 'promiseAll_ocr', 0)
+				).catch(genericReject.bind(null, 'promiseAll_ocr', 0));
+			});
+			fileReader.readAsArrayBuffer(b);
+		}, 'image/png');
+		
+		// :todo: appendToHistoryLog
 	}
 };
 
@@ -2948,6 +3029,13 @@ function shutdown(aData, aReason) {
 	// destroy worker
 	MainWorker._worker.terminate();
 
+	if (bootstrap.GOCRWorker) {
+		GOCRWorker._worker.terminate();
+	}
+	
+	if (bootstrap.OCRADWorker) {
+		OCRADWorker._worker.terminate();
+	}
 }
 
 function getPrefNoSetStuff(aPrefName) {
@@ -3302,7 +3390,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 	var deferredMain_SIPWorker = new Deferred();
 
 	if (!(workerScopeName in bootstrap)) {
-		bootstrap[workerScopeName] = new BasePromiseWorker(aPath);
+		bootstrap[workerScopeName] = new PromiseWorker(aPath);
 		
 		if ('addon' in aCore && 'aData' in aCore.addon) {
 			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it
@@ -3869,5 +3957,25 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 	postStream.addContentLength = true;
   
 	return postStream;
+}
+function genericReject(aPromiseName, aPromiseToReject, aReason) {
+	var rejObj = {
+		name: aPromiseName,
+		aReason: aReason
+	};
+	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
+	if (aPromiseToReject) {
+		aPromiseToReject.reject(rejObj);
+	}
+}
+function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
+	var rejObj = {
+		name: aPromiseName,
+		aCaught: aCaught
+	};
+	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
+	if (aPromiseToReject) {
+		aPromiseToReject.reject(rejObj);
+	}
 }
 // end - common helper functions
