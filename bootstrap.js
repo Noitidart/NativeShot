@@ -1762,63 +1762,19 @@ var gEditor = {
 		var cHeight = gEditor.canComp.height;
 			
 		var serviceTypeFunc = {
-			'gocr': function(aByteArr) {
-				
-				var deferredMain_ocr = new Deferred();
-				
-				var triggerRead = function() {
-					console.log('triggering read');
-					GOCRWorker.postMessageWithCallback(['readByteArr', aByteArr, cWidth, cHeight], function(aRezOcr) {
-						console.log('in callback on mainthread, aRezOcr:', aRezOcr);
-						deferredMain_ocr.resolve(aRezOcr);
-					}, [aByteArr]);
-					console.log('mainthread aByteArr:', aByteArr.byteLength);
-				};
-				
+			gocr: function(aByteArr, dontTransfer) {
 				if (!bootstrap.GOCRWorker) {
-					console.log('running getworker');
-					var promise_getWorker = SICWorker('GOCRWorker', core.addon.path.content + 'modules/gocr/GOCRWorker.js', GOCRWorkerFuncs, {});
-					promise_getWorker.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_getWorker - ', aVal);
-							triggerRead();
-						},
-						genericReject.bind(null, 'promise_getWorker', deferredMain_ocr)
-					).catch(genericCatch.bind(null, 'promise_getWorker', deferredMain_ocr));
-				} else {
-					triggerRead();
+					bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
 				}
 				
-				return deferredMain_ocr.promise;
+				return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
 			},
-			'ocrad': function(aByteArr) {
-				
-				var deferredMain_ocr = new Deferred();
-				
-				var triggerRead = function() {
-					console.log('triggering read');
-					OCRADWorker.postMessageWithCallback(['readByteArr', aByteArr, cWidth, cHeight], function(aRezOcr) {
-						console.log('in callback on mainthread, aRezOcr:', aRezOcr);
-						deferredMain_ocr.resolve(aRezOcr);
-					}, [aByteArr]);
-					console.log('mainthread aByteArr:', aByteArr.byteLength);
-				};
-				
+			ocrad: function(aByteArr, dontTransfer) {
 				if (!bootstrap.OCRADWorker) {
-					console.log('running getworker');
-					var promise_getWorker = SICWorker('OCRADWorker', core.addon.path.content + 'modules/ocrad/OCRADWorker.js', OCRADWorkerFuncs, {});
-					promise_getWorker.then(
-						function(aVal) {
-							console.log('Fullfilled - promise_getWorker - ', aVal);
-							triggerRead();
-						},
-						genericReject.bind(null, 'promise_getWorker', deferredMain_ocr)
-					).catch(genericCatch.bind(null, 'promise_getWorker', deferredMain_ocr));
-				} else {
-					triggerRead();
+					bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
 				}
 				
-				return deferredMain_ocr.promise;
+				return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
 			}
 		};
 		
@@ -1830,8 +1786,8 @@ var gEditor = {
 		var allArr_serviceTypeStr = [];
 		if (serviceTypeStr == 'all') {
 			for (var p in serviceTypeFunc) {
-				promiseAllArr_ocr.push(serviceTypeFunc[p](cImgData.data.buffer));
-				allArr_serviceTypeStr.push(p);
+				promiseAllArr_ocr.push(serviceTypeFunc[p](cImgData.data.buffer, true));
+				allArr_serviceTypeStr.push(p.toUpperCase());
 			}
 		} else {
 			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](cImgData.data.buffer));
@@ -1842,16 +1798,38 @@ var gEditor = {
 		promiseAll_ocr.then(
 			function(aTxtArr) {
 				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
+				cImgData = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
 				var alertStrArr = [];
 				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
 					if (allArr_serviceTypeStr.length > 1) {
-						alertStrArr.push(allArr_serviceTypeStr[i]);
+						alertStrArr.push(allArr_serviceTypeStr[i] + ':');
 						alertStrArr.push();
 						alertStrArr.push();
 					}
 					alertStrArr.push(aTxtArr[i]);
 				}
-				Services.prompt.alert(cDOMWindow, 'NativeShot - OCR Results', alertStrArr.join('\n')); // :todo: hook this up to the notif-bar system once i rework it
+				var alertStr = alertStrArr.join('\n');
+				Services.prompt.alert(cDOMWindow, 'NativeShot - OCR Results', alertStr); // :todo: hook this up to the notif-bar system once i rework it
+				if (allArr_serviceTypeStr.length == 1) {
+					copyTextToClip(alertStr, cDOMWindow);
+				} else {
+					var choices = ['All'];
+					for (var i=0; i<allArr_serviceTypeStr.length; i++) {
+						choices.push(allArr_serviceTypeStr[i]);
+					}
+					var selectedChoiceIndex = {};
+					var rez_select = Services.prompt.select(cDOMWindow, 'NativeShot - Copy to Clipboard', 'Select which result to copy to clipboard:', choices.length, choices, selectedChoiceIndex)
+					if (rez_select) {
+						console.log('selectedChoiceIndex:', selectedChoiceIndex); // this is ```Object { value: 2 }```
+						if (selectedChoiceIndex.value == 0) {
+							copyTextToClip(alertStr, cDOMWindow);
+							console.log('copied all to clip:', alertStr);
+						} else {
+							copyTextToClip(aTxtArr[selectedChoiceIndex.value - 1], cDOMWindow);
+							console.log('copied just ', selectedChoiceIndex.value, ' to clip:', aTxtArr[selectedChoiceIndex.value - 1]);
+						}
+					}
+				}
 			},
 			genericReject.bind(null, 'promiseAll_ocr', 0)
 		).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
