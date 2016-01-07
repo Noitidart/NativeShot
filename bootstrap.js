@@ -1763,65 +1763,105 @@ var gEditor = {
 			
 		var serviceTypeFunc = {
 			'gocr': function(aByteArr) {
+				
+				var deferredMain_ocr = new Deferred();
+				
+				var triggerRead = function() {
+					console.log('triggering read');
+					GOCRWorker.postMessageWithCallback(['readByteArr', aByteArr, cWidth, cHeight], function(aRezOcr) {
+						console.log('in callback on mainthread, aRezOcr:', aRezOcr);
+						deferredMain_ocr.resolve(aRezOcr);
+					}, [aByteArr]);
+					console.log('mainthread aByteArr:', aByteArr.byteLength);
+				};
+				
 				if (!bootstrap.GOCRWorker) {
-					bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
+					console.log('running getworker');
+					var promise_getWorker = SICWorker('GOCRWorker', core.addon.path.content + 'modules/gocr/GOCRWorker.js', GOCRWorkerFuncs, {});
+					promise_getWorker.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_getWorker - ', aVal);
+							triggerRead();
+						},
+						genericReject.bind(null, 'promise_getWorker', deferredMain_ocr)
+					).catch(genericCatch.bind(null, 'promise_getWorker', deferredMain_ocr));
+				} else {
+					triggerRead();
 				}
-				// return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
-				return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
+				
+				return deferredMain_ocr.promise;
 			},
 			'ocrad': function(aByteArr) {
+				
+				var deferredMain_ocr = new Deferred();
+				
+				var triggerRead = function() {
+					console.log('triggering read');
+					OCRADWorker.postMessageWithCallback(['readByteArr', aByteArr, cWidth, cHeight], function(aRezOcr) {
+						console.log('in callback on mainthread, aRezOcr:', aRezOcr);
+						deferredMain_ocr.resolve(aRezOcr);
+					}, [aByteArr]);
+					console.log('mainthread aByteArr:', aByteArr.byteLength);
+				};
+				
 				if (!bootstrap.OCRADWorker) {
-					bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
+					console.log('running getworker');
+					var promise_getWorker = SICWorker('OCRADWorker', core.addon.path.content + 'modules/ocrad/OCRADWorker.js', OCRADWorkerFuncs, {});
+					promise_getWorker.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_getWorker - ', aVal);
+							triggerRead();
+						},
+						genericReject.bind(null, 'promise_getWorker', deferredMain_ocr)
+					).catch(genericCatch.bind(null, 'promise_getWorker', deferredMain_ocr));
+				} else {
+					triggerRead();
 				}
 				
-				// return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
-				return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, [aByteArr]);
+				return deferredMain_ocr.promise;
 			}
 		};
-			
-		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
-
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
-			
-			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
-			fileReader.addEventListener('load', function (event) {
-				var buffer = event.target.result;
-				// console.error('buffer ready:', buffer.constructor.name);
-				
-				var promiseAllArr_ocr = [];
-				var allArr_serviceTypeStr = [];
-				if (serviceTypeStr == 'all') {
-					for (var p in serviceTypeFunc) {
-						promiseAllArr_ocr.push(serviceTypeFunc[p](buffer));
-						allArr_serviceTypeStr.push(p);
+		
+		var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
+		console.log('cImgData:', cImgData);
+		gEditor.closeOutEditor(e);
+		
+		var promiseAllArr_ocr = [];
+		var allArr_serviceTypeStr = [];
+		if (serviceTypeStr == 'all') {
+			for (var p in serviceTypeFunc) {
+				promiseAllArr_ocr.push(serviceTypeFunc[p](cImgData.data.buffer));
+				allArr_serviceTypeStr.push(p);
+			}
+		} else {
+			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](cImgData.data.buffer));
+			allArr_serviceTypeStr.push(serviceTypeStr);
+		}
+		
+		var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
+		promiseAll_ocr.then(
+			function(aTxtArr) {
+				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
+				var alertStrArr = [];
+				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
+					if (allArr_serviceTypeStr.length > 1) {
+						alertStrArr.push(allArr_serviceTypeStr[i]);
+						alertStrArr.push();
+						alertStrArr.push();
 					}
-				} else {
-					promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](buffer));
-					allArr_serviceTypeStr.push(p);
+					alertStrArr.push(aTxtArr[i]);
 				}
-				
-				var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
-				promiseAll_ocr.then(
-					function(aTxtArr) {
-						console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
-						var alertStrArr = [];
-						for (var i=0; i<allArr_serviceTypeStr.length; i++) {
-							alertStrArr.push(allArr_serviceTypeStr[i]);
-							alertStrArr.push();
-							alertStrArr.push();
-							alertStrArr.push(aTxtArr[i]);
-						}
-						Services.prompt.alert(cDOMWindow, 'NativeShot - OCR Results', alertStrArr.join('\n')); // :todo: hook this up to the notif-bar system once i rework it
-					},
-					genericReject.bind(null, 'promiseAll_ocr', 0)
-				).catch(genericReject.bind(null, 'promiseAll_ocr', 0));
-			});
-			fileReader.readAsArrayBuffer(b);
-		}, 'image/png');
+				Services.prompt.alert(cDOMWindow, 'NativeShot - OCR Results', alertStrArr.join('\n')); // :todo: hook this up to the notif-bar system once i rework it
+			},
+			genericReject.bind(null, 'promiseAll_ocr', 0)
+		).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
 		
 		// :todo: appendToHistoryLog
 	}
 };
+
+var OCRADWorkerFuncs = {};
+var GOCRWorkerFuncs = {};
 
 function gEMouseMove(e) {
 	var iMon; //var iMon = gIMonMouseDownedIn; //parseInt(e.view.location.search.substr('?iMon='.length)); // cant do this as on mouse move, user may not be over iMon they started in, so have to calc it
@@ -3424,6 +3464,123 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 	return deferredMain_SIPWorker.promise;
 	
 }
+
+// SICWorker - rev8 - https://gist.github.com/Noitidart/6a9da3589e88cc3df7e7
+const SIC_CB_PREFIX = '_a_gen_cb_';
+const SIC_TRANS_WORD = '_a_gen_trans_';
+var sic_last_cb_id = -1;
+function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core) {
+	// creates a global variable in bootstrap named workerScopeName which will hold worker, do not set up a global for it like var Blah; as then this will think something exists there
+	// aScope is the scope in which the functions are to be executed
+	// ChromeWorker must listen to a message of 'init' and on success of it, it should sendMessage back saying aMsgEvent.data == {aTopic:'init', aReturn:true}
+	// "Start and Initialize ChromeWorker" // based on SIPWorker
+	// returns promise
+		// resolve value: jsBool true
+	// aCore is what you want aCore to be populated with
+	// aPath is something like `core.addon.path.content + 'modules/workers/blah-blah.js'`	
+	var deferredMain_SICWorker = new Deferred();
+
+	if (!(workerScopeName in bootstrap)) {
+		bootstrap[workerScopeName] = new ChromeWorker(aPath);
+		
+		if ('addon' in aCore && 'aData' in aCore.addon) {
+			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it
+		}
+		
+		var afterInitListener = function(aMsgEvent) {
+			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
+			var aMsgEventData = aMsgEvent.data;
+			console.log('mainthread receiving message:', aMsgEventData);
+			
+			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
+			var callbackPendingId;
+			if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+				callbackPendingId = aMsgEventData.pop();
+			}
+			
+			var funcName = aMsgEventData.shift();
+			
+			if (funcName in aFuncExecScope) {
+				var rez_mainthread_call = aFuncExecScope[funcName].apply(null, aMsgEventData);
+				
+				if (callbackPendingId) {
+					if (rez_mainthread_call.constructor.name == 'Promise') {
+						rez_mainthread_call.then(
+							function(aVal) {
+								if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+									console.error('doing transferrrrr');
+									aVal.pop();
+									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal], aVal.pop());
+								} else {
+									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal]);
+								}
+							},
+							function(aReason) {
+								console.error('aReject:', aReason);
+								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+							}
+						).catch(
+							function(aCatch) {
+								console.error('aCatch:', aCatch);
+								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
+							}
+						);
+					} else {
+						// assume array
+						if (rez_mainthread_call.length > 2 && rez_mainthread_call[rez_mainthread_call.length-1] == SIC_TRANS_WORD && Array.isArray(rez_mainthread_call[rez_mainthread_call.length-2])) {
+							// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+							rez_mainthread_call.pop();
+							bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call], rez_mainthread_call.pop());
+						} else {
+							bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+						}
+					}
+				}
+			}
+			else { console.warn('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
+		};
+		
+		var beforeInitListener = function(aMsgEvent) {
+			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
+			var aMsgEventData = aMsgEvent.data;
+			if (aMsgEventData[0] == 'init') {
+				bootstrap[workerScopeName].removeEventListener('message', beforeInitListener);
+				bootstrap[workerScopeName].addEventListener('message', afterInitListener);
+				deferredMain_SICWorker.resolve(true);
+				if ('init' in aFuncExecScope) {
+					aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+				}
+			}
+		};
+		
+		// var lastCallbackId = -1; // dont do this, in case multi SICWorker's are sharing the same aFuncExecScope so now using new Date().getTime() in its place // link8888881
+		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
+			// lastCallbackId++; // link8888881
+			sic_last_cb_id++;
+			var thisCallbackId = SIC_CB_PREFIX + sic_last_cb_id; // + lastCallbackId; // link8888881
+			aFuncExecScope[thisCallbackId] = function() {
+				delete aFuncExecScope[thisCallbackId];
+				// console.log('in mainthread callback trigger wrap, will apply aCB with these arguments:', arguments, 'turned into array:', Array.prototype.slice.call(arguments));
+				aCB.apply(null, arguments[0]);
+			};
+			aPostMessageArr.push(thisCallbackId);
+			// console.log('aPostMessageArr:', aPostMessageArr);
+			bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
+		};
+		
+		bootstrap[workerScopeName].addEventListener('message', beforeInitListener);
+		bootstrap[workerScopeName].postMessage(['init', aCore]);
+		
+	} else {
+		deferredMain_SICWorker.reject('Something is loaded into bootstrap[workerScopeName] already');
+	}
+	
+	return deferredMain_SICWorker.promise;
+	
+}
+
 function jsonToDOM(json, doc, nodes) {
 
     var namespaces = {
