@@ -1512,18 +1512,7 @@ var gEditor = {
 			
 			// start - copy block link7984654 - slight modificaiton
 			// get save path
-			var OSPath_saveDir;
-			try {
-				OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
-			} catch (ex) {
-
-				try {
-					OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path;
-				} catch (ex) {
-
-					OSPath_saveDir = OS.Constants.Path.desktopDir;
-				}
-			}
+			var OSPath_saveDir = getPrefNoSetStuff('quick_save_dir');
 			
 			// generate file name
 			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + ' - ' + myServices.sb.GetStringFromName('failed-upload') + '.png';
@@ -3065,14 +3054,16 @@ function getPrefNoSetStuff(aPrefName) {
 				// os path to dir to save in
 				var defaultVal = function() {
 					try {
-						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
-					} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-
+						OSPath_saveDir = Services.dirsvc.get('XDGPict', Ci.nsIFile).path; // works on linux
+					} catch (ex) {
 						try {
-							return Services.dirsvc.get('Pict', Ci.nsIFile).path;
-						} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-
-							return OS.Constants.Path.desktopDir;
+							OSPath_saveDir = Services.dirsvc.get('Pict', Ci.nsIFile).path; // works on windows
+						} catch (ex) {
+							try {
+								OSPath_saveDir = Services.dirsvc.get('Pct', Ci.nsIFile).path; // works on mac
+							} catch (ex) {
+								OSPath_saveDir = OS.Constants.Path.desktopDir;
+							}
 						}
 					}
 				};
