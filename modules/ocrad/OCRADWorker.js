@@ -28,7 +28,7 @@ worker.log = function(...args) {
 self.addEventListener('message', msg => worker.handleMessage(msg));
 
 function readByteArr(aImgBuf, aWidth, aHeight) {
-	console.info('OCRAD aImgBuf:', aImgBuf, 'aWidth:', aWidth, 'aHeight:', aHeight, '');
+	// console.info('OCRAD aImgBuf:', aImgBuf, 'aWidth:', aWidth, 'aHeight:', aHeight, '');
 	var cImgData = new ImageData(new Uint8ClampedArray(aImgBuf), aWidth, aHeight);
 	var txt = OCRAD(cImgData);
 	return txt;

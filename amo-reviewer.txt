@@ -1,2 +1,0 @@
-ocrad.js - https://github.com/antimatter15/ocrad.js/blob/5b0af624ebfd70cf45ddf55c58eaf25718133ba3/ocrad.js
-gocr.js - https://github.com/antimatter15/gocr.js/tree/d820e0651cf819e9649a837d83125724a2c1cc37
