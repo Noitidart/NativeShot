@@ -19,7 +19,7 @@ const core = {
 			resources: 'chrome://nativeshot/content/resources/',
 			images: 'chrome://nativeshot/content/resources/images/'
 		},
-		cache_key: 'v1.4-real'
+		cache_key: Math.random()
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
