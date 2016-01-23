@@ -29,7 +29,7 @@ const core = {
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/',
 		},
-		cache_key: Math.random() // set to version on release
+		cache_key: 'v1.4-real' // set to version on release
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -1667,12 +1667,12 @@ var gEditor = {
 		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
 			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
 			// let file = new FileUtils.File('C:\\Users\\Vayeate\\Pictures\\imglogo.jpg');
-			console.log('blob ready:', b);
+
 			
 			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
 			fileReader.addEventListener('load', function (event) {
 				var buffer = event.target.result;
-				// console.error('buffer ready:', buffer.constructor.name);
+
 				
 				var pathToRevImg = OS.Path.join(OS.Constants.Path.tmpDir, 'nativeshot_revsearch-' + Date.now() + '.png');
 				var promise_writeRevImg = OS.File.writeAtomic(pathToRevImg, new Uint8Array(buffer));
@@ -1713,7 +1713,7 @@ var gEditor = {
 							name: 'promise_writeRevImg',
 							aReason: aReason
 						};
-						console.error(rejObj);
+
 					}
 				).catch(
 					function(aCaught) {
@@ -1721,7 +1721,7 @@ var gEditor = {
 							name: 'promise_writeRevImg',
 							aCaught: aCaught
 						};
-						console.error(rejObj);
+
 					}
 				);
 				
@@ -1768,7 +1768,7 @@ var gEditor = {
 		};
 		
 		var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
-		console.log('cImgData:', cImgData);
+
 		gEditor.closeOutEditor(e);
 		
 		var promiseAllArr_ocr = [];
@@ -1786,7 +1786,7 @@ var gEditor = {
 		var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
 		promiseAll_ocr.then(
 			function(aTxtArr) {
-				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
+
 				cImgData = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
 				var alertStrArr = [];
 				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
@@ -1809,13 +1809,13 @@ var gEditor = {
 					var selectedChoiceIndex = {};
 					var rez_select = Services.prompt.select(cDOMWindow, 'NativeShot - Copy to Clipboard', 'Select which result to copy to clipboard:', choices.length, choices, selectedChoiceIndex)
 					if (rez_select) {
-						console.log('selectedChoiceIndex:', selectedChoiceIndex); // this is ```Object { value: 2 }```
+
 						if (selectedChoiceIndex.value == 0) {
 							copyTextToClip(alertStr, cDOMWindow);
-							console.log('copied all to clip:', alertStr);
+
 						} else {
 							copyTextToClip(aTxtArr[selectedChoiceIndex.value - 1], cDOMWindow);
-							console.log('copied just ', selectedChoiceIndex.value, ' to clip:', aTxtArr[selectedChoiceIndex.value - 1]);
+
 						}
 					}
 				}
@@ -3459,7 +3459,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		var afterInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
-			console.log('mainthread receiving message:', aMsgEventData);
+
 			
 			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
 			var callbackPendingId;
@@ -3478,7 +3478,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 							function(aVal) {
 								if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
 									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
-									console.error('doing transferrrrr');
+
 									aVal.pop();
 									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal], aVal.pop());
 								} else {
@@ -3486,12 +3486,12 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 								}
 							},
 							function(aReason) {
-								console.error('aReject:', aReason);
+
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 							}
 						).catch(
 							function(aCatch) {
-								console.error('aCatch:', aCatch);
+
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 							}
 						);
@@ -3507,7 +3507,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 					}
 				}
 			}
-			else { console.warn('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 
 		};
 		
@@ -3531,11 +3531,11 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 			var thisCallbackId = SIC_CB_PREFIX + sic_last_cb_id; // + lastCallbackId; // link8888881
 			aFuncExecScope[thisCallbackId] = function() {
 				delete aFuncExecScope[thisCallbackId];
-				// console.log('in mainthread callback trigger wrap, will apply aCB with these arguments:', arguments, 'turned into array:', Array.prototype.slice.call(arguments));
+
 				aCB.apply(null, arguments[0]);
 			};
 			aPostMessageArr.push(thisCallbackId);
-			// console.log('aPostMessageArr:', aPostMessageArr);
+
 			bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
 		};
 		
@@ -4051,7 +4051,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 				var mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
 				ctype = mime.getTypeFromFile(v) || ctype;
 			} catch (ex) {
-				console.warn("failed to get type", ex);
+
 			}
 			item += "Content-Type: " + ctype + "\r\n\r\n";
 
@@ -4064,7 +4064,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 			item = "";
 
 		} else {
-			console.error('in else');
+
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
 			item += encode(v);
 			
@@ -4089,7 +4089,7 @@ function genericReject(aPromiseName, aPromiseToReject, aReason) {
 		name: aPromiseName,
 		aReason: aReason
 	};
-	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
+
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -4099,7 +4099,7 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		name: aPromiseName,
 		aCaught: aCaught
 	};
-	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
+
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
