@@ -1113,7 +1113,7 @@ function shootAllMons() {
 
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
-
+					// console.log('useW:', useW, 'w:', w);
 					
 					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
 
@@ -1178,12 +1178,13 @@ function shootAllMons() {
 					
 
 					
-					var arrLen = useW * h * 4;
+					var arrLen = w * h * 4;
 					// var imagedata = new ImageData(useW, h);
 					var monShotBuf = new ArrayBuffer(arrLen);
 					
 
-					ostypes.API('memcpy')(monShotBuf, pixelBuffer, arrLen);
+					var pixelBufferLen = w * h *4; // cannot use arrLen here as that uses useW which is not w, if i do memcpy will crash obviously
+					ostypes.API('memcpy')(monShotBuf, pixelBuffer, pixelBufferLen);
 
 					
 					var monShotUint8 = new Uint8Array(monShotBuf);
