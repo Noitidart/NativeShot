@@ -331,7 +331,8 @@ function doRegisterJqueryScript() {
 		sandboxPrototype: aContentWindow,
 		wantXrays: false
 	};
-	var principal = docShell.chromeEventHandler.contentPrincipal; // aContentWindow.location.origin;
+	// var principal = docShell.chromeEventHandler.contentPrincipal; // in fx45 this is throwing NS_ERROR_ILLEGAL_VALUE: Illegal value
+	var principal = aContentWindow.location.origin;
 
 	aSandbox = Cu.Sandbox(principal, options);
 

@@ -12,7 +12,12 @@ const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
-Cu.importGlobalProperties(['btoa', 'atob']);
+
+var importGlobalPropertiesArr = ['btoa', 'atob'];
+if (!Ci.nsIDOMFileReader) {
+	importGlobalPropertiesArr.push('FileReader');
+}
+Cu.importGlobalProperties(importGlobalPropertiesArr);
 
 // Globals
 const core = {
@@ -1109,7 +1114,7 @@ var gEditor = {
 		var do_saveCanToDisk = function() {
 			(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
 				gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-				var r = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
+				var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 				r.onloadend = function() {
 					// r.result contains the ArrayBuffer.
 					// start - copy block link49842300
@@ -1668,8 +1673,8 @@ var gEditor = {
 			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {` link374748304
 			// let file = new FileUtils.File('C:\\Users\\Vayeate\\Pictures\\imglogo.jpg');
 			console.log('blob ready:', b);
-			
-			var fileReader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader);
+
+			var fileReader = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 			fileReader.addEventListener('load', function (event) {
 				var buffer = event.target.result;
 				// console.error('buffer ready:', buffer.constructor.name);
