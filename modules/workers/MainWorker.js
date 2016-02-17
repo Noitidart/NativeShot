@@ -377,7 +377,7 @@ function getAllWin(aOptions) {
 
 				var cWinObj = null;
 				for (var i = 0; i < rezWinArr.length; i++) {
-					if (rezWinArr[i].pid || (rezWinArr[i].title && cWinObj && cWinObj.title)) { // apparently sometimes you can hvae a new win title but no pid. like after "browser console" came a "compiz" title but no pid on it
+					if (rezWinArr[i].pid || rezWinArr[i].title) { // apparently sometimes you can hvae a new win title but no pid. like after "browser console" came a "compiz" title but no pid on it
 						pushItBlock();
 						cWinObj = {
 							pid: rezWinArr[i].pid,
