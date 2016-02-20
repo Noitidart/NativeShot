@@ -151,7 +151,7 @@ AboutNativeShot.prototype = Object.freeze({
 	QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
 
 	getURIFlags: function(aURI) {
-		return Ci.nsIAboutModule.ALLOW_SCRIPT;
+		return Ci.nsIAboutModule.ALLOW_SCRIPT | Ci.nsIAboutModule.URI_CAN_LOAD_IN_CHILD;
 	},
 
 	newChannel: function(aURI) {
@@ -284,6 +284,7 @@ function get_gEMenuDomJson() {
 					],
 					['xul:menuseparator', {}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-clear'), oncommand:function(e){ gEditor.clearSelection(e) }}],
+					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-last'), oncommand:function(e){ gEditor.repeatLastSelection(e) }, id:'repeatLastSelection'}],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_select-fullscreen')},
 						gEMenuArrRefs.select_fullscreen
 					],
@@ -315,6 +316,7 @@ function get_gEMenuDomJson() {
 var gColReuploadTimers = {};
 var gLastReuploadTimerId = 0;
 // start - canvas functions to act across all canvases
+var gESelectedRectLast; // set to the last selection on mouse up
 var gCanDim = {
 	execFunc: function(aStrFuncName, aArrFuncArgs=[], aObjConvertScreenToLayer) {
 		/* aObjConvertScreenToLayer is an object holding keys of `x` and `y` and it tells the index in aArrFuncArgs it is found, it will then convert that to layerX
@@ -923,6 +925,30 @@ var gEditor = {
 			colMon[i].E[keyNameInColMonE].removeEventListener(evName, func, aBool);
 		}
 	},
+	saveAsLastSelection: function() {
+		// for use with repeatLastSelection
+		// i save the last selection, if it was used for an action
+		
+		gESelectedRectLast = gESelectedRect.clone();
+		return;
+		
+		if (gESelected) {
+			if (gESelectedRectLast === undefined) {
+				gESelectedRectLast = null;
+			} else {
+				
+			}
+			gESelectedRectLast = gESelectedRect.clone();
+		} // whenever gESelected is set to true, set gESelectedRectLast
+	},
+	repeatLastSelection: function() {
+		console.log('gESelectedRect:', gESelectedRect);
+		if (gESelectedRectLast) {
+			gESelected = true;
+			gESelectedRect = gESelectedRectLast.clone();
+			gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+		}
+	},
 	clearSelection: function(e) {
 		if (!gESelected) {
 			throw new Error('no selection to clear!');
@@ -1019,6 +1045,7 @@ var gEditor = {
 		}
 		
 		this.lastCompositedRect = gESelectedRect.clone();
+		this.saveAsLastSelection();
 		
 		// create a canvas
 		// i use colMon[0] for the composite canvas
@@ -2107,6 +2134,11 @@ function gEPopupHiding(e) {
 
 function gEPopupShowing(e) {
 	//e.view.removeEventListener('keyup', gEKeyUp, false); // so if user hits escape while menu is open, esc will close out menu instead of editor. its ok to only do to current window, as if user clicks else where window it will close menu and the popuphiding adds the window close esc listener back
+	if (gESelectedRectLast) {
+		e.view.document.getElementById('repeatLastSelection').removeAttribute('hidden');
+	} else {
+		e.view.document.getElementById('repeatLastSelection').setAttribute('hidden', 'true');
+	}
 	
 }
 // end - canvas functions to act across all canvases
