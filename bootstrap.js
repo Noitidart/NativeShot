@@ -316,7 +316,8 @@ function get_gEMenuDomJson() {
 var gColReuploadTimers = {};
 var gLastReuploadTimerId = 0;
 // start - canvas functions to act across all canvases
-var gESelectedRectLast; // set to the last selection on mouse up
+var gESelectedRectLastLast; // set to the last selection on mouse up
+var gESelectedRectLast; // temporary, to hold the new gESelectedRectLastLast until the user makes a gESelectedRect that doesnt match gESelectedRectLast
 var gCanDim = {
 	execFunc: function(aStrFuncName, aArrFuncArgs=[], aObjConvertScreenToLayer) {
 		/* aObjConvertScreenToLayer is an object holding keys of `x` and `y` and it tells the index in aArrFuncArgs it is found, it will then convert that to layerX
@@ -928,25 +929,34 @@ var gEditor = {
 	saveAsLastSelection: function() {
 		// for use with repeatLastSelection
 		// i save the last selection, if it was used for an action
-		
-		gESelectedRectLast = gESelectedRect.clone();
-		return;
-		
 		if (gESelected) {
-			if (gESelectedRectLast === undefined) {
-				gESelectedRectLast = null;
-			} else {
-				
-			}
+			gESelectedRectLastLast = gESelectedRectLast;
 			gESelectedRectLast = gESelectedRect.clone();
-		} // whenever gESelected is set to true, set gESelectedRectLast
+		}
 	},
 	repeatLastSelection: function() {
 		console.log('gESelectedRect:', gESelectedRect);
-		if (gESelectedRectLast) {
-			gESelected = true;
-			gESelectedRect = gESelectedRectLast.clone();
-			gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+
+		if (gESelectedRectLastLast || gESelectedRectLast) {
+			var setAsSelected;
+			if (gESelected) {
+				if (gESelectedRect.equals(gESelectedRectLast)) {
+					if (gESelectedRectLastLast) {
+						setAsSelected = gESelectedRectLastLast;
+					}
+				} else {
+					setAsSelected = gESelectedRectLast;
+				}
+				this.clearSelection();
+			} else {
+				setAsSelected = gESelectedRectLast;
+			}
+			
+			if (setAsSelected) {
+				gESelected = true;
+				gESelectedRect = setAsSelected.clone();
+				gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+			}
 		}
 	},
 	clearSelection: function(e) {
@@ -2134,7 +2144,7 @@ function gEPopupHiding(e) {
 
 function gEPopupShowing(e) {
 	//e.view.removeEventListener('keyup', gEKeyUp, false); // so if user hits escape while menu is open, esc will close out menu instead of editor. its ok to only do to current window, as if user clicks else where window it will close menu and the popuphiding adds the window close esc listener back
-	if (gESelectedRectLast) {
+	if (gESelectedRectLastLast || gESelectedRectLast) {
 		e.view.document.getElementById('repeatLastSelection').removeAttribute('hidden');
 	} else {
 		e.view.document.getElementById('repeatLastSelection').setAttribute('hidden', 'true');
