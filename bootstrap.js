@@ -2862,6 +2862,9 @@ var windowListener = {
 
 			}
 		}*/
+		
+		contextMenuSetup(aDOMWindow);
+		
 	},
 	unloadFromWindow: function (aDOMWindow) {
 		if (!aDOMWindow) { return }
@@ -2870,9 +2873,168 @@ var windowListener = {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.removeSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
 		}
+		
+		contextMenuDestroy(aDOMWindow);
 	}
 };
 /*end - windowlistener*/
+
+// start - context menu items
+var gToolbarContextMenu_domId = 'toolbar-context-menu';
+var gCustomizationPanelItemContextMenu_domId = 'customizationPanelItemContextMenu';
+
+var gDashboardMenuitem_domIdSuffix = '_nativeshot-menuitem';
+var gDashboardSeperator_domIdSuffix = '_nativeshot-seperator';
+
+var gDashboardMenuitem_jsonTemplate = ['xul:menuitem', {
+	// id: 'toolbar-context-menu_nativeshot-menuitem',
+	// label: myServices.sb.GetStringFromName('dashboard-menuitem'), // cant access myServices.sb till startup, so this is set on startup // link988888887
+	class: 'menuitem-iconic',
+	image: core.addon.path.images + 'icon16.png',
+	hidden: 'true'
+}];
+var gDashboardMenuseperator_jsonTemplate = ['xul:menuseparator', {
+	// id: 'toolbar-context-menu_nativeshot-menuseparator', // id is set when inserting into dom
+	hidden: 'true'
+}];
+
+function contextMenuBootstrapStartup() {
+	// because i cant access myServices.sb until bootstarp startup triggers i have to set these in here
+	
+	gDashboardMenuitem_jsonTemplate[1].label = myServices.sb.GetStringFromName('dashboard-menuitem'); // link988888887 - needs to go before windowListener is registered
+	gDashboardMenuitem_jsonTemplate[1].onclick = `
+		(function() {
+			var cntTabs = gBrowser.tabs.length;
+			for (var i=0; i<cntTabs; i++) {
+				// e10s safe way to check content of tab
+				if (gBrowser.tabs[i].getAttribute('label') == '${myServices.sb.GetStringFromName('nativeshot.app-main.title')}') { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
+					gBrowser.selectedTab = gBrowser.tabs[i];
+					return;
+				}
+			}
+			var newNativeshotTab = gBrowser.loadOneTab(\'about:nativeshot\', {inBackground:false});
+		})();
+	`;
+	
+}
+
+function contextMenuHiding(e) {
+	// only triggered when it was shown due to right click on cui_nativeshot
+	console.log('context menu hiding');
+	
+	e.target.removeEventListener('popuphiding', contextMenuHiding, false);
+	
+	var cToolbarContextMenu_dashboardMenuitem = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix);
+	if (cToolbarContextMenu_dashboardMenuitem) {
+		var cToolbarContextMenu_dashboardSeperator = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix);
+		cToolbarContextMenu_dashboardMenuitem.setAttribute('hidden', 'true');
+		cToolbarContextMenu_dashboardSeperator.setAttribute('hidden', 'true');
+	}
+	
+	var cCustomizationPanelItemContextMenu_dashboardMenuitem = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix);
+	if (cCustomizationPanelItemContextMenu_dashboardMenuitem) {
+		var cCustomizationPanelItemContextMenu_dashboardSeperator = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);			
+		cCustomizationPanelItemContextMenu_dashboardMenuitem.setAttribute('hidden', 'true');
+		cCustomizationPanelItemContextMenu_dashboardMenuitem.setAttribute('hidden', 'true');
+	}
+	
+}
+
+function contextMenuShowing(e) {
+	console.log('context menu showing', 'popupNode:', e.target.ownerDocument.popupNode);
+	
+	var cPopupNode = e.target.ownerDocument.popupNode;
+	if (cPopupNode.getAttribute('id') == 'cui_nativeshot') {
+		
+		var cToolbarContextMenu_dashboardMenuitem = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix);
+		if (cToolbarContextMenu_dashboardMenuitem) {
+			var cToolbarContextMenu_dashboardSeperator = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix);
+			cToolbarContextMenu_dashboardMenuitem.removeAttribute('hidden');
+			cToolbarContextMenu_dashboardSeperator.removeAttribute('hidden');
+			e.target.addEventListener('popuphiding', contextMenuHiding, false);
+		}
+		
+		var cCustomizationPanelItemContextMenu_dashboardMenuitem = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix);
+		if (cCustomizationPanelItemContextMenu_dashboardMenuitem) {
+			var cCustomizationPanelItemContextMenu_dashboardSeperator = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);			
+			cCustomizationPanelItemContextMenu_dashboardMenuitem.removeAttribute('hidden');
+			cCustomizationPanelItemContextMenu_dashboardSeperator.removeAttribute('hidden');
+			e.target.addEventListener('popuphiding', contextMenuHiding, false);
+		}
+		
+	}
+}
+
+function contextMenuSetup(aDOMWindow) {
+	// if this aDOMWindow has the context menus set it up
+		
+		
+		
+	var cToolbarContextMenu = aDOMWindow.document.getElementById(gToolbarContextMenu_domId);
+	if (cToolbarContextMenu) {
+		gDashboardMenuitem_jsonTemplate[1].id = gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix;
+		gDashboardMenuseperator_jsonTemplate[1].id = gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix;
+		
+		var cToolbarContextMenu_dashboardMenuitem = jsonToDOM(gDashboardMenuitem_jsonTemplate, aDOMWindow.document, {});
+		var cToolbarContextMenu_dashboardSeperator = jsonToDOM(gDashboardMenuseperator_jsonTemplate, aDOMWindow.document, {});
+
+			
+
+		cToolbarContextMenu.insertBefore(cToolbarContextMenu_dashboardSeperator, cToolbarContextMenu.firstChild);
+		cToolbarContextMenu.insertBefore(cToolbarContextMenu_dashboardMenuitem, cToolbarContextMenu.firstChild);
+		
+		cToolbarContextMenu.addEventListener('popupshowing', contextMenuShowing, false);
+	}
+	
+	var cCustomizationPanelItemContextMenu = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId);
+	if (cCustomizationPanelItemContextMenu) {
+		
+		gDashboardMenuitem_jsonTemplate[1].id = gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix;
+		gDashboardMenuseperator_jsonTemplate[1].id = gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix;
+		
+		var cCustomizationPanelItemContextMenu_dashboardMenuitem = jsonToDOM(gDashboardMenuitem_jsonTemplate, aDOMWindow.document, {});
+		var cCustomizationPanelItemContextMenu_dashboardSeperator = jsonToDOM(gDashboardMenuseperator_jsonTemplate, aDOMWindow.document, {});
+
+			
+
+		cCustomizationPanelItemContextMenu.insertBefore(cCustomizationPanelItemContextMenu_dashboardSeperator, cCustomizationPanelItemContextMenu.firstChild);
+		cCustomizationPanelItemContextMenu.insertBefore(cCustomizationPanelItemContextMenu_dashboardMenuitem, cCustomizationPanelItemContextMenu.firstChild);
+		
+		cCustomizationPanelItemContextMenu.addEventListener('popupshowing', contextMenuShowing, false);
+	}
+	
+	console.error('ok good setup');
+}
+
+function contextMenuDestroy(aDOMWindow) {
+	// if this aDOMWindow has the context menus it removes it from it
+	
+	var cToolbarContextMenu = aDOMWindow.document.getElementById(gToolbarContextMenu_domId);
+	if (cToolbarContextMenu) {
+		var cToolbarContextMenu_dashboardMenuitem = aDOMWindow.document.getElementById(gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix);
+		var cToolbarContextMenu_dashboardSeperator = aDOMWindow.document.getElementById(gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix);
+		
+		cToolbarContextMenu.removeChild(cToolbarContextMenu_dashboardMenuitem);
+		cToolbarContextMenu.removeChild(cToolbarContextMenu_dashboardSeperator);
+		
+		cToolbarContextMenu.removeEventListener('popupshowing', contextMenuShowing, false);
+	}
+	
+	var cCustomizationPanelItemContextMenu = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId);	
+	if (cCustomizationPanelItemContextMenu) {
+		var cCustomizationPanelItemContextMenu_dashboardMenuitem = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix);
+		var cCustomizationPanelItemContextMenu_dashboardSeperator = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);
+		
+		cCustomizationPanelItemContextMenu.removeChild(cCustomizationPanelItemContextMenu_dashboardMenuitem);
+		cCustomizationPanelItemContextMenu.removeChild(cCustomizationPanelItemContextMenu_dashboardSeperator);
+		
+		cCustomizationPanelItemContextMenu.removeEventListener('popupshowing', contextMenuShowing, false);
+	}
+	
+	console.error('ok good destroyed');
+	
+}
+// end - context menu items
 
 var gDelayedShotObj;
 var gLastIntervalId = -1;
@@ -2989,6 +3151,8 @@ function startup(aData, aReason) {
 			}
 		}
 	});
+	
+	contextMenuBootstrapStartup();
 	
 	//windowlistener more
 	windowListener.register();
@@ -4108,5 +4272,70 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
+}
+
+// jsonToDom straight lift from - 0201916 - https://developer.mozilla.org/en-US/Add-ons/Overlay_Extensions/XUL_School/DOM_Building_and_HTML_Insertion#JSON_Templating
+function jsonToDOM(json, doc, nodes) {
+
+    var namespaces = {
+        html: 'http://www.w3.org/1999/xhtml',
+        xul: 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul'
+    };
+    var defaultNamespace = namespaces.html;
+
+    function namespace(name) {
+        var m = /^(?:(.*):)?(.*)$/.exec(name);        
+        return [namespaces[m[1]], m[2]];
+    }
+
+    function tag(name, attr) {
+        if (Array.isArray(name)) {
+            var frag = doc.createDocumentFragment();
+            Array.forEach(arguments, function (arg) {
+                if (!Array.isArray(arg[0]))
+                    frag.appendChild(tag.apply(null, arg));
+                else
+                    arg.forEach(function (arg) {
+                        frag.appendChild(tag.apply(null, arg));
+                    });
+            });
+            return frag;
+        }
+
+        var args = Array.slice(arguments, 2);
+        var vals = namespace(name);
+        var elem = doc.createElementNS(vals[0] || defaultNamespace, vals[1]);
+
+        for (var key in attr) {
+            var val = attr[key];
+            if (nodes && key == 'id')
+                nodes[val] = elem;
+
+            vals = namespace(key);
+            if (typeof val == 'function')
+                elem.addEventListener(key.replace(/^on/, ''), val, false);
+            else
+                elem.setAttributeNS(vals[0] || '', vals[1], val);
+        }
+        args.forEach(function(e) {
+            try {
+                elem.appendChild(
+                                    Object.prototype.toString.call(e) == '[object Array]'
+                                    ?
+                                        tag.apply(null, e)
+                                    :
+                                        e instanceof doc.defaultView.Node
+                                        ?
+                                            e
+                                        :
+                                            doc.createTextNode(e)
+                                );
+            } catch (ex) {
+                elem.appendChild(doc.createTextNode(ex));
+            }
+        });
+        return elem;
+    }
+    return tag.apply(null, json);
 }
 // end - common helper functions
