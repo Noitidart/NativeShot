@@ -15,19 +15,18 @@
 		list-style-image: url('chrome://nativeshot/content/resources/images/gray32.png');
 	}
 	/*start-non cui stuff*/
-	notification button[class*=nativeshot] .button-icon {
+	notification button[class*=nativeshot] .button-icon,
+	notificationbox[id*=NativeShotABjetpack] .button-icon {
 		display: -moz-box;
+		-moz-margin-end: 5px;
 	}
 	notification button.nativeshot-twitter-bad .button-icon {
-		-moz-margin-end: 5px;
 		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_bad16.png');
 	}
 	notification button.nativeshot-twitter-good .button-icon {
-		-moz-margin-end: 5px;
 		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_good16.png');
 	}
 	notification button.nativeshot-twitter-neutral .button-icon {
-		-moz-margin-end: 5px;
 		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_neutral16.png');
 	}
 	/*end-non cui stuff*/

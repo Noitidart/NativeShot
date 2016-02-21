@@ -873,31 +873,51 @@ function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
 	}
 }
 */
+
+// all data must be stored in the gEditorABData_* objects link947444544
 var gEditorABData_Bar = {
 	//	gEditor.sessionId: {
-			// ABRef - object for the bar used for state
+			// link8888776 - see this link for details on the keys
 		// }
 };
 var gEditorABData_Btn = {
 	//	some_generated_id: {
-			// ABRef - object for this specific btn (is a child of ABRef) use for state
-			// abID: ABRef.aId
+			// see link11114 for more info on keys
 		// }
-	
 };
-gEditorABData_BtnId = 0;
+var gEditorABData_BtnId = 0;
 
-function gEditorABData_addBtn(aGroup, aStatus) { // is binded to gEditorABData_Bar[this.sessionId]
-	// aGroup is string - dropbox, twitter, gdrive, imgur
-	// aStatus is string - good, bad, neutral
+function gEditorABData_setBtnState(aNewState) { // is binded to gEditorABData_Btn[gEditorABData_BtnId]
+	// returns nothing
+	// aNewState - keys are same as what goes in BtnRef
+
+	for (var p in aNewState) {
+		this.BtnRef[p] = aNewState[p];
+	}
+	
+	if (this.shown) {
+		AB.setState(gEditorABData_Bar[this.sessionId].ABRef);
+	}
+	
+	// return gEditorABData_Btn[gEditorABData_BtnId];
+}
+function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.sessionId]
+	// returns gEditorABData_Btn object for the added btn
+	
+	var cSessionId = this.sessionId;
 	gEditorABData_BtnId++;
-	gEditorABData_Btn[gEditorABData_BtnId] = {
-		bTxt: 'bye',
-		bIcon: 'chrome://mozapps/skin/places/defaultFavicon.png'
+	gEditorABData_Btn[gEditorABData_BtnId] = { // link11114
+		BtnRef: {}, // keys are that, that go in aBtns[] entry - object for this specific btn (is a child of ABRef) use for state
+		// ABRef: this.ABRef, // so I can go AB.setState(.ABRef)
+		sessionId: cSessionId, // so I can go AB.setState(gEditorABData_Bar[.sessionId]) - as having ABRef is causing a "TypeError: cyclic object value"
+		btnId: gEditorABData_BtnId, // im not sure why i include this here - so I can go 
+		// setBtnState: gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]), // obvious why this is needed // :todo: :learn: :verify: gEditorABData_Btn[gEditorABData_BtnId] isnt created at the time of this bind so lets see if it really binds to it not sure
+		data: {} // link947444544
 	};
-	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId]);
+	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId].BtnRef);
+	gEditorABData_Btn[gEditorABData_BtnId].setBtnState = gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]);
 	
-	
+	return gEditorABData_Btn[gEditorABData_BtnId];
 }
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
@@ -1900,11 +1920,34 @@ var gEditor = {
 		
 		// :todo: appendToHistoryLog
 	},
-	uploadOauth: function(e, aOuathService) {
-		// aOuathService - string
+	uploadOauth: function(e, aOAuthService) {
+		// aOAuthService - string
 			// dropbox
 			// gdrive
 			// imgur
+			
+		this.compositeSelection();
+		
+		var cDOMWindow = gEditor.gBrowserDOMWindow;
+		
+		switch (aOAuthService) {
+			case 'dropbox':
+			case 'imgur':
+			case 'gdrive':
+				
+					// good dont error
+				
+				break;
+			default:
+				console.error('invalid aOAuthService:', aOAuthService);
+				throw new Error('invalid aOAuthService!!');
+		}
+		
+		var cBtn = gEditorABData_Bar[gEditor.sessionId].addBtn();
+		cBtn.setBtnState({
+			bTxt: 'Initializing...', // :l10n:
+			bIcon: core.addon.path.images + aOAuthService + '_neutral16.png'
+		});
 		
 		if (!bootstrap.OAuthWorker) {
 			bootstrap.OAuthWorker = new PromiseWorker(core.addon.path.content + 'modules/oauth/OAuthWorker.js');
@@ -1912,22 +1955,24 @@ var gEditor = {
 		
 		// var cDataUrl = this.canComp.toDataURL('image/png', '');
 		// var cBlob;
-		var cArrBuf;
-		var cWidth = this.canComp.width;
-		var cHeight = this.canComp.height;
+		// var cArrBuf;
+		var cWidth = gEditor.canComp.width;
+		var cHeight = gEditor.canComp.height;
 		
-		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
+		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
 			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
 			// cBlob = b;
 			
 			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 			r.onloadend = function() {
-				cArrBuf = r.result;
-				OAuthWorker.post('uploadByteArr', [cArrBuf, cWidth, cHeight], null, [cArrBuf]);
+				// cArrBuf = r.result;
+				cBtn.arrbuf = r.result; // link947444544
+				// OAuthWorker.post('uploadByteArr', [cArrBuf, cWidth, cHeight], null, [cArrBuf]);
 			};
 			r.readAsArrayBuffer(b);
 			
 		}, 'image/png');
+
 	}
 };
 
@@ -2513,26 +2558,32 @@ function shootAllMons(aDOMWindow) {
 	gESelected = false;
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime();
-		gEditorABData_Bar[gEditor.sessionId] = {
-			ABRef: {
+		
+		// notification bar stuff
+		var cSessionId = gEditor.sessionId;
+		gEditorABData_Bar[gEditor.sessionId] = { // link8888776
+			ABRef: { // object for the bar used for state - so I can go AB.setState(.ABRef)
 				aTxt: (new Date()).toLocaleString(),
 				aPriority: 1,
 				aIcon: core.addon.path.images + 'icon16.png',
 				aClose: function() {
-					var thisBtnIds = gEditorABData_Bar[gEditor.sessionId].btnIds;
+					var thisBtnIds = gEditorABData_Bar[cSessionId].btnIds; // can yse gEditor.sessionId here as it uses live value apparently - bug fix from test result
 					 for (var i=0; i<thisBtnIds.length; i++) {
 						 delete gEditorABData_Btn[thisBtnIds[i]];
 					 }
-					 delete gEditorABData_Bar[gEditor.sessionId];
+					 delete gEditorABData_Bar[cSessionId];
 					 // :todo: need to ensure that none of th workers are holding onto any data that was stored in gEditorABData_Bar or gEditorABData_Btn
 				},
 				aBtns: []
 			},
-			shown: false,
-			btnIds: [], // array of generated ids found in gEditorABData_Btn
-			sessionId: gEditor.sessionId,
-			addBtn: gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId])
+			shown: false, // bool. set to true if AB.setState has been called. meaning if notification bar is shown.. also determines if setBtnState should call AB.setState
+			btnIds: [], // array of generated ids found in gEditorABData_Btn // array of generated ids found in gEditorABData_Btn
+			sessionId: gEditor.sessionId, // so i can group things togather per screenshot
+			// addBtn: gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId]) // moved to link44444455 because this is not binding as the object hasnt been made yet
 		};
+		gEditorABData_Bar[gEditor.sessionId].addBtn = gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId]) // link44444455
+		// end notification bar stuff
+		
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
@@ -3307,7 +3358,8 @@ var AB = { // AB stands for attention bar
 			aIcon: 'chrome://mozapps/skin/places/defaultFavicon.png', // icon on the toolbar
 			aPriority: 1, // valid values 1-10
 			aBtns: [], // must be array
-			aHideClose: undefined // if set to string 'true' or bool true, in dom it will get converted to string as 'true'. setting to 1 int will not work.
+			aHideClose: undefined, // if set to string 'true' or bool true, in dom it will get converted to string as 'true'. setting to 1 int will not work.
+			aClose: undefined
 		};
 		
 		/*
@@ -4932,5 +4984,23 @@ function FHR(loadPageSrc, loadPageCallback) {
 		return deferredMain_setSrc.promise;
 	};
 	
+}
+
+//rev1 - https://gist.github.com/Noitidart/c4ab4ca10ff5861c720b
+function validateOptionsObj(aOptions, aOptionsDefaults) {
+	// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
+	for (var aOptKey in aOptions) {
+		if (!(aOptKey in aOptionsDefaults)) {
+			console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
+			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
+		}
+	}
+	
+	// if a key is not found in aOptions, but is found in aOptionsDefaults, it sets the key in aOptions to the default value
+	for (var aOptKey in aOptionsDefaults) {
+		if (!(aOptKey in aOptions)) {
+			aOptions[aOptKey] = aOptionsDefaults[aOptKey];
+		}
+	}
 }
 // end - common helper functions
