@@ -910,9 +910,10 @@ function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.session
 		BtnRef: {}, // keys are that, that go in aBtns[] entry - object for this specific btn (is a child of ABRef) use for state
 		// ABRef: this.ABRef, // so I can go AB.setState(.ABRef)
 		sessionId: cSessionId, // so I can go AB.setState(gEditorABData_Bar[.sessionId]) - as having ABRef is causing a "TypeError: cyclic object value"
-		btnId: gEditorABData_BtnId, // im not sure why i include this here - so I can go 
+		btnId: gEditorABData_BtnId, // because of link888778 - so i can tell worker do work on this guy. and when worker needs, he can say to update this guy, and when worker needs, worker can fetch data from this guy
 		// setBtnState: gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]), // obvious why this is needed // :todo: :learn: :verify: gEditorABData_Btn[gEditorABData_BtnId] isnt created at the time of this bind so lets see if it really binds to it not sure
-		data: {} // link947444544
+		data: {}, // link947444544
+		meta: {} // holds meta data, like group of dropbox/twitter/gdrive/imgur etc. and other info to help work with this button
 	};
 	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId].BtnRef);
 	gEditorABData_Btn[gEditorABData_BtnId].setBtnState = gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]);
@@ -1948,6 +1949,9 @@ var gEditor = {
 			bTxt: 'Initializing...', // :l10n:
 			bIcon: core.addon.path.images + aOAuthService + '_neutral16.png'
 		});
+		cBtn.meta.group = aOAuthService;
+		cBtn.meta.action = 'uploadImgByteData';
+		cBtn.meta.group_action = cBtn.meta.group + '__' + cBtn.meta.action;
 		
 		if (!bootstrap.OAuthWorker) {
 			bootstrap.OAuthWorker = new PromiseWorker(core.addon.path.content + 'modules/oauth/OAuthWorker.js');
@@ -1967,7 +1971,16 @@ var gEditor = {
 			r.onloadend = function() {
 				// cArrBuf = r.result;
 				cBtn.arrbuf = r.result; // link947444544
-				// OAuthWorker.post('uploadByteArr', [cArrBuf, cWidth, cHeight], null, [cArrBuf]);
+				cBtn.width = cWidth;
+				cBtn.height = cHeight;
+				
+				var promise_uploadImgToCloud = OAuthWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, cBrn.meta.group], null, [cArrBuf]); // link888778
+				promise_uploadImgToCloud.then(
+					function(aVal) {
+						console.log('Fullfilled - promise_uploadImgToCloud - ', aVal);
+					},
+					genericReject.bind(null, 'promise_uploadImgToCloud', 0)
+				).catch(genericCatch.bind(null, 'promise_uploadImgToCloud', 0));
 			};
 			r.readAsArrayBuffer(b);
 			
@@ -3650,8 +3663,25 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
+var gFHR = {};
 // start - OAuthWorkerMainThreadFuncs
 var OAuthWorkerMainThreadFuncs = {
+	authorizeAppFHR: function(aBtnId, aOAuthService) {
+		if (!gFHR[aBtnId]) {
+			gFHR[aBtnId] = new FHR();
+		}
+		
+		switch (aOAuthService) {
+			case 'dropbox':
+				
+					// gFHR[aBtnId].loadPage()
+				
+				break;
+			default:
+				console.error('invalid aOAuthService:', aOAuthService);
+				throw new Error('invalid aOAuthService');
+		}
+	},
 	updateAB: function(aId) {
 		// aId is the id of aABInfoObj
 	}
@@ -4936,15 +4966,102 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 	}
 }
 
-function FHR(loadPageSrc, loadPageCallback) {
+// rev3 - https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
+const SAM_CB_PREFIX = '_sam_gen_cb_';
+var sam_last_cb_id = -1;
+function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
+	sam_last_cb_id++;
+	var thisCallbackId = SAM_CB_PREFIX + sam_last_cb_id;
+	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap;
+	aCallbackScope[thisCallbackId] = function(aMessageArr) {
+		delete aCallbackScope[thisCallbackId];
+		aCallback.apply(null, aMessageArr);
+	}
+	aMessageArr.push(thisCallbackId);
+	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
+}
+
+var gFHR_id = 0;
+function FHR() {
 	// my FrameHttpRequest module which loads pages into frames, and navigates by clicks
 	// my play on XHR
 	
 	// must instatiate with loadPageArgs
 	
+	gFHR_id++;
+	
+	this.id = gFHR_id;
+	
+	var fhrFsMsgListenerId = core.addon.id + '-fhr_' + gFHR_id;
+
+	// start - rev3 - https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
+	var fhrFsFuncs = { // can use whatever, but by default its setup to use this
+		FHRFrameScriptReady: function() {
+			console.log('mainthread', 'FHRFrameScriptReady');
+			initedFhr = true;
+			if (fhrPostInitCb) {
+				fhrPostInitCb();
+			}
+		}
+	};
+	var fhrFsMsgListener = {
+		funcScope: fhrFsFuncs,
+		receiveMessage: function(aMsgEvent) {
+			var aMsgEventData = aMsgEvent.data;
+			console.log('fhrFsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
+			// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+			
+			var callbackPendingId;
+			if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+				callbackPendingId = aMsgEventData.pop();
+			}
+			
+			aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
+			
+			var funcName = aMsgEventData.shift();
+			if (funcName in this.funcScope) {
+				var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
+				
+				if (callbackPendingId) {
+					// rez_parentscript_call must be an array or promise that resolves with an array
+					if (rez_parentscript_call.constructor.name == 'Promise') {
+						rez_parentscript_call.then(
+							function(aVal) {
+								// aVal must be an array
+								aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, aVal]);
+							},
+							function(aReason) {
+								console.error('aReject:', aReason);
+								aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, ['promise_rejected', aReason]]);
+							}
+						).catch(
+							function(aCatch) {
+								console.error('aCatch:', aCatch);
+								aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, ['promise_rejected', aCatch]]);
+							}
+						);
+					} else {
+						// assume array
+						aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, rez_parentscript_call]);
+					}
+				}
+			}
+			else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+			
+		}
+	};
+	
+	Services.mm.addMessageListener(fhrFsMsgListenerId, fhrFsMsgListener);
+	
+	// no need to redefine - sendAsyncMessageWithCallback, i can use the globally defined sendAsyncMessageWithCallback fine with this
+	// end - rev3 - https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
+	
+	
 	var aWindow = Services.wm.getMostRecentWindow('navigator:browser');
 	var aDocument = aWindow.document;
-
+	var initedFhr = false;
+	var fhrPostInitCb;
+	
 	var doAfterAppShellDomWinReady = function() {
 		
 			this.frame = aDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'browser');
@@ -4954,13 +5071,15 @@ function FHR(loadPageSrc, loadPageCallback) {
 				this.frame.setAttribute('remote', 'true');
 			// }
 			this.frame.setAttribute('type', 'content');
-			this.frame.setAttribute('style', 'height:100px;border:10px solid steelblue;');
+			this.frame.setAttribute('style', 'height:10px;border:10px solid steelblue;');
 			
 			aDocument.documentElement.appendChild(this.frame);
-			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?' + core.addon.cache_key, false);			
+			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);			
+			// aWindow.gBrowser.selectedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);
 			
 			this.destroy = function() {
 				aDocument.documentElement.removeChild(this.frame);
+				Services.mm.removeMessageListener(fhrFsMsgListenerId, fhrFsMsgListener);
 			};
 		
 	}.bind(this);
@@ -4974,14 +5093,21 @@ function FHR(loadPageSrc, loadPageCallback) {
 		}, false);
 	}
 	
-	this.loadPage = function(aSrc, aCallback) {
+	this.loadPage = function(aSrc, aCbInfoObj, aDeferred) {
 		// sets src of frame
-		
-		var deferredMain_setSrc = new Deferred();
-
-		
-		
-		return deferredMain_setSrc.promise;
+		// aCbInfoObj is a collection of callbacks, like for on fail load, on error etc etc
+	
+		if (aDeferred) {
+			
+		} else {
+			var deferredMain_setSrc = new Deferred();
+			
+			if (!fhrInited) {
+				fhrPostInitCb = this.loadPage(aSrc, aCallback, deferredMain_setSrc);
+			}
+			
+			return deferredMain_setSrc.promise;
+		}
 	};
 	
 }

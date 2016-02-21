@@ -29,5 +29,12 @@
 	notification button.nativeshot-twitter-neutral .button-icon {
 		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_neutral16.png');
 	}
+	
+	#toolbar-context-menu_nativeshot-menuitem .menu-iconic-left,
+	#toolbar-context-menu_nativeshot-menuitem .menu-iconic-right,
+	#customizationPanelItemContextMenu_nativeshot-menuitem .menu-iconic-left,
+	#customizationPanelItemContextMenu_nativeshot-menuitem .menu-iconic-right {
+		visibility: visible; /* needed because on ubuntu 15.01 they are hidden */
+	}
 	/*end-non cui stuff*/
 }
