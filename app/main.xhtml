@@ -60,6 +60,7 @@
 		.skill-block.rem-all:after {
 			opacity: 0;
 			transition: opacity 200ms ease 300ms;
+			z-index: 1; /* i have to do this, otherwise the ones with .rem-all-right::after are hard to hover over, its like the mouse only takes on half of it, real weird */
 		}
 		.skill-block.rem-all:hover:after {
 			opacity: 1;
