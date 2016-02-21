@@ -179,7 +179,9 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 		console.log('matchPhotoUrl:', matchPhotoUrl);
 		photos.push(matchPhotoUrl[1]);
 	}
-
+	
+	console.log('imgIdsAttached_andPreviewIndex:', imgIdsAttached_andPreviewIndex);
+	
 	for (var i=0; i<photos.length; i++) {
 		for (var imgId in imgIdsAttached_andPreviewIndex) {
 			if (imgIdsAttached_andPreviewIndex[imgId] == i) {
@@ -484,8 +486,8 @@ function attachSentImgData() {
 		throw new Error('wtf input box not found!! should nevr get here unless twitter updated their site and changed the id');
 	}
 	
-	countPreview = richInputTweetMsg.parentNode.querySelectorAll('.previews .preview').length;
-	
+	countPreview = tweetDialogDialog.querySelectorAll('.previews .preview').length;
+	console.log('countPreview:', countPreview);
 
 	
 	var img = aContentDocument.createElement('img');
@@ -505,7 +507,8 @@ var timeStartedAttach;
 function waitForAttachToFinish() {
 	// keeps checking the preview account, if it goes up then it has attached
 	
-	var nowCountPreview = richInputTweetMsg.parentNode.querySelectorAll('.previews .preview').length;
+	var nowCountPreview = tweetDialogDialog.querySelectorAll('.previews .preview').length;
+	console.log('nowCountPreview:', nowCountPreview);
 	if (nowCountPreview == countPreview + 1) {
 		// :todo: add event listener on click of the x of the preview, on delete, send msg to parent saying deleted, also delete from imgIdsAttached_andPreviewIndex
 		var justAttachedImgId = currentlyAttaching.imgId;
