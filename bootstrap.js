@@ -235,27 +235,25 @@ function get_gEMenuDomJson() {
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-browse'), oncommand:function(e){ gEditor.saveToFile(e) }}],
 					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_copy'), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
 					['xul:menuitem', {id:'print_menuitem', label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
-					/*
-					['xul:menu', {label:'Upload to Cloud Drive (click this for last used host)'},
+					['xul:menu', {label:'Upload to Cloud Drive'}, // :l10n:
 						['xul:menupopup', {},
-							['xul:menuitem', {label:'Amazon Cloud Drive'}],
-							['xul:menuitem', {label:'Box'}],
-							['xul:menuitem', {label:'Copy by Barracuda Networks'}],
-							['xul:menuitem', {label:'Dropbox'}],
-							['xul:menuitem', {label:'Google Drive'}],
-							['xul:menuitem', {label:'MEGA'}],
-							['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
+							// ['xul:menuitem', {label:'Amazon Cloud Drive'}],
+							// ['xul:menuitem', {label:'Box'}],
+							// ['xul:menuitem', {label:'Copy by Barracuda Networks'}],
+							['xul:menuitem', {label:'Dropbox', oncommand:function(e){ gEditor.uploadOauth(e, 'dropbox') }}], // :l10n:
+							['xul:menuitem', {label:'Google Drive', oncommand:function(e){ gEditor.uploadOauth(e, 'gdrive') }}] // :l10n:
+							// ['xul:menuitem', {label:'MEGA'}],
+							// ['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
 						]
 					],
-					['xul:menu', {label:'Upload to Image Host with My Account (click this for last used host)'},
+					['xul:menu', {label:'Upload to Image Host'}, // :10n:
 						['xul:menupopup', {},
-							['xul:menuitem', {label:'Flickr'}],
-							['xul:menuitem', {label:'Image Shack'}],
-							['xul:menuitem', {label:'Imgur'}],
-							['xul:menuitem', {label:'Photobucket'}]
+							// ['xul:menuitem', {label:'Flickr'}],
+							// ['xul:menuitem', {label:'Image Shack'}],
+							['xul:menuitem', {label:'Imgur', oncommand:function(e){ gEditor.uploadOauth(e, 'imgur') }}] // :10n:
+							// ['xul:menuitem', {label:'Photobucket'}]
 						]
 					],
-					*/
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-img-host-anon')},
 						['xul:menupopup', {},
 							/*['xul:menuitem', {label:'FreeImageHosting.net'}],*/
@@ -875,6 +873,32 @@ function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
 	}
 }
 */
+var gEditorABData_Bar = {
+	//	gEditor.sessionId: {
+			// ABRef - object for the bar used for state
+		// }
+};
+var gEditorABData_Btn = {
+	//	some_generated_id: {
+			// ABRef - object for this specific btn (is a child of ABRef) use for state
+			// abID: ABRef.aId
+		// }
+	
+};
+gEditorABData_BtnId = 0;
+
+function gEditorABData_addBtn(aGroup, aStatus) { // is binded to gEditorABData_Bar[this.sessionId]
+	// aGroup is string - dropbox, twitter, gdrive, imgur
+	// aStatus is string - good, bad, neutral
+	gEditorABData_BtnId++;
+	gEditorABData_Btn[gEditorABData_BtnId] = {
+		bTxt: 'bye',
+		bIcon: 'chrome://mozapps/skin/places/defaultFavicon.png'
+	};
+	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId]);
+	
+	
+}
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -1875,6 +1899,35 @@ var gEditor = {
 		).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
 		
 		// :todo: appendToHistoryLog
+	},
+	uploadOauth: function(e, aOuathService) {
+		// aOuathService - string
+			// dropbox
+			// gdrive
+			// imgur
+		
+		if (!bootstrap.OAuthWorker) {
+			bootstrap.OAuthWorker = new PromiseWorker(core.addon.path.content + 'modules/oauth/OAuthWorker.js');
+		}
+		
+		// var cDataUrl = this.canComp.toDataURL('image/png', '');
+		// var cBlob;
+		var cArrBuf;
+		var cWidth = this.canComp.width;
+		var cHeight = this.canComp.height;
+		
+		(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+			// cBlob = b;
+			
+			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
+			r.onloadend = function() {
+				cArrBuf = r.result;
+				OAuthWorker.post('uploadByteArr', [cArrBuf, cWidth, cHeight], null, [cArrBuf]);
+			};
+			r.readAsArrayBuffer(b);
+			
+		}, 'image/png');
 	}
 };
 
@@ -2114,6 +2167,16 @@ function gEUnload(e) {
 	for (var i=0; i<colMon.length; i++) {
 		colMon[i].E.DOMWindow.removeEventListener('unload', gEUnload, false);
 		colMon[i].E.DOMWindow.close();
+	}
+	
+	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
+	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
+		console.log('need to show notif bar now');
+		AB.setState(gEditorABData_Bar[gEditor.sessionId].ABRef);
+	} else {
+		// no need to show, delete it
+		console.log('no need to show, delete it');
+		delete gEditorABData_Bar[gEditor.sessionId];
 	}
 	
 	gEditor.cleanUp();
@@ -2450,6 +2513,26 @@ function shootAllMons(aDOMWindow) {
 	gESelected = false;
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime();
+		gEditorABData_Bar[gEditor.sessionId] = {
+			ABRef: {
+				aTxt: (new Date()).toLocaleString(),
+				aPriority: 1,
+				aIcon: core.addon.path.images + 'icon16.png',
+				aClose: function() {
+					var thisBtnIds = gEditorABData_Bar[gEditor.sessionId].btnIds;
+					 for (var i=0; i<thisBtnIds.length; i++) {
+						 delete gEditorABData_Btn[thisBtnIds[i]];
+					 }
+					 delete gEditorABData_Bar[gEditor.sessionId];
+					 // :todo: need to ensure that none of th workers are holding onto any data that was stored in gEditorABData_Bar or gEditorABData_Btn
+				},
+				aBtns: []
+			},
+			shown: false,
+			btnIds: [], // array of generated ids found in gEditorABData_Btn
+			sessionId: gEditor.sessionId,
+			addBtn: gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId])
+		};
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 		for (var i=0; i<colMon.length; i++) {
 			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
@@ -3515,6 +3598,14 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
+// start - OAuthWorkerMainThreadFuncs
+var OAuthWorkerMainThreadFuncs = {
+	updateAB: function(aId) {
+		// aId is the id of aABInfoObj
+	}
+};
+// end - OAuthWorkerMainThreadFuncs
+
 function install() {}
 function uninstall(aData, aReason) {
 	// delete imgur history file
@@ -3528,29 +3619,9 @@ function startup(aData, aReason) {
 	core.addon.aData = aData;
 	extendCore();
 	
-	var promise_getMainWorker = SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js');
-	promise_getMainWorker.then(
-		function(aVal) {
-
-			// start - do stuff here - promise_getMainWorker
-			// end - do stuff here - promise_getMainWorker
-		},
-		function(aReason) {
-			var rejObj = {
-				name: 'promise_getMainWorker',
-				aReason: aReason
-			};
-
-		}
-	).catch(
-		function(aCaught) {
-			var rejObj = {
-				name: 'promise_getMainWorker',
-				aCaught: aCaught
-			};
-
-		}
-	);
+	SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js'); // if want instant init, tag on .post() and it will return a promise resolving with value from init
+	
+	SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', OAuthWorkerMainThreadFuncs);
 	
 	CustomizableUI.createWidget({
 		id: 'cui_nativeshot',
@@ -3640,8 +3711,13 @@ function shutdown(aData, aReason) {
 	
 	aboutFactory_nativeshot.unregister();
 	
-	// destroy worker
-	MainWorker._worker.terminate();
+	// destroy workers
+	if (MainWorker && MainWorker.launchTimeStamp) { // as when i went to rev5, its not insantly inited, so there is a chance that it doesnt need terminate
+		MainWorker._worker.terminate();
+	}
+	if (OAuthWorker && OAuthWorker.launchTimeStamp) {
+		OAuthWorker._worker.terminate();
+	}
 
 	if (bootstrap.GOCRWorker) {
 		GOCRWorker._worker.terminate();
@@ -3994,7 +4070,14 @@ function Deferred() {
 	}
 }
 
-function SIPWorker(workerScopeName, aPath, aCore=core) {
+// SIPWorker - rev5 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
+const SIP_CB_PREFIX = '_a_gen_cb_';
+const SIP_TRANS_WORD = '_a_gen_trans_';
+var sip_last_cb_id = -1;
+function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope) {
+	// update 022016 - delayed init till first .post
+	// update 010516 - allowing pomiseworker to execute functions in this scope, supply aFuncExecScope, else leave it undefined and it will not set this part up
+	// update 122115 - init resolves the deferred with the value returned from Worker, rather then forcing it to resolve at true
 	// "Start and Initialize PromiseWorker"
 	// returns promise
 		// resolve value: jsBool true
@@ -4003,41 +4086,130 @@ function SIPWorker(workerScopeName, aPath, aCore=core) {
 	
 	// :todo: add support and detection for regular ChromeWorker // maybe? cuz if i do then ill need to do ChromeWorker with callback
 	
-	var deferredMain_SIPWorker = new Deferred();
+	// var deferredMain_SIPWorker = new Deferred();
 
+	var cWorkerInited = false;
+	var cWorkerPost_orig;
+	
 	if (!(workerScopeName in bootstrap)) {
 		bootstrap[workerScopeName] = new PromiseWorker(aPath);
+		
+		cWorkerPost_orig = bootstrap[workerScopeName].post;
+		
+		bootstrap[workerScopeName].post = function(pFun, pArgs, pCosure, pTransfers) {
+			if (!cWorkerInited) {
+				var deferredMain_post = new Deferred();
+				
+				bootstrap[workerScopeName].post = cWorkerPost_orig;
+				
+				var doInit = function() {
+					var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
+					promise_initWorker.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_initWorker - ', aVal);
+							// start - do stuff here - promise_initWorker
+							if (pFun) {
+								doOrigPost();
+							} else {
+								// pFun is undefined, meaning devuser asked for instant init
+								deferredMain_post.resolve(aVal);
+							}
+							// end - do stuff here - promise_initWorker
+						},
+						genericReject.bind(null, 'promise_initWorker', deferredMain_post)
+					).catch(genericCatch.bind(null, 'promise_initWorker', deferredMain_post));
+				};
+				
+				var doOrigPost = function() {
+					var promise_origPosted = bootstrap[workerScopeName].post(pFun, pArgs, pCosure, pTransfers);
+					promise_origPosted.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_origPosted - ', aVal);
+							deferredMain_post.resolve(aVal);
+						},
+						genericReject.bind(null, 'promise_origPosted', deferredMain_post)
+					).catch(genericCatch.bind(null, 'promise_origPosted', deferredMain_post));
+				};
+				
+				doInit();
+				return deferredMain_post.promise;
+			}
+		};
+		
+		// start 010516 - allow worker to execute functions in bootstrap scope and get value
+		if (aFuncExecScope) {
+			// this triggers instantiation of the worker immediately
+			var origOnmessage = bootstrap[workerScopeName]._worker.onmessage;
+			bootstrap[workerScopeName]._worker.onmessage = function(aMsgEvent) {
+				////// start - my custom stuff
+				var aMsgEventData = aMsgEvent.data;
+				console.log('promiseworker receiving msg:', aMsgEventData);
+				if (Array.isArray(aMsgEventData)) {
+					// my custom stuff, PromiseWorker did self.postMessage to call a function from here
+					console.log('promsieworker is trying to execute function in mainthread');
+					
+					var callbackPendingId;
+					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+						callbackPendingId = aMsgEventData.pop();
+					}
+					
+					var funcName = aMsgEventData.shift();
+					if (funcName in aFuncExecScope) {
+						var rez_mainthread_call = aFuncExecScope[funcName].apply(null, aMsgEventData);
+						
+						if (callbackPendingId) {
+							if (rez_mainthread_call.constructor.name == 'Promise') {
+								rez_mainthread_call.then(
+									function(aVal) {
+										if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+											// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+											console.error('doing transferrrrr');
+											aVal.pop();
+											bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, aVal], aVal.pop());
+										} else {
+											bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, aVal]);
+										}
+									},
+									function(aReason) {
+										console.error('aReject:', aReason);
+										bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+									}
+								).catch(
+									function(aCatch) {
+										console.error('aCatch:', aCatch);
+										bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
+									}
+								);
+							} else {
+								// assume array
+								if (rez_mainthread_call.length > 2 && rez_mainthread_call[rez_mainthread_call.length-1] == SIC_TRANS_WORD && Array.isArray(rez_mainthread_call[rez_mainthread_call.length-2])) {
+									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+									rez_mainthread_call.pop();
+									bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, rez_mainthread_call], rez_mainthread_call.pop());
+								} else {
+									bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, rez_mainthread_call]);
+								}
+							}
+						}
+					}
+					else { console.error('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+					////// end - my custom stuff
+				} else {
+					origOnmessage(aMsgEvent);
+				}
+			}
+		}
+		// end 010516 - allow worker to execute functions in bootstrap scope and get value
 		
 		if ('addon' in aCore && 'aData' in aCore.addon) {
 			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it
 		}
-		
-		var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
-		promise_initWorker.then(
-			function(aVal) {
-
-				// start - do stuff here - promise_initWorker
-				deferredMain_SIPWorker.resolve(true);
-				// end - do stuff here - promise_initWorker
-			},
-			function(aReason) {
-				var rejObj = {name:'promise_initWorker', aReason:aReason};
-
-				deferredMain_SIPWorker.reject(rejObj);
-			}
-		).catch(
-			function(aCaught) {
-				var rejObj = {name:'promise_initWorker', aCaught:aCaught};
-
-				deferredMain_SIPWorker.reject(rejObj);
-			}
-		);
-		
 	} else {
-		deferredMain_SIPWorker.reject('Something is loaded into bootstrap[workerScopeName] already');
+		throw new Error('Something is loaded into bootstrap[workerScopeName] already');
 	}
 	
-	return deferredMain_SIPWorker.promise;
+	// return deferredMain_SIPWorker.promise;
+	return bootstrap[workerScopeName];
 	
 }
 
@@ -4710,5 +4882,55 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
+}
+
+function FHR(loadPageSrc, loadPageCallback) {
+	// my FrameHttpRequest module which loads pages into frames, and navigates by clicks
+	// my play on XHR
+	
+	// must instatiate with loadPageArgs
+	
+	var aWindow = Services.wm.getMostRecentWindow('navigator:browser');
+	var aDocument = aWindow.document;
+
+	var doAfterAppShellDomWinReady = function() {
+		
+			this.frame = aDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'browser');
+			
+			// this.frame.setAttribute('class', core.addon.id + '_fhr-');
+			// if (OS.Constants.Sys.Name.toLowerCase() != 'darwin') {
+				this.frame.setAttribute('remote', 'true');
+			// }
+			this.frame.setAttribute('type', 'content');
+			this.frame.setAttribute('style', 'height:100px;border:10px solid steelblue;');
+			
+			aDocument.documentElement.appendChild(this.frame);
+			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?' + core.addon.cache_key, false);			
+			
+			this.destroy = function() {
+				aDocument.documentElement.removeChild(this.frame);
+			};
+		
+	}.bind(this);
+	
+	if (aDocument.readyState == 'complete') {
+		doAfterAppShellDomWinReady();
+	} else {
+		aWindow.addEventListener('load', function() {
+			aWindow.removeEventListener('load', arguments.callee, false);
+			doAfterAppShellDomWinReady();
+		}, false);
+	}
+	
+	this.loadPage = function(aSrc, aCallback) {
+		// sets src of frame
+		
+		var deferredMain_setSrc = new Deferred();
+
+		
+		
+		return deferredMain_setSrc.promise;
+	};
+	
 }
 // end - common helper functions
