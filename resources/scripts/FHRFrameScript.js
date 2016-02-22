@@ -1,4 +1,4 @@
-const {interfaces: Ci} = Components;
+const {classes:Cc, interfaces:Ci} = Components;
 console.log('FHRFrameScript loaded, this:', Components.stack, Components.stack.filename);
 var gFhrFsMsgListenerId = Components.stack.filename.match(/fhrFsMsgListenerId=([^&]+)/)[1]; // Components.stack.filename == "chrome://nativeshot/content/resources/scripts/FHRFrameScript.js?fhrFsMsgListenerId=NativeShot@jetpack-fhr_1&v=0.2623310905363082"
 
@@ -145,6 +145,14 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		aPromiseToReject.reject(rejObj);
 	}
 }
+
+function xpcomSetTimeout(aNsiTimer, aDelayTimerMS, aTimerCallback) {
+	aNsiTimer.initWithCallback({
+		notify: function() {
+			aTimerCallback();
+		}
+	}, aDelayTimerMS, Ci.nsITimer.TYPE_ONE_SHOT);
+}
 // end - common helpers
 //////////////////////////////////////////////////////// end - boilerplate
 
@@ -160,10 +168,19 @@ statusText - whatever string explaining status
 status - failed or ok
 and any other stuff
 */
+var gTimeout = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer); // hold timeout object
+var gTimeoutMs = 10000;
 
 var bootstrapCallbacks = { // can use whatever, but by default it uses this
 	// put functions you want called by bootstrap/server here
-	loadPage: function(aSrc, aCallbackSetName) {
+	loadPage: function(aSrc, aClickSetName, aCallbackSetName) {
+		// if want to load page by click, then set aClickSetName
+		// must set aSrc OR aClickSetName never both!
+		if (aSrc && aClickSetName) {
+			console.error('must set aSrc OR aClickSetName never both!');
+			throw new Error('must set aSrc OR aClickSetName never both!');
+		}
+		
 		if (pageLoading) {
 			throw new Error('cannot load yet, as previous page is still loading');
 		}
@@ -174,7 +191,50 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 		pageLoading = true;
 		addEventListener('DOMContentLoaded', pageLoaded.bind(null, aCallbackSetName), false);
 		
-		content.location = aSrc;
+		xpcomSetTimeout(gTimeout, gTimeoutMs, pageTimeouted); //gTimeout = setTimeout(pageTimeouted, gTimeoutMs);
+		
+		if (aSrc) {
+			content.location = aSrc;
+		} else if (aClickSetName) {
+			if (!clickSet[aClickSetName]) {
+				console.error('clickSet name not found!! aClickSetName:', aClickSetName);
+				throw new Error('clickSet name not found!!');
+			}
+			
+			// try clicking in all frames
+			var contentWindow = content;
+			var contentFrames = contentWindow.frames;
+			var contentWindowArr = [contentWindow];
+			for (var i=0; i<contentFrames.length; i++) {
+				contentWindowArr.push(contentFrames[i].window);
+			}
+	
+			var rez_clickExec;
+			clickExec_winLoop:
+			for (var h=0; h<contentWindowArr.length; h++) {
+				console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
+				for (var i=0; i<clickSet[aClickSetName].length; i++) {
+					rez_clickExec = clickSet[aClickSetName][i].exec(contentWindowArr[h], contentWindowArr[h].document);
+					if (rez_clickExec) {
+						break clickExec_winLoop;
+					}
+				}
+			}
+			if (!rez_clickExec) {
+				console.log('all click instructions failed!');
+				gTimeout.cancel(); //clearTimeout(gTimeout);
+				pageLoading = false;
+				removeEventListener('DOMContentLoaded', pageLoaded, false);
+				
+				gMainDeferred_loadPage.resolve([{
+					status: 'fail',
+					statusText: 'click-set-failed'
+				}]);
+			}
+		} else {
+			console.error('should never ever get here');
+			throw new Error('should never ever get here');
+		}
 		
 		return gMainDeferred_loadPage.promise;
 	},
@@ -186,6 +246,17 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 
 bootstrapMsgListener.funcScope = bootstrapCallbacks; // need to do this, as i setup bootstrapMsgListener above with funcScope as bootstrapCallbacks however it is undefined at that time
 
+function pageTimeouted() {
+	pageLoading = false;
+	removeEventListener('DOMContentLoaded', pageLoaded, false);
+	
+	content.stop();
+	gMainDeferred_loadPage.resolve([{
+		status: 'fail',
+		statusText: 'timeout'
+	}]);
+}
+
 function pageLoaded(aCallbackSetName, e) {
 	// waits till the loaded event triggers on top window not frames
 	var contentWindow = e.target.defaultView;
@@ -196,6 +267,7 @@ function pageLoaded(aCallbackSetName, e) {
 	} else {
 		// ok top finished loading
 		
+		gTimeout.cancel(); //clearTimeout(gTimeout);
 		pageLoading = false;
 		removeEventListener('DOMContentLoaded', pageLoaded, false);
 		
@@ -278,8 +350,81 @@ var callbackSet = {
 				}
 			}
 		}
+	],
+	//// imgur
+	authorizeApp_imgur: [
+		{
+			fhrResponse: {
+				status: 'fail',
+				statusText: 'not-logged-in',
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('password');
+				if (domEl) { // :maintain-per-website:
+					return this.fhrResponse;
+				}
+			}
+		},
+		{
+			fhrResponse: {
+				status: 'ok',
+				statusText: 'logged-in-allow-screen',
+				username: '' // set by .test() // so oauth worker can test prefs to see if this username was allowed yet
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('upload-global-logged-in');
+				if (domEl) { // :maintain-per-website:
+				
+					var loggedInUserDomEl = domEl.querySelector('.green');
+					if (loggedInUserDomEl) {
+						this.fhrResponse.username = loggedInUserDomEl.textContent;
+					}
+					return this.fhrResponse;
+				}
+			}
+		}
+	],
+	allow_imgur: [
+		{
+			fhrResponse: {
+				status: 'ok',
+				statusText: 'allowed',
+				allowedParams: '' // set by .test()
+			},
+			test: function(aContentWindow, aContentDocument) {
+				
+				var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+				var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
+				
+				var receivedParamsKeyVal = {};
+				for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
+					var splitPiece = receivedParamsPiecesStrArr[i].split('=');
+					receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+				}
+				
+				this.fhrResponse.allowedParams = receivedParamsKeyVal;
+				return this.fhrResponse;
+			}
+		}
 	]
-	//////
+	//// 
+}
+
+var clickSet = {
+	//// imgur
+	allow_imgur: [
+		{
+			// fhrRequest: { // the allow button as of 02216 when user is logged in
+			// 	statusText: 'this is fhrRequest object, this is just for my notes.'
+			// },
+			exec: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('allow');
+				if (domEl) {
+					domEl.click();
+				}
+			}
+		}
+	]
 }
 
 function testAndFindDomEl(targetDocument, selectorsToTry, ifFound_setKeyDomEl_inThisObj_toFoundElement, throwOnNotFound) {

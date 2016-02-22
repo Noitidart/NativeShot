@@ -3694,7 +3694,7 @@ var OAuthWorkerMainThreadFuncs = {
 	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
 		var deferredMain_authorizeApp = new Deferred();
 		
-		var promise_fhrResponse = gEditorABData_Btn[aBtnId].getBtnFHR().loadPage(aUrl, aCallbackSetName);
+		var promise_fhrResponse = gEditorABData_Btn[aBtnId].getBtnFHR().loadPage(aUrl, null, aCallbackSetName);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
 				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
@@ -3704,6 +3704,22 @@ var OAuthWorkerMainThreadFuncs = {
 		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_authorizeApp));
 		
 		return deferredMain_authorizeApp.promise;
+	},
+	clickAllow: function(aBtnId, aClickSetName, aCallbackSetName) {
+		// clicks allow for authorizeApp
+		
+		var deferredMain_clickAllow = new Deferred();
+		
+		var promise_fhrResponse = gEditorABData_Btn[aBtnId].getBtnFHR().loadPage(null, aClickSetName, aCallbackSetName);
+		promise_fhrResponse.then(
+			function(aFHRResponse) {
+				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+				deferredMain_clickAllow.resolve([aFHRResponse]);
+			},
+			genericReject.bind(null, 'promise_fhrResponse', deferredMain_clickAllow)
+		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_clickAllow));
+		
+		return deferredMain_clickAllow.promise;
 	},
 	updateAB: function(aId) {
 		// aId is the id of aABInfoObj
@@ -5140,8 +5156,9 @@ function FHR() {
 		}, false);
 	}
 	
-	this.loadPage = function(aSrc, aCallbackSetName, aDeferredMain_setSrc) {
-		// sets src of frame
+	this.loadPage = function(aSrc, aClickSetName, aCallbackSetName, aDeferredMain_setSrc) {
+		// sets src of frame OR clicks if aClickSetName is set. must either set aSrc OR aClickSetName never both
+		
 		// aCbInfoObj is a collection of callbacks, like for on fail load, on error etc etc
 		console.log('ok in loadPage for id:', this.id);
 		
@@ -5155,15 +5172,15 @@ function FHR() {
 			
 			if (!this.inited) {
 				console.log('not yet inited');
-				fhrPostInitCb = this.loadPage.bind(this, aSrc, aCallbackSetName, deferredMain_setSrc);
+				fhrPostInitCb = this.loadPage.bind(this, aSrc, aClickSetName, aCallbackSetName, deferredMain_setSrc);
 			
 				return deferredMain_setSrc.promise;
 			}
 		}
 		
 		console.log('sending msg to message manager fhrFsMsgListenerId:', fhrFsMsgListenerId);
-		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aCallbackSetName], fhrFsMsgListener.funcScope, function(aFhrResponse) {
-			console.log('aFhrResponse:', aFhrResponse);
+		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aClickSetName, aCallbackSetName], fhrFsMsgListener.funcScope, function(aFhrResponse) {
+			console.log('bootstrap', 'aFhrResponse:', aFhrResponse);
 			deferredMain_setSrc.resolve(aFhrResponse);
 		});
 		
