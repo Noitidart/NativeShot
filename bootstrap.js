@@ -3201,7 +3201,7 @@ function contextMenuSetup(aDOMWindow) {
 		cCustomizationPanelItemContextMenu.addEventListener('popupshowing', contextMenuShowing, false);
 	}
 	
-	console.error('ok good setup');
+	// console.log('ok good setup');
 }
 
 function contextMenuDestroy(aDOMWindow) {
@@ -3229,7 +3229,7 @@ function contextMenuDestroy(aDOMWindow) {
 		cCustomizationPanelItemContextMenu.removeEventListener('popupshowing', contextMenuShowing, false);
 	}
 	
-	console.error('ok good destroyed');
+	// console.log('ok good destroyed');
 	
 }
 // end - context menu items
@@ -3663,18 +3663,18 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
-var gFHR = {};
+var gOauthFHR = {};
 // start - OAuthWorkerMainThreadFuncs
 var OAuthWorkerMainThreadFuncs = {
 	authorizeAppFHR: function(aBtnId, aOAuthService) {
-		if (!gFHR[aBtnId]) {
-			gFHR[aBtnId] = new FHR();
+		if (!gOauthFHR[aBtnId]) {
+			gOauthFHR[aBtnId] = new FHR();
 		}
 		
 		switch (aOAuthService) {
 			case 'dropbox':
 				
-					// gFHR[aBtnId].loadPage()
+					// gOauthFHR[aBtnId].loadPage()
 				
 				break;
 			default:
@@ -3807,6 +3807,11 @@ function shutdown(aData, aReason) {
 	
 	if (bootstrap.OCRADWorker) {
 		OCRADWorker._worker.terminate();
+	}
+	
+	// destroy any FHR's that the devuser did not clean up
+	for (var i=0; i<gFHR.length; i++) {
+		gFHR[i].destroy();
 	}
 }
 
@@ -4981,6 +4986,7 @@ function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aC
 	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
 }
 
+var gFHR = []; // holds all currently alive FHR instances. keeps track of FHR's so it destroys them on shutdown. if devuser did not handle destroying it
 var gFHR_id = 0;
 function FHR() {
 	// my FrameHttpRequest module which loads pages into frames, and navigates by clicks
@@ -4990,7 +4996,9 @@ function FHR() {
 	
 	gFHR_id++;
 	
+	var fhrThis = this;
 	this.id = gFHR_id;
+	gFHR.push(this);
 	
 	var fhrFsMsgListenerId = core.addon.id + '-fhr_' + gFHR_id;
 
@@ -4998,7 +5006,7 @@ function FHR() {
 	var fhrFsFuncs = { // can use whatever, but by default its setup to use this
 		FHRFrameScriptReady: function() {
 			console.log('mainthread', 'FHRFrameScriptReady');
-			initedFhr = true;
+			fhrThis.inited = true;
 			if (fhrPostInitCb) {
 				fhrPostInitCb();
 			}
@@ -5059,7 +5067,6 @@ function FHR() {
 	
 	var aWindow = Services.wm.getMostRecentWindow('navigator:browser');
 	var aDocument = aWindow.document;
-	var initedFhr = false;
 	var fhrPostInitCb;
 	
 	var doAfterAppShellDomWinReady = function() {
@@ -5078,9 +5085,26 @@ function FHR() {
 			// aWindow.gBrowser.selectedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);
 			
 			this.destroy = function() {
-				aDocument.documentElement.removeChild(this.frame);
+				
+				this.frame.messageManager.sendAsyncMessage(fhrFsMsgListenerId, ['destroySelf']); // not really needed as i remove the element
+
 				Services.mm.removeMessageListener(fhrFsMsgListenerId, fhrFsMsgListener);
-			};
+				aDocument.documentElement.removeChild(this.frame);
+				
+				delete this.frame; // release reference to it
+				delete this.loadPage;
+				delete this.destroy;
+				
+				for (var i=0; i<gFHR.length; i++) {
+					if (gFHR[i].id == this.id) {
+						gFHR.splice(i, 1);
+						break;
+					}
+				}
+				
+				this.destroyed = true;
+				console.log('ok destroyed FHR instance with id:', this.id);
+			}.bind(this);
 		
 	}.bind(this);
 	
@@ -5093,22 +5117,36 @@ function FHR() {
 		}, false);
 	}
 	
-	this.loadPage = function(aSrc, aCbInfoObj, aDeferred) {
+	this.loadPage = function(aSrc, aCallbackSetName, aDeferredMain_setSrc) {
 		// sets src of frame
 		// aCbInfoObj is a collection of callbacks, like for on fail load, on error etc etc
-	
-		if (aDeferred) {
-			
+		console.log('ok in loadPage for id:', this.id);
+		
+		var deferredMain_setSrc;
+		
+		if (aDeferredMain_setSrc) {
+			console.log('ok set to preset deferred');
+			deferredMain_setSrc = aDeferredMain_setSrc;
 		} else {
-			var deferredMain_setSrc = new Deferred();
+			deferredMain_setSrc = new Deferred();
 			
-			if (!fhrInited) {
-				fhrPostInitCb = this.loadPage(aSrc, aCallback, deferredMain_setSrc);
+			if (!this.inited) {
+				console.log('not yet inited');
+				fhrPostInitCb = this.loadPage(aSrc, aCallbackSetName, deferredMain_setSrc);
+			
+				return deferredMain_setSrc.promise;
 			}
-			
-			return deferredMain_setSrc.promise;
 		}
-	};
+		
+		console.log('sending msg to message manager fhrFsMsgListenerId:', fhrFsMsgListenerId);
+		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aCallbackSetName], fhrFsMsgListener.funcScope, function(aFhrResponse) {
+			console.log('aFhrResponse:', aFhrResponse);
+			deferredMain_setSrc.resolve(aFhrResponse);
+		});
+		
+		return deferredMain_setSrc.promise;
+		
+	}.bind(this);
 	
 }
 
