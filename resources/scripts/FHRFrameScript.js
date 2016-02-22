@@ -221,15 +221,14 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 				}
 			}
 			if (!rez_clickExec) {
-				console.log('all click instructions failed!');
-				gTimeout.cancel(); //clearTimeout(gTimeout);
-				pageLoading = false;
-				removeEventListener('DOMContentLoaded', pageLoaded, false);
-				
-				gMainDeferred_loadPage.resolve([{
-					status: 'fail',
-					statusText: 'click-set-failed'
-				}]);
+				console.log('all click instructions failed!');				
+				loadPage_finalizer(
+					{
+						status: 'fail',
+						statusText: 'click-set-failed'
+					},
+					false
+				);
 			}
 		} else {
 			console.error('should never ever get here');
@@ -246,15 +245,14 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 
 bootstrapMsgListener.funcScope = bootstrapCallbacks; // need to do this, as i setup bootstrapMsgListener above with funcScope as bootstrapCallbacks however it is undefined at that time
 
-function pageTimeouted() {
-	pageLoading = false;
-	removeEventListener('DOMContentLoaded', pageLoaded, false);
-	
-	content.stop();
-	gMainDeferred_loadPage.resolve([{
-		status: 'fail',
-		statusText: 'timeout'
-	}]);
+function pageTimeouted() {	
+	loadPage_finalizer(
+		{
+			status: 'fail',
+			statusText: 'timeout'
+		},
+		true
+	);
 }
 
 function pageLoaded(aCallbackSetName, e) {
@@ -266,21 +264,24 @@ function pageLoaded(aCallbackSetName, e) {
 		// top window not yet loaded
 	} else {
 		// ok top finished loading
-		
-		gTimeout.cancel(); //clearTimeout(gTimeout);
-		pageLoading = false;
-		removeEventListener('DOMContentLoaded', pageLoaded, false);
+
+		loadPage_finalizer();
 		
 		var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 		var docuri = webnav.document.documentURI;
 		
-		if (docuri.indexOf('about:') === 0) {
+		if (docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') == -1) { // because i used http://127.0.0.1/nativeshot it will fail load on allow as well, so i have to detect that here
 			// failed loading
-			gMainDeferred_loadPage.resolve([{
-				status: 'fail',
-				statusText: 'error-loading',
-				docuri: docuri
-			}]);
+			loadPage_finalizer(
+				{
+					status: 'fail',
+					statusText: 'error-loading',
+					docuri: docuri
+				},
+				false
+			);
+			
+			// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/folder_name%3Fstate%3Dblah%23access_token%3Dfda25d1a39fd974a08a0485eccd8cd752ae16dd4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3D32f7854e11b0091c6206d6ff3668a1f6f4f99c52%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 		} else {
 			// test all frames with callback set
 			// if none of the tests of the callback for that return for that frame, then try next frame.
@@ -302,12 +303,31 @@ function pageLoaded(aCallbackSetName, e) {
 					}
 				}
 			}
-			gMainDeferred_loadPage.resolve([{
-				status: 'fail',
-				statusText: 'failed-callbackset',
-				callbackSetName: aCallbackSetName
-			}]);
+			loadPage_finalizer(
+				{
+					status: 'fail',
+					statusText: 'failed-callbackset',
+					callbackSetName: aCallbackSetName
+				},
+				false
+			);
+			
 		}
+	}
+}
+
+function loadPage_finalizer(aFHRResponse, aDoStop) {
+	
+	if (aDoStop) {
+		content.stop();
+	}
+	
+	gTimeout.cancel(); //clearTimeout(gTimeout);
+	pageLoading = false;
+	removeEventListener('DOMContentLoaded', pageLoaded, false);
+	
+	if (aFHRResponse) {
+		gMainDeferred_loadPage.resolve([aFHRResponse]);
 	}
 }
 
@@ -393,22 +413,33 @@ var callbackSet = {
 			},
 			test: function(aContentWindow, aContentDocument) {
 				
-				var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
-				var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
+				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+				var docuri = webnav.document.documentURI;
+				console.log('docuri:', docuri);
 				
-				var receivedParamsKeyVal = {};
-				for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
-					var splitPiece = receivedParamsPiecesStrArr[i].split('=');
-					receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+				if (docuri.indexOf('about:') === 0) {
+					console.log('aContentWindow.location.href:', aContentWindow.location.href);
+					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
+					
+					var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
+					
+					var receivedParamsKeyVal = {};
+					for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
+						var splitPiece = receivedParamsPiecesStrArr[i].split('=');
+						receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+					}
+					
+					this.fhrResponse.allowedParams = receivedParamsKeyVal;
+					return this.fhrResponse;	
 				}
-				
-				this.fhrResponse.allowedParams = receivedParamsKeyVal;
-				return this.fhrResponse;
 			}
 		}
 	]
 	//// 
 }
+
+callbackSet.authorizeApp_imgur.push(callbackSet.allow_imgur[0]); // because going to authorizeApp_imgur goes directly as if allow_imgur if user had previously (non-locally) allowed it (so meaning on their servers) i add in the allow_imgur block to the above, without duplicating copy paste
 
 var clickSet = {
 	//// imgur
@@ -422,32 +453,10 @@ var clickSet = {
 				if (domEl) {
 					domEl.click();
 				}
+				return true;
 			}
 		}
 	]
-}
-
-function testAndFindDomEl(targetDocument, selectorsToTry, ifFound_setKeyDomEl_inThisObj_toFoundElement, throwOnNotFound) {
-	// targetDocument is like aContentDocument
-	// selectorsToTry is an array of objects, with key method being a document method, and arg being the first arg to pass to it
-	// returns true if it finds any of the selectors >= 0
-	// ifFound_setKeyDomEl_inThisObj_toFoundElement must be an object, with key domEl
-	var foundDomEl;
-	for (var i=0; i<selectorsToTry.length; i++) {
-		foundDomEl = targetDocument[selectorsToTry[i].method](selectorsToTry[i].arg);
-		if (foundDomEl) {
-			if (ifFound_setKeyDomEl_inThisObj_toFoundElement) {
-				ifFound_setKeyDomEl_inThisObj_toFoundElement.domEl = foundDomEl;
-			}
-			return true;
-		}
-	}
-	
-	if (throwOnNotFound) {
-		throw new Error('none of the selectors found the allow btn, needs :maintain-per-website:');
-	} else {
-		return false;
-	}
 }
 
 // END - framescript functionality

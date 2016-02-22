@@ -1991,9 +1991,9 @@ var gEditor = {
 			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 			r.onloadend = function() {
 				// cArrBuf = r.result;
-				cBtn.arrbuf = r.result; // link947444544
-				cBtn.width = cWidth;
-				cBtn.height = cHeight;
+				cBtn.data.arrbuf = r.result; // link947444544
+				cBtn.data.width = cWidth;
+				cBtn.data.height = cHeight;
 				
 				var promise_uploadImgToCloud = OAuthWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, aOAuthService]); // link888778
 				promise_uploadImgToCloud.then(
@@ -3721,6 +3721,45 @@ var OAuthWorkerMainThreadFuncs = {
 		
 		return deferredMain_clickAllow.promise;
 	},
+	extractData: function(aBtnId, aDataKeysArr) {
+		// takes a copy from btn data object and sends to worker
+		// if the key contains "arrbuf" it is transferred to worker
+		// aDataKeysArr is a bunch an array of keys for which you want from data to worker
+		
+		var cSendData = {};
+		var cTransfers = [];
+		
+		var cBtnData = gEditorABData_Btn[aBtnId].data;
+		
+		for (var i=0; i<aDataKeysArr.length; i++) {
+			
+			var cKey = aDataKeysArr[i];
+			
+			cSendData[cKey] = cBtnData[cKey];
+			
+			if (cKey.indexOf('arrbuf') > -1) {
+				cTransfers.push(cBtnData[cKey]);
+				cBtnData[cKey] = 'TRANSFERED'; // i dont have to do this, i just do this in case i look for this and go nuts when things dont work. i remember in past i had an arrbuf but it was transfered and so byteLength was 0 and i didnt realize it and was going nuts
+			}
+			
+		}
+		
+		if (cTransfers.length) {
+			console.log('extracting with transfer');
+			return [cSendData, cTransfers, SIP_TRANS_WORD];
+		} else {
+			console.log('extracting as all copies');
+			return [cSendData];
+		}
+	},
+	putToData: function(aBtnId, aDataObj) {
+		// aDataObj is merged into btn data
+		var cBtnData = gEditorABData_Btn[aBtnId].data;
+		for (var p in aDataObj) {
+			cBtnData[p] = aDataObj[p];
+		}
+		aDataObj = null;
+	},
 	updateAB: function(aId) {
 		// aId is the id of aABInfoObj
 	}
@@ -4196,7 +4235,7 @@ function Deferred() {
 	}
 }
 
-// SIPWorker - rev5 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
+// SIPWorker - rev7 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
 const SIP_CB_PREFIX = '_a_gen_cb_';
 const SIP_TRANS_WORD = '_a_gen_trans_';
 var sip_last_cb_id = -1;
@@ -4275,7 +4314,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope) {
 					console.log('promsieworker is trying to execute function in mainthread');
 					
 					var callbackPendingId;
-					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIP_CB_PREFIX) == 0) {
 						callbackPendingId = aMsgEventData.pop();
 					}
 					
@@ -4287,8 +4326,8 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope) {
 							if (rez_mainthread_call.constructor.name == 'Promise') {
 								rez_mainthread_call.then(
 									function(aVal) {
-										if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
-											// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+										if (aVal.length >= 2 && aVal[aVal.length-1] == SIP_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+											// to transfer in callback, set last element in arr to SIP_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
 											console.error('doing transferrrrr');
 											aVal.pop();
 											bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, aVal], aVal.pop());
@@ -4308,9 +4347,10 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope) {
 								);
 							} else {
 								// assume array
-								if (rez_mainthread_call.length > 2 && rez_mainthread_call[rez_mainthread_call.length-1] == SIC_TRANS_WORD && Array.isArray(rez_mainthread_call[rez_mainthread_call.length-2])) {
-									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+								if (rez_mainthread_call.length > 2 && rez_mainthread_call[rez_mainthread_call.length-1] == SIP_TRANS_WORD && Array.isArray(rez_mainthread_call[rez_mainthread_call.length-2])) {
+									// to transfer in callback, set last element in arr to SIP_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
 									rez_mainthread_call.pop();
+									console.log('doiing traansfer');
 									bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, rez_mainthread_call], rez_mainthread_call.pop());
 								} else {
 									bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, rez_mainthread_call]);
