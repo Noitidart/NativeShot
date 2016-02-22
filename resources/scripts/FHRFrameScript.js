@@ -221,13 +221,11 @@ function pageLoaded(aCallbackSetName, e) {
 			}
 	
 			for (var h=0; h<contentWindowArr.length; h++) {
+				console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
 				for (var i=0; i<callbackSet[aCallbackSetName].length; i++) {
 					var rezTest = callbackSet[aCallbackSetName][i].test(contentWindowArr[h], contentWindowArr[h].document);
 					if (rezTest) {
-						gMainDeferred_loadPage.resolve([{
-							statusText: 'error-loading',
-							responseText: docuri
-						}]);
+						gMainDeferred_loadPage.resolve([rezTest]);
 						return;
 					}
 				}
@@ -248,12 +246,36 @@ var callbackSet = {
 	//// dropbox
 	authorizeApp_dropbox: [
 		{
+			fhrResponse: 'testing!!', // string just for test, it should be a fhrResponse object // nice test shows, this.fhrResponse within .test() is accessing the right thing, which is this thing
 			test: function(aContentWindow, aContentDocument) { // must return fhrResponse obj, else it must return undefined/null
 				// if test succesful, then it returns resolveObj, it may update some stuff in resolveObj
 				console.log('this.fhrResponse:', this.fhrResponse);
-			},
+			}
+		},
+		{
 			fhrResponse: {
-				statusText: 'ya'
+				status: 'fail',
+				statusText: 'api-error',
+				apiText: '' // populated by .test()
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var errorDomEl = aContentDocument.getElementById('errorbox');
+				if (errorDomEl) { // :maintain-per-website:
+					this.fhrResponse.apiText = errorDomEl.innerHTML;
+					return this.fhrResponse;
+				}
+			}
+		},
+		{
+			fhrResponse: {
+				status: 'fail',
+				statusText: 'not-logged-in',
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('login-content');
+				if (domEl) { // :maintain-per-website:
+					return this.fhrResponse;
+				}
 			}
 		}
 	]

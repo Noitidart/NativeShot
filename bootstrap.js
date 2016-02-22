@@ -874,6 +874,7 @@ function getUAPEntry_byGEditorSessionId(gEditorSessionId, throwOnNotFound) {
 }
 */
 
+//// start - button interaction with gEditor system AB system FHR system and OAuth system
 // all data must be stored in the gEditorABData_* objects link947444544
 var gEditorABData_Bar = {
 	//	gEditor.sessionId: {
@@ -913,13 +914,33 @@ function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.session
 		btnId: gEditorABData_BtnId, // because of link888778 - so i can tell worker do work on this guy. and when worker needs, he can say to update this guy, and when worker needs, worker can fetch data from this guy
 		// setBtnState: gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]), // obvious why this is needed // :todo: :learn: :verify: gEditorABData_Btn[gEditorABData_BtnId] isnt created at the time of this bind so lets see if it really binds to it not sure
 		data: {}, // link947444544
-		meta: {} // holds meta data, like group of dropbox/twitter/gdrive/imgur etc. and other info to help work with this button
+		meta: {}, // holds meta data, like group of dropbox/twitter/gdrive/imgur etc. and other info to help work with this button
+		getBtnFHR: gEditorABData_getBtnFhr.bind(null, gEditorABData_BtnId)
 	};
 	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId].BtnRef);
 	gEditorABData_Btn[gEditorABData_BtnId].setBtnState = gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]);
 	
 	return gEditorABData_Btn[gEditorABData_BtnId];
 }
+
+function gEditorABData_getBtnFhr(aBtnId) {
+	// creates fhr for this btn if it doesnt have one. if it has one then it returns that
+	// if created, it adds to the unloaders
+	var cFHR;
+	if (!gEditorABData_Btn[aBtnId].data.fhr) {
+		cFHR = new FHR();
+		gEditorABData_Btn[aBtnId].data.fhr = cFHR;
+		gEditorABData_Bar[gEditorABData_Btn[aBtnId].sessionId].unloaders.push(function() {
+			if (cFHR.destroy) { // test this, because it might have already been destroyed
+				cFHR.destroy();
+			} // else it was already destroyed
+		});
+	} else {
+		cFHR = gEditorABData_Btn[aBtnId].data.fhr;
+	}
+	return cFHR;
+}
+//// end - button interaction with gEditor system AB system FHR system and OAuth system
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
 	canComp: null, // holds canvas element
@@ -1974,7 +1995,7 @@ var gEditor = {
 				cBtn.width = cWidth;
 				cBtn.height = cHeight;
 				
-				var promise_uploadImgToCloud = OAuthWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, cBrn.meta.group], null, [cArrBuf]); // link888778
+				var promise_uploadImgToCloud = OAuthWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, aOAuthService]); // link888778
 				promise_uploadImgToCloud.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_uploadImgToCloud - ', aVal);
@@ -2580,6 +2601,10 @@ function shootAllMons(aDOMWindow) {
 				aPriority: 1,
 				aIcon: core.addon.path.images + 'icon16.png',
 				aClose: function() {
+					var cUnloaders = gEditorABData_Bar[cSessionId].unloaders;
+					for (var i=0; i<cUnloaders.length; i++) {
+						cUnloaders[i]();
+					}
 					var thisBtnIds = gEditorABData_Bar[cSessionId].btnIds; // can yse gEditor.sessionId here as it uses live value apparently - bug fix from test result
 					 for (var i=0; i<thisBtnIds.length; i++) {
 						 delete gEditorABData_Btn[thisBtnIds[i]];
@@ -2593,6 +2618,7 @@ function shootAllMons(aDOMWindow) {
 			btnIds: [], // array of generated ids found in gEditorABData_Btn // array of generated ids found in gEditorABData_Btn
 			sessionId: gEditor.sessionId, // so i can group things togather per screenshot
 			// addBtn: gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId]) // moved to link44444455 because this is not binding as the object hasnt been made yet
+			unloaders: []
 		};
 		gEditorABData_Bar[gEditor.sessionId].addBtn = gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId]) // link44444455
 		// end notification bar stuff
@@ -3663,24 +3689,21 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
-var gOauthFHR = {};
 // start - OAuthWorkerMainThreadFuncs
 var OAuthWorkerMainThreadFuncs = {
-	authorizeAppFHR: function(aBtnId, aOAuthService) {
-		if (!gOauthFHR[aBtnId]) {
-			gOauthFHR[aBtnId] = new FHR();
-		}
+	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
+		var deferredMain_authorizeApp = new Deferred();
 		
-		switch (aOAuthService) {
-			case 'dropbox':
-				
-					// gOauthFHR[aBtnId].loadPage()
-				
-				break;
-			default:
-				console.error('invalid aOAuthService:', aOAuthService);
-				throw new Error('invalid aOAuthService');
-		}
+		var promise_fhrResponse = gEditorABData_Btn[aBtnId].getBtnFHR().loadPage(aUrl, aCallbackSetName);
+		promise_fhrResponse.then(
+			function(aFHRResponse) {
+				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+				deferredMain_authorizeApp.resolve([aFHRResponse]);
+			},
+			genericReject.bind(null, 'promise_fhrResponse', deferredMain_authorizeApp)
+		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_authorizeApp));
+		
+		return deferredMain_authorizeApp.promise;
 	},
 	updateAB: function(aId) {
 		// aId is the id of aABInfoObj
@@ -3703,7 +3726,7 @@ function startup(aData, aReason) {
 	
 	SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js'); // if want instant init, tag on .post() and it will return a promise resolving with value from init
 	
-	SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', OAuthWorkerMainThreadFuncs);
+	SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs);
 	
 	CustomizableUI.createWidget({
 		id: 'cui_nativeshot',
@@ -5078,7 +5101,7 @@ function FHR() {
 				this.frame.setAttribute('remote', 'true');
 			// }
 			this.frame.setAttribute('type', 'content');
-			this.frame.setAttribute('style', 'height:10px;border:10px solid steelblue;');
+			this.frame.setAttribute('style', 'height:100px;border:2px solid steelblue;');
 			
 			aDocument.documentElement.appendChild(this.frame);
 			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);			
@@ -5132,7 +5155,7 @@ function FHR() {
 			
 			if (!this.inited) {
 				console.log('not yet inited');
-				fhrPostInitCb = this.loadPage(aSrc, aCallbackSetName, deferredMain_setSrc);
+				fhrPostInitCb = this.loadPage.bind(this, aSrc, aCallbackSetName, deferredMain_setSrc);
 			
 				return deferredMain_setSrc.promise;
 			}
