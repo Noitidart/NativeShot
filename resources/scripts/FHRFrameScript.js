@@ -430,6 +430,71 @@ var callbackSet = {
 			}
 		}
 	],
+	//// gdrive
+	authorizeApp_gdrive: [
+		{
+			fhrResponse: {
+				status: 'fail',
+				statusText: 'not-logged-in',
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('gaia_loginform');
+				if (domEl) { // :maintain-per-website:
+					return this.fhrResponse;
+				}
+			}
+		},
+		{
+			fhrResponse: {
+				status: 'ok',
+				statusText: 'logged-in-allow-screen',
+				username: '' // set by .test() // so oauth worker can test prefs to see if this username was allowed yet
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('submit_approve_access');
+				if (domEl) { // :maintain-per-website:
+				
+					var loggedInUserDomEl = aContentDocument.querySelector('a[href*=SignOutOptions]');
+					if (loggedInUserDomEl) {
+						this.fhrResponse.username = loggedInUserDomEl.childNodes[0].textContent;
+					}
+					return this.fhrResponse;
+				}
+			}
+		}
+	],
+	allow_gdrive: [
+		{
+			fhrResponse: {
+				status: 'ok',
+				statusText: 'allowed',
+				allowedParams: '' // set by .test()
+			},
+			test: function(aContentWindow, aContentDocument) {
+				
+				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+				var docuri = webnav.document.documentURI;
+				console.log('docuri:', docuri);
+				
+				if (docuri.indexOf('about:') === 0) {
+					console.log('aContentWindow.location.href:', aContentWindow.location.href);
+					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
+					
+					var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
+					
+					var receivedParamsKeyVal = {};
+					for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
+						var splitPiece = receivedParamsPiecesStrArr[i].split('=');
+						receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
+					}
+					
+					this.fhrResponse.allowedParams = receivedParamsKeyVal;
+					return this.fhrResponse;	
+				}
+			}
+		}
+	],
 	//// imgur
 	authorizeApp_imgur: [
 		{
@@ -498,8 +563,9 @@ var callbackSet = {
 	//// 
 }
 
-callbackSet.authorizeApp_imgur.push(callbackSet.allow_imgur[0]); // because going to authorizeApp_imgur goes directly as if allow_imgur if user had previously (non-locally) allowed it (so meaning on their servers) i add in the allow_imgur block to the above, without duplicating copy paste
 callbackSet.authorizeApp_dropbox.push(callbackSet.allow_dropbox[0]);
+callbackSet.authorizeApp_gdrive.push(callbackSet.allow_gdrive[0]);
+callbackSet.authorizeApp_imgur.push(callbackSet.allow_imgur[0]); // because going to authorizeApp_imgur goes directly as if allow_imgur if user had previously (non-locally) allowed it (so meaning on their servers) i add in the allow_imgur block to the above, without duplicating copy paste
 
 var clickSet = {
 
@@ -513,6 +579,24 @@ var clickSet = {
 				var domEl = aContentDocument.querySelector('.auth-button[name=allow_access]');
 				if (domEl) {
 					domEl.click();
+				}
+				return true;
+			}
+		}
+	],
+	//// gdrive
+	allow_gdrive: [
+		{
+			// fhrRequest: { // the allow button as of 02216 when user is logged in
+			// 	statusText: 'this is fhrRequest object, this is just for my notes.'
+			// },
+			exec: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('submit_approve_access');
+				if (domEl) {
+					// aContentWindow.setInterval(function() {
+						// console.log('clicking now, disabled:', domEl.getAttribute('disabled'));
+						domEl.click();
+					// }, 1000);
 				}
 				return true;
 			}
