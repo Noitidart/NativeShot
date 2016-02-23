@@ -257,7 +257,7 @@ function get_gEMenuDomJson() {
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-img-host-anon')},
 						['xul:menupopup', {},
 							/*['xul:menuitem', {label:'FreeImageHosting.net'}],*/
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_imgur'), oncommand:function(e){ gEditor.uploadToImgur(e, false) }}]
+							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_imgur'), oncommand:function(e){ gEditor.uploadOauth(e, 'imguranon') }}]
 						]
 					],
 					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_share-to-social')},
@@ -1593,161 +1593,6 @@ var gEditor = {
 		this.forceFocus = true; // as user needs browser focus so they can tweet it
 		this.closeOutEditor(e);
 	},
-	uploadToImgur: function(e, aBoolAnon) {
-		// aBoolAnon true if want anonymous upload
-		this.compositeSelection();
-		
-		var data = this.canComp.toDataURL('image/png'); // returns `data:image/png;base64,iVBORw.....`
-
-		data = data.substr('data:image/png;base64,'.length); // imgur wants without this
-		
-
-		
-		var abortReuploadAndToFile = function() {
-			// turn data url to file and do quick save
-			gColReuploadTimers[reuploadTimerId].timer.cancel();
-			delete gColReuploadTimers[reuploadTimerId];
-
-			// save data url to file
-			// http://stackoverflow.com/questions/25145792/write-a-data-uri-to-a-file-in-a-firefox-extension/25148685#25148685
-
-			var dataAtob = atob(data);
-			// Decode to an Uint8Array, because OS.File.writeAtomic expects an ArrayBuffer(View).
-			var byteArr = new Uint8Array(dataAtob.length);
-			for (var i = 0, e = dataAtob.length; i < e; ++i) {
-			  byteArr[i] = dataAtob.charCodeAt(i);
-			}
-
-			
-			// start - copy block link7984654 - slight modificaiton
-			// get save path
-			var OSPath_saveDir = getPrefNoSetStuff('quick_save_dir');
-			
-			// generate file name
-			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + ' - ' + myServices.sb.GetStringFromName('failed-upload') + '.png';
-			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
-			// end - copy block link7984654 - slight modificaiton
-			
-			// start - copy block link49842300 - slight mod
-			var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, byteArr, { tmpPath: OSPath_save + '.tmp' });
-			promise_saveToDisk.then(
-				function(aVal) {
-
-					// start - do stuff here - promise_saveToDisk
-					var trans = Transferable(Services.wm.getMostRecentWindow('navigator:browser'));
-					trans.addDataFlavor('text/unicode');
-					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-					trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
-					
-					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-					
-					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
-					// end - do stuff here - promise_saveToDisk
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-
-					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
-					//deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-
-					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
-					//deferred_createProfile.reject(rejObj);
-				}
-			);
-			// end - copy block link49842300 - slight mod
-		};
-		
-		var reuploadTimerId = gLastReuploadTimerId++;
-		var reuploadFunc = function() {
-			if (!gColReuploadTimers[reuploadTimerId]) {
-				gColReuploadTimers[reuploadTimerId] = {
-					timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer),
-					callback: {
-						notify: function() {
-							do_xhrToImgur();
-						}
-					},
-					attempt: 0
-				};
-			}
-			gColReuploadTimers[reuploadTimerId].attempt++;
-			gColReuploadTimers[reuploadTimerId].timer.initWithCallback(gColReuploadTimers[reuploadTimerId].callback, reuploadTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
-			gEditor.showNotif(myServices.sb.formatStringFromName('notif-title_anon-upload-fail', [gColReuploadTimers[reuploadTimerId].attempt], 1), myServices.sb.GetStringFromName('notif-body_anon-upload-fail'), abortReuploadAndToFile);
-		};
-		
-		var do_xhrToImgur = function() {
-			var promise_uploadAnonImgur = xhr('https://api.imgur.com/3/upload', {
-				aPostData: {
-					image: data, // this gets encodeURIComponent'ed by my xhr function
-					type: 'base64'
-				},
-				Headers: {
-					Authorization: 'Client-ID fa64a66080ca868',
-					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' // if i dont do this, then by default Content-Type is `text/plain; charset=UTF-8` and it fails saying `aReason.xhr.response.data.error == 'Image format not supported, or image is corrupt.'` and i get `aReason.xhr.status == 400`
-				},
-				aResponseType: 'json'
-			});
-			
-			promise_uploadAnonImgur.then(
-				function(aVal) {
-
-					// start - do stuff here - promise_uploadAnonImgur
-					if (!aVal.response.success) {
-						reuploadFunc();
-						return;
-					}
-					if (gColReuploadTimers[reuploadTimerId]) {
-						delete gColReuploadTimers[reuploadTimerId];
-					}
-					
-					var imgUrl = aVal.response.data.link;
-					var deleteHash = aVal.response.data.deletehash; // at time of this writing jul 13 2015 the delete link is `'http://imgur.com/delete/' + deleteHash` (ie: http://imgur.com/delete/AxXkaRTpZILspsh)
-					var imgId = aVal.response.data.id;
-					
-					var trans = Transferable(gEditor.gBrowserDOMWindow);
-					trans.addDataFlavor('text/unicode');
-					// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-					trans.setTransferData('text/unicode', SupportsString(imgUrl), imgUrl.length * 2);
-					
-					Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-					
-					// add in update to log file
-					appendToHistoryLog('imgur-anonymous', {
-						d: new Date().getTime(),
-						x: deleteHash,
-						n: imgId
-					});
-					
-					gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_anon-upload-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
-					// end - do stuff here - promise_uploadAnonImgur
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_uploadAnonImgur', aReason:aReason};
-
-					// i have seen aReason.xhr.status == 405 and aReason.xhr.statusText == 'Not Allowed'
-					reuploadFunc();
-					//deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_uploadAnonImgur', aCaught:aCaught};
-
-					//deferred_createProfile.reject(rejObj);
-					//myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', core.addon.name + ' - ' + 'Upload Failed', 'Upload to Imgur failed, see Browser Console for details');
-					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
-				}
-			);
-		};
-		
-		
-		do_xhrToImgur();
-		
-		this.closeOutEditor(e);
-	},
 	reverseSearch: function(e, serviceType) {
 		// serviceType
 			// 0 - tineye
@@ -1947,15 +1792,18 @@ var gEditor = {
 			// dropbox
 			// gdrive
 			// imgur
+			// imguranon
 			
 		this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		
+
 		switch (aOAuthService) {
 			case 'dropbox':
 			case 'imgur':
 			case 'gdrive':
+			case 'imguranon':
 				
 					// good dont error
 				
