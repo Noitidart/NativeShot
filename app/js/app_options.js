@@ -3,19 +3,20 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	
 	// when done must call aPostNonSkelInit_CB();
 	var do_step1 = function() {
-		// refresh prefs in bootstrap core object
-		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['refreshCoreForPrefs']], bootstrapMsgListener.funcScope, function(aCoreAddonPrefs) {
-			console.log('aCoreAddonPrefs:', aCoreAddonPrefs);
-			do_step2();
-		});
-	};
-	
-	var do_step2 = function() {
 		// fetch core - it will have the udpated prefs
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['returnCore']], bootstrapMsgListener.funcScope, function(aCore) {
 			
 			core = aCore;
 			
+			do_step2();
+		});
+	};
+	
+	var do_step2 = function() {
+		// refresh prefs in bootstrap core object - as source of truth  for prefs is in bootstrap
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['refreshCoreForPrefs']], bootstrapMsgListener.funcScope, function(aCoreAddonPrefs) {
+			console.log('aCoreAddonPrefs:', aCoreAddonPrefs);
+			core.addon.prefs = aCoreAddonPrefs;
 			do_step3();
 		});
 	};
@@ -147,8 +148,13 @@ var gDOMStructureCallbacks = {
 		return (!aBlockState.value ? core.addon.l10n.app_options.on : core.addon.l10n.app_options.off);
 	},
 	'callback:quickdir-reset-hidden': function(aBlockState) {
+		console.error('aBlockState.value:', aBlockState.value, 'core.addon.prefs.quick_save_dir.defaultValue:', core.addon.prefs.quick_save_dir.defaultValue);
 		if (aBlockState.value == core.addon.prefs.quick_save_dir.defaultValue) {
+			console.log('euqla so hide');
 			return true;
+		} else {
+			console.log('mismatch so show');
+			return false;
 		}
 	},
 	'callback:quickdir-sup': function(aBlockState) {
@@ -217,7 +223,9 @@ var gDOMStructureCallbacks = {
 };
 
 function getObjKeyVal(aObj, aKey, aState) { // react components uses this only for non-click callbacks
-	// console.log('doing getObjKeyVal on aObj:', aObj, 'aKey:', aKey, 'aState:', aState);
+	if (aKey == 'hidden') {
+		console.error('doing getObjKeyVal on aObj:', aObj, 'aKey:', aKey, 'aState:', aState);
+	}
 	if (aKey in aObj) {
 		var cVal = aObj[aKey];
 		if (typeof(cVal) == 'string' && gDOMStructureCallbacks[cVal]) {
@@ -342,8 +350,9 @@ var Block = React.createClass({
 		// console.log('cBtns:', cBtns);
 		for (var i=0; i<cBtns.length; i++) {
 			var cBtnHidden = getObjKeyVal(cBtns[i], 'hidden', this.props.sBlockValue);
+			console.error('cBtnHidden:', cBtnHidden);
 			if (!cBtnHidden) {
-				cBlockBtns.push(React.createElement(Button, {sBlockValue:this.props.sBlockValue, pBtn:cBtns[i], key:(new Date()).getTime()}));
+				cBlockBtns.push(React.createElement(Button, {sBlockValue:this.props.sBlockValue, pBtn:cBtns[i]}));
 			}
 		}
 		console.log('cBlockBtns:', cBlockBtns);
