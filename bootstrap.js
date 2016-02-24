@@ -4,23 +4,23 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 const PromiseWorker = Cu.import('resource://gre/modules/PromiseWorker.jsm').BasePromiseWorker;
 Cu.import('resource:///modules/CustomizableUI.jsm');
-
 Cu.import('resource://gre/modules/ctypes.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
 const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
-Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 
-var importGlobalPropertiesArr = ['btoa', 'atob'];
+var importGlobalPropertiesArr = [];
 if (!Ci.nsIDOMFileReader) {
 	importGlobalPropertiesArr.push('FileReader');
 }
-Cu.importGlobalProperties(importGlobalPropertiesArr);
+if (importGlobalPropertiesArr.length) {
+	Cu.importGlobalProperties(importGlobalPropertiesArr);
+}
 
 // Globals
-const core = {
+var core = {
 	addon: {
 		name: 'NativeShot',
 		id: 'NativeShot@jetpack',
@@ -32,12 +32,13 @@ const core = {
 			locale: 'chrome://nativeshot/locale/',
 			resources: 'chrome://nativeshot/content/resources/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
-			styles: 'chrome://nativeshot/content/resources/styles/',
+			styles: 'chrome://nativeshot/content/resources/styles/'
 		},
+		prefbranch: 'extensions.NativeShot@jetpack.', // 'extensions.' + core.addon.id + '.',
 		cache_key: Math.random() // set to version on release
 	},
 	os: {
-		name: OS.Constants.Sys.Name.toLowerCase(),
+		// name: OS.Constants.Sys.Name.toLowerCase(),
 		toolkit: Services.appinfo.widgetToolkit.toLowerCase(),
 		xpcomabi: Services.appinfo.XPCOMABI
 	},
@@ -50,9 +51,7 @@ const core = {
 var bootstrap = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
-const cui_cssUri = Services.io.newURI(core.addon.path.styles + 'cui.css', null, null);
 const JETPACK_DIR_BASENAME = 'jetpack';
-const OSPath_historyImgHostAnonImgur = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'imgur-history-anon.unbracketed.json');
 const OSPath_historyLog = OS.Path.join(OS.Constants.Path.profileDir, JETPACK_DIR_BASENAME, core.addon.id, 'simple-storage', 'history-log.unbracketed.json');
 
 const TWITTER_MAX_FILE_SIZE = 5242880; // i got this from doing debugger prettify on twitter javascript files
@@ -63,14 +62,11 @@ const TWITTER_IMG_SUFFIX = ':large';
 const TINEYE_REV_SEARCH_URL = 'http://tineye.com/search';
 const GOOGLEIMAGES_REV_SEARCH_URL = 'https://images.google.com/searchbyimage/upload';
 
-const myPrefBranch = 'extensions.' + core.addon.id + '.';
-
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
 XPCOMUtils.defineLazyGetter(myServices, 'mm', function () { return Cc['@mozilla.org/globalmessagemanager;1'].getService(Ci.nsIMessageBroadcaster).QueryInterface(Ci.nsIFrameScriptLoader); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
@@ -141,30 +137,37 @@ var observers = {
 };
 //end obs stuff
 
-// about module
+// start - about module
 var aboutFactory_nativeshot;
 function AboutNativeShot() {}
-AboutNativeShot.prototype = Object.freeze({
-	classDescription: 'NativeShot Dashboard',
-	contractID: '@mozilla.org/network/protocol/about;1?what=nativeshot',
-	classID: Components.ID('{2079bd20-3369-11e5-a2cb-0800200c9a66}'),
-	QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
 
-	getURIFlags: function(aURI) {
-		return Ci.nsIAboutModule.ALLOW_SCRIPT | Ci.nsIAboutModule.URI_CAN_LOAD_IN_CHILD;
-	},
+function initAndRegisterAboutNativeShot() {
+	// init it
+	AboutNativeShot.prototype = Object.freeze({
+		classDescription: justFormatStringFromName(core.addon.l10n.bootstrap.about_page_desc),
+		contractID: '@mozilla.org/network/protocol/about;1?what=nativeshot',
+		classID: Components.ID('{2079bd20-3369-11e5-a2cb-0800200c9a66}'),
+		QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
 
-	newChannel: function(aURI) {
-		var channel;
-		if (aURI.path.toLowerCase().indexOf('?options') > -1) {
-			channel = Services.io.newChannel(core.addon.path.content + 'app/options.xhtml', null, null);
-		} else {
-			channel = Services.io.newChannel(core.addon.path.content + 'app/main.xhtml', null, null);
+		getURIFlags: function(aURI) {
+			return Ci.nsIAboutModule.ALLOW_SCRIPT | Ci.nsIAboutModule.URI_CAN_LOAD_IN_CHILD;
+		},
+
+		newChannel: function(aURI, aSecurity) {
+			var channel;
+			if (aURI.path.toLowerCase().indexOf('?options') > -1) {
+				channel = Services.io.newChannel(core.addon.path.content + 'app/options.xhtml', null, null);
+			} else {
+				channel = Services.io.newChannel(core.addon.path.content + 'app/main.xhtml', null, null);
+			}
+			channel.originalURI = aURI;
+			return channel;
 		}
-		channel.originalURI = aURI;
-		return channel;
-	}
-});
+	});
+	
+	// register it
+	aboutFactory_nativeshot = new AboutFactory(AboutNativeShot);
+}
 
 function AboutFactory(component) {
 	this.createInstance = function(outer, iid) {
@@ -182,6 +185,7 @@ function AboutFactory(component) {
 	Object.freeze(this);
 	this.register();
 }
+// end - about module
 
 // START - Addon Functionalities					
 // global editor values
@@ -231,10 +235,10 @@ function get_gEMenuDomJson() {
 		gEMenuDomJson =
 			['xul:popupset', {},
 				['xul:menupopup', {id: 'myMenu1'},
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-quick'), oncommand:function(e){ gEditor.saveToFile(e, true) }}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_save-file-browse'), oncommand:function(e){ gEditor.saveToFile(e) }}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_copy'), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
-					['xul:menuitem', {id:'print_menuitem', label:myServices.sb.GetStringFromName('editor-menu_print'), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-quick']), oncommand:function(e){ gEditor.saveToFile(e, true) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-browse']), oncommand:function(e){ gEditor.saveToFile(e) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_copy']), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
+					['xul:menuitem', {id:'print_menuitem', label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_print']), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
 					['xul:menu', {label:'Upload to Cloud Drive'}, // :l10n:
 						['xul:menupopup', {},
 							// ['xul:menuitem', {label:'Amazon Cloud Drive'}],
@@ -254,39 +258,39 @@ function get_gEMenuDomJson() {
 							// ['xul:menuitem', {label:'Photobucket'}]
 						]
 					],
-					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_upload-img-host-anon')},
+					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_upload-img-host-anon'])},
 						['xul:menupopup', {},
 							/*['xul:menuitem', {label:'FreeImageHosting.net'}],*/
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_imgur'), oncommand:function(e){ gEditor.uploadOauth(e, 'imguranon') }}]
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_imgur']), oncommand:function(e){ gEditor.uploadOauth(e, 'imguranon') }}]
 						]
 					],
-					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_share-to-social')},
+					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_share-to-social'])},
 						['xul:menupopup', {},
 							/*['xul:menuitem', {label:'Facebook'}],*/
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_twitter'), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_twitter']), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
 						]
 					],
-					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_search-reverse')},
+					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_search-reverse'])},
 						['xul:menupopup', {},
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_tineye'), oncommand:function(e){ gEditor.reverseSearch(e, 0) }}],
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_google-images'), oncommand:function(e){ gEditor.reverseSearch(e, 1) }}]
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_tineye']), oncommand:function(e){ gEditor.reverseSearch(e, 0) }}],
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_google-images']), oncommand:function(e){ gEditor.reverseSearch(e, 1) }}]
 						]
 					],
-					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_ocr')},
+					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocr'])},
 						['xul:menupopup', {},
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_gocr'), oncommand:function(e){ gEditor.ocr(e, 'gocr') }}],
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_ocrad'), oncommand:function(e){ gEditor.ocr(e, 'ocrad') }}],
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_tesseract'), oncommand:function(e){ gEditor.ocr(e, 'tesseract') }}],
-							['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_ocr-all'), oncommand:function(e){ gEditor.ocr(e, 'all') }}]
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_gocr']), oncommand:function(e){ gEditor.ocr(e, 'gocr') }}],
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocrad']), oncommand:function(e){ gEditor.ocr(e, 'ocrad') }}],
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_tesseract']), oncommand:function(e){ gEditor.ocr(e, 'tesseract') }}],
+							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocr-all']), oncommand:function(e){ gEditor.ocr(e, 'all') }}]
 						]
 					],
 					['xul:menuseparator', {}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-clear'), oncommand:function(e){ gEditor.clearSelection(e) }}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-last'), oncommand:function(e){ gEditor.repeatLastSelection(e) }, id:'repeatLastSelection'}],
-					['xul:menu', {label:myServices.sb.GetStringFromName('editor-menu_select-fullscreen')},
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-clear']), oncommand:function(e){ gEditor.clearSelection(e) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-last']), oncommand:function(e){ gEditor.repeatLastSelection(e) }, id:'repeatLastSelection'}],
+					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-fullscreen'])},
 						gEMenuArrRefs.select_fullscreen
 					],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-window'), oncommand:function(e){ gEditor.selectWindow(e) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-window']), oncommand:function(e){ gEditor.selectWindow(e) }}],
 					/*
 					['xul:menu', {label:'Select Window'},
 						['xul:menupopup', {},
@@ -303,7 +307,7 @@ function get_gEMenuDomJson() {
 					]
 					*/
 					['xul:menuseparator', {}],
-					['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_close'), oncommand:function() { gEditor.closeOutEditor({shiftKey:false}) }}]
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_close']), oncommand:function() { gEditor.closeOutEditor({shiftKey:false}) }}]
 				]
 			];
 	}
@@ -448,9 +452,9 @@ var gENotifCallback = {
 		if (gENotifPending.length > 0) {
 			if (gENotifPending[0].aClickCookie !== null) {
 
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
 			} else {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', myServices.sb.GetStringFromName('addon_name') + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
+				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
 			}
 			gNotifTimer.initWithCallback(gENotifCallback, gNotifTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
 		} else {
@@ -556,7 +560,7 @@ const fsComServer = {
 							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
 							
 							// NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Not Signed In - Focus this tab and sign in, or sign into Twitter in another tab then reload this tab', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
-							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-but-not-signed-in') + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
+							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-not-signed-in']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
 							
 							
 						break;
@@ -569,13 +573,13 @@ const fsComServer = {
 							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
 							
 							// NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Tweet Dialog Closed - Twitter auto detached imgs - Click to reopen/reattach', 'nativeshot-twitter-bad', 'reopen-tweet-modal')
-							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-but-dialog-closed') + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'reopen-tweet-modal');
+							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-dialog-closed']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'reopen-tweet-modal');
 							
 						break;
 					case 'clientNotify_signedInShowAwaitingMsg':
 							
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
-							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
+							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 							
 						break;
 					case 'clientNotify_imgDeleted':
@@ -605,20 +609,20 @@ const fsComServer = {
 											case 'error-loading':
 													
 													// aMsg = 'Error loading Twitter - You may be offline - Click to open new tab and try again';
-													aMsg = myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-but-error-loading');
+													aMsg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-error-loading']);
 													
 												break;
 											case 'non-twitter-load':
 											case 'twitter-page-unloaded':
 													
 													// aMsg = 'Navigated away from Twitter.com - Click to open new tab with Twitter';
-													aMsg = myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-but-twitter-unloaded');
+													aMsg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-twitter-unloaded']);
 													
 												break;
 											case 'tab-closed':
 													
 													// aMsg = 'Tab Closed - Click to reopen';
-													aMsg = myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-but-tab-closed');
+													aMsg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-tab-closed']);
 													
 												break;
 											default:
@@ -662,7 +666,7 @@ const fsComServer = {
 										}
 										if (cntBtnsTweeted == aBtnInfos.length) {
 											// NBs.crossWin[crossWinId].msg = 'All images were succesfully tweeted!'; //:l10n:
-											NBs.crossWin[crossWinId].msg = myServices.sb.GetStringFromName('notif-bar_twitter-msg-imgs-tweeted');
+											NBs.crossWin[crossWinId].msg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-msg-imgs-tweeted']);
 										}
 										
 										if (!aBtnInfo) {
@@ -673,24 +677,24 @@ const fsComServer = {
 										// no need to delete aBtnInfo.actionOnBtn as its not type menu so it wont have any affect
 										aBtnInfo.tweeted = true;
 										// aBtnInfo.label = 'Successfully Tweeted - Image URLs Copied';
-										aBtnInfo.label = myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-tweeted') + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')';
+										aBtnInfo.label = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-tweeted']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')';
 										aBtnInfo.class = 'nativeshot-twitter-good';
 										aBtnInfo.type = 'menu';
 										aBtnInfo.popup = ['xul:menupopup', {},
 															// ['xul:menuitem', {label:'Tweet URL', oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL, null) }] // :l10n:
-															['xul:menuitem', {label:myServices.sb.GetStringFromName('notif-bar_twitter-menu-copy-tweet-link'), oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL, null) }]
+															['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-menu-copy-tweet-link']), oncommand:copyTextToClip.bind(null, refUAPEntry.tweetURL, null) }]
 														 ];
 
 										var arrOfImgUrls = [];
 										for (var imgId in refUAPEntry.imgDatas) {
 											arrOfImgUrls.push(aMsg.json.clips[imgId]);
 											// aBtnInfo.popup.push(['xul:menuitem', {label:'Image ' + arrOfImgUrls.length + ' URL', oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId], null)}]); // :l10n:
-											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-single-image-link', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId] + TWITTER_IMG_SUFFIX, null)}]);
+											aBtnInfo.popup.push(['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-menu-copy-single-image-link'], [arrOfImgUrls.length]), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId] + TWITTER_IMG_SUFFIX, null)}]);
 										}
 										
 										if (arrOfImgUrls.length > 1) {
 											// aBtnInfo.popup.push(['xul:menuitem', {label:'All ' + arrOfImgUrls.length + ' Image URLs', oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'), null)}]); // :l10n:
-											aBtnInfo.popup.push(['xul:menuitem', {label:myServices.sb.formatStringFromName('notif-bar_twitter-menu-copy-all-image-links', [arrOfImgUrls.length], 1), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX, null)}]);
+											aBtnInfo.popup.push(['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-menu-copy-all-image-links'], [arrOfImgUrls.length]), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX, null)}]);
 										}
 										
 										// copy all img urls to clipboard:
@@ -835,7 +839,7 @@ const fsComServer = {
 			}
 
 			// NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Tweet dialog opened and images attached - awaiting user input', 'nativeshot-twitter-neutral', 'focus-tab'); // i can show this, but i am not showing "'Waiting to for progrmattic attach'" so not for right now, but i guess would be nice maybe, but maybe too much info
-			NBs_updateGlobal_updateTwitterBtn(refUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab'); // this is good, because if was found not signed in, then on signed in load it opens up and is waiting for attach, but needs user focus
+			NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab'); // this is good, because if was found not signed in, then on signed in load it opens up and is waiting for attach, but needs user focus
 		} else {
 
 			// not yet availble to attach so do nothing. because when fs is ready to attach it will send me a clientNotify_readyToAttach, and i run this function of twitter_IfFSReadyToAttach_sendNextUnattached there
@@ -1075,7 +1079,7 @@ var gEditor = {
 		
 		if (!gEditor.winArr) {
 
-			var promise_fetchWin = MainWorker.post('getAllWin', [{
+			var promise_fetchWin = ScreenshotWorker.post('getAllWin', [{
 				getPid: true,
 				getBounds: true,
 				getTitle: true,
@@ -1234,7 +1238,7 @@ var gEditor = {
 							
 							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
 							
-							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-ok'), myServices.sb.GetStringFromName('notif-body_file-save-ok'), notifCB_saveToFile.bind(null, OSPath_save));
+							gEditor.showNotif(justFormatStringFromName(core.addon.l10n.bootstrap['notif-title_file-save-ok']), justFormatStringFromName(core.addon.l10n.bootstrap['notif-body_file-save-ok']), notifCB_saveToFile.bind(null, OSPath_save));
 							
 							appendToHistoryLog(aBoolPreset ? 'save-quick' : 'save-browse', {
 								d: new Date().getTime(),
@@ -1247,7 +1251,7 @@ var gEditor = {
 						function(aReason) {
 							var rejObj = {name:'promise_saveToDisk', aReason:aReason};
 
-							gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_file-save-fail'), myServices.sb.GetStringFromName('notif-body_file-save-fail'));
+							gEditor.showNotif(justFormatStringFromName(core.addon.l10n.bootstrap['notif-title_file-save-fail']), justFormatStringFromName(core.addon.l10n.bootstrap['notif-body_file-save-fail']));
 							//deferred_createProfile.reject(rejObj);
 						}
 					).catch(
@@ -1270,7 +1274,7 @@ var gEditor = {
 			var OSPath_saveDir = getPrefNoSetStuff('quick_save_dir');
 			
 			// generate file name
-			var filename = myServices.sb.GetStringFromName('screenshot') + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
+			var filename = justFormatStringFromName(core.addon.l10n.bootstrap['screenshot']) + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
 			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
 			// end - copy block link7984654
 						
@@ -1295,7 +1299,7 @@ var gEditor = {
 
 			}
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(e.view, myServices.sb.GetStringFromName('filepicker-title-save-screenshot'), Ci.nsIFilePicker.modeSave);
+			fp.init(e.view, justFormatStringFromName(core.addon.l10n.bootstrap['filepicker-title-save-screenshot']), Ci.nsIFilePicker.modeSave);
 			fp.appendFilter('PNG Image', '*.png');
 			
 			var rv = fp.show();
@@ -1365,7 +1369,7 @@ var gEditor = {
 		  }    
 		*/
 		
-		gEditor.showNotif(myServices.sb.GetStringFromName('notif-title_clipboard-ok'), myServices.sb.GetStringFromName('notif-body_clipboard-ok'));
+		gEditor.showNotif(justFormatStringFromName(core.addon.l10n.bootstrap['notif-title_clipboard-ok']), justFormatStringFromName(core.addon.l10n.bootstrap['notif-body_clipboard-ok']));
 		
 		appendToHistoryLog('copy', {
 			d: new Date().getTime()
@@ -1539,8 +1543,8 @@ var gEditor = {
 			fsComServer.twitterInitFS(refUAPEntry.userAckId);
 			if (crossWinId in NBs.crossWin) {
 				NBs.crossWin[crossWinId].btns.push({
-					// label: myServices.sb.formatStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet', [1], 1) + '-ID:' + refUAPEntry.userAckId, // :l10n:
-					label: myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + 1 + ')' + '-ID:' + refUAPEntry.userAckId,
+					// label: justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet'], [1]) + '-ID:' + refUAPEntry.userAckId, // :l10n:
+					label: justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + 1 + ')' + '-ID:' + refUAPEntry.userAckId,
 					// label: 'Waiting to for progrmattic attach (1)-ID:' + refUAPEntry.userAckId,
 					btn_id: refUAPEntry.userAckId,
 					class: 'nativeshot-twitter-neutral',
@@ -1550,13 +1554,13 @@ var gEditor = {
 			} else {
 				NBs.crossWin[crossWinId] = {
 					// msg: 'Images have been prepared for Tweeting. User interaction needed in order to complete:', // :l10n:
-					msg: myServices.sb.GetStringFromName('notif-bar_twitter-msg-imgs-awaiting-user-action'),
+					msg: justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-msg-imgs-awaiting-user-action']),
 					img: core.addon.path.images + 'twitter16.png',
 					p: 6,
 					btns: [{
 						// label: 'Image Pending Tweet (1)-ID:' + refUAPEntry.userAckId,
 						// label: 'Waiting to for progrmattic attach (1)-ID:' + refUAPEntry.userAckId,
-						label: myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + 1 + ')' + '-ID:' + refUAPEntry.userAckId,
+						label: justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + 1 + ')' + '-ID:' + refUAPEntry.userAckId,
 						btn_id: refUAPEntry.userAckId,
 						class: 'nativeshot-twitter-neutral',
 						accessKey: 'T',
@@ -1573,8 +1577,8 @@ var gEditor = {
 				}
 			}
 			// btnEntryInCrossWin.label = 'Images Pending Tweet (' + (refUAPEntry.imgDatasCount + 1) + ')-ID:' + refUAPEntry.userAckId;  // :l10n:
-			if (btnEntryInCrossWin.label.indexOf(myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet')) == 0) { // cuz page loads in bg before notif is shown, so if user is doing multi stuff, the btn may have been updated to "not signed in" error msg or something
-				btnEntryInCrossWin.label = myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + (refUAPEntry.imgDatasCount + 1) + ')' + '-ID:' + refUAPEntry.userAckId;
+			if (btnEntryInCrossWin.label.indexOf(justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet'])) == 0) { // cuz page loads in bg before notif is shown, so if user is doing multi stuff, the btn may have been updated to "not signed in" error msg or something
+				btnEntryInCrossWin.label = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + (refUAPEntry.imgDatasCount + 1) + ')' + '-ID:' + refUAPEntry.userAckId;
 			}
 		}
 		
@@ -2189,7 +2193,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	};
 	
 	// if (core.os.name != 'darwinAAAA') {
-		var promise_setWinAlwaysTop = MainWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
+		var promise_setWinAlwaysTop = ScreenshotWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
 		promise_setWinAlwaysTop.then(
 			function(aVal) {
 
@@ -2483,7 +2487,7 @@ function shootAllMons(aDOMWindow) {
 		}
 	};
 	
-	var promise_shoot = MainWorker.post('shootAllMons', []);
+	var promise_shoot = ScreenshotWorker.post('shootAllMons', []);
 	promise_shoot.then(
 		function(aVal) {
 
@@ -2516,13 +2520,13 @@ function shootAllMons(aDOMWindow) {
 			if (!gEMenuArrRefs.select_fullscreen || gEMenuArrRefs.select_fullscreen.length != 2 + colMon.length) {
 				gEMenuArrRefs.select_fullscreen = 
 					['xul:menupopup', {},
-						['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-current-mon'), oncommand:gEditor.selectMonitor.bind(null, -1)}],
-						['xul:menuitem', {label:myServices.sb.GetStringFromName('editor-menu_select-all-mon'), oncommand:gEditor.selectMonitor.bind(null, -2)}]
+						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-current-mon']), oncommand:gEditor.selectMonitor.bind(null, -1)}],
+						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-all-mon']), oncommand:gEditor.selectMonitor.bind(null, -2)}]
 					]
 				;
 				for (var i=0; i<colMon.length; i++) {
 					gEMenuArrRefs.select_fullscreen.push(
-						['xul:menuitem', {label:myServices.sb.formatStringFromName('editor-menu_select-mon-n', [i+1], 1), oncommand:gEditor.selectMonitor.bind(null, i)}]
+						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-mon-n'], [i+1]), oncommand:gEditor.selectMonitor.bind(null, i)}]
 					);
 				}
 			}
@@ -2533,7 +2537,7 @@ function shootAllMons(aDOMWindow) {
 		function(aReason) {
 			var rejObj = {name:'promise_shoot', aReason:aReason};
 
-			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), myServices.sb.GetStringFromName('addon_name') + ' - ' + myServices.sb.GetStringFromName('error-title_screenshot-internal'), myServices.sb.GetStringFromName('error-body_screenshot-internal'));
+			Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + justFormatStringFromName(core.addon.l10n.bootstrap['error-title_screenshot-internal']), justFormatStringFromName(core.addon.l10n.bootstrap['error-body_screenshot-internal']));
 		}
 	).catch(
 		function(aCaught) {
@@ -2557,7 +2561,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 
 				// NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab'); // not showing for right now, i think too much info
 
-				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
+				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				if (!fsComServer.twitterListenerRegistered) {
 					myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
 					fsComServer.twitterListenerRegistered = true;
@@ -2577,7 +2581,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 			
 				// NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab'); // not showing for right now, i think too much info
 
-				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, myServices.sb.GetStringFromName('notif-bar_twitter-btn-imgs-awaiting-user-tweet') + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
+				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				// need to focus for that paste event thingy work around
 				var tab = aUAPEntry.tab.get();
 				tab.ownerDocument.defaultView.focus(); // focus browser window
@@ -2916,7 +2920,7 @@ var windowListener = {
 		
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
-			domWinUtils.loadSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
+			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + 'cui.css', null, null), domWinUtils.AUTHOR_SHEET);
 			
 			for (aGroupId in NBs.crossWin) {
 				NBs.insertGlobalToWin(aGroupId, aDOMWindow);
@@ -2943,7 +2947,7 @@ var windowListener = {
 		
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
-			domWinUtils.removeSheet(cui_cssUri, domWinUtils.AUTHOR_SHEET);
+			domWinUtils.removeSheet(Services.io.newURI(core.addon.path.styles + 'cui.css', null, null), domWinUtils.AUTHOR_SHEET);
 		}
 		
 		contextMenuDestroy(aDOMWindow);
@@ -2960,7 +2964,7 @@ var gDashboardSeperator_domIdSuffix = '_nativeshot-seperator';
 
 var gDashboardMenuitem_jsonTemplate = ['xul:menuitem', {
 	// id: 'toolbar-context-menu_nativeshot-menuitem',
-	// label: myServices.sb.GetStringFromName('dashboard-menuitem'), // cant access myServices.sb till startup, so this is set on startup // link988888887
+	// label: justFormatStringFromName(core.addon.l10n.bootstrap['dashboard-menuitem']), // cant access myServices.sb till startup, so this is set on startup // link988888887
 	class: 'menuitem-iconic',
 	image: core.addon.path.images + 'icon16.png',
 	hidden: 'true'
@@ -2973,13 +2977,13 @@ var gDashboardMenuseperator_jsonTemplate = ['xul:menuseparator', {
 function contextMenuBootstrapStartup() {
 	// because i cant access myServices.sb until bootstarp startup triggers i have to set these in here
 	
-	gDashboardMenuitem_jsonTemplate[1].label = myServices.sb.GetStringFromName('dashboard-menuitem'); // link988888887 - needs to go before windowListener is registered
+	gDashboardMenuitem_jsonTemplate[1].label = justFormatStringFromName(core.addon.l10n.bootstrap['dashboard-menuitem']); // link988888887 - needs to go before windowListener is registered
 	gDashboardMenuitem_jsonTemplate[1].onclick = `
 		(function() {
 			var cntTabs = gBrowser.tabs.length;
 			for (var i=0; i<cntTabs; i++) {
 				// e10s safe way to check content of tab
-				if (gBrowser.tabs[i].getAttribute('label') == '${myServices.sb.GetStringFromName('nativeshot.app-main.title')}') { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
+				if (gBrowser.tabs[i].getAttribute('label') == '${justFormatStringFromName(core.addon.l10n.bootstrap['nativeshot.app-main.title'])}') { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
 					gBrowser.selectedTab = gBrowser.tabs[i];
 					return;
 				}
@@ -3618,8 +3622,8 @@ function install() {}
 function uninstall(aData, aReason) {
 	// delete imgur history file
 	if (aReason == ADDON_UNINSTALL) {
-		Services.prefs.clearUserPref(myPrefBranch + 'quick_save_dir');
-		Services.prefs.clearUserPref(myPrefBranch + 'print_preview');
+		Services.prefs.clearUserPref(core.addon.prefbranch + 'quick_save_dir');
+		Services.prefs.clearUserPref(core.addon.prefbranch + 'print_preview');
 	}
 }
 
@@ -3627,59 +3631,75 @@ function startup(aData, aReason) {
 	core.addon.aData = aData;
 	extendCore();
 	
-	SIPWorker('MainWorker', core.addon.path.content + 'modules/workers/MainWorker.js'); // if want instant init, tag on .post() and it will return a promise resolving with value from init
+	// start - add stuff to core that worker cannot get
 	
-	SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs);
+	// end - add stuff to core that worker cannot get
 	
-	CustomizableUI.createWidget({
-		id: 'cui_nativeshot',
-		defaultArea: CustomizableUI.AREA_NAVBAR,
-		label: myServices.sb.GetStringFromName('cui_nativeshot_lbl'),
-		tooltiptext: myServices.sb.GetStringFromName('cui_nativeshot_tip'),
-		onCommand: function(aEvent) {
-			var aDOMWin = aEvent.target.ownerDocument.defaultView;
-			gEditor.gBrowserDOMWindow = aDOMWin;
-			if (aEvent.shiftKey == 1) {
-				// default time delay queue
-				if (gDelayedShotObj) {
-					// there is a count down currently running
-					gDelayedShotObj.time_left += delayedShotTimePerClick;
-					// gDelayedShotObj.timer.cancel();
-					delayedShotUpdateBadges();
-					// so user wants to add 5 mroe sec to countdown
+	SIPWorker('ScreenshotWorker', core.addon.path.content + 'modules/screenshot/ScreenshotWorker.js'); // if want instant init, tag on .post() and it will return a promise resolving with value from init
+
+	var do_afterWorkerInit = function(aInitedCore) {
+		
+		core = aInitedCore;
+		
+		CustomizableUI.createWidget({
+			id: 'cui_nativeshot',
+			defaultArea: CustomizableUI.AREA_NAVBAR,
+			label: justFormatStringFromName(core.addon.l10n.bootstrap['cui_nativeshot_lbl']),
+			tooltiptext: justFormatStringFromName(core.addon.l10n.bootstrap['cui_nativeshot_tip']),
+			onCommand: function(aEvent) {
+				var aDOMWin = aEvent.target.ownerDocument.defaultView;
+				gEditor.gBrowserDOMWindow = aDOMWin;
+				if (aEvent.shiftKey == 1) {
+					// default time delay queue
+					if (gDelayedShotObj) {
+						// there is a count down currently running
+						gDelayedShotObj.time_left += delayedShotTimePerClick;
+						// gDelayedShotObj.timer.cancel();
+						delayedShotUpdateBadges();
+						// so user wants to add 5 mroe sec to countdown
+					} else {
+						gDelayedShotObj = {
+							time_left: delayedShotTimePerClick,
+							timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer)
+						};
+						delayedShotUpdateBadges();
+						gDelayedShotObj.timer.initWithCallback(delayedShotTimerCallback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+					}
 				} else {
-					gDelayedShotObj = {
-						time_left: delayedShotTimePerClick,
-						timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer)
-					};
-					delayedShotUpdateBadges();
-					gDelayedShotObj.timer.initWithCallback(delayedShotTimerCallback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+					if (gDelayedShotObj) {
+						cancelAndCleanupDelayedShot();
+					}
+					// imemdiate freeze
+					shootAllMons(aDOMWin);
 				}
-			} else {
-				if (gDelayedShotObj) {
-					cancelAndCleanupDelayedShot();
-				}
-				// imemdiate freeze
-				shootAllMons(aDOMWin);
 			}
+		});
+		
+		contextMenuBootstrapStartup();
+		
+		//windowlistener more
+		windowListener.register();
+		//end windowlistener more
+		
+		//start observers stuff more
+		for (var o in observers) {
+			observers[o].reg();
 		}
-	});
+		//end observers stuff more
+		
+		initAndRegisterAboutNativeShot();
+		
+		AB.init();
+	};
 	
-	contextMenuBootstrapStartup();
-	
-	//windowlistener more
-	windowListener.register();
-	//end windowlistener more
-	
-	//start observers stuff more
-	for (var o in observers) {
-		observers[o].reg();
-	}
-	//end observers stuff more
-	
-	aboutFactory_nativeshot = new AboutFactory(AboutNativeShot);
-	
-	AB.init();
+	var promise_getInit = SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs).post();
+	promise_getInit.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_getInit - ', aVal);
+			do_afterWorkerInit(aVal);
+		},
+		genericReject.bind(null, 'promise_getInit', 0)
+	).catch(genericCatch.bind(null, 'promise_getInit', 0));
 }
 
 function shutdown(aData, aReason) {
@@ -3720,8 +3740,8 @@ function shutdown(aData, aReason) {
 	aboutFactory_nativeshot.unregister();
 	
 	// destroy workers
-	if (MainWorker && MainWorker.launchTimeStamp) { // as when i went to rev5, its not insantly inited, so there is a chance that it doesnt need terminate
-		MainWorker._worker.terminate();
+	if (ScreenshotWorker && ScreenshotWorker.launchTimeStamp) { // as when i went to rev5, its not insantly inited, so there is a chance that it doesnt need terminate
+		ScreenshotWorker._worker.terminate();
 	}
 	if (OAuthWorker && OAuthWorker.launchTimeStamp) {
 		OAuthWorker._worker.terminate();
@@ -3767,7 +3787,7 @@ function getPrefNoSetStuff(aPrefName) {
 				
 				var prefVal;
 				try {
-					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + aPrefName);
+					 prefVal = Services.prefs['get' + prefType + 'Pref'](core.addon.prefbranch + aPrefName);
 				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
 					// ok probably doesnt exist, so return default value
 					prefVal = defaultVal();
@@ -3782,7 +3802,7 @@ function getPrefNoSetStuff(aPrefName) {
 				
 				var prefVal;
 				try {
-					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + 'print_preview');
+					 prefVal = Services.prefs['get' + prefType + 'Pref'](core.addon.prefbranch + 'print_preview');
 				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
 					// ok probably doesnt exist, so return default value
 					prefVal = defaultVal;
@@ -4039,47 +4059,42 @@ function isFocused(window) {
 
     return (focusedChildWindow === childTargetWindow);
 }
+// rev3 - https://gist.github.com/Noitidart/326f1282c780e3cb7390
 function Deferred() {
-	if (Promise && Promise.defer) {
+	// update 062115 for typeof
+	if (typeof(Promise) != 'undefined' && Promise.defer) {
 		//need import of Promise.jsm for example: Cu.import('resource:/gree/modules/Promise.jsm');
 		return Promise.defer();
-	} else if (PromiseUtils && PromiseUtils.defer) {
+	} else if (typeof(PromiseUtils) != 'undefined'  && PromiseUtils.defer) {
 		//need import of PromiseUtils.jsm for example: Cu.import('resource:/gree/modules/PromiseUtils.jsm');
 		return PromiseUtils.defer();
-	} else if (Promise) {
-		try {
-			/* A method to resolve the associated Promise with the value passed.
-			 * If the promise is already settled it does nothing.
-			 *
-			 * @param {anything} value : This value is used to resolve the promise
-			 * If the value is a Promise then the associated promise assumes the state
-			 * of Promise passed as value.
-			 */
-			this.resolve = null;
-
-			/* A method to reject the assocaited Promise with the value passed.
-			 * If the promise is already settled it does nothing.
-			 *
-			 * @param {anything} reason: The reason for the rejection of the Promise.
-			 * Generally its an Error object. If however a Promise is passed, then the Promise
-			 * itself will be the reason for rejection no matter the state of the Promise.
-			 */
-			this.reject = null;
-
-			/* A newly created Pomise object.
-			 * Initially in pending state.
-			 */
-			this.promise = new Promise(function(resolve, reject) {
-				this.resolve = resolve;
-				this.reject = reject;
-			}.bind(this));
-			Object.freeze(this);
-		} catch (ex) {
-
-			throw new Error('Promise not available!');
-		}
 	} else {
-		throw new Error('Promise not available!');
+		/* A method to resolve the associated Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} value : This value is used to resolve the promise
+		 * If the value is a Promise then the associated promise assumes the state
+		 * of Promise passed as value.
+		 */
+		this.resolve = null;
+
+		/* A method to reject the assocaited Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} reason: The reason for the rejection of the Promise.
+		 * Generally its an Error object. If however a Promise is passed, then the Promise
+		 * itself will be the reason for rejection no matter the state of the Promise.
+		 */
+		this.reject = null;
+
+		/* A newly created Pomise object.
+		 * Initially in pending state.
+		 */
+		this.promise = new Promise(function(resolve, reject) {
+			this.resolve = resolve;
+			this.reject = reject;
+		}.bind(this));
+		Object.freeze(this);
 	}
 }
 
@@ -5094,5 +5109,17 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 			aOptions[aOptKey] = aOptionsDefaults[aOptKey];
 		}
 	}
+}
+function justFormatStringFromName(aLocalizableStr, aReplacements) {
+    // justFormatStringFromName is formating only ersion of the worker version of formatStringFromName
+
+    var cLocalizedStr = aLocalizableStr;
+    if (aReplacements) {
+        for (var i=0; i<aReplacements.length; i++) {
+            cLocalizedStr = cLocalizedStr.replace('%S', aReplacements[i]);
+        }
+    }
+
+    return cLocalizedStr;
 }
 // end - common helper functions
