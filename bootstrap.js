@@ -109,6 +109,11 @@ var gPrefMeta = { // short for pref meta data // dictates dom structure in optio
 			var mainDeferred_getAutoupdate = new Deferred();
 			
 			AddonManager.getAddonByID(core.addon.id, function(addon) {
+				// start - set lastUpdatedDate into core, this is bad, as getter is meant only for specific stuff. but on startup this gets called, and i need last updated date which is available here so this is unrelated to the pref system
+				if (!core.addon.lastUpdatedDate) {
+					core.addon.lastUpdatedGetTime = addon.updateDate.getTime();
+				}
+				// end - set lastUpdatedDate into core, this is bad, as getter is meant only for specific stuff. but on startup this gets called, and i need last updated date which is available here so this is unrelated to the pref system
 				var gotVal = parseInt(addon.applyBackgroundUpdates);
 				if (gotVal === 0) {
 					mainDeferred_getAutoupdate.resolve(false);
@@ -170,11 +175,17 @@ function prefGet(aPrefName) {
 				console.log('Fullfilled - gotVal - ', aVal);
 				// start - copy block1029221000
 				if (isValidPrefVal(aPrefName, aVal)) {
-					core.addon.prefs[aPrefName] = aVal; // link3838375435343
+					core.addon.prefs[aPrefName] = { // link3838375435343
+						value: aVal,
+						defaultValue: gPrefMeta[aPrefName].defaultValue
+					};
 					deferred_waitGetter.resolve(aVal);
 				} else {
 					console.error('got invalid value for pref name:', aPrefName, 'value got was:', '"' + aVal + '"', 'so returning default');
-					core.addon.prefs[aPrefName] = gPrefMeta[aPrefName].defaultValue; // link3838375435343
+					core.addon.prefs[aPrefName] = { // link3838375435343
+						value: gPrefMeta[aPrefName].defaultValue,
+						defaultValue: gPrefMeta[aPrefName].defaultValue
+					};
 					// deferred_waitGetter.resolve(getFromCore_curValOrDefault(aPrefName)); // link444522952112
 					deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
 				}
@@ -186,7 +197,10 @@ function prefGet(aPrefName) {
 					aReason: aReason
 				};
 				console.error('Rejected - gotVal - ', rejObj);
-				core.addon.prefs[aPrefName] = gPrefMeta[aPrefName].defaultValue; // link3838375435343
+				core.addon.prefs[aPrefName] = { // link3838375435343
+					value: gPrefMeta[aPrefName].defaultValue,
+					defaultValue: gPrefMeta[aPrefName].defaultValue
+				};
 				// deferred_waitGetter.resolve(getFromCore_curValOrDefault(aPrefName)); // link444522952112
 				deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
 			}
@@ -207,7 +221,10 @@ function prefGet(aPrefName) {
 	} else {
 		// start - copy block1029221000
 		if (isValidPrefVal(aPrefName, gotVal)) {
-			core.addon.prefs[aPrefName] = gotVal; // link3838375435343
+			core.addon.prefs[aPrefName] = { // link3838375435343
+				value: gotVal,
+				defaultValue: gPrefMeta[aPrefName].defaultValue
+			};
 			return gotVal;
 		}
 		// end - copy block1029221000
@@ -223,6 +240,8 @@ function getFromCore_curValOrDefault(aPrefName) {
 }
 
 function prefSet(aPrefName, aNewVal) {
+	// returns the prefName obj from core.addon.prefs on set. for non custom and custom sync the return true is valid statement that it succesfully was set. for custom async it is not valid as it will return true before set is complete. 
+	
 	if (isValidPrefVal(aPrefName, aNewVal)) {
 		var prefType = gPrefMeta[aPrefName].type;
 		switch (prefType) {
@@ -242,7 +261,11 @@ function prefSet(aPrefName, aNewVal) {
 				console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
 				throw new Error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName');
 		}
-		core.addon.prefs[aPrefName] = aNewVal; // link3838375435343
+		core.addon.prefs[aPrefName] = { // link3838375435343
+			value: aNewVal,
+			defaultValue: gPrefMeta[aPrefName].defaultValue
+		};
+		return core.addon.prefs[aPrefName];
 	}
 }
 
@@ -4090,7 +4113,8 @@ function startup(aData, aReason) {
 		).catch(genericCatch.bind(null, 'promise_getInit', 0));
 	};
 	
-	// set stuff in core, as it is sent to worker	
+	// set stuff in core, as it is sent to worker
+	core.addon.version = aData.version;
 	var promise_initPrefs = refreshCoreForPrefs();
 	
 	
@@ -4195,6 +4219,71 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 			cNsiFile.reveal();
 		}
 	}
+}
+
+function browseFile(aDialogTitle) {
+	// uses xpcom file browser and returns path to file selected
+
+	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+	
+	fp.init(Services.wm.getMostRecentWindow(null), aDialogTitle, Ci.nsIFilePicker.modeOpen);
+	
+	/*
+	switch (OS.Constants.Sys.Name.toLowerCase()) {
+		case 'winnt':
+		case 'wince':
+		case 'winmo':
+			
+				// fp.appendFilter('Firefox Executeable (application/exe)', 'firefoxg.exe');
+				fp.appendFilter(myServices.sb.GetStringFromName('filter-exe-win'), 'firefox.exe');
+				fp.displayDirectory = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent;
+				
+			break;
+		case 'darwin':
+			
+				// fp.appendFilter('Firefox Application Bundle', '*.app');
+				fp.appendFilter(myServices.sb.GetStringFromName('filter-exe-mac'), '*.app');
+				// fp.displayDirectory = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent;
+				fp.displayDirectory = (new FileUtils.File(core.profilist.path.XREExeF)).parent.parent.parent;
+				// .parent = MacOs
+				// .parent.parent = Contents
+				// .parent.parent.parent = .app
+				// .parent.parent.parent.parent = parent of .app
+				
+			break;
+		default:
+		
+				// assume unix, it has no extension apparently
+				// fp.appendFilter('Firefox Binary (application/x-sharedlib)', 'firefox');
+				fp.appendFilter(myServices.sb.GetStringFromName('filter-exe-nix'), 'firefox');
+				fp.displayDirectory = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent;
+
+	}
+	*/
+	
+	var rv = fp.show();
+	if (rv == Ci.nsIFilePicker.returnOK) { // no need for Ci.nsIFilePicker.returnReplace as this is just an open
+		
+		return fp.file.path;
+
+	}// else { // cancelled	}
+	
+	return undefined; // cancelled
+}
+
+function browseDir(aDialogTitle) {
+	// uses xpcom file browser and returns path to dir selected
+
+	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+	fp.init(Services.wm.getMostRecentWindow('navigator:browser'), aDialogTitle, Ci.nsIFilePicker.modeGetFolder);
+	// fp.appendFilters(Ci.nsIFilePicker.filterAll);
+
+	var rv = fp.show();
+	if (rv == Ci.nsIFilePicker.returnOK) { // no need for Ci.nsIFilePicker.returnReplace as this is just an open
+		
+		return fp.file.path;
+
+	}// else { // cancelled	} so it will return undefined
 }
 
 function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {

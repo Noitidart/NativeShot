@@ -13,12 +13,18 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	var do_step2 = function() {
 		// fetch core - it will have the udpated prefs
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['returnCore']], bootstrapMsgListener.funcScope, function(aCore) {
+			
 			core = aCore;
+			
 			do_step3();
 		});
 	};
 	
 	var do_step3 = function() {
+		gLastUpdated = new Date(core.addon.lastUpdatedGetTime);
+		
+		initGDOMStructureLocalized();
+		
 		refreshGDOMState();
 		
 		renderReact();
@@ -42,88 +48,103 @@ function nsOnFocus() {
 }
 
 // Globals
-var gDOMStructure = [ // react reads this as pBlocks
-	// each must have:
-	//		id
-	//		pref - the field key name in core.addon.prefs
-	//		label
-	//		values - object, key is value that pref can be in core.addon.prefs, see gPrefMeta for value details and validation crossfile-link44375677
-	//		descs - array of texts
-	//		btns - array of objects
-			// each must have
-			//		id
-			//		label
-			//		hidden - true or false based on if you want to show it or not (usually this is callback)
-	
-	// if you want to set a callback, make sure to set it in gDOMStructureCallbacks with same key
-	{
-		id: 'autoup',
-		pref: 'autoupdate',
-		label: 'Automatic Updates',
-		values: {
-			'false': 'Off',
-			'true': 'On'
-		},
-		descs: [
-			'current addon version',
-			'last updated'
-		],
-		btns: [
-			{
-				id: 'autoup-toggle',
-				label: 'callback:autoup-toggle' // start with callback: means it should call that callback to figure out the value for this field
-			}
-		]
-	},
-	{
-		id: 'quickdir',
-		pref: 'quick_save_dir',
-		label: 'Quick Save Folder',
-		sup: 'callback:quickdir-sup',
-		values: 'callback:quickdir-values', // start with callback: means it should call that callback to figure out the value for this field
-		descs: [
-			'a',
-			'b'
-		],
-		btns: [
-			{
-				id: 'quickdir-chg',
-				label: 'Change'
-			},
-			{
-				id: 'quickdir-reset',
-				label: 'Reset',
-				hidden: 'callback:quickdir-reset-hidden'
-			}
-		]
-	},
-	{
-		id: 'printprev',
-		pref: 'print_preview',
-		label: 'Print Preview',
-		values: {
-			'false': 'Off',
-			'true': 'On'
-		},
-		descs: [
-			'current addon version',
-			'last updated'
-		],
-		btns: [
-			{
-				id: 'printprev-toggle',
-				label: 'callback:printprev-toggle'
-			}
-		]
-	}
-];
+var gLastUpdated;
 
-var gDOMStructureCallbacks = { // because gDOMStructure is passed in as a prop to the react component, we dont want any functions otherwise it triggers the diff mechanism all the time // basically the values of these fields are dicated by the state value of the block
+var gDOMStructure;
+function initGDOMStructureLocalized() {
+	gDOMStructure = [ // react reads this as pBlocks
+		// each must have:
+		//		id
+		//		pref - the field key name in core.addon.prefs
+		//		label
+		//		values - object, key is value that pref can be in core.addon.prefs, see gPrefMeta for value details and validation crossfile-link44375677
+		//		descs - array of texts
+		//		btns - array of objects
+				// each must have
+				//		id
+				//		label
+				//		hidden - true or false (or can omit field for false) based on if you want to show it or not (usually this is callback)
+				//		click
+		
+		// if you want to set a callback, make sure to set it in gDOMStructureCallbacks with same key
+		{
+			id: 'autoup',
+			pref: 'autoupdate',
+			label: core.addon.l10n.app_options.auto_updates,
+			values: {
+				'false': core.addon.l10n.app_options.off,
+				'true': core.addon.l10n.app_options.on
+			},
+			descs: [
+				justFormatStringFromName(core.addon.l10n.app_options.version, [core.addon.version]),
+				justFormatStringFromName(core.addon.l10n.app_options.last_updated, [
+					core.addon.l10n.dateFormat['month.' + (gLastUpdated.getMonth() + 1) + '.name'] + ' ' + gLastUpdated.getDate() + ', ' + gLastUpdated.getFullYear()
+				])
+			],
+			btns: [
+				{
+					id: 'autoup-toggle',
+					label: 'callback:autoup-toggle', // start with callback: means it should call that callback to figure out the value for this field
+					click: 'callback:autoup-toggle-click'
+				}
+			]
+		},
+		{
+			id: 'quickdir',
+			pref: 'quick_save_dir',
+			label: core.addon.l10n.app_options.quick_save_dir,
+			sup: 'callback:quickdir-sup',
+			values: 'callback:quickdir-values', // start with callback: means it should call that callback to figure out the value for this field
+			descs: [
+				core.addon.l10n.app_options.quick_save_dir_desc1,
+				core.addon.l10n.app_options.quick_save_dir_desc2
+			],
+			btns: [
+				{
+					id: 'quickdir-chg',
+					label: core.addon.l10n.app_options.change,
+					click: 'callback:quickdir-chg-click'
+				},
+				{
+					id: 'quickdir-reset',
+					label: core.addon.l10n.app_options.reset,
+					hidden: 'callback:quickdir-reset-hidden',
+					click: 'callback:quickdir-reset-click'
+				}
+			]
+		},
+		{
+			id: 'printprev',
+			pref: 'print_preview',
+			label: core.addon.l10n.app_options.print_preview,
+			values: {
+				'false': core.addon.l10n.app_options.off,
+				'true': core.addon.l10n.app_options.on
+			},
+			descs: [
+				core.addon.l10n.app_options.print_preview_desc1,
+				core.addon.l10n.app_options.print_preview_desc2
+			],
+			btns: [
+				{
+					id: 'printprev-toggle',
+					label: 'callback:printprev-toggle',
+					click: 'callback:printprev-toggle-click'
+				}
+			]
+		}
+	];
+}
+
+var gDOMStructureCallbacks = {
+	// because gDOMStructure is passed in as a prop to the react component, we dont want any functions otherwise it triggers the diff mechanism all the time // basically the values of these fields are dicated by the state value of the block
+	// callbacks used in click are binded to `this` of the componenet
+	// all other callbacks are passed the state of the block
 	'callback:printprev-toggle': function(aBlockState) {
-		return (aBlockState.value == 'false' ? 'On' : 'Off');
+		return (!aBlockState.value ? core.addon.l10n.app_options.on : core.addon.l10n.app_options.off);
 	},
 	'callback:autoup-toggle': function(aBlockState) {
-		return aBlockState.value == 'false' ? 'On' : 'Off';
+		return (!aBlockState.value ? core.addon.l10n.app_options.on : core.addon.l10n.app_options.off);
 	},
 	'callback:quickdir-reset-hidden': function(aBlockState) {
 		if (aBlockState.value == core.addon.prefs.quick_save_dir.defaultValue) {
@@ -142,8 +163,72 @@ var gDOMStructureCallbacks = { // because gDOMStructure is passed in as a prop t
 		var cValues = {};
 		cValues[aBlockState.value + ''] = aBlockState.value.substr(aBlockState.value.lastIndexOf(core.os.filesystem_seperator) + core.os.filesystem_seperator.length);
 		return cValues;
+	},
+	'callback:printprev-toggle-click': function() {
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'print_preview', !core.addon.prefs.print_preview.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
+			core.addon.prefs.print_preview = aCorePrefNameObj;
+			refreshGDOMState();
+			MyStore.setState({
+				sBlockValues: JSON.parse(JSON.stringify(gDOMState))
+			});
+		});
+	},
+	'callback:autoup-toggle-click': function() {
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'autoupdate', !core.addon.prefs.autoupdate.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
+			core.addon.prefs.autoupdate = aCorePrefNameObj;
+			refreshGDOMState();
+			MyStore.setState({
+				sBlockValues: JSON.parse(JSON.stringify(gDOMState))
+			});
+		});
+	},
+	'callback:quickdir-chg-click': function() {
+		
+		var do_setPref = function(aDirPlatPath) {
+			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'quick_save_dir', aDirPlatPath]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
+				console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
+				core.addon.prefs.quick_save_dir = aCorePrefNameObj;
+				refreshGDOMState();
+				MyStore.setState({
+					sBlockValues: JSON.parse(JSON.stringify(gDOMState))
+				});
+			});
+		};
+		
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['browseDir', core.addon.l10n.change_dir_dialog_title]], bootstrapMsgListener.funcScope, function(aDirPlatPath) {
+			console.log('aDirPlatPath:', aDirPlatPath);
+			if (aDirPlatPath && aDirPlatPath != core.addon.prefs.quick_save_dir.value) {
+				do_setPref(aDirPlatPath);
+			}
+		});
+	},
+	'callback:quickdir-reset-click': function() {
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'quick_save_dir', core.addon.prefs.quick_save_dir.defaultValue]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
+			core.addon.prefs.quick_save_dir = aCorePrefNameObj;
+			refreshGDOMState();
+			MyStore.setState({
+				sBlockValues: JSON.parse(JSON.stringify(gDOMState))
+			});
+		});
 	}
 };
+
+function getObjKeyVal(aObj, aKey, aState) { // react components uses this only for non-click callbacks
+	// console.log('doing getObjKeyVal on aObj:', aObj, 'aKey:', aKey, 'aState:', aState);
+	if (aKey in aObj) {
+		var cVal = aObj[aKey];
+		if (typeof(cVal) == 'string' && gDOMStructureCallbacks[cVal]) {
+			return gDOMStructureCallbacks[cVal](aState);
+		} else {
+			return cVal;
+		}
+	} else {
+		return undefined;
+	}
+}
 
 var gDOMState = {}; // react reads this as sBlocks // each entry is an object. the current value/state for each entry gDOMStructure
 function refreshGDOMState() {
@@ -156,7 +241,7 @@ function refreshGDOMState() {
 		
 		var cStructState = gDOMState[cStructEntry.id];
 		if (cStructEntry.pref) {
-			cStructState.value = core.addon.prefs[cStructEntry.pref];
+			cStructState.value = core.addon.prefs[cStructEntry.pref].value;
 		} else {
 			throw new Error('at this point in time each entry must have a pref associated with it');
 		}
@@ -227,25 +312,8 @@ var Row = React.createClass({
 	}
 });
 
-function getObjKeyVal(aObj, aKey, aState) {
-	// console.log('doing getObjKeyVal on aObj:', aObj);
-	if (aKey in aObj) {
-		var cVal = aObj[aKey];
-		if (typeof(cVal) == 'string' && gDOMStructureCallbacks[cVal]) {
-			return gDOMStructureCallbacks[cVal](aState);
-		} else {
-			return cVal;
-		}
-	} else {
-		return undefined;
-	}
-}
-
 var Block = React.createClass({
     displayName: 'Block',
-	btnClick: function(e) {
-		alert('btn clicked');
-	},
 	render: function() {
 		// props
 		//		pBlock
@@ -275,7 +343,7 @@ var Block = React.createClass({
 		for (var i=0; i<cBtns.length; i++) {
 			var cBtnHidden = getObjKeyVal(cBtns[i], 'hidden', this.props.sBlockValue);
 			if (!cBtnHidden) {
-				cBlockBtns.push(React.createElement(Button, {pBlock:this.props.pBlock, pBtn:cBtns[i]}));
+				cBlockBtns.push(React.createElement(Button, {sBlockValue:this.props.sBlockValue, pBtn:cBtns[i], key:(new Date()).getTime()}));
 			}
 		}
 		console.log('cBlockBtns:', cBlockBtns);
@@ -318,20 +386,25 @@ var Block = React.createClass({
 
 var Button = React.createClass({
     displayName: 'Button',
-	click: function(e) {
-		alert('clicked on button id: ' + this.props.pBtn.id)
-	},
 	render: function() {
 		// props
-		//		pBlock
+		//		sBlockValue
 		//		pBtn
 		
-		var cChildren = [];
+		var cAttr = {
+			href:'#',
+			className:'b-md butt-style'
+		};
 		
-		var cBtnLabel = getObjKeyVal(this.props.pBtn, 'label', this.props.pBtn);
+		var cLabel = getObjKeyVal(this.props.pBtn, 'label', this.props.sBlockValue);
 		
-		return React.createElement('a', {onClick:this.click, href:'#', className:'b-md butt-style'},
-			cBtnLabel
+		var cClick;
+		if (typeof(this.props.pBtn.click) == 'string' && gDOMStructureCallbacks[this.props.pBtn.click]) {
+			cAttr.onClick = gDOMStructureCallbacks[this.props.pBtn.click].bind(this);
+		}
+		
+		return React.createElement('a', cAttr,
+			cLabel
 		)
 	}
 });
