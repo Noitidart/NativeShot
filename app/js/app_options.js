@@ -1,321 +1,587 @@
-// Imports
-const {classes: Cc, interfaces: Ci, utils: Cu, Constructor: CC, results: Cr} = Components;
-Cu.import('resource://gre/modules/AddonManager.jsm');
-Cu.import('resource://gre/modules/FileUtils.jsm');
-Cu.import('resource://gre/modules/osfile.jsm');
-Cu.import('resource://gre/modules/Services.jsm');
-Cu.import('resource://gre/modules/XPCOMUtils.jsm');
-Cu.import('resource://gre/modules/Promise.jsm');
+////////// start - nativeshot - app_main
+function nsInitPage(aPostNonSkelInit_CB) {
+	
+	// when done must call aPostNonSkelInit_CB();
+	var do_step1 = function() {
+		// refresh prefs in bootstrap core object
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['refreshCoreForPrefs']], bootstrapMsgListener.funcScope, function(aCoreAddonPrefs) {
+			console.log('aCoreAddonPrefs:', aCoreAddonPrefs);
+			do_step2();
+		});
+	};
+	
+	var do_step2 = function() {
+		// fetch core - it will have the udpated prefs
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['returnCore']], bootstrapMsgListener.funcScope, function(aCore) {
+			core = aCore;
+			do_step3();
+		});
+	};
+	
+	var do_step3 = function() {
+		refreshGDOMState();
+		
+		renderReact();
+		
+		aPostNonSkelInit_CB();
+	};
+	
+	do_step1();
+}
+
+function nsOnFocus() {
+	// refresh prefs in bootstrap core object
+	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['refreshCoreForPrefs']], bootstrapMsgListener.funcScope, function(aCoreAddonPrefs) {
+		console.log('aCoreAddonPrefs:', aCoreAddonPrefs);
+		core.addon.prefs = aCoreAddonPrefs;
+		refreshGDOMState();
+		MyStore.setState({
+			sBlockValues: JSON.parse(JSON.stringify(gDOMState))
+		});
+	});
+}
 
 // Globals
-const core = {
-	addon: {
-		name: 'NativeShot',
-		id: 'NativeShot@jetpack',
-		path: {
-			name: 'nativeshot',
-			content: 'chrome://nativeshot/content/',
-			locale: 'chrome://nativeshot/locale/',
-			resources: 'chrome://nativeshot/content/resources/',
-			images: 'chrome://nativeshot/content/resources/images/'
+var gDOMStructure = [ // react reads this as pBlocks
+	// each must have:
+	//		id
+	//		pref - the field key name in core.addon.prefs
+	//		label
+	//		values - object, key is value that pref can be in core.addon.prefs, see gPrefMeta for value details and validation crossfile-link44375677
+	//		descs - array of texts
+	//		btns - array of objects
+			// each must have
+			//		id
+			//		label
+			//		hidden - true or false based on if you want to show it or not (usually this is callback)
+	
+	// if you want to set a callback, make sure to set it in gDOMStructureCallbacks with same key
+	{
+		id: 'autoup',
+		pref: 'autoupdate',
+		label: 'Automatic Updates',
+		values: {
+			'false': 'Off',
+			'true': 'On'
 		},
-		cache_key: Math.random()
+		descs: [
+			'current addon version',
+			'last updated'
+		],
+		btns: [
+			{
+				id: 'autoup-toggle',
+				label: 'callback:autoup-toggle' // start with callback: means it should call that callback to figure out the value for this field
+			}
+		]
 	},
-	os: {
-		name: OS.Constants.Sys.Name.toLowerCase(),
-		toolkit: Services.appinfo.widgetToolkit.toLowerCase(),
-		xpcomabi: Services.appinfo.XPCOMABI
+	{
+		id: 'quickdir',
+		pref: 'quick_save_dir',
+		label: 'Quick Save Folder',
+		sup: 'callback:quickdir-sup',
+		values: 'callback:quickdir-values', // start with callback: means it should call that callback to figure out the value for this field
+		descs: [
+			'a',
+			'b'
+		],
+		btns: [
+			{
+				id: 'quickdir-chg',
+				label: 'Change'
+			},
+			{
+				id: 'quickdir-reset',
+				label: 'Reset',
+				hidden: 'callback:quickdir-reset-hidden'
+			}
+		]
 	},
-	firefox: {
-		pid: Services.appinfo.processID,
-		version: Services.appinfo.version
+	{
+		id: 'printprev',
+		pref: 'print_preview',
+		label: 'Print Preview',
+		values: {
+			'false': 'Off',
+			'true': 'On'
+		},
+		descs: [
+			'current addon version',
+			'last updated'
+		],
+		btns: [
+			{
+				id: 'printprev-toggle',
+				label: 'callback:printprev-toggle'
+			}
+		]
+	}
+];
+
+var gDOMStructureCallbacks = { // because gDOMStructure is passed in as a prop to the react component, we dont want any functions otherwise it triggers the diff mechanism all the time // basically the values of these fields are dicated by the state value of the block
+	'callback:printprev-toggle': function(aBlockState) {
+		return (aBlockState.value == 'false' ? 'On' : 'Off');
+	},
+	'callback:autoup-toggle': function(aBlockState) {
+		return aBlockState.value == 'false' ? 'On' : 'Off';
+	},
+	'callback:quickdir-reset-hidden': function(aBlockState) {
+		if (aBlockState.value == core.addon.prefs.quick_save_dir.defaultValue) {
+			return true;
+		}
+	},
+	'callback:quickdir-sup': function(aBlockState) {
+		var fsSeperatorLastIndex = aBlockState.value.lastIndexOf(core.os.filesystem_seperator);
+		if (fsSeperatorLastIndex == -1) {
+			return core.os.filesystem_seperator;
+		} else {
+			return aBlockState.value.substr(0, fsSeperatorLastIndex);
+		}
+	},
+	'callback:quickdir-values': function(aBlockState) {
+		var cValues = {};
+		cValues[aBlockState.value + ''] = aBlockState.value.substr(aBlockState.value.lastIndexOf(core.os.filesystem_seperator) + core.os.filesystem_seperator.length);
+		return cValues;
 	}
 };
-var gAngScope;
-// var gAngInjector;
-const myPrefBranch = 'extensions.' + core.addon.id + '.';
 
-// Lazy Imports
-const myServices = {};
-XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb_app_common', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_common.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
-XPCOMUtils.defineLazyGetter(myServices, 'sb_app_options', function () { return Services.strings.createBundle(core.addon.path.locale + 'app_options.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
-XPCOMUtils.defineLazyGetter(myServices, 'sb_dateFormat', function () { return Services.strings.createBundle('chrome://global/locale/dateFormat.properties'); });
+var gDOMState = {}; // react reads this as sBlocks // each entry is an object. the current value/state for each entry gDOMStructure
+function refreshGDOMState() {
+	// can be use as initGDOMState as well
+	
+	gDOMState = {};
+	for (var i=0; i<gDOMStructure.length; i++) {
+		var cStructEntry = gDOMStructure[i];
+		gDOMState[cStructEntry.id] = {};
+		
+		var cStructState = gDOMState[cStructEntry.id];
+		if (cStructEntry.pref) {
+			cStructState.value = core.addon.prefs[cStructEntry.pref];
+		} else {
+			throw new Error('at this point in time each entry must have a pref associated with it');
+		}
+	}
+}
 
-// start - addon functionalities
+function renderReact() {
+	var myContainer = React.createElement(Container, {pBlocks:JSON.parse(JSON.stringify(gDOMStructure))});
+	
+	ReactDOM.render(
+		myContainer,
+		document.getElementById('main_wrapp')
+	);
+}
 
-var	ANG_APP = angular.module('nativeshot_options', [])
-	.controller('BodyController', ['$scope', function($scope) {
-		
-		var MODULE = this;
-		
-		var gAngBody = angular.element(document.body);
-		gAngScope = gAngBody.scope();
-		// gAngInjector = gAngBody.injector();
-		
-		MODULE.version = 'rawr';
-		MODULE.last_updated = 'boo';
-		
-		// just putting the keys in here so i know what goes in here, but this is all updated by readInPrefsToNg
-		MODULE.prefs = {
-			autoUpdateDefault: null,
-			auto_update: null, // 0 off, 1 default, 2 on
-			quick_save_dir_dirname: null,
-			quick_save_dir_basename: null,
-			print_preview: null
+// start - react components
+var MyStore = {};
+
+var Container = React.createClass({
+    displayName: 'Container',
+	getInitialState: function() {
+		return {
+			sBlockValues: JSON.parse(JSON.stringify(gDOMState))
 		};
-		fetchAddon_v_lu_au();
+	},
+	componentDidMount: function() {
+		MyStore.updateStatedIniObj = this.updateStatedIniObj; // no need for bind here else React warns "Warning: bind(): You are binding a component method to the component. React does this for you automatically in a high-performance way, so you can safely remove this call. See Menu"
+		MyStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work
+	},
+	render: function() {
+		// props
+		//		pBlocks
 		
-		MODULE.BrowseSelectDirForPref = function() {
-			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), myServices.sb_app_options.GetStringFromName('change-dir-dialog-title'), Ci.nsIFilePicker.modeGetFolder);
-			// fp.appendFilters(Ci.nsIFilePicker.filterAll);
+		var maxBlocksPerRow = 3;
+		var cChildren = [];
+		
+		var k = -1; // k is tracker index for this.props.pBlocks
+		var numRows = Math.ceil(this.props.pBlocks.length / maxBlocksPerRow);
+		for (var i=0; i<numRows; i++) {
+			var cRowChildren = [];
+			for (var j=0; j<maxBlocksPerRow; j++) {
+				k++;
+				cRowChildren.push(React.createElement(Block, {pBlock:this.props.pBlocks[k], sBlockValue:this.state.sBlockValues[this.props.pBlocks[k].id]}));
+				if (k == this.props.pBlocks.length - 1) { // in case there is not exactly maxBlocksPerRow left to fill this row. so number of blocks for this row is less than maxBlocksPerRow
+					break;
+				}
+			}
+			cChildren.push(React.createElement(Row, {children:cRowChildren}));
+		}
+		
+		return React.createElement('div', {className:'container'},
+			cChildren
+		);
+	}
+});
 
-			var rv = fp.show();
-			if (rv == Ci.nsIFilePicker.returnOK) {
-				var quick_save_dir = getPref('quick_save_dir', fp.file.path);
-				MODULE.prefs.quick_save_dir_basename = OS.Path.basename(quick_save_dir);
-				MODULE.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(MODULE.prefs.quick_save_dir_basename));
-			}// else { // cancelled	}
-		};
+var Row = React.createClass({
+    displayName: 'Row',
+	render: function() {
+		// props
+		//		children
 		
-		MODULE.quickSaveDirIsDefault = function() {
-			try {
-				var prefVal = Services.prefs.getCharPref(myPrefBranch + 'quick_save_dir');
-				return false;
-			} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
-				return true;
+		return React.createElement('div', {className:'padd-80'},
+			React.createElement('div', {className:'row'},
+				this.props.children
+			)
+		);
+	}
+});
+
+function getObjKeyVal(aObj, aKey, aState) {
+	// console.log('doing getObjKeyVal on aObj:', aObj);
+	if (aKey in aObj) {
+		var cVal = aObj[aKey];
+		if (typeof(cVal) == 'string' && gDOMStructureCallbacks[cVal]) {
+			return gDOMStructureCallbacks[cVal](aState);
+		} else {
+			return cVal;
+		}
+	} else {
+		return undefined;
+	}
+}
+
+var Block = React.createClass({
+    displayName: 'Block',
+	btnClick: function(e) {
+		alert('btn clicked');
+	},
+	render: function() {
+		// props
+		//		pBlock
+		//		sBlockValue
+		
+		var cBlockTitle = this.props.pBlock.label;
+		
+		var cValues = getObjKeyVal(this.props.pBlock, 'values', this.props.sBlockValue);
+		var cBlockValue = (!cValues ? undefined : cValues[this.props.sBlockValue.value]);
+		
+		var cBlockSup;
+		if (cBlockValue) {
+			cBlockSup = getObjKeyVal(this.props.pBlock, 'sup', this.props.sBlockValue);
+		}
+		
+		var cBlockDescs = [];
+		var cDescs = this.props.pBlock.descs;
+		for (var i=0; i<cDescs.length; i++) {
+			cBlockDescs.push(React.createElement('li', {},
+				cDescs[i]
+			));
+		}
+		
+		var cBlockBtns = [];
+		var cBtns = this.props.pBlock.btns;
+		// console.log('cBtns:', cBtns);
+		for (var i=0; i<cBtns.length; i++) {
+			var cBtnHidden = getObjKeyVal(cBtns[i], 'hidden', this.props.sBlockValue);
+			if (!cBtnHidden) {
+				cBlockBtns.push(React.createElement(Button, {pBlock:this.props.pBlock, pBtn:cBtns[i]}));
+			}
+		}
+		console.log('cBlockBtns:', cBlockBtns);
+		
+		// add space between the cBtns if there is more than 1
+		// so [1, 2] becomes Array [ 1, " ", 2 ]
+		// [1, 2, 3] Array [ 1, " ", 2, " ", 3 ]
+		// etc
+		if (cBlockBtns.length > 1) {
+			for (var i=0; i<cBlockBtns.length-1; i=i+2) {
+				cBlockBtns.splice(i+1, 0, ' ');
 			}
 		}
 		
-		MODULE.resetQuickSaveDir = function() {
-			var quick_save_dir = getPref('quick_save_dir', 'default');
-			MODULE.prefs.quick_save_dir_basename = OS.Path.basename(quick_save_dir);
-			MODULE.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(MODULE.prefs.quick_save_dir_basename));
-		}
-	}]);
-
-function updateNg_v_lu_au() {
-	// from _cache_fetchAddon_v_lu_au, devuser should never call this, devuser should call fetchAddon_v_lu_au with true/false for refreshCache
-	gAngScope.BC.version = _cache_fetchAddon_v_lu_au.version;
-	var getTime = _cache_fetchAddon_v_lu_au.last_updated;
-	var formattedDate = myServices.sb_dateFormat.GetStringFromName('month.' + (getTime.getMonth()+1) + '.name') + ' ' + getTime.getDate() + ', ' + getTime.getFullYear();
-	gAngScope.BC.last_updated = formattedDate;
-
-	gAngScope.BC.prefs.auto_update = _cache_fetchAddon_v_lu_au.auto_update;
-	gAngScope.BC.prefs.autoUpdateDefault = _cache_fetchAddon_v_lu_au.autoUpdateDefault;
-	gAngScope.$digest();
-}
-
-function setAutoUpdateOn() {
-	if (_cache_fetchAddon_v_lu_au.autoUpdateDefault) {
-
-		_cache_gAddon.applyBackgroundUpdates = 1; // set it to default as default is on
-		_cache_fetchAddon_v_lu_au.auto_update = 1;
-	} else {
-
-		_cache_gAddon.applyBackgroundUpdates = 2;
-		_cache_fetchAddon_v_lu_au.auto_update = 2;
+		return React.createElement('div', {className:'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12'},
+			React.createElement('div', {className:'price-block' + (!cBlockSup ? '' : ' filesystem-path')},
+				React.createElement('div', {className:'price-price'},
+					React.createElement('h4', {},
+						cBlockTitle
+					)
+				),
+				React.createElement('div', {className:'price-title'},
+					!cBlockSup ? undefined : React.createElement('sup', {},
+						cBlockSup
+					),
+					React.createElement('span', {},
+						cBlockValue
+					)
+				),
+				React.createElement('ul', {},
+					cBlockDescs
+				),
+				React.createElement('div', {className:'button-style-2'},
+					cBlockBtns
+				)
+			)
+		);
 	}
-	fetchAddon_v_lu_au();
-}
+});
 
-function setAutoUpdateOff() {
-	_cache_fetchAddon_v_lu_au.autoUpdateDefault = AddonManager.autoUpdateDefault;
-	if (!_cache_fetchAddon_v_lu_au.autoUpdateDefault) {
-
-		_cache_gAddon.applyBackgroundUpdates = 1; // set it to default as default is off
-		_cache_fetchAddon_v_lu_au.auto_update = 1;
-	} else {
-
-		_cache_gAddon.applyBackgroundUpdates = 0;
-		_cache_fetchAddon_v_lu_au.auto_update = 0;
+var Button = React.createClass({
+    displayName: 'Button',
+	click: function(e) {
+		alert('clicked on button id: ' + this.props.pBtn.id)
+	},
+	render: function() {
+		// props
+		//		pBlock
+		//		pBtn
+		
+		var cChildren = [];
+		
+		var cBtnLabel = getObjKeyVal(this.props.pBtn, 'label', this.props.pBtn);
+		
+		return React.createElement('a', {onClick:this.click, href:'#', className:'b-md butt-style'},
+			cBtnLabel
+		)
 	}
-	fetchAddon_v_lu_au();
-}
+});
 
-function readInPrefsToNg() {
+// end - react components
 
-	// reads prefs and updates gui
-	
-	// quick_save_dir
-	var quick_save_dir = getPref('quick_save_dir');
-	gAngScope.BC.prefs.quick_save_dir_basename = OS.Path.basename(quick_save_dir);
-	gAngScope.BC.prefs.quick_save_dir_dirname = quick_save_dir.substr(0, quick_save_dir.lastIndexOf(gAngScope.BC.prefs.quick_save_dir_basename));
-	
-	// print_preview
-	gAngScope.BC.prefs.print_preview = getPref('print_preview');
-	
-	// call get auto update fetch, and refresh cache, this then calls updateNg_v_lu_au which calls $digest as that is async, so i dont call a $digest in this function
-	fetchAddon_v_lu_au(true)
-}
+// start - common helper functions
 
-var _cache_fetchAddon_v_lu_au;
-var _cache_gAddon;
-function fetchAddon_v_lu_au(refreshCache) {
-	// fetches addon details of verison, last update, and autoupdate
-	// runs updateNg_v_lu_au
-	if (!_cache_fetchAddon_v_lu_au || refreshCache) {
-		_cache_fetchAddon_v_lu_au = {};
-		AddonManager.getAddonByID(core.addon.id, function(addon) {
-			_cache_gAddon = addon;
-			_cache_fetchAddon_v_lu_au.version = addon.version;
-			_cache_fetchAddon_v_lu_au.last_updated = addon.updateDate;
-			_cache_fetchAddon_v_lu_au.auto_update = parseInt(addon.applyBackgroundUpdates);
-			_cache_fetchAddon_v_lu_au.autoUpdateDefault = AddonManager.autoUpdateDefault;
-			updateNg_v_lu_au();
-		});
-	} else {
-		updateNg_v_lu_au();
+// end - common helper functions
+////////// end - nativeshot - app_main
+
+
+
+
+
+
+
+
+
+
+
+///////////////// start - framescript skeleton
+// Imports
+const {interfaces:Ci} = Components;
+
+// Globals
+var core = {
+	addon: {
+		id: 'NativeShot@jetpack' // non-skel
 	}
-}			
+}; // set by initPage
+var gCFMM; // needed for contentMMFromContentWindow_Method2
 
-// on window focus will likely want to do:
-	// fetchAddon_v_lu_au(true);
+// // Lazy imports
+// var myServices = {};
+// XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'cp.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
 
-function doOnBlur() {
-	attachFocusListener();
+// Start - DOM Event Attachments
+function doOnBeforeUnload() {
+
+	contentMMFromContentWindow_Method2(window).removeMessageListener(core.addon.id, bootstrapMsgListener);
+
 }
-function doOnFocus() {
-	window.removeEventListener('focus', doOnFocus, false);
-	readInPrefsToNg();
+
+function doOnContentLoad() {
+	console.log('in doOnContentLoad');
+	initPage();
+}
+
+document.addEventListener('DOMContentLoaded', doOnContentLoad, false);
+window.addEventListener('beforeunload', doOnBeforeUnload, false);
+
+// :note: should attach doOnBlur to window.blur after page is init'ed for first time, or if widnow not focused, then attach focus listener link147928272
+function ifNotFocusedDoOnBlur() { // was ifNotFocusedAttachFocusListener
+	if (!document.hasFocus()) {
+		attachFocusListener();
+	}
 }
 
 function attachFocusListener() {
+	// :note: i dont know why im removing focus on blur, but thats how i did it in nativeshot, it must avoid some redundancy
 	window.addEventListener('focus', doOnFocus, false);
 }
-	
-function onPageReady() {
-	// alert('page ready ' + myServices.sb_app_options.GetStringFromName('blah'))
-	window.addEventListener('blur', doOnBlur, false);
-	readInPrefsToNg(); // attachFocusListener();
-}
-// end - addon functionalities
 
-function getPref(aPrefName, doSetPrefWithVal) {
-	// gets pref, if its not there, returns default
-	// this one is mix with setPref, if set 2nd arg, see within blocks to see custom stuff, like quick_save_dir if devuser sets it to 'default' it will reset it
-	switch (aPrefName) {
-		case 'quick_save_dir':
+function detachFocusListener() {
+	window.removeEventListener('focus', doOnFocus, false);
+}
+
+function doOnFocus() {
+	detachFocusListener();
+	// fetch prefs from bootstrap, and update dom
+	nsOnFocus(); // non-skel
+}
+
+// End - DOM Event Attachments
+// Start - Page Functionalities
+
+function initPage() {
+	
+	var postNonSkelInit = function() {
+		window.addEventListener('blur', attachFocusListener, false); // link147928272
+		ifNotFocusedDoOnBlur();
+	};
+	
+	nsInitPage(postNonSkelInit); ///// non-skel
+}
+
+// End - Page Functionalities
+
+// start - server/framescript comm layer
+// sendAsyncMessageWithCallback - rev3
+var bootstrapCallbacks = { // can use whatever, but by default it uses this
+	// put functions you want called by bootstrap/server here
+	
+};
+const SAM_CB_PREFIX = '_sam_gen_cb_';
+var sam_last_cb_id = -1;
+function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
+	sam_last_cb_id++;
+	var thisCallbackId = SAM_CB_PREFIX + sam_last_cb_id;
+	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap; // :todo: figure out how to get global scope here, as bootstrap is undefined
+	aCallbackScope[thisCallbackId] = function(aMessageArr) {
+		delete aCallbackScope[thisCallbackId];
+		aCallback.apply(null, aMessageArr);
+	}
+	aMessageArr.push(thisCallbackId);
+	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
+}
+var bootstrapMsgListener = {
+	funcScope: bootstrapCallbacks,
+	receiveMessage: function(aMsgEvent) {
+		var aMsgEventData = aMsgEvent.data;
+		console.log('framescript getting aMsgEvent, unevaled:', uneval(aMsgEventData));
+		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
 		
-				// os path to dir to save in
-				var defaultVal = function() {
-					try {
-						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path;
-					} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-
-						try {
-							return Services.dirsvc.get('Pict', Ci.nsIFile).path;
-						} catch (ex if ex.result == Cr.NS_ERROR_FAILURE) { // this cr when path at keyword doesnt exist
-
-							return OS.Constants.Path.desktopDir;
+		var callbackPendingId;
+		if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+			callbackPendingId = aMsgEventData.pop();
+		}
+		
+		var funcName = aMsgEventData.shift();
+		if (funcName in this.funcScope) {
+			var rez_fs_call = this.funcScope[funcName].apply(null, aMsgEventData);
+			
+			if (callbackPendingId) {
+				// rez_fs_call must be an array or promise that resolves with an array
+				if (rez_fs_call.constructor.name == 'Promise') {
+					rez_fs_call.then(
+						function(aVal) {
+							// aVal must be an array
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
+						},
+						function(aReason) {
+							console.error('aReject:', aReason);
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
-					}
-				};
-				var prefType = 'Char';
-				
-				// set pref part
-				if (doSetPrefWithVal !== undefined) {
-					if (doSetPrefWithVal == 'default' || doSetPrefWithVal == defaultVal()) { // note: special case
-						Services.prefs.clearUserPref(myPrefBranch + 'quick_save_dir')
-					} else {
-						Services.prefs['set' + prefType + 'Pref'](myPrefBranch + aPrefName, doSetPrefWithVal);
-					}
+					).catch(
+						function(aCatch) {
+							console.error('aCatch:', aCatch);
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
+						}
+					);
+				} else {
+					// assume array
+					contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, rez_fs_call]);
 				}
-				// end set pref part
-				
-				var prefVal;
-				try {
-					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + aPrefName);
-				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
-					// ok probably doesnt exist, so return default value
-					prefVal = defaultVal();
-				}
-				return prefVal;
-			
-			break;
-		case 'print_preview':
-			
-				var defaultVal = false;
-				var prefType = 'Bool';
-				
-				// set pref part
-				if (doSetPrefWithVal !== undefined) {
-					if (doSetPrefWithVal == defaultVal) {
-						Services.prefs.clearUserPref(myPrefBranch + aPrefName)
-					} else {
-						Services.prefs['set' + prefType + 'Pref'](myPrefBranch + aPrefName, doSetPrefWithVal);
-					}
-				}
-				// end set pref part
-				
-				var prefVal;
-				try {
-					 prefVal = Services.prefs['get' + prefType + 'Pref'](myPrefBranch + 'print_preview');
-				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
-					// ok probably doesnt exist, so return default value
-					prefVal = defaultVal;
-				}
-				return prefVal;
-			
-			break;
-		default:
-			throw new Error('unrecognized aPrefName: ' + aPrefName);
+			}
+		}
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+		
+	}
+};
+contentMMFromContentWindow_Method2(content).addMessageListener(core.addon.id, bootstrapMsgListener);
+// end - server/framescript comm layer
+// start - common helper functions
+function contentMMFromContentWindow_Method2(aContentWindow) {
+	if (!gCFMM) {
+		gCFMM = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIDocShell)
+							  .QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIContentFrameMessageManager);
+	}
+	return gCFMM;
+
+}
+function Deferred() { // rev3 - https://gist.github.com/Noitidart/326f1282c780e3cb7390
+	// update 062115 for typeof
+	if (typeof(Promise) != 'undefined' && Promise.defer) {
+		//need import of Promise.jsm for example: Cu.import('resource:/gree/modules/Promise.jsm');
+		return Promise.defer();
+	} else if (typeof(PromiseUtils) != 'undefined'  && PromiseUtils.defer) {
+		//need import of PromiseUtils.jsm for example: Cu.import('resource:/gree/modules/PromiseUtils.jsm');
+		return PromiseUtils.defer();
+	} else {
+		/* A method to resolve the associated Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} value : This value is used to resolve the promise
+		 * If the value is a Promise then the associated promise assumes the state
+		 * of Promise passed as value.
+		 */
+		this.resolve = null;
+
+		/* A method to reject the assocaited Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} reason: The reason for the rejection of the Promise.
+		 * Generally its an Error object. If however a Promise is passed, then the Promise
+		 * itself will be the reason for rejection no matter the state of the Promise.
+		 */
+		this.reject = null;
+
+		/* A newly created Pomise object.
+		 * Initially in pending state.
+		 */
+		this.promise = new Promise(function(resolve, reject) {
+			this.resolve = resolve;
+			this.reject = reject;
+		}.bind(this));
+		Object.freeze(this);
 	}
 }
-// start - common helper functions
-function extendCore() {
-	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
-	switch (core.os.name) {
-		case 'winnt':
-		case 'winmo':
-		case 'wince':
-			core.os.version = parseFloat(Services.sysinfo.getProperty('version'));
-			// http://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions
-			if (core.os.version == 6.0) {
-				core.os.version_name = 'vista';
-			}
-			if (core.os.version >= 6.1) {
-				core.os.version_name = '7+';
-			}
-			if (core.os.version == 5.1 || core.os.version == 5.2) { // 5.2 is 64bit xp
-				core.os.version_name = 'xp';
-			}
-			break;
-			
-		case 'darwin':
-			var userAgent = myServices.hph.userAgent;
+function genericReject(aPromiseName, aPromiseToReject, aReason) {
+	var rejObj = {
+		name: aPromiseName,
+		aReason: aReason
+	};
+	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
+	if (aPromiseToReject) {
+		aPromiseToReject.reject(rejObj);
+	}
+}
+function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
+	var rejObj = {
+		name: aPromiseName,
+		aCaught: aCaught
+	};
+	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
+	if (aPromiseToReject) {
+		aPromiseToReject.reject(rejObj);
+	}
+}
 
-			var version_osx = userAgent.match(/Mac OS X 10\.([\d\.]+)/);
-
-			
-			if (!version_osx) {
-				throw new Error('Could not identify Mac OS X version.');
-			} else {
-				var version_osx_str = version_osx[1];
-				var ints_split = version_osx[1].split('.');
-				if (ints_split.length == 1) {
-					core.os.version = parseInt(ints_split[0]);
-				} else if (ints_split.length >= 2) {
-					core.os.version = ints_split[0] + '.' + ints_split[1];
-					if (ints_split.length > 2) {
-						core.os.version += ints_split.slice(2).join('');
-					}
-					core.os.version = parseFloat(core.os.version);
-				}
-				// this makes it so that 10.10.0 becomes 10.100
-				// 10.10.1 => 10.101
-				// so can compare numerically, as 10.100 is less then 10.101
-				
-				//core.os.version = 6.9; // note: debug: temporarily forcing mac to be 10.6 so we can test kqueue
-			}
-			break;
-		default:
-			// nothing special
+// rev1 - https://gist.github.com/Noitidart/c4ab4ca10ff5861c720b
+function validateOptionsObj(aOptions, aOptionsDefaults) {
+	// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
+	for (var aOptKey in aOptions) {
+		if (!(aOptKey in aOptionsDefaults)) {
+			console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
+			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
+		}
 	}
 	
+	// if a key is not found in aOptions, but is found in aOptionsDefaults, it sets the key in aOptions to the default value
+	for (var aOptKey in aOptionsDefaults) {
+		if (!(aOptKey in aOptions)) {
+			aOptions[aOptKey] = aOptionsDefaults[aOptKey];
+		}
+	}
+}
+function justFormatStringFromName(aLocalizableStr, aReplacements) {
+    // justFormatStringFromName is formating only ersion of the worker version of formatStringFromName
 
+    var cLocalizedStr = aLocalizableStr;
+    if (aReplacements) {
+        for (var i=0; i<aReplacements.length; i++) {
+            cLocalizedStr = cLocalizedStr.replace('%S', aReplacements[i]);
+        }
+    }
+
+    return cLocalizedStr;
 }
 // end - common helper functions
-
-document.addEventListener('DOMContentLoaded', onPageReady, false);

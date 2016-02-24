@@ -10,6 +10,7 @@ Cu.import('resource://gre/modules/Geometry.jsm');
 const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.jsm', {});
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
+Cu.import('resource://gre/modules/AddonManager.jsm');
 
 var importGlobalPropertiesArr = [];
 if (!Ci.nsIDOMFileReader) {
@@ -34,7 +35,8 @@ var core = { // core has stuff added into by MainWorker (currently OAuthWorker) 
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/'
 		},
-		prefbranch: 'extensions.NativeShot@jetpack.', // 'extensions.' + core.addon.id + '.',
+		prefbranch: 'extensions.NativeShot@jetpack.',
+		prefs: {},
 		cache_key: Math.random() // set to version on release
 	},
 	os: {
@@ -69,6 +71,257 @@ XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
 XPCOMUtils.defineLazyGetter(myServices, 'mm', function () { return Cc['@mozilla.org/globalmessagemanager;1'].getService(Ci.nsIMessageBroadcaster).QueryInterface(Ci.nsIFrameScriptLoader); });
 
+// start - pref stuff
+// Initialize the prefs object in core - this needs to be done first in the mainthread as then core gets sent to workers
+// no validation is done on the defaultValue, i assume the devuser sets it right
+var gPrefMeta = { // short for pref meta data // dictates dom structure in options.xhmtl crossfile-link44375677
+	// each MUST HAVE defaultValue, values, type
+	// type Custom MUST HAVE getter, setter can be null
+	// setter and getter are for setting and getting into the environement they are got from. the js environment here which is core.addon.prefs[aPrefName] is updated on every set and get in prefSet and prefGet with approprate validation done there link3838375435343
+		// but do not set the value of core.addon.prefs from the getter/setter
+		// async getter, should return a promise, and the value resolved is what is used
+	quick_save_dir: {
+		defaultValue: quickSaveDirDefaultValue(),
+		values: [quickSaveDirValidator],
+		type: 'Char' // type is string - Char,Int,Bool,Custom // if custom it then needs a setter and getter. setter can be null then it is never written anywhere.
+	},
+	print_preview: {
+		defaultValue: false,
+		values: [false, true],
+		type: 'Bool'
+	},
+	autoupdate: {
+		defaultValue: true,
+		values: [false, true], // false off, true on
+		type: 'Custom',
+		setter: function(aNewVal) {
+			// i dont care to return promise on succesful set, even though it is async, because the core.addon.prefs[aPrefName] is updated right away and thats what the addon uses. and promise is only for the addon to know when done
+			AddonManager.getAddonByID(core.addon.id, function(addon) {
+				if (aNewVal) {
+					addon.applyBackgroundUpdates  = 2;
+				} else {
+					addon.applyBackgroundUpdates  = 0;
+				}
+			});
+		},
+		getter: function() {
+			// do no validation on gotten val, just report it back to devuser, validation is done after it is got
+			var mainDeferred_getAutoupdate = new Deferred();
+			
+			AddonManager.getAddonByID(core.addon.id, function(addon) {
+				var gotVal = parseInt(addon.applyBackgroundUpdates);
+				if (gotVal === 0) {
+					mainDeferred_getAutoupdate.resolve(false);
+				} else if (gotVal === 2) {
+					mainDeferred_getAutoupdate.resolve(true);
+				} else {
+					// its 1, so default value, lets see what that is
+					var gotValOfDefault = AddonManager.autoUpdateDefault; // true for on, false for off
+					if (gotValOfDefault) {
+						// default is on
+						mainDeferred_getAutoupdate.resolve(true);
+					} else {
+						// default is off
+						mainDeferred_getAutoupdate.resolve(false);
+					}
+				}
+			});
+			
+			return mainDeferred_getAutoupdate.promise;
+		}
+	}
+};
+
+// only use prefGet function if you want to get fresh, otherwise just use core.addon.prefs[aPrefName] for the value
+function prefGet(aPrefName) {
+	
+	var prefType = gPrefMeta[aPrefName].type;
+	var gotVal;
+	switch (prefType) {
+		case 'Custom':
+			
+				gotVal = gPrefMeta[aPrefName].getter();
+			
+			break;
+		case 'Char':
+		case 'Int':
+		case 'Bool':
+			
+				try {
+					gotVal = Services.prefs['get' + prefType + 'Pref'](core.addon.prefbranch + aPrefName);
+				} catch(ex) {
+					// pref probably doesnt exist, so set it to defaultValue
+					gotVal = gPrefMeta[aPrefName].defaultValue;
+				}
+			
+			break;
+		default:
+			console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
+			throw new Error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName');
+	}
+	
+	if (gotVal.constructor.name == 'Promise') {
+		var deferred_waitGetter = new Deferred();
+		
+		// actually on error it returns the default value, because you wanted it fresh right, meaning the devuser thinks current value is defunct?? maybe so im going with this  decided against ----> // on error, it resolves with the current value, if no current value, then it resolves with the default value link444522952112
+		
+		gotVal.then(
+			function(aVal) {
+				console.log('Fullfilled - gotVal - ', aVal);
+				// start - copy block1029221000
+				if (isValidPrefVal(aPrefName, aVal)) {
+					core.addon.prefs[aPrefName] = aVal; // link3838375435343
+					deferred_waitGetter.resolve(aVal);
+				} else {
+					console.error('got invalid value for pref name:', aPrefName, 'value got was:', '"' + aVal + '"', 'so returning default');
+					core.addon.prefs[aPrefName] = gPrefMeta[aPrefName].defaultValue; // link3838375435343
+					// deferred_waitGetter.resolve(getFromCore_curValOrDefault(aPrefName)); // link444522952112
+					deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
+				}
+				// end - copy block1029221000
+			},
+			function(aReason) {
+				var rejObj = {
+					name: 'gotVal',
+					aReason: aReason
+				};
+				console.error('Rejected - gotVal - ', rejObj);
+				core.addon.prefs[aPrefName] = gPrefMeta[aPrefName].defaultValue; // link3838375435343
+				// deferred_waitGetter.resolve(getFromCore_curValOrDefault(aPrefName)); // link444522952112
+				deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {
+					name: 'gotVal',
+					aCaught: aCaught
+				};
+				console.error('Caught - gotVal - ', rejObj);
+				core.addon.prefs[aPrefName] = gPrefMeta[aPrefName].defaultValue; // link3838375435343
+				// deferred_waitGetter.resolve(getFromCore_curValOrDefault(aPrefName)); // link444522952112
+				deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
+			}
+		);
+		
+		return deferred_waitGetter.promise;
+	} else {
+		// start - copy block1029221000
+		if (isValidPrefVal(aPrefName, gotVal)) {
+			core.addon.prefs[aPrefName] = gotVal; // link3838375435343
+			return gotVal;
+		}
+		// end - copy block1029221000
+	}
+}
+
+function getFromCore_curValOrDefault(aPrefName) {
+	if (aPrefName in core.addon.prefs) {
+		return core.addon.prefs[aPrefName];
+	} else {
+		return gPrefMeta[aPrefName].defaultValue;
+	}
+}
+
+function prefSet(aPrefName, aNewVal) {
+	if (isValidPrefVal(aPrefName, aNewVal)) {
+		var prefType = gPrefMeta[aPrefName].type;
+		switch (prefType) {
+			case 'Custom':
+				
+					gPrefMeta[aPrefName].setter(aNewVal);
+				
+				break;
+			case 'Char':
+			case 'Int':
+			case 'Bool':
+				
+					Services.prefs['set' + prefType + 'Pref'](core.addon.prefbranch + aPrefName, aNewVal);
+				
+				break;
+			default:
+				console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
+				throw new Error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName');
+		}
+		core.addon.prefs[aPrefName] = aNewVal; // link3838375435343
+	}
+}
+
+function isValidPrefVal(aPrefName, aVal) {
+	// aVal is something you want to test if it is valid for setting to pref value
+	// RETURNS
+		// true
+		// false
+	
+	var cValues = gPrefMeta[aPrefName].values;
+	if (!cValues) {
+		console.error('valid values not set for aPrefName:', aPrefName);
+		throw new Error('valid values not set for aPrefName!');
+	}
+	for (var i=0; i<cValues.length; i++) {
+		if (typeof(cValues[i]) == 'function') {
+			if (cValues[i](aVal)) {
+				return true;
+			}
+		} else {
+			if (aVal == cValues[i]) {
+				return true;
+			}
+		}
+	}
+	
+	return false;
+}
+
+function quickSaveDirDefaultValue() {
+	try {
+		return Services.dirsvc.get('XDGPict', Ci.nsIFile).path; // works on linux
+	} catch (ex) {
+		try {
+			return Services.dirsvc.get('Pict', Ci.nsIFile).path; // works on windows
+		} catch (ex) {
+			try {
+				return Services.dirsvc.get('Pct', Ci.nsIFile).path; // works on mac
+			} catch (ex) {
+				return OS.Constants.Path.desktopDir;
+			}
+		}
+	}
+}
+
+function quickSaveDirValidator(aNewVal) {
+	return true; // :todo: for now i just return true
+}
+
+function refreshCoreForPrefs() {
+	// updates all the values in core.addon.prefs
+	// RETURNS
+		// promise telling you when complete. resolve value is core.addon.prefs
+	var mainDeferred_refreshCoreForPrefs = new Deferred();
+	
+	var promiseAllArr_getterRequests = [];
+	for (var aPrefName in gPrefMeta) {
+		var fetchFresh = prefGet(aPrefName);
+		if (fetchFresh.constructor.name == 'Promise') {
+			promiseAllArr_getterRequests.push(fetchFresh);
+		}
+	}
+	
+	if (!promiseAllArr_getterRequests.length) {
+		mainDeferred_refreshCoreForPrefs.resolve(core.addon.prefs);
+	} else {
+		var promiseAll_getterRequests = Promise.all(promiseAllArr_getterRequests);
+		promiseAll_getterRequests.then(
+			function(aVal) {
+				console.log('Fullfilled - promiseAll_getterRequests - ', aVal);
+				mainDeferred_refreshCoreForPrefs.resolve(core.addon.prefs);
+			},
+			genericReject.bind(null, 'promiseAll_getterRequests', mainDeferred_refreshCoreForPrefs)
+		).catch(genericCatch.bind(null, 'promiseAll_getterRequests', mainDeferred_refreshCoreForPrefs));
+	}
+	
+	return mainDeferred_refreshCoreForPrefs.promise;
+}
+// end - pref stuff
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
 	switch (core.os.name) {
@@ -3760,7 +4013,7 @@ function uninstall(aData, aReason) {
 }
 
 function startup(aData, aReason) {
-	core.addon.aData = aData;
+	// core.addon.aData = aData;
 	extendCore();
 	
 	// start - add stuff to core that worker cannot get
@@ -3826,14 +4079,28 @@ function startup(aData, aReason) {
 		Services.mm.addMessageListener(core.addon.id, fsMsgListener);
 	};
 	
-	var promise_getInit = SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs).post();
-	promise_getInit.then(
+	var do_afterPrefsInit = function() {
+		var promise_getInit = SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs).post();
+		promise_getInit.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_getInit - ', aVal);
+				do_afterWorkerInit(aVal);
+			},
+			genericReject.bind(null, 'promise_getInit', 0)
+		).catch(genericCatch.bind(null, 'promise_getInit', 0));
+	};
+	
+	// set stuff in core, as it is sent to worker	
+	var promise_initPrefs = refreshCoreForPrefs();
+	
+	
+	promise_initPrefs.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_getInit - ', aVal);
-			do_afterWorkerInit(aVal);
+			console.log('Fullfilled - promise_initPrefs - ', aVal);
+			do_afterPrefsInit();
 		},
-		genericReject.bind(null, 'promise_getInit', 0)
-	).catch(genericCatch.bind(null, 'promise_getInit', 0));
+		genericReject.bind(null, 'promise_initPrefs', 0)
+	).catch(genericCatch.bind(null, 'promise_initPrefs', 0));
 }
 
 function shutdown(aData, aReason) {
@@ -3927,59 +4194,6 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 			cNsiFile.append(aFileName);
 			cNsiFile.reveal();
 		}
-	}
-}
-function getPrefNoSetStuff(aPrefName) {
-	// gets pref, if its not there, returns default
-	// this one doesnt have the set stuff
-	switch (aPrefName) {
-		case 'quick_save_dir':
-		
-				// os path to dir to save in
-				var defaultVal = function() {
-					try {
-						return Services.dirsvc.get('XDGPict', Ci.nsIFile).path; // works on linux
-					} catch (ex) {
-						try {
-							return Services.dirsvc.get('Pict', Ci.nsIFile).path; // works on windows
-						} catch (ex) {
-							try {
-								return Services.dirsvc.get('Pct', Ci.nsIFile).path; // works on mac
-							} catch (ex) {
-								return OS.Constants.Path.desktopDir;
-							}
-						}
-					}
-				};
-				var prefType = 'Char';
-				
-				var prefVal;
-				try {
-					 prefVal = Services.prefs['get' + prefType + 'Pref'](core.addon.prefbranch + aPrefName);
-				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
-					// ok probably doesnt exist, so return default value
-					prefVal = defaultVal();
-				}
-				return prefVal;
-			
-			break;
-		case 'print_preview':
-			
-				var defaultVal = false;
-				var prefType = 'Bool';
-				
-				var prefVal;
-				try {
-					 prefVal = Services.prefs['get' + prefType + 'Pref'](core.addon.prefbranch + 'print_preview');
-				} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) { // this cr when pref doesnt exist
-					// ok probably doesnt exist, so return default value
-					prefVal = defaultVal;
-				}
-				return prefVal;
-			
-			break;
-		default:
-			throw new Error('unrecognized aPrefName: ' + aPrefName);
 	}
 }
 
