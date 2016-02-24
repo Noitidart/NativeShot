@@ -20,7 +20,7 @@ if (importGlobalPropertiesArr.length) {
 }
 
 // Globals
-var core = {
+var core = { // core has stuff added into by MainWorker (currently OAuthWorker) and then it is updated
 	addon: {
 		name: 'NativeShot',
 		id: 'NativeShot@jetpack',
@@ -49,6 +49,7 @@ var core = {
 };
 
 var bootstrap = this;
+var BOOTSTRAP = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 const JETPACK_DIR_BASENAME = 'jetpack';
@@ -3618,6 +3619,137 @@ var OAuthWorkerMainThreadFuncs = {
 };
 // end - OAuthWorkerMainThreadFuncs
 
+// start - main framescript communication - rev3 https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
+var fsFuncs = { // can use whatever, but by default its setup to use this
+	callInPromiseWorker: function(aArrOfFuncnameThenArgs) {
+		// for use with sendAsyncMessageWithCallback from framescripts
+		
+		var mainDeferred_callInPromiseWorker = new Deferred();
+		
+		var rez_pwcall = OAuthWorker.post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
+		rez_pwcall.then(
+			function(aVal) {
+				console.log('Fullfilled - rez_pwcall - ', aVal);
+				if (Array.isArray(aVal)) {
+					mainDeferred_callInPromiseWorker.resolve(aVal);
+				} else {
+					mainDeferred_callInPromiseWorker.resolve([aVal]);
+				}
+			},
+			function(aReason) {
+				var rejObj = {
+					name: 'rez_pwcall',
+					aReason: aReason
+				};
+				console.error('Rejected - rez_pwcall - ', rejObj);
+				mainDeferred_callInPromiseWorker.resolve([rejObj]);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {
+					name: 'rez_pwcall',
+					aCaught: aCaught
+				};
+				console.error('Caught - rez_pwcall - ', rejObj);
+				mainDeferred_callInPromiseWorkerr.resolve([rejObj]);
+			}
+		);
+		
+		return mainDeferred_callInPromiseWorker.promise;
+	},
+	callInBootstrap: function(aArrOfFuncnameThenArgs) {
+		// for use with sendAsyncMessageWithCallback from framescripts
+		
+		var mainDeferred_callInBootstrap = new Deferred();
+		
+		var rez_pwcall = BOOTSTRAP[aArrOfFuncnameThenArgs.shift()].apply(null, aArrOfFuncnameThenArgs);
+		if (rez_pwcall && rez_pwcall.constructor.name == 'Promise') { // rez_pwcall may be undefined if it didnt return a promise
+			rez_pwcall.then(
+				function(aVal) {
+					console.log('Fullfilled - rez_pwcall - ', aVal);
+					if (Array.isArray(aVal)) {
+						mainDeferred_callInBootstrap.resolve(aVal);
+					} else {
+						mainDeferred_callInBootstrap.resolve([aVal]);
+					}
+				},
+				function(aReason) {
+					var rejObj = {
+						name: 'rez_pwcall',
+						aReason: aReason
+					};
+					console.error('Rejected - rez_pwcall - ', rejObj);
+					mainDeferred_callInBootstrap.resolve([rejObj]);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {
+						name: 'rez_pwcall',
+						aCaught: aCaught
+					};
+					console.error('Caught - rez_pwcall - ', rejObj);
+					mainDeferred_callInBootstrapr.resolve([rejObj]);
+				}
+			);
+		} else {
+			if (Array.isArray(rez_pwcall)) {
+				mainDeferred_callInBootstrap.resolve(rez_pwcall);
+			} else {
+				mainDeferred_callInBootstrap.resolve([rez_pwcall]);
+			}
+		}
+		
+		return mainDeferred_callInBootstrap.promise;
+	}
+};
+var fsMsgListener = {
+	funcScope: fsFuncs,
+	receiveMessage: function(aMsgEvent) {
+		var aMsgEventData = aMsgEvent.data;
+		console.log('fsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
+		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+		
+		var callbackPendingId;
+		if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+			callbackPendingId = aMsgEventData.pop();
+		}
+		
+		aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
+		
+		var funcName = aMsgEventData.shift();
+		if (funcName in this.funcScope) {
+			var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
+			
+			if (callbackPendingId) {
+				// rez_parentscript_call must be an array or promise that resolves with an array
+				if (rez_parentscript_call.constructor.name == 'Promise') {
+					rez_parentscript_call.then(
+						function(aVal) {
+							// aVal must be an array
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
+						},
+						function(aReason) {
+							console.error('aReject:', aReason);
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+						}
+					).catch(
+						function(aCatch) {
+							console.error('aCatch:', aCatch);
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
+						}
+					);
+				} else {
+					// assume array
+					aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, rez_parentscript_call]);
+				}
+			}
+		}
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+		
+	}
+};
+// end - main framescript communication
+
 function install() {}
 function uninstall(aData, aReason) {
 	// delete imgur history file
@@ -3690,6 +3822,8 @@ function startup(aData, aReason) {
 		initAndRegisterAboutNativeShot();
 		
 		AB.init();
+		
+		Services.mm.addMessageListener(core.addon.id, fsMsgListener);
 	};
 	
 	var promise_getInit = SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs).post();
@@ -3759,8 +3893,42 @@ function shutdown(aData, aReason) {
 	for (var i=0; i<gFHR.length; i++) {
 		gFHR[i].destroy();
 	}
+	
+	Services.mm.removeMessageListener(core.addon.id, fsMsgListener);
 }
 
+// start - custom addon functionalities
+function openRelatedTab(aUrl) {
+	Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(aUrl, {
+		inBackground: false,
+		relatedToCurrent: true
+	});
+}
+
+// rev3 - https://gist.github.com/Noitidart/feeec1776c6ee4254a34
+function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
+	// can pass in aNsiFile
+	if (aNsiFile) {
+		//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
+		// opens the directory of the aNsiFile
+		
+		if (aNsiFile.isDirectory()) {
+			aNsiFile.launch();
+		} else {
+			aNsiFile.reveal();
+		}
+	} else {
+		var cNsiFile = new FileUtils.File(aDirPlatPath);
+		
+		if (!aFileName) {
+			// its a directory
+			cNsiFile.launch();
+		} else {
+			cNsiFile.append(aFileName);
+			cNsiFile.reveal();
+		}
+	}
+}
 function getPrefNoSetStuff(aPrefName) {
 	// gets pref, if its not there, returns default
 	// this one doesnt have the set stuff
@@ -4044,6 +4212,7 @@ function appendToHistoryLog(aTypeStr, aData) {
 	
 	do_openHistory(); // starts the papend to history process
 }
+// end - custom addon functionalities
 
 // start - common helper functions
 function isFocused(window) {
@@ -4810,16 +4979,6 @@ function tryOsFile_ifDirsNoExistMakeThenRetry(nameOfOsFileFunc, argsOfOsFileFunc
 	
 	
 	return deferred_tryOsFile_ifDirsNoExistMakeThenRetry.promise;
-}
-function showFileInOSExplorer(aNsiFile) {
-	//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
-	// opens the directory of the aNsiFile
-	
-	if (aNsiFile.isDirectory()) {
-		aNsiFile.launch();
-	} else {
-		aNsiFile.reveal();
-	}
 }
 function copyTextToClip(aTxt, aDOMWindow) {
 	var trans = Transferable(aDOMWindow ? aDOMWindow : Services.wm.getMostRecentWindow('navigator:browser'));
