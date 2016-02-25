@@ -10,7 +10,7 @@ var core = { // have to set up the main keys that you want when aCore is merged 
 		}
 	},
 	os: {
-		// name: OS.Constants.Sys.Name.toLowerCase()
+		name: OS.Constants.Sys.Name.toLowerCase()
 	}
 };
 
@@ -220,6 +220,11 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aPre
 							});
 						}
 					});
+
+					if (core.os.mname == 'darwin') {
+						self.postMessage(['callInBootstrap', ['macSetLevelOfBrowseFile']]);
+					}
+					
 					return deferredMain_saveToDiskImgArrBufForBtnId.promise;
 			
 				break;

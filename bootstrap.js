@@ -40,7 +40,7 @@ var core = { // core has stuff added into by MainWorker (currently MainWorker) a
 		cache_key: Math.random() // set to version on release
 	},
 	os: {
-		// name: OS.Constants.Sys.Name.toLowerCase(),
+		name: OS.Constants.Sys.Name.toLowerCase(),
 		toolkit: Services.appinfo.widgetToolkit.toLowerCase(),
 		xpcomabi: Services.appinfo.XPCOMABI
 	},
@@ -3095,6 +3095,7 @@ var windowListener = {
 		
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
+			console.error('heeeeeee:', core.addon.path.styles + 'cui.css');
 			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + 'cui.css', null, null), domWinUtils.AUTHOR_SHEET);
 			
 			for (aGroupId in NBs.crossWin) {
@@ -4197,6 +4198,72 @@ function browseFile(aDialogTitle, aOptions={}) {
 	} else {
 		return fpDoneCallback(fp.show());
 	}
+}
+
+function macSetLevelOfBrowseFile() {
+	// can use gMacTypes.setLevel and gMacTypes.NSMainMenuWindowLevel because this only ever triggers after link98476884 runs for sure for sure
+	console.error('in macSetLevelOfBrowseFile');
+	/*
+	var cWin = Services.wm.getMostRecentWindow(null);
+	try {
+		var cWinType = cWin.document.documentElement.getAttribute('windowtype');
+		console.error('cWinType:', cWinType);
+	} catch(ignore) {}
+	try {
+		var cWinTitle = cWin.document.documentElement.getAttribute('title');
+		console.error('cWinTitle:', cWinTitle);
+	} catch(ignore) {}
+	
+	var aHwndPtrStr = Services.wm.getMostRecentWindow(null).QueryInterface(Ci.nsIInterfaceRequestor)
+										.getInterface(Ci.nsIWebNavigation)
+										.QueryInterface(Ci.nsIDocShellTreeItem)
+										.treeOwner
+										.QueryInterface(Ci.nsIInterfaceRequestor)
+										.getInterface(Ci.nsIBaseWindow)
+										.nativeHandle;
+	var NSWindowString = aHwndPtrStr;
+
+								
+	var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+	*/
+	var NSApplication = gMacTypes.objc_getClass('NSApplication');
+	var sharedApplication = gMacTypes.sel_registerName('sharedApplication');
+	
+	var sharedApp = gMacTypes.objc_msgSend(NSApplication, sharedApplication);
+	console.log('sharedApp:', sharedApp, sharedApp.toString(), uneval(sharedApp));
+	
+	var keyWindow = gMacTypes.sel_registerName('keyWindow');
+	var rez_keyWin = gMacTypes.objc_msgSend(sharedApp, keyWindow);
+	console.log('rez_keyWin:', rez_keyWin, rez_keyWin.toString(), uneval(rez_keyWin));
+	if (rez_keyWin.isNull()) {
+		console.error('no keyWindow yet, apparently its possible, im guessing maybe while the window is opening, im not sure but just to be safe wait a bit and call again');
+		setTimeout(macSetLevelOfBrowseFile, 100);
+		return;
+	}
+	
+	var title = gMacTypes.sel_registerName('title');
+	var rez_title = gMacTypes.objc_msgSend(rez_keyWin, title);
+	console.log('rez_title:', rez_title, rez_title.toString(), uneval(rez_title));
+	
+	var UTF8String = gMacTypes.sel_registerName('UTF8String');
+	var rez_titleUTF8 = gMacTypes.objc_msgSend(rez_title, UTF8String);
+	console.log('rez_titleUTF8:', rez_titleUTF8, rez_titleUTF8.toString(), uneval(rez_titleUTF8));
+	
+	var cCharPtr = ctypes.cast(rez_titleUTF8, ctypes.char.ptr);
+	var cWinTitle = cCharPtr.readString(); // :note: // link123111119 i do read string, so the text i open browseFile with should be readable by this
+	console.log('cWinTitle:', cWinTitle);
+	
+	if (cWinTitle != core.addon.l10n.bootstrap['filepicker-title-save-screenshot']) {
+		console.error('keyWindow is not the browse file picker dialog yet so try again in a bit');
+		setTimeout(macSetLevelOfBrowseFile, 100);
+		return;
+	} else {	
+		var rez_setLevel = gMacTypes.objc_msgSend(rez_keyWin, gMacTypes.setLevel, gMacTypes.NSInteger(gMacTypes.NSMainMenuWindowLevel + 1)); // i guess 0 is NSNormalWindowLevel // link98476884 // link847455111
+		console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString(), uneval(rez_setLevel));
+	}
+	console.error('done macSetLevelOfBrowseFile');
+	
+	// in my tests, i didnt need to every wait, as keyWindow was set and it was the picker
 }
 
 function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {
