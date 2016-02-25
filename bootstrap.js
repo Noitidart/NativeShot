@@ -512,8 +512,8 @@ function get_gEMenuDomJson() {
 		gEMenuDomJson =
 			['xul:popupset', {},
 				['xul:menupopup', {id: 'myMenu1'},
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-quick']), oncommand:function(e){ gEditor.saveToFile(e, true) }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-browse']), oncommand:function(e){ gEditor.saveToFile(e) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-quick']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-quick') }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-browse']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-browse') }}],
 					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_copy']), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
 					['xul:menuitem', {id:'print_menuitem', label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_print']), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
 					['xul:menu', {label:'Upload to Cloud Drive'}, // :l10n:
@@ -1491,115 +1491,6 @@ var gEditor = {
 			gENotifCallback.notify(gNotifTimer);
 		}
 	},
-	saveToFile: function(e, aBoolPreset) {
-		// aBoolPreset true if want to use preset folder and file name
-		this.compositeSelection();
-		
-		var OSPath_save;
-		var do_saveCanToDisk = function() {
-			(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
-				gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-				var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
-				r.onloadend = function() {
-					// r.result contains the ArrayBuffer.
-					// start - copy block link49842300
-					var promise_saveToDisk = OS.File.writeAtomic(OSPath_save, new Uint8Array(r.result), { tmpPath: OSPath_save + '.tmp' });
-					promise_saveToDisk.then(
-						function(aVal) {
-
-							// start - do stuff here - promise_saveToDisk
-							var trans = Transferable(gEditor.gBrowserDOMWindow);
-							trans.addDataFlavor('text/unicode');
-							// We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-							trans.setTransferData('text/unicode', SupportsString(OSPath_save), OSPath_save.length * 2);
-							
-							Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-							
-							gEditor.showNotif(justFormatStringFromName(core.addon.l10n.bootstrap['notif-title_file-save-ok']), justFormatStringFromName(core.addon.l10n.bootstrap['notif-body_file-save-ok']), notifCB_saveToFile.bind(null, OSPath_save));
-							
-							appendToHistoryLog(aBoolPreset ? 'save-quick' : 'save-browse', {
-								d: new Date().getTime(),
-								n: OS.Path.basename(OSPath_save),
-								f: OS.Path.dirname(OSPath_save)
-							});
-							
-							// end - do stuff here - promise_saveToDisk
-						},
-						function(aReason) {
-							var rejObj = {name:'promise_saveToDisk', aReason:aReason};
-
-							gEditor.showNotif(justFormatStringFromName(core.addon.l10n.bootstrap['notif-title_file-save-fail']), justFormatStringFromName(core.addon.l10n.bootstrap['notif-body_file-save-fail']));
-							//deferred_createProfile.reject(rejObj);
-						}
-					).catch(
-						function(aCaught) {
-							var rejObj = {name:'promise_saveToDisk', aCaught:aCaught};
-
-							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Developer Error', 'Developer did something wrong in the code, see Browser Console.');
-							//deferred_createProfile.reject(rejObj);
-						}
-					);
-					// end - copy block link49842300
-				};
-				r.readAsArrayBuffer(b);
-			}, 'image/png');
-		}
-		
-		if (aBoolPreset) {
-			// start - copy block link7984654
-			// get save path
-			var OSPath_saveDir = prefGet('quick_save_dir');
-			
-			// generate file name
-			var filename = justFormatStringFromName(core.addon.l10n.bootstrap['screenshot']) + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
-			OSPath_save = OS.Path.join(OSPath_saveDir, filename);
-			// end - copy block link7984654
-						
-			do_saveCanToDisk();
-			
-		} else {
-			if (core.os.name == 'darwin') {
-					// can use gMacTypes.setLevel and gMacTypes.NSMainMenuWindowLevel because this only ever triggers after link98476884 runs for sure for sure
-					var aHwndPtrStr = e.view.QueryInterface(Ci.nsIInterfaceRequestor)
-														.getInterface(Ci.nsIWebNavigation)
-														.QueryInterface(Ci.nsIDocShellTreeItem)
-														.treeOwner
-														.QueryInterface(Ci.nsIInterfaceRequestor)
-														.getInterface(Ci.nsIBaseWindow)
-														.nativeHandle;
-					var NSWindowString = aHwndPtrStr;
-
-												
-					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
-
-					var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.setLevel, gMacTypes.NSInteger(0)); // i guess 0 is NSNormalWindowLevel
-
-			}
-			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-			fp.init(e.view, justFormatStringFromName(core.addon.l10n.bootstrap['filepicker-title-save-screenshot']), Ci.nsIFilePicker.modeSave);
-			fp.appendFilter('PNG Image', '*.png');
-			
-			var rv = fp.show();
-			
-			if (core.os.name == 'darwin') {
-				var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.setLevel, gMacTypes.NSInteger(gMacTypes.NSMainMenuWindowLevel + 1)); // link847455111
-
-			}
-			
-			if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
-				OSPath_save = fp.file.path.trim();
-				
-				if (!/^.*\.png/i.test(OSPath_save)) {
-					OSPath_save += '.png';
-				}
-				do_saveCanToDisk();
-			} else {
-				 // user canceled
-
-				//gEditor.closeOutEditor(e);
-			}
-		}
-	},
 	copyToClipboard: function(e) {
 		this.compositeSelection();
 			
@@ -2078,15 +1969,22 @@ var gEditor = {
 		this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
+		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
-
+		var cMethodForService;
 		switch (aOAuthService) {
 			case 'dropbox':
 			case 'imgur':
 			case 'gdrive':
 			case 'imguranon':
 				
-					// good dont error
+					cMethodForService = 'uploadImgArrBufForBtnId';
+				
+				break;
+			case 'save-quick':
+			case 'save-browse':
+				
+					cMethodForService = 'saveToDiskImgArrBufForBtnId';
 				
 				break;
 			default:
@@ -2094,7 +1992,7 @@ var gEditor = {
 				throw new Error('invalid aOAuthService!!');
 		}
 		
-		var cBtn = gEditorABData_Bar[gEditor.sessionId].addBtn();
+		var cBtn = gEditorABData_Bar[cSessionId].addBtn();
 		cBtn.setBtnState({
 			bTxt: 'Initializing...', // :l10n:
 			bIcon: core.addon.path.images + aOAuthService + '_neutral16.png'
@@ -2124,7 +2022,7 @@ var gEditor = {
 				cBtn.data.width = cWidth;
 				cBtn.data.height = cHeight;
 				
-				var promise_uploadImgToCloud = MainWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, aOAuthService]); // link888778
+				var promise_uploadImgToCloud = MainWorker.post(cMethodForService, [cBtn.btnId, aOAuthService, cSessionId]); // link888778
 				promise_uploadImgToCloud.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_uploadImgToCloud - ', aVal);
@@ -2720,13 +2618,13 @@ function shootAllMons(aDOMWindow) {
 	
 	gESelected = false;
 	var openWindowOnEachMon = function() {
-		gEditor.sessionId = new Date().getTime();
+		gEditor.sessionId = new Date().getTime(); // in other words, this is time of screenshot of this session
 		
 		// notification bar stuff
 		var cSessionId = gEditor.sessionId;
 		gEditorABData_Bar[gEditor.sessionId] = { // link8888776
 			ABRef: { // object for the bar used for state - so I can go AB.setState(.ABRef)
-				aTxt: (new Date()).toLocaleString(),
+				aTxt: (new Date(gEditor.sessionId)).toLocaleString(),
 				aPriority: 1,
 				aIcon: core.addon.path.images + 'icon16.png',
 				aClose: function() {
@@ -3938,7 +3836,12 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 		
 		var mainDeferred_callInBootstrap = new Deferred();
 		
-		var rez_pwcall = BOOTSTRAP[aArrOfFuncnameThenArgs.shift()].apply(null, aArrOfFuncnameThenArgs);
+		var cBootMethod = aArrOfFuncnameThenArgs.shift();
+		if (!(cBootMethod in BOOTSTRAP)) {
+			console.error('method is not in bootstrap! cBootMethod:', cBootMethod);
+			throw new Error('method is not in bootstrap!');
+		}
+		var rez_pwcall = BOOTSTRAP[cBootMethod].apply(null, aArrOfFuncnameThenArgs);
 		if (rez_pwcall && rez_pwcall.constructor.name == 'Promise') { // rez_pwcall may be undefined if it didnt return a promise
 			rez_pwcall.then(
 				function(aVal) {
@@ -3978,6 +3881,9 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 		return mainDeferred_callInBootstrap.promise;
 	}
 };
+
+MainWorkerMainThreadFuncs.callInBootstrap = fsFuncs.callInBootstrap;
+
 var fsMsgListener = {
 	funcScope: fsFuncs,
 	receiveMessage: function(aMsgEvent) {
@@ -4221,69 +4127,76 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 	}
 }
 
-function browseFile(aDialogTitle) {
+function browseFile(aDialogTitle, aOptions={}) {
 	// uses xpcom file browser and returns path to file selected
-
-	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+	// returns
+		// filename
+		// if aOptions.returnDetails is true, then it returns object with fields:
+		//	{
+		//		filepath: string,
+		//		replace: bool, // only set if mode is modeSave
+		//	}
 	
-	fp.init(Services.wm.getMostRecentWindow(null), aDialogTitle, Ci.nsIFilePicker.modeOpen);
-	
-	/*
-	switch (OS.Constants.Sys.Name.toLowerCase()) {
-		case 'winnt':
-		case 'wince':
-		case 'winmo':
-			
-				// fp.appendFilter('Firefox Executeable (application/exe)', 'firefoxg.exe');
-				fp.appendFilter(myServices.sb.GetStringFromName('filter-exe-win'), 'firefox.exe');
-				fp.displayDirectory = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent;
-				
-			break;
-		case 'darwin':
-			
-				// fp.appendFilter('Firefox Application Bundle', '*.app');
-				fp.appendFilter(myServices.sb.GetStringFromName('filter-exe-mac'), '*.app');
-				// fp.displayDirectory = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent;
-				fp.displayDirectory = (new FileUtils.File(core.profilist.path.XREExeF)).parent.parent.parent;
-				// .parent = MacOs
-				// .parent.parent = Contents
-				// .parent.parent.parent = .app
-				// .parent.parent.parent.parent = parent of .app
-				
-			break;
-		default:
-		
-				// assume unix, it has no extension apparently
-				// fp.appendFilter('Firefox Binary (application/x-sharedlib)', 'firefox');
-				fp.appendFilter(myServices.sb.GetStringFromName('filter-exe-nix'), 'firefox');
-				fp.displayDirectory = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent;
-
+	var cOptionsDefaults = {
+		mode: 'modeOpen', // modeSave, modeGetFolder,
+		filters: undefined, // else an array. in sets of two. so one filter would be ['PNG', '*.png'] or two filters woul be ['PNG', '*.png', 'All Files', '*']
+		startDirPlatPath: undefined, // string - platform path to dir the dialog should start in
+		returnDetails: false,
+		async: false // if set to true, then it wont block main thread while its open, and it will also return a promise
 	}
-	*/
 	
-	var rv = fp.show();
-	if (rv == Ci.nsIFilePicker.returnOK) { // no need for Ci.nsIFilePicker.returnReplace as this is just an open
-		
-		return fp.file.path;
-
-	}// else { // cancelled	}
+	validateOptionsObj(aOptions, cOptionsDefaults);
 	
-	return undefined; // cancelled
-}
-
-function browseDir(aDialogTitle) {
-	// uses xpcom file browser and returns path to dir selected
-
 	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-	fp.init(Services.wm.getMostRecentWindow('navigator:browser'), aDialogTitle, Ci.nsIFilePicker.modeGetFolder);
-	// fp.appendFilters(Ci.nsIFilePicker.filterAll);
+	
+	fp.init(Services.wm.getMostRecentWindow(null), aDialogTitle, Ci.nsIFilePicker[aOptions.mode]);
+	
+	if (aOptions.filters) {
+		for (var i=0; i<aOptions.filters.length; i=i+2) {
+			fp.appendFilter(aOptions.filters[i], aOptions.filters[i+1]);
+		}
+	}
+	
+	if (aOptions.startDirPlatPath) {
+		fp.displayDirectory = new FileUtils.File(aOptions.startDirPlatPath);
+	}
+	
+	var fpDoneCallback = function(rv) {
+		var retFP;
+		if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
+			
+			if (aOptions.returnDetails) {
+				var cBrowsedDetails = {
+					filepath: fp.file.path
+				};
+				
+				if (aOptions.mode == 'modeSave') {
+					cBrowsedDetails.replace = (rv == Ci.nsIFilePicker.returnReplace);
+				}
+				
+				retFP = cBrowsedDetails;
+			} else {
+				retFP = fp.file.path;
+			}
 
-	var rv = fp.show();
-	if (rv == Ci.nsIFilePicker.returnOK) { // no need for Ci.nsIFilePicker.returnReplace as this is just an open
-		
-		return fp.file.path;
-
-	}// else { // cancelled	} so it will return undefined
+		}// else { // cancelled	}
+		if (aOptions.async) {
+			console.error('async resolving');
+			mainDeferred_browseFile.resolve(retFP);
+		} else {
+			return retFP;
+		}
+	}
+	
+	if (aOptions.async) {
+		var mainDeferred_browseFile = new Deferred();
+		fp.open({
+			done: fpDoneCallback
+		});
+		return mainDeferred_browseFile.promise;
+	} else {
+		return fpDoneCallback(fp.show());
+	}
 }
 
 function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {

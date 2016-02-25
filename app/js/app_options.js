@@ -203,7 +203,7 @@ var gDOMStructureCallbacks = {
 			});
 		};
 		
-		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['browseDir', core.addon.l10n.change_dir_dialog_title]], bootstrapMsgListener.funcScope, function(aDirPlatPath) {
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['browseFile', core.addon.l10n.app_options.change_dir_dialog_title, {mode:'modeGetFolder', async:true}]], bootstrapMsgListener.funcScope, function(aDirPlatPath) {
 			console.log('aDirPlatPath:', aDirPlatPath);
 			if (aDirPlatPath && aDirPlatPath != core.addon.prefs.quick_save_dir.value) {
 				do_setPref(aDirPlatPath);
