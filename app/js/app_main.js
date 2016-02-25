@@ -877,7 +877,9 @@ function initPage() {
 // sendAsyncMessageWithCallback - rev3
 var bootstrapCallbacks = { // can use whatever, but by default it uses this
 	// put functions you want called by bootstrap/server here
-	
+	serverCommand_refreshDashboardGuiFromFile: function() {
+		nsOnFocus();
+	}
 };
 const SAM_CB_PREFIX = '_sam_gen_cb_';
 var sam_last_cb_id = -1;

@@ -21,7 +21,7 @@ if (importGlobalPropertiesArr.length) {
 }
 
 // Globals
-var core = { // core has stuff added into by MainWorker (currently OAuthWorker) and then it is updated
+var core = { // core has stuff added into by MainWorker (currently MainWorker) and then it is updated
 	addon: {
 		name: 'NativeShot',
 		id: 'NativeShot@jetpack',
@@ -1548,7 +1548,7 @@ var gEditor = {
 		if (aBoolPreset) {
 			// start - copy block link7984654
 			// get save path
-			var OSPath_saveDir = getPrefNoSetStuff('quick_save_dir');
+			var OSPath_saveDir = prefGet('quick_save_dir');
 			
 			// generate file name
 			var filename = justFormatStringFromName(core.addon.l10n.bootstrap['screenshot']) + ' - ' + getSafedForOSPath(new Date().toLocaleFormat()) + '.png';
@@ -1657,7 +1657,7 @@ var gEditor = {
 	sendToPrinter: function(e) {
 		this.compositeSelection();
 		
-		if (!getPrefNoSetStuff('print_preview')) {
+		if (!getPref('print_preview')) {
 			// print method link678321212
 			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
 			var doc = win.document;
@@ -2103,8 +2103,8 @@ var gEditor = {
 		cBtn.meta.action = 'uploadImgByteData';
 		cBtn.meta.group_action = cBtn.meta.group + '__' + cBtn.meta.action;
 		
-		if (!bootstrap.OAuthWorker) {
-			bootstrap.OAuthWorker = new PromiseWorker(core.addon.path.content + 'modules/oauth/OAuthWorker.js');
+		if (!bootstrap.MainWorker) {
+			bootstrap.MainWorker = new PromiseWorker(core.addon.path.content + 'modules/oauth/MainWorker.js');
 		}
 		
 		// var cDataUrl = this.canComp.toDataURL('image/png', '');
@@ -2124,7 +2124,7 @@ var gEditor = {
 				cBtn.data.width = cWidth;
 				cBtn.data.height = cHeight;
 				
-				var promise_uploadImgToCloud = OAuthWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, aOAuthService]); // link888778
+				var promise_uploadImgToCloud = MainWorker.post('uploadImgArrBufForBtnId', [cBtn.btnId, aOAuthService]); // link888778
 				promise_uploadImgToCloud.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_uploadImgToCloud - ', aVal);
@@ -3818,8 +3818,8 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
-// start - OAuthWorkerMainThreadFuncs
-var OAuthWorkerMainThreadFuncs = {
+// start - MainWorkerMainThreadFuncs
+var MainWorkerMainThreadFuncs = {
 	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
 		var deferredMain_authorizeApp = new Deferred();
 		
@@ -3893,7 +3893,7 @@ var OAuthWorkerMainThreadFuncs = {
 		// aId is the id of aABInfoObj
 	}
 };
-// end - OAuthWorkerMainThreadFuncs
+// end - MainWorkerMainThreadFuncs
 
 // start - main framescript communication - rev3 https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
 var fsFuncs = { // can use whatever, but by default its setup to use this
@@ -3902,7 +3902,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 		
 		var mainDeferred_callInPromiseWorker = new Deferred();
 		
-		var rez_pwcall = OAuthWorker.post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
+		var rez_pwcall = MainWorker.post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
 		rez_pwcall.then(
 			function(aVal) {
 				console.log('Fullfilled - rez_pwcall - ', aVal);
@@ -4103,7 +4103,7 @@ function startup(aData, aReason) {
 	};
 	
 	var do_afterPrefsInit = function() {
-		var promise_getInit = SIPWorker('OAuthWorker', core.addon.path.content + 'modules/oauth/OAuthWorker.js', core, OAuthWorkerMainThreadFuncs).post();
+		var promise_getInit = SIPWorker('MainWorker', core.addon.path.content + 'modules/main/MainWorker.js', core, MainWorkerMainThreadFuncs).post();
 		promise_getInit.then(
 			function(aVal) {
 				console.log('Fullfilled - promise_getInit - ', aVal);
@@ -4168,8 +4168,8 @@ function shutdown(aData, aReason) {
 	if (ScreenshotWorker && ScreenshotWorker.launchTimeStamp) { // as when i went to rev5, its not insantly inited, so there is a chance that it doesnt need terminate
 		ScreenshotWorker._worker.terminate();
 	}
-	if (OAuthWorker && OAuthWorker.launchTimeStamp) {
-		OAuthWorker._worker.terminate();
+	if (MainWorker && MainWorker.launchTimeStamp) {
+		MainWorker._worker.terminate();
 	}
 
 	if (bootstrap.GOCRWorker) {
@@ -4416,7 +4416,8 @@ function appendToHistoryLog(aTypeStr, aData) {
 
 				// start - do stuff here - promise_closeHistory
 				// notify any open dashboards that they should reload gui
-				myServices.mm.broadcastAsyncMessage(core.addon.id, 'serverCommand_refreshDashboardGuiFromFile');
+				// myServices.mm.broadcastAsyncMessage(core.addon.id, 'serverCommand_refreshDashboardGuiFromFile');
+				myServices.mm.broadcastAsyncMessage(core.addon.id, ['serverCommand_refreshDashboardGuiFromFile']);
 
 				// end - do stuff here - promise_closeHistory
 			},
