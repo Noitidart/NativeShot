@@ -291,11 +291,10 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aPre
 			break;
 		}
 		
-		// appendToHistoryLog(aServiceName, {
-			// d: new Date().getTime(),
-			// n: OS.Path.basename(OSPath_save),
-			// f: OS.Path.dirname(OSPath_save)
-		// });
+		addEntryToLog(aServiceName, {
+			n: OS.Path.basename(useFilePath),
+			f: OS.Path.dirname(useFilePath)
+		});
 		
 		deferredMain_saveToDiskImgArrBufForBtnId.resolve({
 			status: true,
@@ -476,31 +475,18 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	
 	var cServiceInt = gLogTypesN2I[aServiceName];
 	var defaultDataKeys_all = { // each entry must have:
-		d: new Date(), // - new Date().getTime() - must be unique to each entry. even for twitter with 4 imgs attached, just increment each d by 1ms // this is not the time of screenshot. it is the time the entry was added!
+		d: new Date().getTime(), // - new Date().getTime() - must be unique to each entry. even for twitter with 4 imgs attached, just increment each d by 1ms // this is not the time of screenshot. it is the time the entry was added!
 		t: cServiceInt, // gLogTypesN2I
 		// noWriteObj: {} // not all get this
 	};
 	
 	// add in t and d
-	validateOptionsObj(aData, defaultDataKeys_all);
+	logDataMergeObjects(aData, defaultDataKeys_all);
 	
-	for (var dataKey in defaultDataKeys_all) {
-		defaultDataKeys_service[aServiceName][dataKey] = undefined;
-	}
-	validateOptionsObj(aData, defaultDataKeys_service[aServiceName]); // ensure it is correct for this type // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
-	
-	// because validateOptionsObj is meant for the default object to have the value to set to, and i am using it just to ensure that all keys are present. i go through the keys and check if any is undefined and if it is then i throw
-	// if any keys were not defined then throw
-	var missingKeys = [];
-	for (var aDataKey in aData) {
-		if (typeof(aData[aDataKey]) == 'undefined') {
-			missingKeys.push(aDataKey);
-		}
-	}
-	if (missingKeys.length) {
-		console.error('missing key in data! ' + missingKeys.join());
-		throw new Error('missing key in data! ' + missingKeys.join());
-	}
+
+	console.log('now checking service keys');
+	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName]); // ensure it is correct for this type // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
+	console.log('check passed');
 	
 	if (defaultDataKeys_service[aServiceName].noWriteObj) {
 		// add in noWriteObj, the 2nd validateOptionsObj above, does add one in, but it will not be there in production so add it here
@@ -508,9 +494,20 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 		
 		// format depends (and expects) the keys in the write part of the data obj to be present and valid, so i make sure to throw in previous block if something was not set. and thats why i do formatLogEntryNoWriteObj after all of them are set
 		formatLogEntryNoWriteObj(aData);
-	
-		validateOptionsObj(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj); // ensure the noWriteObj for this object has the write keys // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
+		console.log('now checking noWriteObj');
+		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj); // ensure the noWriteObj for this object has the write keys // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
 	}
+	
+	// ok purely dev checking
+	for (var dataKey in defaultDataKeys_all) { // console.log('remove on production')
+		defaultDataKeys_service[aServiceName][dataKey] = undefined; // console.log('remove on production')
+	} // console.log('remove on production')
+	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName], true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing // console.log('remove on production')
+	
+	if (aData.noWriteObj) { // console.log('remove on production')
+		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj, true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing // console.log('remove on production')
+	} // console.log('remove on production')
+	
 	// read in log
 	// readHistoryLog();
 	
@@ -533,6 +530,32 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	
 	// close it
 	hOpen.close();
+	
+	self.postMessage(['callInBootstrap', ['broadcastToMainGuisToUpdate']]);
+}
+
+function logDataMergeObjects(aOptions, aOptionsDefaults, throwOnExtraKey) {
+	if (throwOnExtraKey) {
+		// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
+		for (var aOptKey in aOptions) {
+			if (!(aOptKey in aOptionsDefaults)) {
+				console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
+				throw new Error('ya throw');
+			}
+		}
+	}
+	
+	// if a key is not found in aOptions, but is found in aOptionsDefaults, it sets the key in aOptions to the default value
+	// if the default value is === undefined then it throws because the dev needed to provide it
+	for (var aOptKey in aOptionsDefaults) {
+		if (!(aOptKey in aOptions)) {
+			aOptions[aOptKey] = aOptionsDefaults[aOptKey];
+			if (aOptionsDefaults[aOptKey] === undefined) {
+				console.error('the needed key of', aOptKey, 'was not found!', 'aOptions:', aOptions, 'aOptionsDefaults:', aOptionsDefaults);
+				throw new Error('needed key not provided!');
+			}
+		}
+	}
 }
 
 function removeTypeInLog(aNameForT) {

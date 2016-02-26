@@ -1,31 +1,13 @@
 ////////// start - nativeshot - app_main
 var gJLog = []; // parsed json of history-log
 
-// link872132154 cross file
-const aTypeStrToTypeInt = {
-	'imgur-anonymous': 0,
-	'twitter': 1,
-	'copy': 2,
-	'print': 3,
-	'save-quick': 4,
-	'save-browse': 5,
-	'tineye': 7,
-	'google-images': 8
-};
+var aTypeStrToTypeInt = {};
 var aTypeIntToTypeStr = {};
-for (var p in aTypeStrToTypeInt) {
-	aTypeIntToTypeStr[aTypeStrToTypeInt[p]] = p;
-}
 			
 const biggest_count_should_be_percent = 90; // for skill bars
 
 // all values in Varitants must be array or obj as it is a pass by reference
 var classVariants = {}
-classVariants[aTypeStrToTypeInt['imgur-anonymous']] = 'item nativeshot-imgur-anonymous';
-classVariants[aTypeStrToTypeInt['twitter']] = 'item nativeshot-twitter';
-classVariants[aTypeStrToTypeInt['save-quick']] = 'item nativeshot-save-quick';
-classVariants[aTypeStrToTypeInt['save-browse']] = 'item nativeshot-save-browse';
-
 
 var classREF = {
 	class: ''
@@ -53,41 +35,6 @@ var gHoverId = -1;
 function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 	// September 12, 2015 - 7:41 PM
 	switch (aTypeInt) {
-		case aTypeStrToTypeInt['imgur-anonymous']:
-		
-				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + justFormatStringFromName(core.addon.l10n.app_main['view']) + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + justFormatStringFromName(core.addon.l10n.app_main['copy']) + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>" + justFormatStringFromName(core.addon.l10n.app_main['delete']) + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + justFormatStringFromName(core.addon.l10n.app_main['remove']) + "</a></span>";
-				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
-										['h4', {},
-											aTitle
-										],
-										['span', {class:'pr-sutitle'},
-											aSubtitle
-										],
-										['br', {}],
-										['br', {}],
-										['br', {}],
-										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
-											['span', {class:'fa fa-eye'}],
-											justFormatStringFromName(core.addon.l10n.app_main['view'])
-										],
-										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
-											['span', {class:'fa fa-link'}],
-											justFormatStringFromName(core.addon.l10n.app_main['copy'])
-										],
-										['br', {}],
-										['br', {}],
-										['br', {}],
-										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
-											['span', {class:'fa fa-remove'}],
-											justFormatStringFromName(core.addon.l10n.app_main['delete'])
-										],
-										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
-											['span', {class:'fa fa-history'}],
-											justFormatStringFromName(core.addon.l10n.app_main['remove'])
-										]
-									 ];
-				 
-			break;
 		case aTypeStrToTypeInt['twitter']:
 		
 				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + justFormatStringFromName(core.addon.l10n.app_main['view']) + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + justFormatStringFromName(core.addon.l10n.app_main['copy']) + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-ttttttt'></span>" + justFormatStringFromName(core.addon.l10n.app_main['open-tweet']) + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + justFormatStringFromName(core.addon.l10n.app_main['remove']) + "</a></span>";
@@ -202,7 +149,38 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 
 			break;
 		default:
-			throw new Error('unrecognized aTypeInt: ' + aTypeInt);
+				// by default i assume its oauth upload, so same as imguranon format
+				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + justFormatStringFromName(core.addon.l10n.app_main['view']) + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + justFormatStringFromName(core.addon.l10n.app_main['copy']) + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-remove'></span>" + justFormatStringFromName(core.addon.l10n.app_main['delete']) + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + justFormatStringFromName(core.addon.l10n.app_main['remove']) + "</a></span>";
+				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
+										['h4', {},
+											aTitle
+										],
+										['span', {class:'pr-sutitle'},
+											aSubtitle
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
+											['span', {class:'fa fa-eye'}],
+											justFormatStringFromName(core.addon.l10n.app_main['view'])
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
+											['span', {class:'fa fa-link'}],
+											justFormatStringFromName(core.addon.l10n.app_main['copy'])
+										],
+										['br', {}],
+										['br', {}],
+										['br', {}],
+										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
+											['span', {class:'fa fa-remove'}],
+											justFormatStringFromName(core.addon.l10n.app_main['delete'])
+										],
+										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
+											['span', {class:'fa fa-history'}],
+											justFormatStringFromName(core.addon.l10n.app_main['remove'])
+										]
+									 ];
 	}
 }
 
@@ -219,6 +197,16 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	// when done must call aPostNonSkelInit_CB();
 	
 	var do_attachEventListeners = function() {
+		
+		/***********************************/
+		/*SLIP HOVER PLUGIN*/
+		/**********************************/
+		 $('.sliphover').sliphover({
+			 target: '.ellem',
+			 caption: 'data-caption',
+			 fontColor: '#fff'
+		 });
+		 
 		/***********************************/
 		/*MAGNIFIC POPUP*/
 		/**********************************/
@@ -285,6 +273,12 @@ function nsInitPage(aPostNonSkelInit_CB) {
 				// }
 			];
 			
+			aTypeStrToTypeInt = aServicesInfos.logTypesN2I;
+			for (var p in aTypeStrToTypeInt) {
+				aTypeIntToTypeStr[aTypeStrToTypeInt[p]] = p;
+				classVariants[aTypeStrToTypeInt[p]] = 'item nativeshot-' + p;
+			}
+			
 			for (var cServiceName in aServicesInfos.logTypesN2I) {
 				
 				var cServiceInfoEntry = {};
@@ -296,6 +290,8 @@ function nsInitPage(aPostNonSkelInit_CB) {
 				cServiceInfoEntry.hasAssociatedImgs = ('noWriteObj' in cServiceDataKeys && 'imgsrc' in cServiceDataKeys.noWriteObj);
 				
 				servicesInfosReact.push(cServiceInfoEntry);
+				
+				
 			}
 			
 			console.log('servicesInfosReact:', servicesInfosReact);
@@ -641,53 +637,47 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 		if (!(gJLog[i].t in aTypeIntToTypeStr)) {
 			throw new Error('found a type in the log file, that is not known to the app.js global aTypeStrToTypeInt. the unknown type id is: ' + gJLog[i].t);
 		}
-		switch (gJLog[i].t) {
-			case aTypeStrToTypeInt['save-quick']:
-			case aTypeStrToTypeInt['save-browse']:
-			case aTypeStrToTypeInt['twitter']:
-			case aTypeStrToTypeInt['imgur-anonymous']:
-						
-					if (!(gJLog[i].t in classVariants)) {
-						throw new Error('no mainDivClassVariants for type ' + gJLog[i].t);
-					}
-								
-					classREF.class = classVariants[gJLog[i].t];
-					var imgDate = new Date(gJLog[i].d);
-					var formattedDate = justFormatStringFromName(core.addon.l10n.dateFormat['month.' + (imgDate.getMonth()+1) + '.name']) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
-					
-					dataCaptionREF['data-gettime'] = gJLog[i].d;
-					imgREF.src = gJLog[i].noWriteObj.imgsrc;
-					aREF.href = imgREF.src;
-					gHoverId++;
-					dataCaptionREF['data-caption'] = gHoverId;
-					templatedDataCaption(gJLog[i].t, formattedDate, justFormatStringFromName(core.addon.l10n.app_main['type' + gJLog[i].t]), gJLog[i].d, imgREF.src);
-					
-					
-					var foundAlreadyInIzotope = false;
-					for (var isotopeImgSrc in objOfImagePathsInIsotope) {
-						// go through the gJLog obj i created
-						if (imgREF.src.toLowerCase() == isotopeImgSrc.toLowerCase()) {
-							foundAlreadyInIzotope = true;
-							break;
-						}
-					}
-					fileJsonAsIzotopeEls[imgREF.src] = {
-						aTypeInt: aTypeStrToTypeInt[gJLog[i].t]
-					};
-					if (!foundAlreadyInIzotope) {
-						imgsAdded = true;
-						
-						var createdEl = jsonToDOM(slipCoverJson, document, {});
 
-						ic.insertBefore(createdEl, ic.firstChild.nextSibling);
-						if (isNotInit) {
-							izotopeContainer.isotope('addItems', createdEl);
-						}
-					}
+		if (gJLog[i].noWriteObj && gJLog[i].noWriteObj.imgsrc) {						
+			if (!(gJLog[i].t in classVariants)) {
+				throw new Error('no mainDivClassVariants for type ' + gJLog[i].t);
+			}
+						
+			classREF.class = classVariants[gJLog[i].t];
+			var imgDate = new Date(gJLog[i].d);
+			var formattedDate = justFormatStringFromName(core.addon.l10n.dateFormat['month.' + (imgDate.getMonth()+1) + '.name']) + ' ' + imgDate.getDate() + ', ' + imgDate.getFullYear() + ' - ' + (imgDate.getHours() > 12 ? Math.abs(imgDate.getHours() - 12) : imgDate.getHours()) + ':' + (imgDate.getMinutes() < 10 ? '0' + imgDate.getMinutes() : imgDate.getMinutes()) + ' ' + (imgDate.getHours() < 12 ? 'AM' : 'PM');
+			
+			dataCaptionREF['data-gettime'] = gJLog[i].d;
+			imgREF.src = gJLog[i].noWriteObj.imgsrc;
+			aREF.href = imgREF.src;
+			gHoverId++;
+			dataCaptionREF['data-caption'] = gHoverId;
+			templatedDataCaption(gJLog[i].t, formattedDate, justFormatStringFromName(core.addon.l10n.app_main['title_' + aTypeIntToTypeStr[gJLog[i].t]]), gJLog[i].d, imgREF.src);
+			
+			
+			var foundAlreadyInIzotope = false;
+			for (var isotopeImgSrc in objOfImagePathsInIsotope) {
+				// go through the gJLog obj i created
+				if (imgREF.src.toLowerCase() == isotopeImgSrc.toLowerCase()) {
+					foundAlreadyInIzotope = true;
+					break;
+				}
+			}
+			fileJsonAsIzotopeEls[imgREF.src] = {
+				aTypeInt: aTypeStrToTypeInt[gJLog[i].t]
+			};
+			if (!foundAlreadyInIzotope) {
+				imgsAdded = true;
 				
-				break;
-			default:
-				// no image for this type in isotope, like copy and print
+				var createdEl = jsonToDOM(slipCoverJson, document, {});
+
+				ic.insertBefore(createdEl, ic.firstChild.nextSibling);
+				if (isNotInit) {
+					izotopeContainer.isotope('addItems', createdEl);
+				}
+			}
+		} else {
+			// no image for this type in isotope, like copy and print
 		}
 	}
 

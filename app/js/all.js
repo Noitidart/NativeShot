@@ -219,21 +219,7 @@
                 $(this).parent().next().slideDown("easeOutExpo");
             }
             return false;
-    });			 			 
-			 
-	/***********************************/
-	/*SLIP HOVER PLUGIN*/
-	/**********************************/
-				 
-	// if ($(window).width()>992){			 
-	if ($('.sliphover').length){			 
-		 $('.sliphover').sliphover({
-			 target: '.ellem',
-			 caption: 'data-caption',
-			 fontColor: '#fff'
-		 });
-	}
-	// }
+    });
 				 
 	/***********************************/
 	/*GOOGLE MAP*/

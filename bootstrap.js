@@ -4225,12 +4225,15 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 	});
 }
 
+function broadcastToMainGuisToUpdate() {
+	myServices.mm.broadcastAsyncMessage(core.addon.id, ['serverCommand_refreshDashboardGuiFromFile']);
+}
+
 function addEntryToLog(aTypeStr, aData={}) {
 	var promise_appendLog = MainWorker.post('addEntryToLog', [aTypeStr, aData]);
 	promise_appendLog.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_appendLog - ', aVal);
-			myServices.mm.broadcastAsyncMessage(core.addon.id, ['serverCommand_refreshDashboardGuiFromFile']);
 		},
 		genericReject.bind(null, 'promise_appendLog', 0)
 	).catch(genericCatch.bind(null, 'promise_appendLog', 0));
