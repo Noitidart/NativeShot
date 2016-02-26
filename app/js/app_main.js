@@ -220,43 +220,6 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	
 	var do_attachEventListeners = function() {
 		/***********************************/
-		/*skill-block click handlers*/
-		/**********************************/
-		$('.skill-block').on('click', function(event) {
-			event.stopPropagation();
-
-			var typeStr = $(event.target).closest('.skill-block').find('.skill-line').attr('data-nativeshot-category');
-			// alert(['clicked ' + typeStr, 'clicked x:'+event.offsetX,'el left:'+event.target.offsetLeft,'el right:' + (event.target.offsetLeft + event.target.offsetWidth)].join('\n'));
-			if (event.offsetX > event.target.offsetLeft + event.target.offsetWidth || event.offsetX < 0) {
-				// alert(['clicked pseudo el'].join('\n'));
-				// remove all history from log
-				switch (typeStr) {
-					// link872132154 cross file
-					case 'print':
-					case 'copy':
-					case 'tineye':
-					case 'google-images':
-						removeEntryOrEntriesFromFileJson(undefined, aTypeStrToTypeInt[typeStr]);
-						break; // these support remove all
-					default:
-						// these dont support remove all
-				}
-			} else {
-				// apply filter
-				switch (typeStr) {
-					// link872132154 cross file
-					case 'print':
-					case 'copy':
-					case 'tineye':
-					case 'google-images':
-						break; // these arent filterable
-					default:
-						// $('.izotope-container').isotope({filter: '.nativeshot-' + typeStr});
-						izotopeFilter(typeStr);
-				}
-			}
-		})
-		/***********************************/
 		/*MAGNIFIC POPUP*/
 		/**********************************/
 		$(document.body).magnificPopup({ // cant do '.izotope-container' here because the click happens on the "view" button in the sliphover which is dynamically added to the body element
@@ -303,8 +266,6 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	};
 	
 	var do_step1 = function() {
-		do_attachEventListeners();
-		
 		// fetch core
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['returnCore']], bootstrapMsgListener.funcScope, function(aCore) {
 			core = aCore;
@@ -313,21 +274,281 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	};
 	
 	var do_step2 = function() {
+		// get services infos
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['returnServicesInfos']], bootstrapMsgListener.funcScope, function(aServicesInfos) {			
+			var servicesInfosReact = [
+				// {
+				// 	serviceName: cServiceName,
+				// 	serviceInt: 0,
+				// 	serviceTitle: core.addon.l10n.app_main[cServiceName],
+				// 	hasAssociatedImgs: 'noWriteObj' in cServiceInfoEntry && 'imgsrc' in cServiceInfoEntry.noWriteObj
+				// }
+			];
+			
+			for (var cServiceName in aServicesInfos.logTypesN2I) {
+				
+				var cServiceInfoEntry = {};
+				var cServiceDataKeys = aServicesInfos.serviceDataKeys[cServiceName];
+				
+				cServiceInfoEntry.serviceName = cServiceName;
+				cServiceInfoEntry.serviceInt = aServicesInfos.logTypesN2I[cServiceName];
+				cServiceInfoEntry.serviceTitle = core.addon.l10n.app_main['title_' + cServiceName];
+				cServiceInfoEntry.hasAssociatedImgs = ('noWriteObj' in cServiceDataKeys && 'imgsrc' in cServiceDataKeys.noWriteObj);
+				
+				servicesInfosReact.push(cServiceInfoEntry);
+			}
+			
+			console.log('servicesInfosReact:', servicesInfosReact);
+			servicesInfosReact.sort(function(a, b) {
+				return compareAlphaNumeric(a.serviceTitle, b.serviceTitle); // sort asc
+			});
+			
+			MyStore.postMountCB = do_step3;
+			
+			renderReact(servicesInfosReact);
+		});
+	};
+	
+	var do_step3 = function() {
+		
+
+		
+		do_attachEventListeners();
+		
 		readHistoryLog(function() {
 			updateCountsToSkillBars();
 			matchIsotopeContentsToFileJson(false);
 			
-			do_step3();
+			do_step4();
 		});
 	}
 	
-	var do_step3 = function() {
+	var do_step4 = function() {
+		MyStore.setState({
+			sLog: JSON.parse(JSON.stringify(gJLog)),
+		});
 		aPostNonSkelInit_CB();
 	};
 	
 	do_step1();
 
 }
+
+// react control
+var MyStore = {};
+function renderReact(aServicesInfos) {
+	var myMainComp = React.createElement(MainComp, {pServicesInfos:aServicesInfos});
+	
+	ReactDOM.render(
+		myMainComp,
+		document.querySelector('.main-wrapp')
+	);
+}
+
+// react components
+var MainComp = React.createClass({
+	displayName: 'MainComp',
+	getInitialState: function() {
+		return {
+			sLog: [],
+			sActiveFilter: 'all' // the serviceName or "all" of the one that is currently filtered
+		};
+	},
+	componentDidMount: function() {
+		MyStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work
+		MyStore.postMountCB();
+		delete MyStore.postMountCB;
+	},
+	render: function() {
+		// props
+		//	pServicesInfos
+
+		return React.createElement('div', {className:'container'},
+			React.createElement(ServicesSummaryRow, {pServicesInfos:this.props.pServicesInfos, sLog:this.state.sLog, sActiveFilter:this.state.sActiveFilter}),
+			React.createElement(ServicesFilterRow, {pServicesInfos:this.props.pServicesInfos, sActiveFilter:this.state.sActiveFilter})
+		);
+	}
+});
+var ServicesSummaryRow = React.createClass({
+	displayName: 'ServicesSummaryRow',
+	getInitialState: function() {
+		return {
+			
+		};
+	},
+	render: function() {
+		// props
+		//	pServicesInfos
+		//	sActiveFilter
+		//	sLog
+
+		var summaryColCnt = 3; // devuser must set this number to the number of ServicesSummaryCol elements in this returned render
+		var servicesPerColCnt = Math.ceil(this.props.pServicesInfos.length / summaryColCnt);
+		
+		var cServicesInfosGroups = []; // create sections out of pServicesInfos into groups of servicesPerColCnt 
+		
+		for (var i=0; i<summaryColCnt; i++) {
+			cServicesInfosGroups.push(this.props.pServicesInfos.slice(i * servicesPerColCnt, i * servicesPerColCnt + servicesPerColCnt));
+		}
+		
+		// get counts of entries for each service in sLog
+		var sServicesLogEntryCnts = {};
+		for (var i=0; i<this.props.pServicesInfos.length; i++) {
+			sServicesLogEntryCnts[this.props.pServicesInfos[i].serviceInt] = 0;
+		}
+		for (var i=0; i<this.props.sLog.length; i++) {
+			sServicesLogEntryCnts[this.props.sLog[i].t]++;
+		}
+		// delete the serviceInt keys and copy it to the new key with serviceName
+		for (var i=0; i<this.props.pServicesInfos.length; i++) {
+			sServicesLogEntryCnts[this.props.pServicesInfos[i].serviceName] = sServicesLogEntryCnts[this.props.pServicesInfos[i].serviceInt];
+			delete sServicesLogEntryCnts[this.props.pServicesInfos[i].serviceInt];
+		}
+		
+		return React.createElement('div', {className:'padd-80', style:{paddingBottom:'40px'} },
+			React.createElement('div', {className:'row'},
+				React.createElement('div', {className:'col-md-4 col-sm-6 col-xs-12'},
+					React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				),
+				React.createElement('div', {className:'col-md-4 col-sm-6 col-xs-12'},
+					React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+					/*
+					React.createElement('div', {className:'second-caption'},
+						React.createElement('p', {style:{lineHeight:'155px', textAlign:'center'} },
+							core.addon.l10n.app_main.category_desc
+						)
+					)
+					*/
+				),
+				React.createElement('div', {className:'col-md-4 col-sm-12 col-xs-12'}, // should this be `col-sm-6`? not `-12`?
+					React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				)
+			)
+		);
+	}
+});
+
+var ServicesFilterRow = React.createClass({
+	displayName: 'ServicesFilterRow',
+	render: function() {
+		// props
+		//	pServicesInfos
+		//	sActiveFilter
+		
+		var cFilterBtns = [];
+		
+		// push the "All" filter button first
+		cFilterBtns.push(React.createElement(ServiceFilterBtn, {pServiceName:'all', pServiceTitle:core.addon.l10n.app_main.title_all, sActiveFilter:this.props.sActiveFilter}));
+		
+		var cServicesInfos = this.props.pServicesInfos;
+		console.log('cServicesInfos:', cServicesInfos);
+		for (var i=0; i<cServicesInfos.length; i++) {
+			var cServiceInfoEntry = cServicesInfos[i];
+			if (cServiceInfoEntry.hasAssociatedImgs) {
+				cFilterBtns.push(React.createElement(ServiceFilterBtn, {pServiceName:cServiceInfoEntry.serviceName, pServiceTitle:cServiceInfoEntry.serviceTitle, sActiveFilter:this.props.sActiveFilter}));
+			}
+		}
+		
+		return React.createElement('div', {className:'padd-80' },
+			React.createElement('div', {className:'row'},
+				React.createElement('div', {id:'filters', className:'fillter-wrap', style:{lineHeight:'40px', paddingBottom:'25px'} },
+					cFilterBtns
+				)
+			),
+			React.createElement('div', {className:'row'},
+				React.createElement('div', {className:'izotope-container gutt-col3 sliphover', id:'izoc', },
+					React.createElement('div', {className:'grid-sizer'}),
+					React.createElement('div', {id:'message_div_izo_none', style:{display:'none'} }, // link89454 so on load if none it doesnt do transition
+						core.addon.l10n.app_main.isotope_no_results
+					)
+				)
+			)
+		);
+	}
+});
+
+var ServiceFilterBtn = React.createClass({
+	displayName: 'ServiceFilterBtn',
+	click: function() {
+		izotopeFilter(this.props.pServiceName == 'all' ? '*' : this.props.pServiceName);
+	},
+	render: function() {
+		// props
+		//	sActiveFilter - holds serviceName
+		//	pServiceName
+		//	pServiceTitle
+		
+		return React.createElement('button', {className:'but' + (this.props.sActiveFilter == this.props.pServiceName ? ' activbut' : ''), 'data-filter':(this.props.pServiceName == 'all' ? '*' : '.nativeshot-' + this.props.pServiceName), onClick:this.click},
+			this.props.pServiceTitle
+		);
+	}
+});
+
+var ServicesSummaryCol = React.createClass({
+	displayName: 'ServicesSummaryCol',
+	render: function() {
+		// props
+		//	pServicesInfosGroup
+		//	sServicesLogEntryCnts
+		//	sActiveFilter
+		
+		// console.log('pServicesInfosGroup:', this.props.pServicesInfosGroup);
+		// console.log('sServicesLogEntryCnts:', this.props.sServicesLogEntryCnts);
+		
+		var cChildren = [];
+		
+		for (var i=0; i<this.props.pServicesInfosGroup.length; i++) {
+			var sServiceLogEntryCnt = this.props.sServicesLogEntryCnts[this.props.pServicesInfosGroup[i].serviceName];
+			cChildren.push(React.createElement(ServiceSummary, {sServiceLogEntryCnt:sServiceLogEntryCnt, pServiceName:this.props.pServicesInfosGroup[i].serviceName, pServiceTitle:this.props.pServicesInfosGroup[i].serviceTitle, sActiveFilter:this.props.sActiveFilter, pHasAssociatedImgs:this.props.pServicesInfosGroup[i].hasAssociatedImgs}));
+		}
+		
+		return React.createElement('div', {className:'second-caption'},
+			cChildren
+		);
+	}
+});
+
+var ServiceSummary = React.createClass({
+    displayName: 'ServiceSummary',
+	clickApplyFilter: function() {
+		// click event only attached when it has associated imgs
+		izotopeFilter(this.props.pServiceName);
+	},
+	clickRemoveAllLogEntries: function() {
+		// click event only attached when it has NO associated imgs
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['removeTypeInLog', this.props.pServiceName]], bootstrapMsgListener.funcScope, function(aStatusObj) {
+			if (!aStatusObj.status) {
+				// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
+				// alert(aStatusObj.detail);
+			} else {
+				gJLog = aStatusObj.jLog;
+				updateCountsToSkillBars();
+			}
+		});
+	},
+	render: function() {
+		// props
+		//	sServiceLogEntryCnt
+		//	pServiceName
+		//	pServiceTitle
+		//	sActiveFilter
+		//	pHasAssociatedImgs
+		
+		return React.createElement('div', {className:'skill-block' + (this.props.pHasAssociatedImgs ? '' : ' rem-all'), onClick:(this.props.pHasAssociatedImgs ? this.clickApplyFilter : undefined)},
+			// core.addon.l10n.app_main['category_' + this.props.serviceName], // see comment on next line for why i dont do this line
+			this.props.pServiceTitle, // i dont do the core.addon.l10n access here because at start i push all the services and sort them alpha based on the value from localization
+			this.props.pHasAssociatedImgs ? undefined : React.createElement('div', {className:'rem-all-after', onClick:this.clickRemoveAllLogEntries}),
+			React.createElement('div', {className:'skill-line', 'data-nativeshot-category':this.props.pServiceName},
+				React.createElement('h5', {className:'timer'},
+					this.props.sServiceLogEntryCnt
+				),
+				React.createElement('div')
+			)
+		);
+	}
+});
+
+// interaction via jquery - as thats how the template came - i should change this to use react in the future instead
 
 function updateCountsToSkillBars() {
 	// after update counts
@@ -691,7 +912,7 @@ function izoDelete(aGettime) {
 	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['deleteEntryInLog', aGettime]], bootstrapMsgListener.funcScope, function(aStatusObj) {
 		if (!aStatusObj.status) {
 			// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
-			alert(aStatusObj.detail);
+			// alert(aStatusObj.detail);
 		} else {
 			gJLog = aStatusObj.jLog;
 			updateCountsToSkillBars();
@@ -705,7 +926,7 @@ function izoRemove(aGettime) {
 	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['removeEntryInLog', aGettime]], bootstrapMsgListener.funcScope, function(aStatusObj) {
 		if (!aStatusObj.status) {
 			// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
-			alert(aStatusObj.detail);
+			// alert(aStatusObj.detail);
 		} else {
 			gJLog = aStatusObj.jLog;
 			updateCountsToSkillBars();
@@ -1037,5 +1258,22 @@ function justFormatStringFromName(aLocalizableStr, aReplacements) {
     }
 
     return cLocalizedStr;
+}
+var reA = /[^a-zA-Z]/g; // for compareAlphaNumeric
+var reN = /[^0-9]/g; // for compareAlphaNumeric
+function compareAlphaNumeric(a, b) {
+	// useful for sorting algo, originally inteded for alpha-numeric asc sort. taken from - http://stackoverflow.com/a/4340339/1828637
+	// returns -1 if a < b
+	// returns -1 if a == b
+	// returns -1 if a > b
+    var aA = a.replace(reA, '');
+    var bA = b.replace(reA, '');
+    if(aA === bA) {
+        var aN = parseInt(a.replace(reN, ''), 10);
+        var bN = parseInt(b.replace(reN, ''), 10);
+        return aN === bN ? 0 : aN > bN ? 1 : -1;
+    } else {
+        return aA > bA ? 1 : -1;
+    }
 }
 // end - common helper functions

@@ -1,15 +1,2 @@
 <!ENTITY nativeshot.app-main.title 'Dashboard | NativeShot'>
 <!ENTITY nativeshot.app-main.desc 'View and manage previous captures'>
-
-<!ENTITY nativeshot.app-main.category-save-quick 'Save - Quick'>
-<!ENTITY nativeshot.app-main.category-save-browse 'Save - Browse'>
-<!ENTITY nativeshot.app-main.category-copy 'Copy'>
-<!ENTITY nativeshot.app-main.category-print 'Print'>
-<!ENTITY nativeshot.app-main.category-twitter 'Twitter'>
-<!ENTITY nativeshot.app-main.category-imgur-anonymous 'Imgur - Anonymous'>
-<!ENTITY nativeshot.app-main.category-all 'All'>
-<!ENTITY nativeshot.app-main.category-tineye 'Search - Tineye'>
-<!ENTITY nativeshot.app-main.category-google-images 'Search - Google Images'>
-
-<!ENTITY nativeshot.app-main.category-desc 'select a category to filter'>
-<!ENTITY nativeshot.app-main.isotope-no-results 'no images in this category'>
