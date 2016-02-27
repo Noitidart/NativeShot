@@ -3642,7 +3642,7 @@ var MainWorkerMainThreadFuncs = {
 	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
 		var deferredMain_authorizeApp = new Deferred();
 		
-		var promise_fhrResponse = gEditorABData_Btn[aBtnId].getBtnFHR().loadPage(aUrl, null, aCallbackSetName);
+		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aUrl, null, aCallbackSetName);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
 				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
@@ -3657,8 +3657,8 @@ var MainWorkerMainThreadFuncs = {
 		// clicks allow for authorizeApp
 		
 		var deferredMain_clickAllow = new Deferred();
-		
-		var promise_fhrResponse = gEditorABData_Btn[aBtnId].getBtnFHR().loadPage(null, aClickSetName, aCallbackSetName);
+	
+		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
 				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
@@ -3714,6 +3714,22 @@ var MainWorkerMainThreadFuncs = {
 };
 // end - MainWorkerMainThreadFuncs
 
+var nodataBtnFhrs = {}; // key is nodataBtnId and value is the fhr
+function fhr_ifBtnIdNodata(aBtnId) {
+	if (typeof(aBtnId) == 'string' && aBtnId.indexOf('nodata:') === 0) {
+		if (!nodataBtnFhrs[aBtnId]) {
+			nodataBtnFhrs[aBtnId] = new FHR();
+		}
+		return nodataBtnFhrs[aBtnId];
+	} else {
+		return false;
+	}
+}
+
+function destroy_nodataFhr(aNoDataBtnId) {
+	nodataBtnFhrs[aNoDataBtnId].destroy();
+	delete nodataBtnFhrs[aNoDataBtnId];
+}
 // start - main framescript communication - rev3 https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
 var fsFuncs = { // can use whatever, but by default its setup to use this
 	callInPromiseWorker: function(aArrOfFuncnameThenArgs) {
@@ -4293,11 +4309,11 @@ function Deferred() {
 	}
 }
 
-// SIPWorker - rev7 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
+// SIPWorker - rev9 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
 const SIP_CB_PREFIX = '_a_gen_cb_';
 const SIP_TRANS_WORD = '_a_gen_trans_';
 var sip_last_cb_id = -1;
-function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope) {
+function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP) {
 	// update 022016 - delayed init till first .post
 	// update 010516 - allowing pomiseworker to execute functions in this scope, supply aFuncExecScope, else leave it undefined and it will not set this part up
 	// update 122115 - init resolves the deferred with the value returned from Worker, rather then forcing it to resolve at true
@@ -4419,6 +4435,24 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope) {
 					else { console.error('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
 					////// end - my custom stuff
 				} else {
+					// find the entry in queue that matches this id, and move it to first position, otherwise i get the error `Internal error: expecting msg " + handler.id + ", " + " got " + data.id + ` --- this guy uses pop and otherwise might get the wrong id if i have multiple promises pending
+					var cQueue = bootstrap[workerScopeName]._queue._array;
+					var cQueueItemFound;
+					for (var i=0; i<cQueue.length; i++) {
+						if (cQueue[i].id == aMsgEvent.data.id) {
+							cQueueItemFound = true;
+							if (i !== 0) {
+								// move it to first position
+								var wasQueue = cQueue.slice(); // console.log('remove on production');
+								cQueue.splice(0, 0, cQueue.splice(i, 1)[0]);
+								console.log('ok moved q item from position', i, 'to position 0, this should fix that internal error, aMsgEvent.data.id:', aMsgEvent.data.id, 'queue is now:', cQueue, 'queue was:', wasQueue);
+							}
+							break;
+						}
+					}
+					if (!cQueueItemFound) {
+						console.error('errrrror: how on earth can it not find the item with this id in the queue? i dont throw here as the .pop will throw the internal error, aMsgEvent.data.id:', aMsgEvent.data.id, 'cQueue:', cQueue);
+					}
 					origOnmessage(aMsgEvent);
 				}
 			}
