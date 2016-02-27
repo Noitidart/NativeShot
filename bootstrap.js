@@ -4379,6 +4379,20 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 		if (aFuncExecScope) {
 			// this triggers instantiation of the worker immediately
 			var origOnmessage = bootstrap[workerScopeName]._worker.onmessage;
+			var origOnerror = bootstrap[workerScopeName]._worker.onerror;
+			
+			bootstrap[workerScopeName]._worker.onerror = function(onErrorEvent) {
+				// got an error that PromiseWorker did not know how to serialize. so we didnt get a {fail:.....} postMessage. so in onerror it does pop of the deferred. however with allowing promiseworker to return async, we cant simply pop if there are more then 1 promises pending
+				var cQueue = bootstrap[workerScopeName]._queue._array;
+				if (cQueue.length === 1) {
+					console.log('its fine for origOnerror it will just pop the only one there, which is the one to reject for sure as there are no other promises');
+					origOnerror(onErrorEvent);
+				} else {
+					onErrorEvent.preventDefault(); // as they do this in origOnerror so i prevent here too
+					console.error('queue has more then one promises in there, i dont know which one to reject', 'onErrorEvent:', onErrorEvent, 'queue:', bootstrap[workerScopeName]._queue._array);
+				}
+			};
+			
 			bootstrap[workerScopeName]._worker.onmessage = function(aMsgEvent) {
 				////// start - my custom stuff
 				var aMsgEventData = aMsgEvent.data;
@@ -4447,6 +4461,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 								cQueue.splice(0, 0, cQueue.splice(i, 1)[0]);
 								console.log('ok moved q item from position', i, 'to position 0, this should fix that internal error, aMsgEvent.data.id:', aMsgEvent.data.id, 'queue is now:', cQueue, 'queue was:', wasQueue);
 							}
+							else { console.log('no need to reorder queue, the element of data.id:', aMsgEvent.data.id, 'is already in first position:', bootstrap[workerScopeName]._queue._array); }
 							break;
 						}
 					}
