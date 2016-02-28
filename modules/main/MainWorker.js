@@ -413,6 +413,7 @@ function removeEntryInLog(aValOfD) {
 	}
 }
 
+var gUsedD = [];
 // function appendToHistoryLog(aTypeStr, aData) {
 function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	// adds a history item
@@ -525,7 +526,12 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	// add in t and d
 	logDataMergeObjects(aData, defaultDataKeys_all);
 	
-
+	// MAKE SURE .D IS NOT DUPLICATE as this is an identifier for each log entry
+	while (gUsedD.indexOf(aData.d) > -1) {
+		aData.d++;
+	}
+	gUsedD.push(aData.d);
+	
 	console.log('now checking service keys');
 	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName]); // ensure it is correct for this type // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
 	console.log('check passed');
