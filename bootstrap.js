@@ -4385,7 +4385,8 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 				// got an error that PromiseWorker did not know how to serialize. so we didnt get a {fail:.....} postMessage. so in onerror it does pop of the deferred. however with allowing promiseworker to return async, we cant simply pop if there are more then 1 promises pending
 				var cQueue = bootstrap[workerScopeName]._queue._array;
 				if (cQueue.length === 1) {
-					console.log('its fine for origOnerror it will just pop the only one there, which is the one to reject for sure as there are no other promises');
+					// console.log('its fine for origOnerror it will just pop the only one there, which is the one to reject for sure as there are no other promises');
+					// DO NOTE THOUGH - .onerror message might come in from any error, it is innate to worker to send this message on error, so it will pop out the promise early, so maybe i might run this origOnerror before the actual promise rejects due to catch
 					origOnerror(onErrorEvent);
 				} else {
 					onErrorEvent.preventDefault(); // as they do this in origOnerror so i prevent here too
