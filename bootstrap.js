@@ -2158,12 +2158,32 @@ function gEMouseMove(e) {
 			case 1:
 			
 					// ne
-				
+					// copy from ns
+					var dMY = cEMMY - gEMDY;
+					resizedRect.top = gEOrigSelectedRect.top + dMY;
+					if (cEMMY <= gEOrigSelectedRect.bottom) {
+						resizedRect.top = gEOrigSelectedRect.top + dMY;
+						resizedRect.bottom = gEOrigSelectedRect.bottom;
+					} else {
+						resizedRect.top = gEOrigSelectedRect.bottom;
+						resizedRect.bottom = gEOrigSelectedRect.bottom + (dMY - gEOrigSelectedRect.height);
+					}
+					// copy from - we
+					var dMX = cEMMX - gEMDX;
+					resizedRect.left = gEOrigSelectedRect.left + dMX;
+					if (cEMMX <= gEOrigSelectedRect.right) {
+						resizedRect.left = gEOrigSelectedRect.left + dMX;
+						resizedRect.right = gEOrigSelectedRect.right;
+					} else {
+						resizedRect.left = gEOrigSelectedRect.right;
+						resizedRect.right = gEOrigSelectedRect.right + (dMX - gEOrigSelectedRect.width);
+					}
 				break;
 			case 2:
 			
 					// ns
 					var dMY = cEMMY - gEMDY;
+					resizedRect.top = gEOrigSelectedRect.top + dMY;
 					if (cEMMY <= gEOrigSelectedRect.bottom) {
 						resizedRect.top = gEOrigSelectedRect.top + dMY;
 						resizedRect.bottom = gEOrigSelectedRect.bottom;
@@ -2175,38 +2195,119 @@ function gEMouseMove(e) {
 				break;
 			case 3:
 			
-					//
-				
+					// nw
+					// copy from ns
+					var dMY = cEMMY - gEMDY;
+					resizedRect.top = gEOrigSelectedRect.top + dMY;
+					if (cEMMY <= gEOrigSelectedRect.bottom) {
+						resizedRect.top = gEOrigSelectedRect.top + dMY;
+						resizedRect.bottom = gEOrigSelectedRect.bottom;
+					} else {
+						resizedRect.top = gEOrigSelectedRect.bottom;
+						resizedRect.bottom = gEOrigSelectedRect.bottom + (dMY - gEOrigSelectedRect.height);
+					}
+					// copy from ew
+					var dMX = cEMMX - gEMDX;
+					resizedRect.left = gEOrigSelectedRect.left + dMX;
+					if (cEMMX >= gEOrigSelectedRect.left) {
+						resizedRect.right = gEOrigSelectedRect.right + dMX;
+						resizedRect.left = gEOrigSelectedRect.left;
+					} else {
+						resizedRect.right = gEOrigSelectedRect.left;
+						resizedRect.left = gEOrigSelectedRect.left + (dMX + gEOrigSelectedRect.width);
+					}
+					
 				break;
 			case 4:
 			
-					// we
-					var dW = cEMMX - gEMDX;
-					newW += dW;
+					// we - copy and replace all from ns
+					var dMX = cEMMX - gEMDX;
+					resizedRect.left = gEOrigSelectedRect.left + dMX;
+					if (cEMMX <= gEOrigSelectedRect.right) {
+						resizedRect.left = gEOrigSelectedRect.left + dMX;
+						resizedRect.right = gEOrigSelectedRect.right;
+					} else {
+						resizedRect.left = gEOrigSelectedRect.right;
+						resizedRect.right = gEOrigSelectedRect.right + (dMX - gEOrigSelectedRect.width);
+					}
 				
 				break;
 			case 5:
 			
-					// ew
-					var dW = cEMMX - gEMDX;
-					newW += dW;
+					// ew - copy and replace all from sn
+					var dMX = cEMMX - gEMDX;
+					resizedRect.left = gEOrigSelectedRect.left + dMX;
+					if (cEMMX >= gEOrigSelectedRect.left) {
+						resizedRect.right = gEOrigSelectedRect.right + dMX;
+						resizedRect.left = gEOrigSelectedRect.left;
+					} else {
+						resizedRect.right = gEOrigSelectedRect.left;
+						resizedRect.left = gEOrigSelectedRect.left + (dMX + gEOrigSelectedRect.width);
+					}
 				
 				break;
 			case 6:
 			
-					// 
-				
+					// sw
+					// copy from sn
+					var dMY = cEMMY - gEMDY;
+					resizedRect.top = gEOrigSelectedRect.top + dMY;
+					if (cEMMY >= gEOrigSelectedRect.top) {
+						resizedRect.bottom = gEOrigSelectedRect.bottom + dMY;
+						resizedRect.top = gEOrigSelectedRect.top;
+					} else {
+						resizedRect.bottom = gEOrigSelectedRect.top;
+						resizedRect.top = gEOrigSelectedRect.top + (dMY + gEOrigSelectedRect.height);
+					}
+					// copy from we
+					var dMX = cEMMX - gEMDX;
+					resizedRect.left = gEOrigSelectedRect.left + dMX;
+					if (cEMMX <= gEOrigSelectedRect.right) {
+						resizedRect.left = gEOrigSelectedRect.left + dMX;
+						resizedRect.right = gEOrigSelectedRect.right;
+					} else {
+						resizedRect.left = gEOrigSelectedRect.right;
+						resizedRect.right = gEOrigSelectedRect.right + (dMX - gEOrigSelectedRect.width);
+					}
+					
 				break;
 			case 7:
 			
 					// sn
-					var dH = cEMMY - gEMDY;
-					newH += dH;
+					var dMY = cEMMY - gEMDY;
+					resizedRect.top = gEOrigSelectedRect.top + dMY;
+					if (cEMMY >= gEOrigSelectedRect.top) {
+						resizedRect.bottom = gEOrigSelectedRect.bottom + dMY;
+						resizedRect.top = gEOrigSelectedRect.top;
+					} else {
+						resizedRect.bottom = gEOrigSelectedRect.top;
+						resizedRect.top = gEOrigSelectedRect.top + (dMY + gEOrigSelectedRect.height);
+					}
 				
 				break;
 			case 8:
 			
-					// 
+					// se
+					// copy from sn
+					var dMY = cEMMY - gEMDY;
+					resizedRect.top = gEOrigSelectedRect.top + dMY;
+					if (cEMMY >= gEOrigSelectedRect.top) {
+						resizedRect.bottom = gEOrigSelectedRect.bottom + dMY;
+						resizedRect.top = gEOrigSelectedRect.top;
+					} else {
+						resizedRect.bottom = gEOrigSelectedRect.top;
+						resizedRect.top = gEOrigSelectedRect.top + (dMY + gEOrigSelectedRect.height);
+					}
+					// copy from ew
+					var dMX = cEMMX - gEMDX;
+					resizedRect.left = gEOrigSelectedRect.left + dMX;
+					if (cEMMX >= gEOrigSelectedRect.left) {
+						resizedRect.right = gEOrigSelectedRect.right + dMX;
+						resizedRect.left = gEOrigSelectedRect.left;
+					} else {
+						resizedRect.right = gEOrigSelectedRect.left;
+						resizedRect.left = gEOrigSelectedRect.left + (dMX + gEOrigSelectedRect.width);
+					}
 				
 				break;
 			default:
@@ -2358,7 +2459,7 @@ function gEMouseDown(e) {
 			var cPoint = new Rect(cEMDX, cEMDY, 1, 1);
 			
 			// check if cPoint is in the resizePt rects
-			/*
+			
 			gDefResizePtSize += 5; // make hit test easier for user + 1 for the stroke
 			var resizePtRects = [
 				new Rect(gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize), // top left
@@ -2375,8 +2476,10 @@ function gEMouseDown(e) {
 			for (var i=0; i<8; i++) {
 				if (resizePtRects[i].contains(cPoint)) {
 					gEResizing = i + 1; // so i can just test `if (gEResizing)`
-					gEOrigSelectedRect.copyFrom(gESelectedRect);
-					console.log('gEOrigSelectedRect:', gEOrigSelectedRect);
+					// gEOrigSelectedRect.copyFrom(gESelectedRect);
+					gEOrigSelectedRect = gESelectedRect.clone();
+					gEMDX = cEMDX;
+					gEMDY = cEMDY;
 					gIMonMouseDownedIn = iMon;
 					gEditor.setSelectionStyles();
 					
@@ -2397,7 +2500,7 @@ function gEMouseDown(e) {
 					return;
 				}
 			}
-			*/
+			
 			if (gESelectedRect.contains(cPoint)) {
 				
 				
