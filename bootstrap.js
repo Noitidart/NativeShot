@@ -1925,7 +1925,7 @@ var gEditor = {
 		if (serviceTypeStr == 'all') {
 			for (var p in serviceTypeFunc) {
 				promiseAllArr_ocr.push(serviceTypeFunc[p](cImgData.data.buffer, true));
-				allArr_serviceTypeStr.push(p.toUpperCase());
+				allArr_serviceTypeStr.push(p);
 			}
 		} else {
 			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](cImgData.data.buffer));
@@ -1940,30 +1940,35 @@ var gEditor = {
 				var alertStrArr = [];
 				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
 					if (allArr_serviceTypeStr.length > 1) {
-						alertStrArr.push(allArr_serviceTypeStr[i] + ':');
+						// alertStrArr.push(allArr_serviceTypeStr[i] + ':');
+						alertStrArr.push(core.addon.l10n.bootstrap['ocr_label_' + allArr_serviceTypeStr[i]]);
 						alertStrArr.push();
 						alertStrArr.push();
 					}
 					alertStrArr.push(aTxtArr[i]);
 				}
 				var alertStr = alertStrArr.join('\n');
-				Services.prompt.alert(cDOMWindow, 'NativeShot - OCR Results', alertStr); // :todo: hook this up to the notif-bar system once i rework it
+				Services.prompt.alert(cDOMWindow, core.addon.l10n.bootstrap.ocr_results_title, alertStr); // :todo: hook this up to the notif-bar system once i rework it
 				if (allArr_serviceTypeStr.length == 1) {
 					copyTextToClip(alertStr, cDOMWindow);
 				} else {
-					var choices = ['All'];
+					var choices = [core.addon.l10n.bootstrap.ocr_opt_all];
 					for (var i=0; i<allArr_serviceTypeStr.length; i++) {
-						choices.push(allArr_serviceTypeStr[i]);
+						choices.push(core.addon.l10n.bootstrap['ocr_opt_' + allArr_serviceTypeStr[i]]);
 					}
 					var selectedChoiceIndex = {};
-					var rez_select = Services.prompt.select(cDOMWindow, 'NativeShot - Copy to Clipboard', 'Select which result to copy to clipboard:', choices.length, choices, selectedChoiceIndex)
+					var rez_select = Services.prompt.select(cDOMWindow, core.addon.l10n.bootstrap.ocr_choice_title, core.addon.l10n.bootstrap.ocr_choice_msg, choices.length, choices, selectedChoiceIndex)
 					if (rez_select) {
 						console.log('selectedChoiceIndex:', selectedChoiceIndex); // this is ```Object { value: 2 }```
 						if (selectedChoiceIndex.value == 0) {
 							copyTextToClip(alertStr, cDOMWindow);
 							console.log('copied all to clip:', alertStr);
+							for (var realServiceTypeStr in serviceTypeFunc) {
+								addEntryToLog(realServiceTypeStr);
+							}
 						} else {
 							copyTextToClip(aTxtArr[selectedChoiceIndex.value - 1], cDOMWindow);
+							addEntryToLog(allArr_serviceTypeStr[selectedChoiceIndex.value - 1]);
 							console.log('copied just ', selectedChoiceIndex.value, ' to clip:', aTxtArr[selectedChoiceIndex.value - 1]);
 						}
 					}
@@ -1972,11 +1977,7 @@ var gEditor = {
 			genericReject.bind(null, 'promiseAll_ocr', 0)
 		).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
 		
-		if (serviceTypeStr == 'all') {
-			for (var realServiceTypeStr in serviceTypeFunc) {
-				addEntryToLog(realServiceTypeStr);
-			}
-		} else {
+		if (serviceTypeStr != 'all') {
 			addEntryToLog(serviceTypeStr);
 		}
 	},
@@ -3478,7 +3479,7 @@ var gDashboardMenuseperator_jsonTemplate = ['xul:menuseparator', {
 }];
 
 function contextMenuBootstrapStartup() {
-	// because i cant access myServices.sb until bootstarp startup triggers i have to set these in here
+	// because i cant access myServices.sb until bootstrap startup triggers i have to set these in here
 	
 	gDashboardMenuitem_jsonTemplate[1].label = justFormatStringFromName(core.addon.l10n.bootstrap['dashboard-menuitem']); // link988888887 - needs to go before windowListener is registered
 	gDashboardMenuitem_jsonTemplate[1].onclick = `

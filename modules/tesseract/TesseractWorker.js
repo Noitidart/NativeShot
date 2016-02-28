@@ -78,8 +78,9 @@ function readByteArr(aImgBuf, aWidth, aHeight) {
 	
 	gIndex++;
 	
-	gT.detect(gIndex, cImgData, function(detectErr, detectResult) {
-		console.log('detectErr:', detectErr, 'detectResult:', detectResult);
+	// gT.detect(gIndex, cImgData, function(detectErr, detectResult) {
+		// console.log('detectErr:', detectErr, 'detectResult:', detectResult);
+		var detectResult = 'temp'; // temp solution till i implement detection or pref
 		gIndex++;
 		
 		var aOptions = {};
@@ -104,7 +105,7 @@ function readByteArr(aImgBuf, aWidth, aHeight) {
 				deferredMain_readByteArr.reject('tesseract.js failed');
 			}
 		});
-	});
+	// });
 	
 	// console.info('OCRAD aImgBuf:', aImgBuf, 'aWidth:', aWidth, 'aHeight:', aHeight, '');
 	// return 'rawr'; // with my hook for "noit hook to allow PromiseWorker methods to return promises" i can return anything or a promises
