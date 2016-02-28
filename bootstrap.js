@@ -491,6 +491,8 @@ var gESelectedRect = new Rect(0, 0, 0, 0);
 const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
 const gDefLineDash = [3, 3];
 const gDefStrokeStyle = '#fff';
+const gDefAltLineDash = [0, 3, 0];
+const gDefAltStrokeStyle = '#000';
 const gDefLineWidth = '1';
 var gDefResizePtSize = 7;
 const gDefResizePtStyle = '#000';
@@ -1534,6 +1536,10 @@ var gEditor = {
 		gCanDim.execFunc('translate', [0.5, 0.5]);
 		gCanDim.execFunc('rect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]); // draw invisible rect for stroke
 		gCanDim.execFunc('stroke');
+		
+		// gCanDim.execProp('strokeStyle', gDefAltStrokeStyle);
+		// gCanDim.execFunc('setLineDash', [gDefAltLineDash]);
+		// gCanDim.execFunc('stroke');
 		gCanDim.execFunc('translate', [-0.5, -0.5]);
 		
 		// draw resize points/strokeStyle
@@ -2584,40 +2590,40 @@ function gEKeyDown(e) {
 	if (e.keyCode == 27) {
 		// this key down does not trigger if menu was open (at least on win81, need to test on other platforms)
 		gPanelWasNotOpenDuringEsc = true; // tell key up to close window on up
-	} else if (e.keyCode == 37) {
-		// left arrow key
+	} else if ([37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+		// left, up, right, down, arrow keys in this order
 		gEditor.setSelectionStyles();
-		if (e.altKey) {
-			gEditor.resizeSelection(-1, 0, !e.shiftKey);
-		} else {
-			gEditor.moveSelection(-1, 0, !e.shiftKey);
-		}
-		gEditor.restorePreSelectionStyles();
-	} else if (e.keyCode == 38) {
-		// up arrow key
-		gEditor.setSelectionStyles();
-		if (e.altKey) {
-			gEditor.resizeSelection(0, 1, !e.shiftKey);
-		} else {
-			gEditor.moveSelection(0, -1, !e.shiftKey);
-		}
-		gEditor.restorePreSelectionStyles();
-	} else if (e.keyCode == 39) {
-		// right arrow key
-		gEditor.setSelectionStyles();
-		if (e.altKey) {
-			gEditor.resizeSelection(1, 0, !e.shiftKey);
-		} else {
-			gEditor.moveSelection(1, 0, !e.shiftKey);
-		}
-		gEditor.restorePreSelectionStyles();
-	} else if (e.keyCode == 40) {
-		// down arrow key
-		gEditor.setSelectionStyles();
-		if (e.altKey) {
-			gEditor.resizeSelection(0, -1, !e.shiftKey);
-		} else {
-			gEditor.moveSelection(0, 1, !e.shiftKey);
+		switch (e.keyCode) {
+			case 37:
+					if (e.altKey) {
+						gEditor.resizeSelection(-1, 0, e.shiftKey);
+					} else {
+						gEditor.moveSelection(-1, 0, e.shiftKey);
+					}
+				break;
+			case 38:
+					if (e.altKey) {
+						gEditor.resizeSelection(0, 1, e.shiftKey);
+					} else {
+						gEditor.moveSelection(0, -1, e.shiftKey);
+					}
+				break;
+			case 39:
+					if (e.altKey) {
+						gEditor.resizeSelection(1, 0, e.shiftKey);
+					} else {
+						gEditor.moveSelection(1, 0, e.shiftKey);
+					}
+				break;
+			case 40:
+					if (e.altKey) {
+						gEditor.resizeSelection(0, -1, e.shiftKey);
+					} else {
+						gEditor.moveSelection(0, 1, e.shiftKey);
+					}
+				break;
+			default:
+				// will never get here
 		}
 		gEditor.restorePreSelectionStyles();
 	}

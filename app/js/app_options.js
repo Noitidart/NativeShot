@@ -283,21 +283,16 @@ var Container = React.createClass({
 		// props
 		//		pBlocks
 		
-		var maxBlocksPerRow = 3;
 		var cChildren = [];
 		
-		var k = -1; // k is tracker index for this.props.pBlocks
-		var numRows = Math.ceil(this.props.pBlocks.length / maxBlocksPerRow);
+		var k = -1 * MAX_BLOCKS_PER_ROW; // k is tracker index for this.props.pBlocks
+		var numRows = Math.ceil(this.props.pBlocks.length / MAX_BLOCKS_PER_ROW);
 		for (var i=0; i<numRows; i++) {
-			var cRowChildren = [];
-			for (var j=0; j<maxBlocksPerRow; j++) {
-				k++;
-				cRowChildren.push(React.createElement(Block, {pBlock:this.props.pBlocks[k], sBlockValue:this.state.sBlockValues[this.props.pBlocks[k].id]}));
-				if (k == this.props.pBlocks.length - 1) { // in case there is not exactly maxBlocksPerRow left to fill this row. so number of blocks for this row is less than maxBlocksPerRow
-					break;
-				}
+			k += MAX_BLOCKS_PER_ROW;
+			cChildren.push(React.createElement(Row, {pBlocks:this.props.pBlocks, pK:k, sBlockValues:this.state.sBlockValues}));
+			if (k >= this.props.pBlocks.length - 1) {
+				break;
 			}
-			cChildren.push(React.createElement(Row, {children:cRowChildren}));
 		}
 		
 		return React.createElement('div', {className:'container'},
@@ -306,15 +301,28 @@ var Container = React.createClass({
 	}
 });
 
+const MAX_BLOCKS_PER_ROW = 3;
 var Row = React.createClass({
     displayName: 'Row',
 	render: function() {
 		// props
-		//		children
+		//	pBlocks
+		//	sBlockValues
+		//	pK
+		
+		var cRowChildren = [];
+		var k = this.props.pK;
+		for (var j=0; j<MAX_BLOCKS_PER_ROW; j++) {
+			cRowChildren.push(React.createElement(Block, {pBlock:this.props.pBlocks[k], sBlockValue:this.props.sBlockValues[this.props.pBlocks[k].id]}));
+			if (k == this.props.pBlocks.length - 1) { // in case there is not exactly MAX_BLOCKS_PER_ROW left to fill this row. so number of blocks for this row is less than MAX_BLOCKS_PER_ROW
+				break;
+			}
+			k++;
+		}
 		
 		return React.createElement('div', {className:'padd-80'},
 			React.createElement('div', {className:'row'},
-				this.props.children
+				cRowChildren
 			)
 		);
 	}
