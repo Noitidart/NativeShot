@@ -614,7 +614,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				}
 				console.log('will force focus now');
 				var rez_winForceFocus = winForceForegroundWindow(hwndPtr); // use the last hwndPtr, i just need to focus one of my canvas windows // so if user hits esc it will work, otherwise the keyboard focus is in the other app even though my canvas window is top most
-				console.error('rez_winForceFocus:', rez_winForceFocus);
+				// console.log('rez_winForceFocus:', rez_winForceFocus);
 				
 			break;
 		case 'gtk':
