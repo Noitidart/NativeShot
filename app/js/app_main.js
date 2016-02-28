@@ -416,7 +416,7 @@ var ServicesSummaryRow = React.createClass({
 					)
 					*/
 				),
-				React.createElement('div', {className:'col-md-4 col-sm-12 col-xs-12'}, // should this be `col-sm-6`? not `-12`?
+				React.createElement('div', {className:'col-md-4 col-sm-8 col-sm-offset-2 col-md-offset-0 col-xs-12'}, // should this be `col-sm-6`? not `-12`?
 					React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
 				)
 			)

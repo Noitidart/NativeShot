@@ -55,6 +55,9 @@ var BOOTSTRAP = this;
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 
+const TWITTER_URL = 'https://twitter.com/';
+const TWITTER_IMG_SUFFIX = ':large';
+
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
@@ -1659,8 +1662,7 @@ var gEditor = {
 	},
 	sendToPrinter: function(e) {
 		this.compositeSelection();
-		
-		if (!getPref('print_preview')) {
+		if (!prefGet('print_preview')) {
 			// print method link678321212
 			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
 			var doc = win.document;

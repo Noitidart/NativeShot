@@ -301,7 +301,7 @@ var Container = React.createClass({
 	}
 });
 
-const MAX_BLOCKS_PER_ROW = 3;
+const MAX_BLOCKS_PER_ROW = 3; // link6675835357
 var Row = React.createClass({
     displayName: 'Row',
 	render: function() {
@@ -310,10 +310,12 @@ var Row = React.createClass({
 		//	sBlockValues
 		//	pK
 		
-		var cRowChildren = [];
 		var k = this.props.pK;
+		var rowBlockCnt = Math.min(this.props.pBlocks.length - k, MAX_BLOCKS_PER_ROW);
+		
+		var cRowChildren = [];
 		for (var j=0; j<MAX_BLOCKS_PER_ROW; j++) {
-			cRowChildren.push(React.createElement(Block, {pBlock:this.props.pBlocks[k], sBlockValue:this.props.sBlockValues[this.props.pBlocks[k].id]}));
+			cRowChildren.push(React.createElement(Block, {pBlock:this.props.pBlocks[k], sBlockValue:this.props.sBlockValues[this.props.pBlocks[k].id], pRowBlockCnt:rowBlockCnt, pRowFirstBlock:(j === 0 ? true : false)}));
 			if (k == this.props.pBlocks.length - 1) { // in case there is not exactly MAX_BLOCKS_PER_ROW left to fill this row. so number of blocks for this row is less than MAX_BLOCKS_PER_ROW
 				break;
 			}
@@ -332,8 +334,10 @@ var Block = React.createClass({
     displayName: 'Block',
 	render: function() {
 		// props
-		//		pBlock
-		//		sBlockValue
+		//	pBlock
+		//	sBlockValue
+		//	pRowBlockCnt
+		//	pRowFirstBlock - true if its the first block in the row else false
 		
 		var cBlockTitle = this.props.pBlock.label;
 		
@@ -375,7 +379,20 @@ var Block = React.createClass({
 			}
 		}
 		
-		return React.createElement('div', {className:'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12'},
+		var cClassName;
+		if (!this.props.pRowFirstBlock || this.props.pRowBlockCnt == MAX_BLOCKS_PER_ROW) {
+			cClassName = 'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12';
+		} else {
+			// :note: if increase MAX_BLOCKS_PER_ROW then I have to adjust this bootstrap offset logic per http://stackoverflow.com/a/35687323/1828637 // link6675835357
+			if (this.props.pRowBlockCnt == 2) {
+				cClassName = 'col-lg-4 col-lg-offset-2 col-md-4 col-md-offset-2 col-sm-6 col-sm-offset-3 col-xs-12';
+			} else {
+				// this.props.pRowBlockCnt is 1 obviously
+				cClassName = 'col-lg-4 col-lg-offset-4 col-md-4 col-md-offset-4 col-sm-6 col-sm-offset-3 col-xs-12';
+			}
+		}
+		
+		return React.createElement('div', {className:cClassName},
 			React.createElement('div', {className:'price-block' + (!cBlockSup ? '' : ' filesystem-path')},
 				React.createElement('div', {className:'price-price'},
 					React.createElement('h4', {},
