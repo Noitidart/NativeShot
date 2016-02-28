@@ -1319,6 +1319,32 @@ var gEditor = {
 		
 		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 	},
+	resizeSelection: function(dW, dH, by10) {
+		if (!gESelected) {
+			// console.log('no selection');
+			return;
+		}
+		
+		if (by10) {
+			dW *= 10;
+			dH *= 10;
+		}
+		
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		
+		var gESelectedWidth = gESelectedRect.width;
+		var gESelectedHeight = gESelectedRect.height;
+		
+		if (gESelectedWidth + dW >= 0) {
+			gESelectedRect.width += dW;
+		}
+		if (gESelectedHeight + dH >= 0) {
+			gESelectedRect.height += dH;
+		}
+		
+		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
+	},
 	clearSelection: function(e) {
 		if (!gESelected) {
 			throw new Error('no selection to clear!');
@@ -2265,16 +2291,32 @@ function gEKeyDown(e) {
 		gPanelWasNotOpenDuringEsc = true; // tell key up to close window on up
 	} else if (e.keyCode == 37) {
 		// left arrow key
-		gEditor.moveSelection(-1, 0, !e.shiftKey);
+		if (e.altKey) {
+			gEditor.resizeSelection(-1, 0, !e.shiftKey);
+		} else {
+			gEditor.moveSelection(-1, 0, !e.shiftKey);
+		}
 	} else if (e.keyCode == 38) {
 		// up arrow key
-		gEditor.moveSelection(0, -1, !e.shiftKey);
+		if (e.altKey) {
+			gEditor.resizeSelection(0, 1, !e.shiftKey);
+		} else {
+			gEditor.moveSelection(0, -1, !e.shiftKey);
+		}
 	} else if (e.keyCode == 39) {
 		// right arrow key
-		gEditor.moveSelection(1, 0, !e.shiftKey);
+		if (e.altKey) {
+			gEditor.resizeSelection(1, 0, !e.shiftKey);
+		} else {
+			gEditor.moveSelection(1, 0, !e.shiftKey);
+		}
 	} else if (e.keyCode == 40) {
 		// down arrow key
-		gEditor.moveSelection(0, 1, !e.shiftKey);
+		if (e.altKey) {
+			gEditor.resizeSelection(0, -1, !e.shiftKey);
+		} else {
+			gEditor.moveSelection(0, 1, !e.shiftKey);
+		}
 	}
 	else { console.log('e.keyCode:', e.keyCode); }
 }
