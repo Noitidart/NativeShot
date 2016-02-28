@@ -482,14 +482,18 @@ var gETopLeftMostY;
 var gESelected = false;
 var gESelecting = false; // users is drawing rect
 var gEMoving = false; // user is moving rect
+var gEResizing = false; // user is moving rect
+var gEOrigSelectedRect = new Rect(0, 0, 0, 0);
 var gEMDX = null; // mouse down x
 var gEMDY = null; // mouse down y
 var gESelectedRect = new Rect(0, 0, 0, 0);
 
 const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
-const gDefLineDash = [3, 2];
-const gDefStrokeStyle = '#ccc';
+const gDefLineDash = [3, 3];
+const gDefStrokeStyle = '#fff';
 const gDefLineWidth = '1';
+var gDefResizePtSize = 7;
+const gDefResizePtStyle = '#000';
 
 var gNotifTimer;
 
@@ -617,52 +621,57 @@ var gCanDim = {
 		
 		var clone_aArrFuncArgs = [];
 		for (var i=0; i<colMon.length; i++) {
-			// clone aArrFuncArgs (instead of aArrFuncArgs.slice() i think it might be better to do it this way)
-			for (var j=0; j<aArrFuncArgs.length; j++) {
-				clone_aArrFuncArgs[j] = aArrFuncArgs[j];
-			}
-			
-			// var orig = JSON.stringify(clone_aArrFuncArgs); // :debug:
-			
-			// do special replacements in arugments
-			for (var j=0; j<clone_aArrFuncArgs.length; j++) {
-				// special replacements
-				if (clone_aArrFuncArgs[j] == '{{W}}') {
-					clone_aArrFuncArgs[j] = colMon[i].w;
-				} else if (clone_aArrFuncArgs[j] == '{{H}}') {
-					clone_aArrFuncArgs[j] = colMon[i].h;
+			if (aArrFuncArgs.length) {
+				// clone aArrFuncArgs (instead of aArrFuncArgs.slice() i think it might be better to do it this way)
+				for (var j=0; j<aArrFuncArgs.length; j++) {
+					clone_aArrFuncArgs[j] = aArrFuncArgs[j];
 				}
-			}
-			
-			// modify screenX and screenY to layerX and layerY based on monitor
-			if (aObjConvertScreenToLayer) {
-				var cRect = new Rect(clone_aArrFuncArgs[aObjConvertScreenToLayer.x], clone_aArrFuncArgs[aObjConvertScreenToLayer.y], clone_aArrFuncArgs[aObjConvertScreenToLayer.w], clone_aArrFuncArgs[aObjConvertScreenToLayer.h]);
-				// start - block link6587436215
-				// check if intersection
-				var rectIntersecting = colMon[i].rect.intersect(cRect);
-
-				if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
-					// does not intersect, continue to next monitor
-
-					continue;
-				} else {
-
-					// convert screen xy of rect to layer xy
-					clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = rectIntersecting.left - colMon[i].x;
-					clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = rectIntersecting.top - colMon[i].y;
-					
-					// adjust width and height, needed for multi monitor selection correction
-					clone_aArrFuncArgs[aObjConvertScreenToLayer.w] = rectIntersecting.width;
-					clone_aArrFuncArgs[aObjConvertScreenToLayer.h] = rectIntersecting.height;
-
+				
+				// var orig = JSON.stringify(clone_aArrFuncArgs); // :debug:
+				
+				// do special replacements in arugments
+				for (var j=0; j<clone_aArrFuncArgs.length; j++) {
+					// special replacements
+					if (clone_aArrFuncArgs[j] == '{{W}}') {
+						clone_aArrFuncArgs[j] = colMon[i].w;
+					} else if (clone_aArrFuncArgs[j] == '{{H}}') {
+						clone_aArrFuncArgs[j] = colMon[i].h;
+					}
 				}
-				// end - block link6587436215
+				
+				// modify screenX and screenY to layerX and layerY based on monitor
+				if (aObjConvertScreenToLayer) {
+					var cRect = new Rect(clone_aArrFuncArgs[aObjConvertScreenToLayer.x], clone_aArrFuncArgs[aObjConvertScreenToLayer.y], clone_aArrFuncArgs[aObjConvertScreenToLayer.w], clone_aArrFuncArgs[aObjConvertScreenToLayer.h]);
+					// start - block link6587436215
+					// check if intersection
+					var rectIntersecting = colMon[i].rect.intersect(cRect);
+
+					if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
+						// does not intersect, continue to next monitor
+
+						continue;
+					} else {
+
+						// convert screen xy of rect to layer xy
+						clone_aArrFuncArgs[aObjConvertScreenToLayer.x] = rectIntersecting.left - colMon[i].x;
+						clone_aArrFuncArgs[aObjConvertScreenToLayer.y] = rectIntersecting.top - colMon[i].y;
+						
+						// adjust width and height, needed for multi monitor selection correction
+						clone_aArrFuncArgs[aObjConvertScreenToLayer.w] = rectIntersecting.width;
+						clone_aArrFuncArgs[aObjConvertScreenToLayer.h] = rectIntersecting.height;
+
+					}
+					// end - block link6587436215
+				}
+				
+				var aCtxDim = colMon[i].E.ctxDim;
+
+
+				aCtxDim[aStrFuncName].apply(aCtxDim, clone_aArrFuncArgs);
+			} else {
+				var aCtxDim = colMon[i].E.ctxDim;
+				aCtxDim[aStrFuncName]();
 			}
-			
-			var aCtxDim = colMon[i].E.ctxDim;
-
-
-			aCtxDim[aStrFuncName].apply(aCtxDim, clone_aArrFuncArgs);
 		}
 	},
 	execProp: function(aStrPropName, aPropVal) {
@@ -1238,6 +1247,8 @@ var gEditor = {
 		gESelected = false;
 		gESelecting = false; // users is drawing rect
 		gEMoving = false; // user is moving rect
+		gEResizing = false;
+		gEOrigSelectedRect.setRect(0, 0, 0, 0);
 		gEMDX = null; // mouse down x
 		gEMDY = null; // mouse down y
 
@@ -1320,6 +1331,7 @@ var gEditor = {
 		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 	},
 	resizeSelection: function(dW, dH, by10) {
+		// can never resize to 0
 		if (!gESelected) {
 			// console.log('no selection');
 			return;
@@ -1336,10 +1348,10 @@ var gEditor = {
 		var gESelectedWidth = gESelectedRect.width;
 		var gESelectedHeight = gESelectedRect.height;
 		
-		if (gESelectedWidth + dW >= 0) {
+		if (gESelectedWidth + dW > 0) {
 			gESelectedRect.width += dW;
 		}
-		if (gESelectedHeight + dH >= 0) {
+		if (gESelectedHeight + dH > 0) {
 			gESelectedRect.height += dH;
 		}
 		
@@ -1510,6 +1522,63 @@ var gEditor = {
 			}
 			colMon[0].E.DOMWindow.close();
 		}
+	},
+	borderSelection: function() {
+		if (!gESelected) {
+			// console.log('no selection');
+			return;
+		}
+		
+		// draw dashed border
+		gCanDim.execFunc('beginPath');
+		gCanDim.execFunc('translate', [0.5, 0.5]);
+		gCanDim.execFunc('rect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]); // draw invisible rect for stroke
+		gCanDim.execFunc('stroke');
+		gCanDim.execFunc('translate', [-0.5, -0.5]);
+		
+		// draw resize points/strokeStyle
+		gCanDim.execFunc('beginPath');
+		gCanDim.execProp('fillStyle', gDefResizePtStyle);
+		gCanDim.execFunc('setLineDash', [[0]]);
+		
+		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize]); // top left
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize]); // top center
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize]); // top right
+		                  
+		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize]); // middle left
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize]); // middle right
+		                  
+		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize]); // bottom left
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize]); // bottom center
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2)  + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize]); // bottom right
+		
+		gCanDim.execFunc('fill');
+		gCanDim.execFunc('translate', [0.5, 0.5]);
+		gCanDim.execFunc('stroke');
+		gCanDim.execFunc('translate', [-0.5, -0.5]);
+		
+		gCanDim.execFunc('beginPath');
+		gCanDim.execFunc('setLineDash', [gDefLineDash]); // restore line dash style for next line dash
+		gCanDim.execProp('fillStyle', gDefDimFillStyle); // set back to default dim fill color
+		
+	},
+	setSelectionStyles: function() {
+		// // clear out any drawings existing here
+		// gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
+		// gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
+		
+		// save what ever previous styles user applied
+		gCanDim.execFunc('save');
+		
+		// set "in selection" styles
+		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
+		gCanDim.execFunc('setLineDash', [gDefLineDash]);
+		gCanDim.execProp('strokeStyle', gDefStrokeStyle);
+		gCanDim.execProp('lineWidth', gDefLineWidth);
+	},
+	restorePreSelectionStyles: function() {
+		gEditor.borderSelection();
+		gCanDim.execFunc('restore');
 	},
 	showNotif: function(aTitle, aMsg, aClickCallback) {
 		if (!gNotifTimer) {
@@ -2076,6 +2145,84 @@ function gEMouseMove(e) {
 		
 		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 
+	} else if (gEResizing) {
+		var cEMMX = colMon[iMon].win81ScaleX ? Math.floor(colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX)) : e.screenX;
+		var cEMMY = colMon[iMon].win81ScaleY ? Math.floor(colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY)) : e.screenY;
+		// var cEMMX = e.screenX;
+		// var cEMMY = e.screenY;
+		
+		var newW = gEOrigSelectedRect.width;
+		var newH = gEOrigSelectedRect.height;
+		var resizedRect = gEOrigSelectedRect.clone();
+		switch (gEResizing) {
+			case 1:
+			
+					// ne
+				
+				break;
+			case 2:
+			
+					// ns
+					var dMY = cEMMY - gEMDY;
+					if (cEMMY <= gEOrigSelectedRect.bottom) {
+						resizedRect.top = gEOrigSelectedRect.top + dMY;
+						resizedRect.bottom = gEOrigSelectedRect.bottom;
+					} else {
+						resizedRect.top = gEOrigSelectedRect.bottom;
+						resizedRect.bottom = gEOrigSelectedRect.bottom + (dMY - gEOrigSelectedRect.height);
+					}
+				
+				break;
+			case 3:
+			
+					//
+				
+				break;
+			case 4:
+			
+					// we
+					var dW = cEMMX - gEMDX;
+					newW += dW;
+				
+				break;
+			case 5:
+			
+					// ew
+					var dW = cEMMX - gEMDX;
+					newW += dW;
+				
+				break;
+			case 6:
+			
+					// 
+				
+				break;
+			case 7:
+			
+					// sn
+					var dH = cEMMY - gEMDY;
+					newH += dH;
+				
+				break;
+			case 8:
+			
+					// 
+				
+				break;
+			default:
+				// will never get here
+		}
+
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+				
+		if (resizedRect.width && resizedRect.height) {
+			gESelected = true;
+			gESelectedRect.copyFrom(resizedRect);
+			gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
+		} else {
+			gESelected = false;
+		}
 	}
 	
 	// e.preventDefault();
@@ -2093,7 +2240,8 @@ function gEMouseUp(e) {
 		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
 		gIMonMouseDownedIn = null;
 		
-		gCanDim.execFunc('restore');
+		gEditor.restorePreSelectionStyles();
+		
 		
 	} else if (gEMoving) {
 		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
@@ -2102,7 +2250,16 @@ function gEMouseUp(e) {
 		gCanDim.execStyle('cursor', 'crosshair');
 		gIMonMouseDownedIn = null;
 		
-		gCanDim.execFunc('restore');
+		gEditor.restorePreSelectionStyles();
+		
+	} else if (gEResizing) {
+		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+		gEResizing = false;
+		gEOrigSelectedRect.setRect(0, 0, 0, 0);
+		gCanDim.execStyle('cursor', 'crosshair');
+		gIMonMouseDownedIn = null;
+		
+		gEditor.restorePreSelectionStyles();
 	}
 	
 	// e.preventDefault();
@@ -2139,7 +2296,7 @@ function gEMouseDown(e) {
 			if (gEditor.winArr) {
 				// go through all windows in z order and draw sel around the window rect that contains cEMDX, cEMDY
 
-				Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(gEditor.winArr)) // :debug:
+				// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(gEditor.winArr)) // :debug: console.log('remove on prod');
 				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
 				var first_nativeshot_canvas_found = false;
 				for (var i=0; i<gEditor.winArr.length; i++) {
@@ -2167,7 +2324,8 @@ function gEMouseDown(e) {
 					}
 					if (cEMDX >= gEditor.winArr[i].left && cEMDX <= gEditor.winArr[i].right && cEMDY >= gEditor.winArr[i].top && cEMDY <= gEditor.winArr[i].bottom) {
 
-
+						gEditor.setSelectionStyles();
+						
 						gIMonMouseDownedIn = iMon;
 						gESelecting = false;
 						gESelected = true;
@@ -2178,6 +2336,7 @@ function gEMouseDown(e) {
 						gESelectedRect.setRect(gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height);
 						gCanDim.execFunc('clearRect', [gEditor.winArr[i].left, gEditor.winArr[i].top, gEditor.winArr[i].width, gEditor.winArr[i].height], {x:0,y:1,w:2,h:3});
 						
+						gEditor.restorePreSelectionStyles();
 						break;
 					}
 				}
@@ -2193,21 +2352,62 @@ function gEMouseDown(e) {
 			colMon[iMon].E.DOMWindow.setTimeout(do_selWinAtPt, 100); // as winArr is populated async'ly. user may click before winArr is populated
 		}
 		
-	} else if (e.target.id == 'hitboxMoveSel') {
-		gEMoving = true;
-		gEMDX = cEMDX;
-		gEMDY = cEMDY;
-		// gEditor.addEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
-		gIMonMouseDownedIn = iMon;
-		colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 	} else {
 		if (gESelected) {
 			// if user mouses down within selected area, then dont start new selection
 			var cPoint = new Rect(cEMDX, cEMDY, 1, 1);
+			
+			// check if cPoint is in the resizePt rects
+			/*
+			gDefResizePtSize += 5; // make hit test easier for user + 1 for the stroke
+			var resizePtRects = [
+				new Rect(gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize), // top left
+				new Rect((gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize), // top center
+				new Rect((gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize), // top right
+				new Rect(gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize), // middle left
+				new Rect((gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize), // middle right
+				new Rect(gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize), // bottom left
+				new Rect((gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize), // bottom center
+				new Rect((gESelectedRect.left - gDefResizePtSize / 2) + gESelectedRect.width, (gESelectedRect.top - gDefResizePtSize / 2)  + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize) // bottom right
+			];
+			gDefResizePtSize -= 5;
+			
+			for (var i=0; i<8; i++) {
+				if (resizePtRects[i].contains(cPoint)) {
+					gEResizing = i + 1; // so i can just test `if (gEResizing)`
+					gEOrigSelectedRect.copyFrom(gESelectedRect);
+					console.log('gEOrigSelectedRect:', gEOrigSelectedRect);
+					gIMonMouseDownedIn = iMon;
+					gEditor.setSelectionStyles();
+					
+					var resizeCursors = [
+						'nw-resize',
+						'ns-resize',
+						'ne-resize',
+						'ew-resize',
+						'ew-resize',
+						'ne-resize',
+						'ns-resize',
+						'nw-resize'
+					];
+					
+					gCanDim.execStyle('cursor', resizeCursors[gEResizing - 1]);
+					console.log('gEResizing:', gEResizing);
+					colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
+					return;
+				}
+			}
+			*/
 			if (gESelectedRect.contains(cPoint)) {
+				
+				
 				gEMDX = cEMDX;
 				gEMDY = cEMDY;
 				gIMonMouseDownedIn = iMon;
+				
+				
+				gEditor.setSelectionStyles();
+				
 				gEMoving = gESelectedRect.clone();
 				gCanDim.execStyle('cursor', 'move');
 				colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
@@ -2223,15 +2423,7 @@ function gEMouseDown(e) {
 		gEMDX = cEMDX;
 		gEMDY = cEMDY;
 		
-		// save what ever previous styles user applied
-		gCanDim.execFunc('save');
-		
-		// set "in selection" styles
-		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
-		gCanDim.execFunc('setLineDash', [gDefLineDash]);
-		gCanDim.execFunc('setLineDash', [gDefLineDash]);
-		gCanDim.execProp('strokeStyle', gDefStrokeStyle);
-		gCanDim.execProp('lineWidth', gDefLineWidth);
+		gEditor.setSelectionStyles();
 		
 		// clear out any drawings existing here
 		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
@@ -2291,34 +2483,42 @@ function gEKeyDown(e) {
 		gPanelWasNotOpenDuringEsc = true; // tell key up to close window on up
 	} else if (e.keyCode == 37) {
 		// left arrow key
+		gEditor.setSelectionStyles();
 		if (e.altKey) {
 			gEditor.resizeSelection(-1, 0, !e.shiftKey);
 		} else {
 			gEditor.moveSelection(-1, 0, !e.shiftKey);
 		}
+		gEditor.restorePreSelectionStyles();
 	} else if (e.keyCode == 38) {
 		// up arrow key
+		gEditor.setSelectionStyles();
 		if (e.altKey) {
 			gEditor.resizeSelection(0, 1, !e.shiftKey);
 		} else {
 			gEditor.moveSelection(0, -1, !e.shiftKey);
 		}
+		gEditor.restorePreSelectionStyles();
 	} else if (e.keyCode == 39) {
 		// right arrow key
+		gEditor.setSelectionStyles();
 		if (e.altKey) {
 			gEditor.resizeSelection(1, 0, !e.shiftKey);
 		} else {
 			gEditor.moveSelection(1, 0, !e.shiftKey);
 		}
+		gEditor.restorePreSelectionStyles();
 	} else if (e.keyCode == 40) {
 		// down arrow key
+		gEditor.setSelectionStyles();
 		if (e.altKey) {
 			gEditor.resizeSelection(0, -1, !e.shiftKey);
 		} else {
 			gEditor.moveSelection(0, 1, !e.shiftKey);
 		}
+		gEditor.restorePreSelectionStyles();
 	}
-	else { console.log('e.keyCode:', e.keyCode); }
+	// else { console.log('e.keyCode:', e.keyCode); }
 }
 
 function gEPopupHiding(e) {
