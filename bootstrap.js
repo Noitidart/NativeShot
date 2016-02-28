@@ -2038,7 +2038,21 @@ function gEMouseMove(e) {
 		}
 		
 	} else if (gEMoving) {
-		// :todo:
+		var cEMMX = colMon[iMon].win81ScaleX ? Math.floor(colMon[iMon].x + ((e.screenX - colMon[iMon].x) * colMon[iMon].win81ScaleX)) : e.screenX;
+		var cEMMY = colMon[iMon].win81ScaleY ? Math.floor(colMon[iMon].y + ((e.screenY - colMon[iMon].y) * colMon[iMon].win81ScaleY)) : e.screenY;
+		
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		
+		
+		gESelectedRect.left = gEMoving.left - (gEMDX - cEMMX);
+		gESelectedRect.top = gEMoving.top - (gEMDY - cEMMY);
+		
+		gESelectedRect.width = gEMoving.width;
+		gESelectedRect.height = gEMoving.height;
+		
+		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
+
 	}
 	
 	// e.preventDefault();
@@ -2059,10 +2073,10 @@ function gEMouseUp(e) {
 		gCanDim.execFunc('restore');
 		
 	} else if (gEMoving) {
-		gEMoving = false;
-		
 		// gEditor.removeEventListener('DOMWindow', 'mousemove', gEMouseMove, false);
 		colMon[gIMonMouseDownedIn].E.DOMWindow.removeEventListener('mousemove', gEMouseMove, false);
+		gEMoving = false;
+		gCanDim.execStyle('cursor', 'crosshair');
 		gIMonMouseDownedIn = null;
 		
 		gCanDim.execFunc('restore');
@@ -2168,7 +2182,12 @@ function gEMouseDown(e) {
 			// if user mouses down within selected area, then dont start new selection
 			var cPoint = new Rect(cEMDX, cEMDY, 1, 1);
 			if (gESelectedRect.contains(cPoint)) {
-
+				gEMDX = cEMDX;
+				gEMDY = cEMDY;
+				gIMonMouseDownedIn = iMon;
+				gEMoving = gESelectedRect.clone();
+				gCanDim.execStyle('cursor', 'move');
+				colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 				return; // he clicked within it, dont do anything
 			}
 		}
