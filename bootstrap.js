@@ -1297,7 +1297,7 @@ var gEditor = {
 	},
 	moveSelection: function(dX, dY, by10) {
 		if (!gESelected) {
-			console.log('no selection');
+			// console.log('no selection');
 			return;
 		}
 		
@@ -1305,22 +1305,19 @@ var gEditor = {
 			dX *= 10;
 			dY *= 10;
 		}
-		console.log('gESelectedRect:', gESelectedRect);
-				
-		var movedSelectedRect = gESelectedRect.clone();
-		console.log('movedSelectedRect:', movedSelectedRect);
-		movedSelectedRect.translate(dX, dY);
 		
-		// movedSelectedRect.left += dX;
-		// movedSelectedRect.right += dX;
-		// movedSelectedRect.top += dY;
-		// movedSelectedRect.bottom += dY;
+		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
+		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
 		
-		this.clearSelection();
+		var gESelectedWidth = gESelectedRect.width;
+		var gESelectedHeight = gESelectedRect.height;
 		
-		gESelected = true;
-		gESelectedRect = movedSelectedRect;
-		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+		gESelectedRect.translate(dX, dY);
+		
+		gESelectedRect.width = gESelectedWidth;
+		gESelectedRect.height = gESelectedHeight;
+		
+		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
 	},
 	clearSelection: function(e) {
 		if (!gESelected) {
