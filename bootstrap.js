@@ -1295,6 +1295,33 @@ var gEditor = {
 			}
 		}
 	},
+	moveSelection: function(dX, dY, by10) {
+		if (!gESelected) {
+			console.log('no selection');
+			return;
+		}
+		
+		if (by10) {
+			dX *= 10;
+			dY *= 10;
+		}
+		console.log('gESelectedRect:', gESelectedRect);
+				
+		var movedSelectedRect = gESelectedRect.clone();
+		console.log('movedSelectedRect:', movedSelectedRect);
+		movedSelectedRect.translate(dX, dY);
+		
+		// movedSelectedRect.left += dX;
+		// movedSelectedRect.right += dX;
+		// movedSelectedRect.top += dY;
+		// movedSelectedRect.bottom += dY;
+		
+		this.clearSelection();
+		
+		gESelected = true;
+		gESelectedRect = movedSelectedRect;
+		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+	},
 	clearSelection: function(e) {
 		if (!gESelected) {
 			throw new Error('no selection to clear!');
@@ -1977,7 +2004,7 @@ function gEMouseMove(e) {
 		
 
 		var newW = cEMMX - gEMDX;
-		var newH = cEMMY - gEMDY;
+		var newH = e.shiftKey ? newW : cEMMY - gEMDY;
 		
 		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
 		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
@@ -1985,17 +2012,17 @@ function gEMouseMove(e) {
 		if (newW && newH) {
 			gESelected = true;
 			if (newW < 0) {
-				gESelectedRect.left = gEMDX + newW;
+				gESelectedRect.left = e.altKey ? gEMDX + (newW / 2) : gEMDX + newW;
 				gESelectedRect.width = Math.abs(newW);
 			} else {
-				gESelectedRect.left = gEMDX;
+				gESelectedRect.left = e.altKey ? gEMDX - (newW / 2) : gEMDX;
 				gESelectedRect.width = newW;
 			}
 			if (newH < 0) {
-				gESelectedRect.top = gEMDY + newH;
+				gESelectedRect.top = e.altKey ? gEMDY + (newH / 2) : gEMDY + newH;
 				gESelectedRect.height = Math.abs(newH);
 			} else {
-				gESelectedRect.top = gEMDY;
+				gESelectedRect.top = e.altKey ? gEMDY - (newH / 2) : gEMDY;
 				gESelectedRect.height = newH;
 			}
 			//gESelectedRect.setRect(gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height); // no need
@@ -2220,7 +2247,20 @@ function gEKeyDown(e) {
 	if (e.keyCode == 27) {
 		// this key down does not trigger if menu was open (at least on win81, need to test on other platforms)
 		gPanelWasNotOpenDuringEsc = true; // tell key up to close window on up
+	} else if (e.keyCode == 37) {
+		// left arrow key
+		gEditor.moveSelection(-1, 0, !e.shiftKey);
+	} else if (e.keyCode == 38) {
+		// up arrow key
+		gEditor.moveSelection(0, -1, !e.shiftKey);
+	} else if (e.keyCode == 39) {
+		// right arrow key
+		gEditor.moveSelection(1, 0, !e.shiftKey);
+	} else if (e.keyCode == 40) {
+		// down arrow key
+		gEditor.moveSelection(0, 1, !e.shiftKey);
 	}
+	else { console.log('e.keyCode:', e.keyCode); }
 }
 
 function gEPopupHiding(e) {
