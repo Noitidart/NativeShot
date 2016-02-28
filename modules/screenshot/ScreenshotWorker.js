@@ -611,8 +611,10 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					
 					//var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
 					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, 0, 0, 0, 0, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
-
 				}
+				console.log('will force focus now');
+				var rez_winForceFocus = winForceForegroundWindow(hwndPtr); // use the last hwndPtr, i just need to focus one of my canvas windows // so if user hits esc it will work, otherwise the keyboard focus is in the other app even though my canvas window is top most
+				console.error('rez_winForceFocus:', rez_winForceFocus);
 				
 			break;
 		case 'gtk':
@@ -1786,11 +1788,78 @@ function shootAllMons() {
 
 // End - Addon Functionality
 
-var txtEn = new TextEncoder()
-var pth = OS.Path.join(OS.Constants.Path.desktopDir, 'logit.txt');
+// rev1 - https://gist.github.com/Noitidart/50c7fa116f58836722a1
+function winForceForegroundWindow(aHwndToFocus) {
+	// windows only!
+	// focus a window even if this process, that is calling this function, is not the foreground window
+	// copy of work from here - ForceForegroundWindow - http://www.asyncop.com/MTnPDirEnum.aspx?treeviewPath=[o]+Open-Source\WinModules\Infrastructure\SystemAPI.cpp
+	
+	// aHwndToFocus should be ostypes.TYPE.HWND
+	// RETURNS
+		// true - if focused
+		// false - if it could not focus
+	
+	if (core.os.name != 'winnt') {
+		throw new Error('winForceForegroundWindow is only for Windows platform');
+	}
+	
+	var hTo = aHwndToFocus;
+	
+	var hFrom = ostypes.API('GetForegroundWindow')();
+	if (hFrom.isNull()) {
+		// nothing in foreground, so calling process is free to focus anything
+		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+		return rez_SetSetForegroundWindow ? true : false;
+	}
 
-function logit(txt) {
-	var valOpen = OS.File.open(pth, {write: true, append: true});
-	var valWrite = valOpen.write(txtEn.encode(txt + '\n'));
-	valOpen.close();
+	if (cutils.comparePointers(hTo, hFrom) === 0) {
+		// window is already focused
+		console.log('window is already focused');
+		return true;
+	}
+	
+	var pidFrom = ostypes.TYPE.DWORD();
+	var threadidFrom = ostypes.API('GetWindowThreadProcessId')(hFrom, pidFrom.address());
+	console.info('threadidFrom:', threadidFrom);
+	console.info('pidFrom:', pidFrom);
+	
+	var pidTo = ostypes.TYPE.DWORD();
+	var threadidTo = ostypes.API('GetWindowThreadProcessId')(hTo, pidTo.address()); // threadidTo is thread of my firefox id, and hTo is that of my firefox id so this is possible to do
+	console.info('threadidTo:', threadidTo);
+	console.info('pidTo:', pidTo);
+	
+	// impossible to get here if `cutils.jscEqual(threadidFrom, threadidTo)` because if thats the case, then the window is already focused!!
+	// if (cutils.jscEqual(threadidFrom, threadidTo) {
+	
+	// from testing, it shows that ```cutils.jscEqual(pidFrom, pidTo)``` works only if i allow at least 100ms of wait time between, which is very weird
+	if (/*cutils.jscEqual(pidFrom, pidTo) || */cutils.jscEqual(pidFrom, core.firefox.pid)) {
+		// the pid that needs to be focused, is already focused, so just focus it
+		// or
+		// the pid that needs to be focused is not currently focused, but the calling pid is currently focused. the current pid is allowed to shift focus to anything else it wants
+		// if (cutils.jscEqual(pidFrom, pidTo)) {
+		// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
+		// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
+			console.log('the process, of the window that is currently focused, is of this calling thread, so i can go ahead and just focus it - no need for attach');
+		// }
+		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+		return rez_SetSetForegroundWindow ? true : false;
+	}
+	
+	var threadidOfCallingProcess = ostypes.API('GetCurrentThreadId')();
+	console.log('threadidOfCallingProcess:', threadidOfCallingProcess);
+	
+	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, true);
+	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+	if (!rez_AttachThreadInput) {
+		throw new Error('failed to attach thread input');
+	}
+	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+
+	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, false);
+	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+	
+	return rez_SetSetForegroundWindow ? true : false;
 }

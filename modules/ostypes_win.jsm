@@ -370,6 +370,21 @@ var winInit = function() {
 				self.TYPE.int
 			);
 		},
+		AttachThreadInput: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms681956%28v=vs.85%29.aspx
+			 * BOOL WINAPI AttachThreadInput(
+			 *   __in_ DWORD idAttach,
+			 *   __in_ DWORD idAttachTo,
+			 *   __in_ BOOL  fAttach
+			 * );
+			 */
+			return lib('user32').declare('AttachThreadInput', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.DWORD,	// idAttach
+				self.TYPE.DWORD,	// idAttachTo
+				self.TYPE.BOOL		// fAttach
+			);
+		},
 		BitBlt: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd183370%28v=vs.85%29.aspx
 			 * BOOL BitBlt(
@@ -558,6 +573,16 @@ var winInit = function() {
 				self.TYPE.LPRECT // lpRec
 			);
 		},
+		GetCurrentThreadId: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms683183%28v=vs.85%29.aspx
+			 * DWORD WINAPI GetCurrentThreadId(
+			 *   void
+			 * );
+			 */
+			return lib('kernel32').declare('GetCurrentThreadId', self.TYPE.ABI,
+				self.TYPE.DWORD	// return
+			);
+		},
 		GetCursorPos: function() {
 			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms648390%28v=vs.85%29.aspx
 			 * BOOL WINAPI GetCursorPos(
@@ -617,6 +642,16 @@ var winInit = function() {
 				self.TYPE.UINT.ptr,			// *dpiX
 				self.TYPE.UINT.ptr			// *dpiY
 			);
+		},
+		GetForegroundWindow: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms633505%28v=vs.85%29.aspx
+			 * HWND WINAPI GetForegroundWindow(
+			 *   void
+			 * );
+			 */
+			return lib('user32').declare('GetForegroundWindow', self.TYPE.ABI,
+				self.TYPE.HWND		// return
+			)
 		},
 		GetMonitorInfo: function() {
 			/* https://msdn.microsoft.com/en-us/library/windows/desktop/dd144901%28v=vs.85%29.aspx
@@ -752,6 +787,17 @@ var winInit = function() {
 				self.TYPE.HGDIOBJ, //return
 				self.TYPE.HDC, // hdc
 				self.TYPE.HGDIOBJ // hgdiobj
+			);
+		},
+		SetForegroundWindow: function() {
+			/* http://msdn.microsoft.com/en-us/library/ms633539%28v=vs.85%29.aspx
+			 * BOOL WINAPI SetForegroundWindow(
+			 *   __in_ HWND hWnd
+			 * );
+			 */
+			return lib('user32').declare('SetForegroundWindow', self.TYPE.ABI,
+				self.TYPE.BOOL,	// return
+				self.TYPE.HWND	// hWnd
 			);
 		},
 		SetWindowPos: function() {
