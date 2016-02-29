@@ -1863,3 +1863,71 @@ function winForceForegroundWindow(aHwndToFocus) {
 	
 	return rez_SetSetForegroundWindow ? true : false;
 }
+
+function trashFile(aFilePlatPath) {
+	// aFilePlatPath is a js string
+	
+	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+		case 'winnt':
+		case 'winmo':
+		case 'wince':
+		
+				// http://stackoverflow.com/a/23721071/1828637
+				var sfo = ostypes.TYPE.SHFILEOPSTRUCT();
+				sfo.hwnd = null;
+				sfo.wFunc = ostypes.CONST.FO_DELETE;
+				sfo.pFrom = ostypes.TYPE.PCZZTSTR.targetType.array(aFilePlatPath.length + 2)(aFilePlatPath); // + 2 because we need it double terminated, that is the definition of PCZZTSTR per the msdn docs
+				sfo.pTo = null;
+				sfo.fFlags = ostypes.CONST.FOF_ALLOWUNDO | ostypes.CONST.FOF_NOCONFIRMATION | ostypes.CONST.FOF_NOERRORUI | ostypes.CONST.FOF_SILENT;
+				sfo.fAnyOperationsAborted = 0;
+				sfo.hNameMappings = null;
+				sfo.lpszProgressTitle = null;
+				
+				console.log('sfo.pFrom:', sfo.pFrom.toString());
+				
+				var rez_trash = ostypes.API('SHFileOperation')(sfo.address());
+				console.log('rez_trash:', rez_trash);
+				console.log('sfo.fAnyOperationsAborted:', sfo.fAnyOperationsAborted);
+				
+				if (cutils.jscEqual(rez_trash, 0)) {
+					return true;
+				} else {
+					return false;
+				}
+				
+				
+			break;
+		case 'gtk':
+
+				throw new Error('not yet supported');
+			
+			break;
+		case 'darwin':
+				
+				// http://stackoverflow.com/a/18069259/1828637
+				var trashNSStrings = new ostypes.HELPER.nsstringColl();
+				try {
+					
+					var NSArray = ostypes.HELPER.class('NSArray');
+					// var cNSArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('array'));
+					
+					var NSURL = ostypes.HELPER.class('NSURL');
+					var cMacUrl = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('URLWithString:'), trashNSStrings.get('aFilePlatPath'));
+					var cMacUrlArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('arrayWithObject:'), cMacUrl);
+					
+					var NSWorkspace = ostypes.HELPER.class('NSWorkspace');
+					var sharedWorkspace = ostypes.API('objc_msgSend')(NSWorkspace, ostypes.HELPER.sel('sharedWorkspace'));
+					var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, ostypes.TYPE.NIL);
+					console.log('rez_trash:', rez_trash);
+					
+				} finally {				
+					if (trashNSStrings) {
+						trashNSStrings.releaseAll()
+					}
+				}
+			
+			break;
+		default:
+			throw new Error('os not supported ' + core.os.name);
+	}
+}

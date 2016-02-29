@@ -4049,6 +4049,45 @@ var AB = { // AB stands for attention bar
 
 // start - MainWorkerMainThreadFuncs
 var MainWorkerMainThreadFuncs = {
+	callInPromiseWorker: function(aWorkerName, aArrOfFuncnameThenArgs) {
+		// for use with sendAsyncMessageWithCallback from framescripts
+		
+		var mainDeferred_callInPromiseWorker = new Deferred();
+		
+		console.log('aWorkerName:', aWorkerName);
+		console.log('aArrOfFuncnameThenArgs:', aArrOfFuncnameThenArgs);
+		
+		var rez_pwcall = BOOTSTRAP[aWorkerName].post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
+		rez_pwcall.then(
+			function(aVal) {
+				console.log('Fullfilled - rez_pwcall - ', aVal);
+				if (Array.isArray(aVal)) {
+					mainDeferred_callInPromiseWorker.resolve(aVal);
+				} else {
+					mainDeferred_callInPromiseWorker.resolve([aVal]);
+				}
+			},
+			function(aReason) {
+				var rejObj = {
+					name: 'rez_pwcall',
+					aReason: aReason
+				};
+				console.error('Rejected - rez_pwcall - ', rejObj);
+				mainDeferred_callInPromiseWorker.resolve([rejObj]);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {
+					name: 'rez_pwcall',
+					aCaught: aCaught
+				};
+				console.error('Caught - rez_pwcall - ', rejObj);
+				mainDeferred_callInPromiseWorkerr.resolve([rejObj]);
+			}
+		);
+		
+		return mainDeferred_callInPromiseWorker.promise;
+	},
 	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
 		var deferredMain_authorizeApp = new Deferred();
 		
@@ -4230,6 +4269,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 };
 
 MainWorkerMainThreadFuncs.callInBootstrap = fsFuncs.callInBootstrap;
+// MainWorkerMainThreadFuncs.callInBootstrap = fsFuncs.callInPromiseWorker;
 
 var fsMsgListener = {
 	funcScope: fsFuncs,

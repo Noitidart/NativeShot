@@ -61,6 +61,7 @@ var winTypes = function() {
 	this.BOOLEAN = this.BYTE; // http://blogs.msdn.com/b/oldnewthing/archive/2004/12/22/329884.aspx
 	this.COLORREF = this.DWORD; // when i copied/pasted there was this comment next to this: // 0x00bbggrr
 	this.DWORD_PTR = this.ULONG_PTR;
+	this.FILEOP_FLAGS = this.WORD;
 	this.HANDLE = this.PVOID;
 	this.HRESULT = this.LONG;
 	this.LPCSTR = this.CHAR.ptr; // typedef __nullterminated CONST CHAR *LPCSTR;
@@ -98,7 +99,8 @@ var winTypes = function() {
 	this.LPHANDLE = this.HANDLE.ptr;
 	this.LPOLESTR = this.OLECHAR.ptr; // typedef [string] OLECHAR *LPOLESTR; // https://github.com/wine-mirror/wine/blob/bdeb761357c87d41247e0960f71e20d3f05e40e6/include/wtypes.idl#L287 // http://stackoverflow.com/a/1607335/1828637 // LPOLESTR is usually to be allocated with CoTaskMemAlloc()
 	this.LPTSTR = ifdef_UNICODE ? this.LPWSTR : this.LPSTR;
-
+	this.PCTSTR = ifdef_UNICODE ? this.LPCWSTR : this.LPCSTR;
+	
 	// SUPER DUPER ADVANCED TYPES // defined by "super advanced types"
 	this.HCURSOR = this.HICON;
 	this.HMODULE = this.HINSTANCE;
@@ -256,12 +258,27 @@ var winTypes = function() {
 
 	// FURTHER ADV STRUCTS
 	this.PBITMAPINFO = this.BITMAPINFO.ptr;
-
+	
 	// FUNCTION TYPES
 	this.MONITORENUMPROC = ctypes.FunctionType(this.CALLBACK_ABI, this.BOOL, [this.HMONITOR, this.HDC, this.LPRECT, this.LPARAM]);
 
 	// STRUCTS USING FUNC TYPES
 
+
+	this.PCZZSTR = ifdef_UNICODE ? this.WCHAR.ptr : this.CHAR.ptr; // EDUCATED GUESS BASED ON TYPEDEF FROM --> // ansi / unicode - https://github.com/wine-mirror/wine/blob/b1ee60f22fbd6b854c3810a89603458ec0585369/include/winnt.h#L483 --- 
+	this.PCZZTSTR = this.PCZZSTR; // double null terminated from msdn docs // typedef from https://github.com/wine-mirror/wine/blob/b1ee60f22fbd6b854c3810a89603458ec0585369/include/winnt.h#L535
+
+	this.SHFILEOPSTRUCT = ctypes.StructType('_SHFILEOPSTRUCT', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/bb759795%28v=vs.85%29.aspx
+		{ hwnd: this.HWND },
+		{ wFunc: this.UINT },
+		{ pFrom: this.PCZZTSTR },
+		{ pTo: this.PCZZTSTR },
+		{ fFlags: this.FILEOP_FLAGS },
+		{ fAnyOperationsAborted: this.BOOL },
+		{ hNameMappings: this.LPVOID },
+		{ lpszProgressTitle: this.PCTSTR }
+	]);
+	this.LPSHFILEOPSTRUCT = this.SHFILEOPSTRUCT.ptr;
 }
 
 var winInit = function() {
@@ -303,7 +320,15 @@ var winInit = function() {
 		MDT_Raw_DPI: 2,
 		MDT_Default: 0, // MDT_Effective_DPI
 		WS_VISIBLE: 0x10000000,
-		GWL_STYLE: -16
+		GWL_STYLE: -16,
+		
+		FO_DELETE: 3,
+		FOF_ALLOWUNDO: 64,
+		FOF_SILENT: 4,
+		FOF_NOCONFIRMATION: 16,
+		FOF_NOERRORUI: 1024
+		// FOF_NOCONFIRMMKDIR: ,
+		// FOF_WANTNUKEWARNING: 
 	};
 
 	var _lib = {}; // cache for lib
@@ -821,6 +846,17 @@ var winInit = function() {
 				self.TYPE.INT,				// cx
 				self.TYPE.INT,				// cy
 				self.TYPE.UINT				// uFlags
+			);
+		},
+		SHFileOperation: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/bb762164%28v=vs.85%29.aspx
+			 * int SHFileOperation(
+			 *   __inout_ LPSHFILEOPSTRUCT lpFileOp
+			 * );
+			 */
+			return lib('shell32').declare(ifdef_UNICODE ? 'SHFileOperationW' : 'SHFileOperationA', self.TYPE.ABI,
+				self.TYPE.INT,				// return
+				self.TYPE.LPSHFILEOPSTRUCT	// lpFileOp
 			);
 		}
 	};

@@ -34,6 +34,41 @@ var gHoverEl = {};
 var gHoverId = -1;
 function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 	// September 12, 2015 - 7:41 PM
+	
+	var iconDelete;
+	switch (aTypeInt) {
+		case aTypeStrToTypeInt['dropbox']:
+				iconDelete = 'trash'
+			break;
+		case aTypeStrToTypeInt['save-quick']:
+		case aTypeStrToTypeInt['save-browse']:
+				if (core.os.mname == 'winnt' || core.os.mname == 'darwin') {
+					iconDelete = 'trash';
+				} else {
+					iconDelete = 'remove';
+				}
+			break;
+		default:
+			iconDelete = 'remove';
+	}
+	
+	var txtDelete;
+	switch (aTypeInt) {
+		case aTypeStrToTypeInt['dropbox']:
+				txtDelete = 'trash'
+			break;
+		case aTypeStrToTypeInt['save-quick']:
+		case aTypeStrToTypeInt['save-browse']:
+				if (core.os.mname == 'winnt' || core.os.mname == 'darwin') {
+					txtDelete = 'trash'
+				} else {
+					txtDelete = 'delete'
+				}
+			break;
+		default:
+			txtDelete = 'delete'
+	}
+	
 	switch (aTypeInt) {
 		case aTypeStrToTypeInt['twitter']:
 		
@@ -71,44 +106,6 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 				 
 			break;
 		case aTypeStrToTypeInt['save-browse']:
-		
-				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + justFormatStringFromName(core.addon.l10n.app_main['view']) + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + justFormatStringFromName(core.addon.l10n.app_main['copy']) + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + justFormatStringFromName(core.addon.l10n.app_main['open']) + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + justFormatStringFromName(core.addon.l10n.app_main['delete']) + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + justFormatStringFromName(core.addon.l10n.app_main['remove']) + "</a></span>";
-				gHoverEl[gHoverId] = ['span', {class:'vertical-align'},
-										['h4', {},
-											aTitle
-										],
-										['span', {class:'pr-sutitle'},
-											aSubtitle
-										],
-										['br', {}],
-										['br', {}],
-										['br', {}],
-										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
-											['span', {class:'fa fa-eye'}],
-											justFormatStringFromName(core.addon.l10n.app_main['view'])
-										],
-										['a', {href:'#', class:'card-button', onclick:'izoCopy(' + aGettime + ')'},
-											['span', {class:'fa fa-link'}],
-											justFormatStringFromName(core.addon.l10n.app_main['copy'])
-										],
-										['a', {href:'#', class:'card-button', onclick:'izoOpen(' + aGettime + ')'},
-											['span', {class:'fa fa-folder-open'}],
-											justFormatStringFromName(core.addon.l10n.app_main['open'])
-										],
-										['br', {}],
-										['br', {}],
-										['br', {}],
-										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
-											['span', {class:'fa fa-trash'}],
-											justFormatStringFromName(core.addon.l10n.app_main['delete'])
-										],
-										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
-											['span', {class:'fa fa-history'}],
-											justFormatStringFromName(core.addon.l10n.app_main['remove'])
-										]
-									 ];
-				 
-			break;
 		case aTypeStrToTypeInt['save-quick']:
 		
 				// return "<span class='vertical-align'><h4>" + aTitle + "</h4><span class='pr-sutitle'>" + aSubtitle + "</span><br/><br/><br/><a href='" + aImgSrc + "' class='card-button mag-view' data-card-gettime='" + aGettime + "' onclick='izoView(event, " + aGettime + ")'><span class='fa fa-eye'></span>" + justFormatStringFromName(core.addon.l10n.app_main['view']) + "</a><a href='#' class='card-button' onclick='izoCopy(" + aGettime + ")'><span class='fa fa-link'></span>" + justFormatStringFromName(core.addon.l10n.app_main['copy']) + "</a><a href='#' class='card-button' onclick='izoOpen(" + aGettime + ")'><span class='fa fa-folder-open'></span>" + justFormatStringFromName(core.addon.l10n.app_main['open']) + "</a><br/><br/><br/><a href='#' class='card-button' onclick='izoDelete(" + aGettime + ")'><span class='fa fa-trash'></span>" + justFormatStringFromName(core.addon.l10n.app_main['delete']) + "</a><a href='#' class='card-button' onclick='izoRemove(" + aGettime + ")'><span class='fa fa-history'></span>" + justFormatStringFromName(core.addon.l10n.app_main['remove']) + "</a></span>";
@@ -138,15 +135,15 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 										['br', {}],
 										['br', {}],
 										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
-											['span', {class:'fa fa-trash'}],
-											justFormatStringFromName(core.addon.l10n.app_main['delete'])
+											['span', {class:'fa fa-' + iconDelete}],
+											justFormatStringFromName(core.addon.l10n.app_main[txtDelete])
 										],
 										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
 											['span', {class:'fa fa-history'}],
 											justFormatStringFromName(core.addon.l10n.app_main['remove'])
 										]
 									 ];
-
+				 
 			break;
 		default:
 				// by default i assume its oauth upload, so same as imguranon format
@@ -173,8 +170,8 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 										['br', {}],
 										['br', {}],
 										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
-											['span', {class:'fa fa-remove'}],
-											justFormatStringFromName(core.addon.l10n.app_main['delete'])
+											['span', {class:'fa fa-' + iconDelete}],
+											justFormatStringFromName(core.addon.l10n.app_main[txtDelete])
 										],
 										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
 											['span', {class:'fa fa-history'}],
