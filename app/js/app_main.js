@@ -40,14 +40,6 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 		case aTypeStrToTypeInt['dropbox']:
 				iconDelete = 'trash'
 			break;
-		case aTypeStrToTypeInt['save-quick']:
-		case aTypeStrToTypeInt['save-browse']:
-				if (core.os.mname == 'winnt' || core.os.mname == 'darwin') {
-					iconDelete = 'trash';
-				} else {
-					iconDelete = 'remove';
-				}
-			break;
 		default:
 			iconDelete = 'remove';
 	}
@@ -56,14 +48,6 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 	switch (aTypeInt) {
 		case aTypeStrToTypeInt['dropbox']:
 				txtDelete = 'trash'
-			break;
-		case aTypeStrToTypeInt['save-quick']:
-		case aTypeStrToTypeInt['save-browse']:
-				if (core.os.mname == 'winnt' || core.os.mname == 'darwin') {
-					txtDelete = 'trash'
-				} else {
-					txtDelete = 'delete'
-				}
 			break;
 		default:
 			txtDelete = 'delete'
@@ -135,8 +119,8 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 										['br', {}],
 										['br', {}],
 										['a', {href:'#', class:'card-button', onclick:'izoDelete(' + aGettime + ')'},
-											['span', {class:'fa fa-' + iconDelete}],
-											justFormatStringFromName(core.addon.l10n.app_main[txtDelete])
+											['span', {class:'fa fa-trash'}],
+											justFormatStringFromName(core.addon.l10n.app_main.trash)
 										],
 										['a', {href:'#', class:'card-button', onclick:'izoRemove(' + aGettime + ')'},
 											['span', {class:'fa fa-history'}],

@@ -42,15 +42,7 @@ var xlibTypes = function() {
 	this.RRMode = this.XID;
 	this.XRRModeFlags = ctypes.unsigned_long;
 	this.Rotation = ctypes.uint16_t; // not exactly sure about this one but its working
-	this.GdkDrawable = ctypes.StructType('GdkDrawable');
-	this.GdkWindow = ctypes.StructType('GdkWindow');
-	this.GtkWindow = ctypes.StructType('GtkWindow');
-	
-	// gtk types temp
-	this.gint = ctypes.int;
-	this.gboolean = this.gint;
-	this.gpointer = ctypes.voidptr_t;
-	
+
 	// ADVANCED TYPES
 	this.Colormap = this.XID;
 	this.Cursor = this.XID;
@@ -210,6 +202,69 @@ var xlibTypes = function() {
 	this.XEvent = ctypes.StructType('_XEvent', [ // http://tronche.com/gui/x/xlib/events/structures.html
 		{ xclient: this.XClientMessageEvent }
 	])
+	
+	/////////////// GTK stuff temporary for test, i want to use x11 for everything
+	// SIMPLE TYPES
+	this.CARD32 = /^(Alpha|hppa|ia64|ppc64|s390|x86_64)-/.test(core.os.xpcomabi) ? ctypes.unsigned_int : ctypes.unsigned_long;
+	this.gchar = ctypes.char;
+	this.GAppInfo = ctypes.StructType('GAppInfo');
+	this.GAppLaunchContext = ctypes.StructType('GAppLaunchContext');
+	this.GBytes = ctypes.StructType('_GBytes');
+	this.GCancellable = ctypes.StructType('_GCancellable');
+	this.GdkColormap = ctypes.StructType('GdkColormap');
+	this.GDesktopAppInfo = ctypes.StructType('GDesktopAppInfo');
+	this.GdkDisplay = ctypes.StructType('GdkDisplay');
+	this.GdkDisplayManager = ctypes.StructType('GdkDisplayManager');
+	this.GdkDrawable = ctypes.StructType('GdkDrawable');
+	this.GdkFilterReturn = ctypes.int; // enum, guessing enum is int
+	this.GdkFullscreenMode = ctypes.int;
+	this.GdkGravity = ctypes.int;
+	this.GdkPixbuf = ctypes.StructType('GdkPixbuf');
+	this.GdkScreen = ctypes.StructType('GdkScreen');
+	this.GdkWindow = ctypes.StructType('GdkWindow');
+	this.GdkWindowHints = ctypes.int;
+	this.GdkWindowTypeHint = ctypes.int;
+	this.gdouble = ctypes.double;
+	this.GFile = ctypes.StructType('_GFile');
+	this.GFileMonitor = ctypes.StructType('_GFileMonitor');
+	this.gint = ctypes.int;
+	this.gpointer = ctypes.void_t.ptr;
+	this.GQuark = ctypes.uint32_t;
+	this.GtkWidget = ctypes.StructType('GtkWidget');
+	this.GtkWindow = ctypes.StructType('GtkWindow');
+	this.GtkWindowPosition = ctypes.int;
+	this.guchar = ctypes.unsigned_char;
+	this.guint = ctypes.unsigned_int;
+	this.guint32 = ctypes.unsigned_int;
+	this.gulong = ctypes.unsigned_long;
+	
+	// ADVANCED TYPES // defined by "simple types"
+	this.gboolean = this.gint;
+	this.GQuark = this.guint32;
+	
+	/// 
+	this.GdkXEvent = this.XEvent;
+	//this.GdkEvent = ctypes.StructType('GdkEvent', [
+		
+	//]);
+	this.GdkEvent = ctypes.void_t;
+	
+	// SIMPLE STRUCTS
+	this.GError = new ctypes.StructType('GError', [
+		{'domain': this.GQuark},
+		{'code': ctypes.int},
+		{'message': ctypes.char.ptr}
+	]);
+	this.GList = new ctypes.StructType('GList', [
+		{'data': ctypes.voidptr_t},
+		{'next': ctypes.voidptr_t},
+		{'prev': ctypes.voidptr_t}
+	]);
+	
+	// FUNCTION TYPES
+	this.GdkFilterFunc = ctypes.FunctionType(this.CALLBACK_ABI, this.GdkFilterReturn, [this.GdkXEvent.ptr, this.GdkEvent.ptr, this.gpointer]).ptr; // https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#GdkFilterFunc
+
+	
 };
 
 var x11Init = function() {
@@ -250,6 +305,29 @@ var x11Init = function() {
 	};
 	
 	var _lib = {}; // cache for lib
+	var libAttempter = function(aPath, aPrefered, aPossibles) {
+		// place aPrefered at front of aPossibles
+		if (aPrefered) {
+			aPossibles.splice(aPossibles.indexOf(aPrefered), 1); // link123543939
+			aPossibles.splice(0, 0, aPrefered);
+		}
+		
+		for (var i=0; i<aPossibles.length; i++) {
+			try {
+				_lib[aPath] = ctypes.open(aPossibles[i]);
+				break;
+			} catch (ignore) {
+				// on windows ignore.message == "couldn't open library rawr: error 126"
+				// on ubuntu ignore.message == ""couldn't open library rawr: rawr: cannot open shared object file: No such file or directory""
+			}
+		}
+		if (!_lib[aPath]) {
+			throw new Error({
+				name: 'platform-error',
+				message: 'Path to ' + path + ' on operating system of , "' + OS.Constants.Sys.Name + '" was not found. This does not mean it is not supported, it means that the author of this addon did not specify the proper name. Report this to author.'
+			});
+		}
+	};
 	var lib = function(path) {
 		//ensures path is in lib, if its in lib then its open, if its not then it adds it to lib and opens it. returns lib
 		//path is path to open library
@@ -261,84 +339,168 @@ var x11Init = function() {
 			switch (path) {
 				case 'gdk2':
 				
-						_lib[path] = ctypes.open('libgdk-x11-2.0.so.0');
+						var possibles = ['libgdk-x11-2.0.so.0'];
+						
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
+						switch (core.os.name) {
+							case 'linux':
+								preferred = 'libgdk-x11-2.0.so.0';
+								break;
+							default:
+								// do nothing
+						}
+						
+						libAttempter(path, preferred, possibles);
 				
 					break;
 				case 'gdk3':
 				
-						_lib[path] = ctypes.open('libgdk-3.so.0');
+						var possibles = ['libgdk-3.so.0'];
+						
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
+						switch (core.os.name) {
+							case 'linux':
+								preferred = 'libgdk-3.so.0';
+								break;
+							default:
+								// do nothing
+						}
+						
+						libAttempter(path, preferred, possibles);
+				
+					break;
+				case 'gio':
+				
+						var possibles = ['libgio-2.0.so.0'];
+						
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
+						switch (core.os.name) {
+							case 'linux':
+								preferred = 'libgio-2.0.so.0';
+								break;
+							default:
+								// do nothing
+						}
+						
+						libAttempter(path, preferred, possibles);
 				
 					break;
 				case 'gtk2':
 				
-						_lib[path] = ctypes.open('libgtk-x11-2.0.so.0');
+						var possibles = ['libgtk-x11-2.0.so.0'];
+						
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
+						switch (core.os.name) {
+							case 'linux':
+								preferred = 'libgtk-x11-2.0.so.0';
+								break;
+							default:
+								// do nothing
+						}
+						
+						libAttempter(path, preferred, possibles);
 				
+					break;
+				case 'xcb':
+
+						var possibles = ['libxcb.so'];
+						
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
+						switch (core.os.name) {
+							case 'freebsd': // physically unverified
+							case 'openbsd': // physically unverified
+							case 'android': // physically unverified
+							case 'sunos': // physically unverified
+							case 'netbsd': // physically unverified
+							case 'dragonfly': // physcially unverified
+							case 'gnu/kfreebsd': // physically unverified
+							case 'linux':
+								preferred = 'libxcb.so';
+								break;
+							default:
+								// do nothing
+						}
+						
+						libAttempter(path, preferred, possibles);
+						
 					break;
 				case 'libc':
 
+						var possibles = ['libc.dylib', 'libc.so.7', 'libc.so.61.0', 'libc.so', 'libc.so.6', 'libc.so.0.1'];
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
 						switch (core.os.name) {
 							case 'darwin':
-								_lib[path] = ctypes.open('libc.dylib');
+								preferred = 'libc.dylib';
 								break;
 							case 'freebsd':
-								_lib[path] = ctypes.open('libc.so.7');
+								preferred = 'libc.so.7';
 								break;
 							case 'openbsd':
-								_lib[path] = ctypes.open('libc.so.61.0');
+								preferred = 'libc.so.61.0';
 								break;
 							case 'android':
 							case 'sunos':
 							case 'netbsd': // physically unverified
 							case 'dragonfly': // physcially unverified
-								_lib[path] = ctypes.open('libc.so');
+								preferred = 'libc.so';
 								break;
 							case 'linux':
-								_lib[path] = ctypes.open('libc.so.6');
+								preferred = 'libc.so.6';
 								break;
 							case 'gnu/kfreebsd': // physically unverified
-								_lib[path] = ctypes.open('libc.so.0.1');
+								preferred = 'libc.so.0.1';
 								break;
 							default:
-								throw new Error({
-									name: 'api-error',
-									message: 'Path to libc on operating system of , "' + OS.Constants.Sys.Name + '" is not supported'
-								});
+								// do nothing
 						}
+						
+						libAttempter(path, preferred, possibles);
 
 					break;
 				case 'x11':
-
+				
+						var possibles = ['libX11.dylib', 'libX11.so.7', 'libX11.so.61.0', 'libX11.so', 'libX11.so.6', 'libX11.so.0.1'];
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
 						switch (core.os.name) {
 							case 'darwin': // physically unverified
-								_lib[path] = ctypes.open('libX11.dylib');
+								preferred = 'libX11.dylib';
 								break;
 							case 'freebsd': // physically unverified
-								_lib[path] = ctypes.open('libX11.so.7');
+								preferred = 'libX11.so.7';
 								break;
 							case 'openbsd': // physically unverified
-								_lib[path] = ctypes.open('libX11.so.61.0');
+								preferred = 'libX11.so.61.0';
 								break;
 							case 'sunos': // physically unverified
 							case 'netbsd': // physically unverified
 							case 'dragonfly': // physcially unverified
-								_lib[path] = ctypes.open('libX11.so');
+								preferred = 'libX11.so';
 								break;
 							case 'linux':
-								_lib[path] = ctypes.open('libX11.so.6');
+								preferred = 'libX11.so.6';
 								break;
 							case 'gnu/kfreebsd': // physically unverified
-								_lib[path] = ctypes.open('libX11.so.0.1');
+								preferred = 'libX11.so.0.1';
 								break;
 							default:
-								throw new Error({
-									name: 'api-error',
-									message: 'Path to libX11 on operating system of , "' + OS.Constants.Sys.Name + '" is not supported'
-								});
+								// do nothing
 						}
+						
+						libAttempter(path, preferred, possibles);
 
 					break;
-					case 'xrandr':
-
+				case 'xrandr':
+					
+						var possibles = ['libXrandr.so.2'];
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
 						switch (core.os.name) {
 							case 'freebsd': // physically unverified
 							case 'openbsd': // physically unverified
@@ -347,14 +509,13 @@ var x11Init = function() {
 							case 'dragonfly': // physcially unverified
 							case 'linux':
 							case 'gnu/kfreebsd': // physically unverified
-								_lib[path] = ctypes.open('libXrandr.so.2');
+								preferred = 'libXrandr.so.2';
 								break;
 							default:
-								throw new Error({
-									name: 'api-error',
-									message: 'Path to libX11 on operating system of , "' + OS.Constants.Sys.Name + '" is not supported'
-								});
+								// do nothing
 						}
+						
+						libAttempter(path, preferred, possibles);
 
 					break;
 				default:
@@ -915,6 +1076,91 @@ var x11Init = function() {
 			);
 		},
 		// end - XRANDR
+		// start - gtk
+		g_app_info_launch_uris: function() {
+			/* https://developer.gnome.org/gio/unstable/GAppInfo.html#g-app-info-launch-uris
+			 * gboolean g_app_info_launch_uris (
+			 *   GAppInfo *appinfo,
+			 *   GList *uris,
+			 *   GAppLaunchContext *launch_context,
+			 *   GError **error
+			 * );
+			 */
+			return lib('gio').declare('g_app_info_launch_uris', self.TYPE.ABI,
+				self.TYPE.gboolean,					// return
+				self.TYPE.GAppInfo.ptr,				// *appinfo
+				self.TYPE.GList.ptr,				// *uris
+				self.TYPE.GAppLaunchContext.ptr,	// *launch_context
+				self.TYPE.GError.ptr.ptr			// **error
+			);
+		},
+		g_desktop_app_info_new_from_filename: function() {
+			/* https://developer.gnome.org/gio/unstable/gio-Desktop-file-based-GAppInfo.html#g-desktop-app-info-new-from-filename
+			 * GDesktopAppInfo * g_desktop_app_info_new_from_filename(
+			 *   const char *filename
+			 * );
+			 */
+			return lib('gio').declare('g_desktop_app_info_new_from_filename', self.TYPE.ABI,
+				self.TYPE.GDesktopAppInfo.ptr,	// return
+				self.TYPE.gchar.ptr				// *filename
+			);
+		},
+		g_file_new_for_path: function() {
+			/* https://developer.gnome.org/gio/stable/GFile.html#g-file-new-for-path
+			 * GFile *g_file_new_for_path (
+			 *   const char *path
+			 * );
+			 */
+			return lib('gio').declare('g_file_new_for_path', self.TYPE.ABI,
+				self.TYPE.GFile.ptr,	// return
+				self.TYPE.char.ptr		// *char
+			);
+		},
+		g_file_trash: function() {
+			/* https://developer.gnome.org/gio/stable/GFile.html#g-file-trash
+			 * gboolean g_file_trash (
+			 *   GFile *file,
+			 *   GCancellable *cancellable,
+			 *   GError **error
+			 * );
+			 */
+			return lib('gio').declare('g_file_trash', self.TYPE.ABI,
+				self.TYPE.gboolean,				// return
+				self.TYPE.GFile.ptr,			// *file
+				self.TYPE.GCancellable.ptr,		// *cancellable
+				self.TYPE.GError.ptr.ptr		// **error
+			);
+		},
+		gdk_window_add_filter: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-add-filter
+			 * void gdk_window_add_filter (
+			 *   GdkWindow *window,
+			 *   GdkFilterFunc function,
+			 *   gpointer data
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_add_filter', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.GdkFilterFunc,	// function
+				self.TYPE.gpointer			// data
+			);
+		},
+		gdk_window_remove_filter: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-remove-filter
+			 * void gdk_window_add_filter (
+			 *   GdkWindow *window,
+			 *   GdkFilterFunc function,
+			 *   gpointer data
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_remove_filter', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.GdkFilterFunc,	// function
+				self.TYPE.gpointer			// data
+			);
+		},
 		gtk_window_set_keep_above: function() {
 			/* https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-keep-above
 			 * void gtk_window_set_keep_above (
@@ -927,7 +1173,8 @@ var x11Init = function() {
 				self.TYPE.GtkWindow.ptr,	// *window
 				self.TYPE.gboolean			// setting
 			);
-		},
+		}
+		// end - gtk
 	};
 	// end - predefine your declares here
 	// end - function declares

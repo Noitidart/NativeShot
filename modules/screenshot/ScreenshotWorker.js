@@ -1899,7 +1899,18 @@ function trashFile(aFilePlatPath) {
 			break;
 		case 'gtk':
 
-				throw new Error('not yet supported');
+				var cGFile = ostypes.API('g_file_new_for_path')(aFilePlatPath);
+				console.log('cGFile:', cGFile);
+				
+				var rez_trash = ostypes.API('g_file_trash')(cGFile, null, null);
+				console.log('rez_trash:', rez_trash);
+				
+				if (cutils.jscEqual(rez_trash, 1)) {
+					return true;
+				} else {
+					// i have only seen it be 0 on fail
+					return false;
+				}
 			
 			break;
 		case 'darwin':
