@@ -265,6 +265,7 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 		switch (aServiceName) {
 			case 'save-quick':
 			
+					console.log('autogen name:', autogenScreenshotFileName(aScreenshotTime), 'safed for plat:', safedForPlatFS(autogenScreenshotFileName(aScreenshotTime), {repStr:'.'}));
 					cFilePath = OS.Path.join(core.addon.prefs.quick_save_dir.value, safedForPlatFS(autogenScreenshotFileName(aScreenshotTime), {repStr:'.'}) + '.png');
 					cNoOverwrite = true;
 			
@@ -546,7 +547,6 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 		
 		// format depends (and expects) the keys in the write part of the data obj to be present and valid, so i make sure to throw in previous block if something was not set. and thats why i do formatLogEntryNoWriteObj after all of them are set
 		formatLogEntryNoWriteObj(aData);
-		console.log('now checking noWriteObj');
 		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj); // ensure the noWriteObj for this object has the write keys // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
 	}
 	
@@ -572,7 +572,22 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	
 	// rather then read whole log and write, just append, its probably much more performant
 	
-	var hOpen = OS.File.open(core.addon.path.history_log, {write: true, append: true});
+	var hOpen;
+	try {
+		hOpen = OS.File.open(core.addon.path.history_log, {write: true, append: true}); // file created if not there HOWEVER if the directory doesnt exist, then it throws OSFileError.becauseNoSuchFile winLastError=3 and unixErrno=2 (test on win10 and mac10.10.1)
+	} catch(OSFileError) {
+		if (OSFileError.becauseNoSuchFile) {
+			console.warn('OSFileError:', OSFileError);
+			// .open creates the file if its not there, if it gets to becauseNoSuchFile it means the directories dont exist to here, so lets make it
+			// windows gives winLastError 3
+			// mac gives unixErrno 2
+			OS.File.makeDir(OS.Path.dirname(core.addon.path.history_log), {from:OS.Constants.Path.profileDir});
+			// now if it erros then dont catch it, so it throws
+			hOpen = OS.File.open(core.addon.path.history_log, {write: true, append: true});
+		} else {
+			throw OSFileError;
+		}
+	}
 	
 	// append it
 	
@@ -664,7 +679,7 @@ function readHistoryLog() {
 		rez_read = OS.File.read(core.addon.path.history_log, {encoding:'utf-8'});
 	} catch (OSFileError) {
 		if (OSFileError.becauseNoSuchFile) {
-			rez_read = '[]';
+			rez_read = '';
 		} else {
 			throw OSFileError;
 		}
@@ -1155,14 +1170,16 @@ function platformFilePathSeperator() {
 	// return _cache_platformFilePathSeperator;
 	return OS.Path.join(' ', ' ').replace(/ /g, '');
 }
-// rev1 - _ff-addon-snippet-safedForPlatFS.js - https://gist.github.com/Noitidart/e6dbbe47fbacc06eb4ca
+// rev2 - _ff-addon-snippet-safedForPlatFS.js - https://gist.github.com/Noitidart/e6dbbe47fbacc06eb4ca
 var _safedForPlatFS_pattWIN = /([\\*:?<>|\/\"])/g;
-var _safedForPlatFS_pattNIXMAC = /\//g;
+var _safedForPlatFS_pattNIXMAC = /[\/:]/g;
 function safedForPlatFS(aStr, aOptions={}) {
 	// short for getSafedForPlatformFilesystem - meaning after running this on it, you can safely use the return in a filename on this current platform
 	// aOptions
 	//	repStr - use this string, in place of the default repCharForSafePath in place of non-platform safe characters
 	//	allPlatSafe - by default it will return a path safed for the current OS. Set this to true if you want to to get a string that can be used on ALL platforms filesystems. A Windows path is safe on all other platforms
+	
+	// 022816 - i added : to _safedForPlatFS_pattNIXMAC because on mac it was replacing it with a `/` which is horrible it will screw up OS.Path.join .split etc
 	
 	// set defaults on aOptions
 	if (!('allPlatSafe' in aOptions)) {

@@ -20,6 +20,7 @@ var macTypes = function() {
 	this.char = ctypes.char;
 	this.int = ctypes.int;
 	this.int16_t = ctypes.int16_t;
+	this.int32_t = ctypes.int32_t;
 	this.int64_t = ctypes.int64_t;
 	this.intptr_t = ctypes.intptr_t;
 	this.long = ctypes.long;
@@ -31,6 +32,7 @@ var macTypes = function() {
 	this.uint64_t = ctypes.uint64_t;
 	this.unsigned_char = ctypes.unsigned_char;
 	this.unsigned_long = ctypes.unsigned_long;
+	this.unsigned_long_long = ctypes.unsigned_long_long;
 	this.void = ctypes.void_t;
 	
 	// ADV C TYPES
@@ -205,8 +207,19 @@ var macTypes = function() {
 	
 	
 	// SIMPLE OBJC STRUCTS
+	this.Block_descriptor_1 = ctypes.StructType('Block_descriptor_1', [
+		{ reserved: this.unsigned_long_long },
+		{ size: this.unsigned_long_long }
+	]);
 	
 	// ADV OBJC STRUCTS
+	this.Block_literal_1 = ctypes.StructType('Block_literal_1', [
+		{ isa: this.void.ptr },
+		{ flags: this.int32_t },
+		{ reserved: this.int32_t },
+		{ invoke: this.void.ptr },
+		{ descriptor: this.Block_descriptor_1.ptr }
+	]);
 	
 
 	// dispatch stuff
@@ -226,6 +239,7 @@ var macInit = function() {
 	this.CONST = {
 		get CGRectNull () { if (!('CGRectNull' in _const)) { _const['CGRectNull'] = lib('CoreGraphics').declare('CGRectNull', self.TYPE.CGRect); } return _const['CGRectNull']; },
 		get kCFTypeArrayCallBacks () { if (!('kCFTypeArrayCallBacks' in _const)) { _const['kCFTypeArrayCallBacks'] = lib('CoreFoundation').declare('kCFTypeArrayCallBacks', self.TYPE.CFArrayCallBacks); } return _const['kCFTypeArrayCallBacks']; },
+		get _NSConcreteGlobalBlock () { if (!('_NSConcreteGlobalBlock' in _const)) { _const['_NSConcreteGlobalBlock'] = lib('objc').declare('_NSConcreteGlobalBlock', self.TYPE.void.ptr); } return _const['_NSConcreteGlobalBlock']; },
 		kCGErrorSuccess: 0,
 		kCGNullDirectDisplay: 0,
 		kCGBaseWindowLevelKey: 0,
@@ -261,7 +275,13 @@ var macInit = function() {
 		NO: self.TYPE.BOOL(0),
 		NSPNGFileType: self.TYPE.NSUInteger(4),
 		YES: self.TYPE.BOOL(1), // i do this instead of 1 becuase for varidic types we need to expclicitly define it
-		NIL: self.TYPE.void.ptr(ctypes.UInt64('0x0')) // needed for varidic args, as i cant pass null there
+		NIL: self.TYPE.void.ptr(ctypes.UInt64('0x0')), // needed for varidic args, as i cant pass null there
+		
+		BLOCK_HAS_COPY_DISPOSE: 1 << 25,
+		BLOCK_HAS_CTOR: 1 << 26,
+		BLOCK_IS_GLOBAL: 1 << 28,
+		BLOCK_HAS_STRET: 1 << 29,
+		BLOCK_HAS_SIGNATURE: 1 << 30
 	};
 
 	var _lib = {}; // cache for lib
@@ -771,6 +791,28 @@ var macInit = function() {
 				}
 				this.coll = null;
 			};
+		},
+		createBlock: function(aFuncTypePtr) {
+			// based on work from here: https://github.com/trueinteractions/tint2/blob/f6ce18b16ada165b98b07869314dad1d7bee0252/modules/Bridge/core.js#L370-L394
+			var bl = self.TYPE.Block_literal_1();
+			
+			// Set the class of the instance
+			bl.isa = self.CONST._NSConcreteGlobalBlock;
+			
+			// Global flags
+			bl.flags = self.CONST.BLOCK_HAS_STRET;
+			bl.reserved = 0;
+			bl.invoke = aFuncTypePtr;
+			
+			// create descriptor
+			var desc = self.TYPE.Block_descriptor_1();
+			desc.reserved = 0;
+			desc.size = self.TYPE.Block_literal_1.size;
+			
+			// set descriptor into block literal
+			bl.descriptor = desc.address();
+
+			return bl;
 		}
 	};
 }

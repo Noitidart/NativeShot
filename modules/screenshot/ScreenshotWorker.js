@@ -839,7 +839,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				
 				// make a class to hold my methods:
 				var needsRegistration; // meaning registerClassPair, alloc, and init will be called and stored
-				// unregister, unalloc, etc all `OSSTuff.setWinAlwaysOnTop_****` and delete js key pairs from OSStuff if you want it re-registered later on
+				// unregister, unalloc, etc all `OSStuff.setWinAlwaysOnTop_****` and delete js key pairs from OSStuff if you want it re-registered later on
 				
 				var NSObject = ostypes.HELPER.class('NSObject');
 				
@@ -1912,13 +1912,61 @@ function trashFile(aFilePlatPath) {
 					// var cNSArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('array'));
 					
 					var NSURL = ostypes.HELPER.class('NSURL');
-					var cMacUrl = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('URLWithString:'), trashNSStrings.get('aFilePlatPath'));
-					var cMacUrlArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('arrayWithObject:'), cMacUrl);
+					console.log('aFilePlatPath:', aFilePlatPath);
 					
+					var cMacUrl = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('fileURLWithPath:isDirectory:'), trashNSStrings.get(aFilePlatPath), ostypes.CONST.NO);
+					console.log('cMacUrl:', cMacUrl);
+					if (cMacUrl.isNull()) {
+						console.error('failed to create NSURL');
+						return false;
+					}
+					
+					var cMacUrlArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('arrayWithObject:'), cMacUrl);
+					console.log('cMacUrlArray:', cMacUrlArray);
+
 					var NSWorkspace = ostypes.HELPER.class('NSWorkspace');
+					
 					var sharedWorkspace = ostypes.API('objc_msgSend')(NSWorkspace, ostypes.HELPER.sel('sharedWorkspace'));
-					var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, ostypes.TYPE.NIL);
-					console.log('rez_trash:', rez_trash);
+					
+					var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, ostypes.CONST.NIL); // verified that NIL is not modified it is still 0x0 after calling this
+					console.log('rez_trash:', rez_trash); // value is meaningless
+					
+					// as val of rez_trash is meaningless i have to check until its trashed. i dont think this function blocks till trash completes, so i loop below
+					var MAX_TRASHED_CHECK_CNT = 10;
+					var TRASHED_CHECK_INTERVAL = 10; // ms
+					var trashed_check_i = 0;
+					while (trashed_check_i < MAX_TRASHED_CHECK_CNT) {
+						var trashedFileExists = OS.File.exists(aFilePlatPath);
+						console.log(trashed_check_i, 'trashedFileExists:', trashedFileExists);
+						if (!trashedFileExists) {
+							// yes it was trashed
+							return true;
+						}
+						setTimeoutSync(TRASHED_CHECK_INTERVAL);
+						trashed_check_i++;
+					}
+					return false; // checked max times, and the file is still not yet trashed, so report false for rez_trash
+					
+					// with callback block - this cannot be run from ChromeWorker's - this is a firefox bug i have to link the bugzilla here
+					// var handlerId = new Date().getTime();
+					// OSStuff[handlerId] = {};
+					// 
+					// OSStuff[handlerId].myHandler_js = function(NSURLs, error) {
+					// 	console.error('handler called');
+					// 	
+					// 	console.log('error:', error, error.toString(), error.isNull());
+					// 	
+					// 	// return nothing as per its IMP
+					// };
+					// ostypes.TYPE.NSURLs = ctypes.voidptr_t;
+					// ostypes.TYPE.NSError = ctypes.voidptr_t;
+					// var IMP_for_completionHandler = ctypes.FunctionType(ostypes.TYPE.CALLBACK_ABI, ostypes.TYPE.VOID, [ostypes.TYPE.NSURLs, ostypes.TYPE.NSError]);
+					// OSStuff[handlerId].myHandler_c = IMP_for_completionHandler.ptr(OSStuff[handlerId].myHandler_js);
+					// var myBlock_c = ostypes.HELPER.createBlock(OSStuff[handlerId].myHandler_c);
+					// 
+					// var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, myBlock_c.address()); // verified that NIL is not modified it is still 0x0 after calling this
+					// console.log('rez_trash:', rez_trash);
+					
 					
 				} finally {				
 					if (trashNSStrings) {
@@ -1931,3 +1979,10 @@ function trashFile(aFilePlatPath) {
 			throw new Error('os not supported ' + core.os.name);
 	}
 }
+
+// start - common helper
+function setTimeoutSync(aMilliseconds) {
+	var breakDate = Date.now() + aMilliseconds;
+	while (Date.now() < breakDate) {}
+}
+// end - common helper
