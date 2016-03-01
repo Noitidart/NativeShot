@@ -1279,6 +1279,22 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		});
 		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action);
 	},
+	retrywith_menudata: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'retry', [gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action]);
+		console.log('this:', this);
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Waiting...', // :l10n:
+			bType: 'button',
+			// bIcon: core.addon.path.images + this.menuitem.menudata + '16.png',
+			bMenu: undefined
+		});
+		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, this.menuitem.menudata, gEditorABData_BtnENTRY.meta.action);
+	},
+	focus_tab: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		var tabToFocus = gEditorABData_BtnENTRY.data.tabWk.get();
+		tabToFocus.ownerDocument.defaultView.focus(); // focus browser window
+		tabToFocus.ownerDocument.defaultView.gBrowser.selectedTab = tabToFocus; // focus tab
+	},
 	'save-browse': function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		gEditorABData_BtnENTRY.setBtnState({
 			bTxt: 'Waiting...', // :l10n:
@@ -2153,6 +2169,8 @@ function doServiceForBtnId(aBtnId, aOAuthService, aActionForService) {
 }
 
 function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPostDataObj) {
+	var cBtnStore = gEditorABData_Btn[aBtnId];
+	
 	var ansifileFieldFound = false;
 	for (var aPostKey in aPostDataObj) {
 		if (aPostDataObj[aPostKey] == '{{ansifile}}') {
@@ -2165,9 +2183,28 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 	if (!ansifileFieldFound) { console.error('deverror, must have a field in aPostDataObj in where to place the nsi file, this field must be a string when sent from worker and should be {{ansifile}}'); throw new Error('deverror, must have a field in aPostDataObj in where to place the nsi file, this field must be a string when sent from worker and should be {{ansifile}}'); }
 	console.log('aPostDataObj:', aPostDataObj);
 	
-	Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(aServiceSearchUrl, {
+	var tab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(aServiceSearchUrl, {
 		inBackground: false,
 		postData: encodeFormData(aPostDataObj, 'iso8859-1')
+	});
+	
+	cBtnStore.data.tabWk = Cu.getWeakReference(tab);
+
+	MainWorkerMainThreadFuncs.updateAttnBar(aBtnId, {
+		bTxt: 'Focus Tab', // :l10n:
+		bClick: 'focus_tab',
+		bType: 'menu-button',
+		bMenu: [
+			{
+				cTxt: 'Retry',
+				cClick: 'retry'
+			},
+			{
+				cTxt: 'Retry with ' + (cBtnStore.meta.service == 'tineye' ? 'Google Images' : 'Tineye'),
+				cClick: 'retrywith_menudata',
+				menudata: (cBtnStore.meta.service == 'tineye' ? 'google-images' : 'tineye')
+			}
+		]
 	});
 }
 
@@ -4250,6 +4287,9 @@ var MainWorkerMainThreadFuncs = {
 	updateAttnBar: function(aBtnId, newBtnRefData) {
 		// aId is the id of aABInfoObj
 		// common keys in in newBtnRefData are added to the current BtnRef --- BtnRef is not set equal to newBtnRefData, hence the word "Data" in the param
+		if(isBtnIdNoData(aBtnId)) {
+			return false;
+		}
 		console.log('newBtnRefData:', newBtnRefData);
 		
 		var cBtnObj = gEditorABData_Btn[aBtnId];
@@ -4275,6 +4315,13 @@ function fhr_ifBtnIdNodata(aBtnId) {
 function destroy_nodataFhr(aNoDataBtnId) {
 	nodataBtnFhrs[aNoDataBtnId].destroy();
 	delete nodataBtnFhrs[aNoDataBtnId];
+}
+function isBtnIdNoData(aBtnId) {
+	if (typeof(aBtnId) == 'string' && aBtnId.indexOf('nodata:') === 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 // start - main framescript communication - rev3 https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
 var fsFuncs = { // can use whatever, but by default its setup to use this
