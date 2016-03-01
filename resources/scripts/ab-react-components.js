@@ -110,7 +110,8 @@
 							pKey: this.props.pBtns[i].bKey,
 							pTxt: this.props.pBtns[i].bTxt,
 							pMenu: this.props.pBtns[i].bMenu,
-							pIcon: this.props.pBtns[i].bIcon
+							pIcon: this.props.pBtns[i].bIcon,
+							pType: this.props.pBtns[i].bType
 						};
 						cChildren.push(React.createElement(window[aAddonId + '-AB'].masterComponents.Button, cButtonProps));
 					}
@@ -166,14 +167,15 @@
 					className: 'notification-button notification-button-default',
 					label: this.props.pTxt,
 					accessKey: cAccesskey,
-					image: cImage
+					image: cImage,
+					type: this.props.pType || undefined
 				};
 				
 				cProps.onClick = this.click;
 				
 				var cChildren;			
 				if (this.props.pMenu && this.props.pMenu.length) {
-					cProps.type = 'menu';
+					cProps.type = !cProps.type ? 'menu' : cProps.type;
 					var cChildren = React.createElement(window[aAddonId + '-AB'].masterComponents.Menu, {pMenu:this.props.pMenu});
 				}
 				return React.createElement('button', cProps,

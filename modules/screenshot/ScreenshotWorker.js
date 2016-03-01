@@ -1943,8 +1943,8 @@ function trashFile(aFilePlatPath) {
 					console.log('rez_trash:', rez_trash); // value is meaningless
 					
 					// as val of rez_trash is meaningless i have to check until its trashed. i dont think this function blocks till trash completes, so i loop below
-					var MAX_TRASHED_CHECK_CNT = 10;
-					var TRASHED_CHECK_INTERVAL = 10; // ms
+					var TRASHED_CHECK_INTERVAL = 100; // ms
+					var MAX_TRASHED_CHECK_CNT = Math.ceil(10000 / TRASHED_CHECK_INTERVAL); // checks for 10,000 ms
 					var trashed_check_i = 0;
 					while (trashed_check_i < MAX_TRASHED_CHECK_CNT) {
 						var trashedFileExists = OS.File.exists(aFilePlatPath);

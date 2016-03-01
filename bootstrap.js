@@ -1180,19 +1180,54 @@ function gEditorABData_setBtnState(aNewState) { // is binded to gEditorABData_Bt
 		this.BtnRef[p] = aNewState[p];
 	}
 	
-	if (this.shown) {
+	// go through and find any bClick and replace it with the callback
+	replaceClickNameWithClickCallback(this.BtnRef, this);
+	
+	// go through the menu items to see if any of them have a cClick
+	if (this.BtnRef.bMenu) {
+		iterMenuForNameToCbs(this.BtnRef.bMenu, this);
+	}
+	
+	if (gEditorABData_Bar[this.sessionId].shown) {
 		AB.setState(gEditorABData_Bar[this.sessionId].ABRef);
 	}
+	else { console.error('bar not yet shown') }
 	
 	// return gEditorABData_Btn[gEditorABData_BtnId];
 }
+
+function iterMenuForNameToCbs(jMenu, a_gEditorABData_BtnENTRY) {
+	jMenu.forEach(function(jEntry, jIndex, jArr) {
+		replaceClickNameWithClickCallback(jEntry, a_gEditorABData_BtnENTRY);
+		if (jEntry.cMenu) {
+			iterMenuForNameToCbs(jEntry.cMenu);
+		}
+	});
+}
+
+function replaceClickNameWithClickCallback(aObjEntryForRep, a_gEditorABData_BtnENTRY) {
+	if (!aObjEntryForRep.bClick && !aObjEntryForRep.cClick) {
+		return; // this has no click name
+	}
+	var keyClick = aObjEntryForRep.bClick ? 'bClick' : 'cClick';
+	// if i ever change bClick or cClick to a func, it gets taken out, so i dont have to check if it changed or its type is string, because its type for sure is string, but i just do it to show my future self
+	if (typeof(aObjEntryForRep[keyClick]) != 'string') {
+		console.error('this should never ever happen, typeof is:', typeof(aObjEntryForRep[keyClick]));
+		return;
+	}
+	
+	var keyClickName = aObjEntryForRep[keyClick];
+	var gEditorABData_BtnENTRY = this;
+	aObjEntryForRep[keyClick] = function(sentByABAPI_doClose, sentByABAPI_browser) { gEditorABClickCallbacks_Btn[keyClickName].bind(this, a_gEditorABData_BtnENTRY, sentByABAPI_doClose, sentByABAPI_browser)() };
+}
+
 function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.sessionId]
 	// returns gEditorABData_Btn object for the added btn
 	
 	var cSessionId = this.sessionId;
 	gEditorABData_BtnId++;
 	gEditorABData_Btn[gEditorABData_BtnId] = { // link11114
-		BtnRef: {}, // keys are that, that go in aBtns[] entry - object for this specific btn (is a child of ABRef) use for state
+		BtnRef: {}, // this is the react object for each btn, that is reference to what is within the react object of owning bar in gEditorABData_Bar
 		// ABRef: this.ABRef, // so I can go AB.setState(.ABRef)
 		sessionId: cSessionId, // so I can go AB.setState(gEditorABData_Bar[.sessionId]) - as having ABRef is causing a "TypeError: cyclic object value"
 		btnId: gEditorABData_BtnId, // because of link888778 - so i can tell worker do work on this guy. and when worker needs, he can say to update this guy, and when worker needs, worker can fetch data from this guy
@@ -1224,6 +1259,39 @@ function gEditorABData_getBtnFhr(aBtnId) {
 	}
 	return cFHR;
 }
+
+var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its gEditorABData_Btn obj
+	copy: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		// console.log('this:', this, 'gEditorABData_BtnENTRY:', gEditorABData_BtnENTRY, 'doClose:', doClose, 'aBrowser:', aBrowser);
+		copyTextToClip(gEditorABData_BtnENTRY.data.copyTxt);
+	},
+	openInFinder: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		// console.log('this:', this, 'gEditorABData_BtnENTRY:', gEditorABData_BtnENTRY, 'doClose:', doClose, 'aBrowser:', aBrowser);
+		var nsifileOfCopyTxt = new FileUtils.File(gEditorABData_BtnENTRY.data.copyTxt); // i can do this because for save-quick save-browse copyTxt is platform path
+		showFileInOSExplorer(nsifileOfCopyTxt);
+	},
+	retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'retry', [gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action]);
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Waiting...', // :l10n:
+			bType: 'button',
+			bMenu: undefined
+		});
+		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action);
+	},
+	'save-browse': function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Waiting...', // :l10n:
+			bType: 'button',
+			bIcon: core.addon.path.images + 'save-browse16.png',
+			bMenu: undefined
+		});
+		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, 'save-browse');
+	},
+	none: function() {
+		// used for removing a callback
+	}
+};
 //// end - button interaction with gEditor system AB system FHR system and OAuth system
 var gEditor = {
 	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
@@ -1987,14 +2055,61 @@ var gEditor = {
 			// gdrive
 			// imgur
 			// imguranon
+			// etc see link64098756794556
 			
 		this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
-		var cMethodForService;
-		switch (aOAuthService) {
+		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
+		
+		// var cDataUrl = this.canComp.toDataURL('image/png', '');
+		// var cBlob;
+		// var cArrBuf;
+		var cWidth = gEditor.canComp.width;
+		var cHeight = gEditor.canComp.height;
+		
+		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
+			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
+			// cBlob = b;
+			
+			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
+			r.onloadend = function() {
+				// cArrBuf = r.result;
+				cBtn.data.arrbuf = r.result; // link947444544
+				cBtn.data.width = cWidth;
+				cBtn.data.height = cHeight;
+				
+				doServiceForBtnId(cBtn.btnId, aOAuthService);
+			};
+			r.readAsArrayBuffer(b);
+			
+		}, 'image/png');
+
+	}
+};
+
+function createNewBtnStore(aSessionId, aService) {
+	var cBtn = gEditorABData_Bar[aSessionId].addBtn();
+	cBtn.setBtnState({
+		bTxt: 'Waiting...', // :l10n:
+		bIcon: core.addon.path.images + aService + '16.png'
+	});
+	cBtn.meta.service = aService;
+	return cBtn;
+}
+
+function doServiceForBtnId(aBtnId, aOAuthService, aActionForService) {
+	// must have arrbuf or appropriate data in button data store object
+	// aActionForService is optional, if it is not provided it uses the cBtnStore.meta.action
+		// if not provided, the service is calculated and set in the meta data
+	
+	var cBtnStore = gEditorABData_Btn[aBtnId];
+	
+	var cMethodForService;
+	if (!aActionForService) {
+		switch (aOAuthService) { // link64098756794556
 			case 'dropbox':
 			case 'imgur':
 			case 'gdrive':
@@ -2019,51 +2134,23 @@ var gEditor = {
 				console.error('invalid aOAuthService:', aOAuthService);
 				throw new Error('invalid aOAuthService!!');
 		}
-		
-		var cBtn = gEditorABData_Bar[cSessionId].addBtn();
-		cBtn.setBtnState({
-			bTxt: 'Initializing...', // :l10n:
-			bIcon: core.addon.path.images + aOAuthService + '_neutral16.png'
-		});
-		cBtn.meta.group = aOAuthService;
-		cBtn.meta.action = 'uploadImgByteData';
-		cBtn.meta.group_action = cBtn.meta.group + '__' + cBtn.meta.action;
-		
-		if (!bootstrap.MainWorker) {
-			bootstrap.MainWorker = new PromiseWorker(core.addon.path.content + 'modules/oauth/MainWorker.js');
+		cBtnStore.meta.action = cMethodForService;
+	} else {
+		cMethodForService = cBtnStore.meta.action;
+		if (!cMethodForService) {
+			console.error('no service defined for cBtnStore!:', cBtnStore);
+			throw new Error('no service defined for cBtnStore!');
 		}
-		
-		// var cDataUrl = this.canComp.toDataURL('image/png', '');
-		// var cBlob;
-		// var cArrBuf;
-		var cWidth = gEditor.canComp.width;
-		var cHeight = gEditor.canComp.height;
-		
-		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-			// cBlob = b;
-			
-			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
-			r.onloadend = function() {
-				// cArrBuf = r.result;
-				cBtn.data.arrbuf = r.result; // link947444544
-				cBtn.data.width = cWidth;
-				cBtn.data.height = cHeight;
-				
-				var promise_methodForService = MainWorker.post(cMethodForService, [cBtn.btnId, aOAuthService, cSessionId]); // link888778
-				promise_methodForService.then(
-					function(aVal) {
-						console.log('Fullfilled - promise_methodForService - ', aVal);
-					},
-					genericReject.bind(null, 'promise_methodForService', 0)
-				).catch(genericCatch.bind(null, 'promise_methodForService', 0));
-			};
-			r.readAsArrayBuffer(b);
-			
-		}, 'image/png');
-
 	}
-};
+	
+	var promise_methodForService = MainWorker.post(cMethodForService, [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId]); // link888778
+	promise_methodForService.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_methodForService - ', aVal);
+		},
+		genericReject.bind(null, 'promise_methodForService', 0)
+	).catch(genericCatch.bind(null, 'promise_methodForService', 0));
+}
 
 function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPostDataObj) {
 	var ansifileFieldFound = false;
@@ -2568,14 +2655,15 @@ function gEUnload(e) {
 	}
 	
 	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
-	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
+	// if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
 		console.log('need to show notif bar now');
+		gEditorABData_Bar[gEditor.sessionId].shown = true; // otherwise setBtnState will not update react states
 		AB.setState(gEditorABData_Bar[gEditor.sessionId].ABRef);
-	} else {
-		// no need to show, delete it
-		console.log('no need to show, delete it');
-		delete gEditorABData_Bar[gEditor.sessionId];
-	}
+	// } else {
+	// 	// no need to show, delete it
+	// 	console.log('no need to show, delete it');
+	// 	delete gEditorABData_Bar[gEditor.sessionId];
+	// }
 	
 	gEditor.cleanUp();
 }
@@ -4156,9 +4244,18 @@ var MainWorkerMainThreadFuncs = {
 			cBtnData[p] = aDataObj[p];
 		}
 		aDataObj = null;
+		
+		return ['ok'];
 	},
-	updateAB: function(aId) {
+	updateAttnBar: function(aBtnId, newBtnRefData) {
 		// aId is the id of aABInfoObj
+		// common keys in in newBtnRefData are added to the current BtnRef --- BtnRef is not set equal to newBtnRefData, hence the word "Data" in the param
+		console.log('newBtnRefData:', newBtnRefData);
+		
+		var cBtnObj = gEditorABData_Btn[aBtnId];
+		console.log('cBtnObj:', cBtnObj);
+		
+		cBtnObj.setBtnState(newBtnRefData);		
 	}
 };
 // end - MainWorkerMainThreadFuncs
@@ -4862,7 +4959,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 						var rez_mainthread_call = aFuncExecScope[funcName].apply(null, aMsgEventData);
 						
 						if (callbackPendingId) {
-							if (rez_mainthread_call.constructor.name == 'Promise') {
+							if (rez_mainthread_call.constructor.name == 'Promise') { // if get undefined here, that means i didnt return an array from the function in main thread that the worker called
 								rez_mainthread_call.then(
 									function(aVal) {
 										if (aVal.length >= 2 && aVal[aVal.length-1] == SIP_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
