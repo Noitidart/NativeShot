@@ -162,6 +162,7 @@ contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FH
 
 var pageLoading = false;
 var gMainDeferred_loadPage; // resolve it with what you usually resolve XHR with, well as much as you can
+var gData; // set per loadPage and cleaned up when loadPage is done
 /*
 // resolve with:
 statusText - whatever string explaining status
@@ -173,7 +174,7 @@ var gTimeoutMs = 10000;
 
 var bootstrapCallbacks = { // can use whatever, but by default it uses this
 	// put functions you want called by bootstrap/server here
-	loadPage: function(aSrc, aClickSetName, aCallbackSetName) {
+	loadPage: function(aSrc, aClickSetName, aCallbackSetName, aData) {
 		// if want to load page by click, then set aClickSetName
 		// must set aSrc OR aClickSetName never both!
 		if (aSrc && aClickSetName) {
@@ -185,7 +186,7 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 			throw new Error('cannot load yet, as previous page is still loading');
 		}
 		
-		
+		gData = aData;
 		gMainDeferred_loadPage = new Deferred();
 		
 		pageLoading = true;
@@ -201,35 +202,7 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 				throw new Error('clickSet name not found!!');
 			}
 			
-			// try clicking in all frames
-			var contentWindow = content;
-			var contentFrames = contentWindow.frames;
-			var contentWindowArr = [contentWindow];
-			for (var i=0; i<contentFrames.length; i++) {
-				contentWindowArr.push(contentFrames[i].window);
-			}
-	
-			var rez_clickExec;
-			clickExec_winLoop:
-			for (var h=0; h<contentWindowArr.length; h++) {
-				console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
-				for (var i=0; i<clickSet[aClickSetName].length; i++) {
-					rez_clickExec = clickSet[aClickSetName][i].exec(contentWindowArr[h], contentWindowArr[h].document);
-					if (rez_clickExec) {
-						break clickExec_winLoop;
-					}
-				}
-			}
-			if (!rez_clickExec) {
-				console.log('all click instructions failed!');				
-				loadPage_finalizer(
-					{
-						status: 'fail',
-						statusText: 'click-set-failed'
-					},
-					false
-				);
-			}
+			tryClicks(content, aClickSetName);
 		} else {
 			console.error('should never ever get here');
 			throw new Error('should never ever get here');
@@ -244,6 +217,86 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 };
 
 bootstrapMsgListener.funcScope = bootstrapCallbacks; // need to do this, as i setup bootstrapMsgListener above with funcScope as bootstrapCallbacks however it is undefined at that time
+
+const TRY_INTERVAL = 100;
+const MAX_TRY_CNT = 10000 / TRY_INTERVAL; // checks for 5s
+var gTriesTimeout = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer); // hold timeout object
+
+function getAllContentWins(aContentWindow) {
+	// gets all window elements, including frames
+	var contentFrames = aContentWindow.frames;
+	var contentWindowArr = [aContentWindow];
+	for (var i=0; i<contentFrames.length; i++) {
+		contentWindowArr.push(contentFrames[i].window);
+	}
+	return contentWindowArr;
+}
+
+function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
+	// cur_try_cnt is set progrmatically devuser should never set it
+	// try clicking in all frames
+
+	console.error(aClickSetName, 'trying click set now, cur_try_cnt:', cur_try_cnt);
+	var contentWindowArr = getAllContentWins(aContentWindow);
+	
+	var rez_clickExec;
+	for (var h=0; h<contentWindowArr.length; h++) {
+		console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
+		for (var i=0; i<clickSet[aClickSetName].length; i++) {
+			rez_clickExec = clickSet[aClickSetName][i].exec(contentWindowArr[h], contentWindowArr[h].document);
+			if (rez_clickExec) {
+				return;
+			}
+		}
+	}
+	
+	// if (!rez_clickExec) { // obviously if get to this point then rez_clickExec
+		console.log('all click instructions failed, try:', cur_try_cnt);
+		if (cur_try_cnt < MAX_TRY_CNT) {
+			xpcomSetTimeout(gTriesTimeout, MAX_TRY_CNT, tryClicks.bind(null, aContentWindow, aClickSetName, cur_try_cnt + 1)); // setTimeout
+		} else {
+			loadPage_finalizer(
+				{
+					status: 'fail',
+					statusText: 'click-set-failed'
+				},
+				false
+			);
+		}
+	// }
+}
+
+function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
+	// test all frames with callback set
+	// if none of the tests of the callback for that return for that frame, then try next frame.
+		// if none of the frames then report failed callbacks fhrResponse object
+	console.error(aCallbackSetName, 'trying load callback set now, cur_try_cnt:', cur_try_cnt);
+	var contentWindowArr = getAllContentWins(aContentWindow);
+
+	for (var h=0; h<contentWindowArr.length; h++) {
+		console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
+		for (var i=0; i<callbackSet[aCallbackSetName].length; i++) {
+			var rezTest = callbackSet[aCallbackSetName][i].test(contentWindowArr[h], contentWindowArr[h].document);
+			if (rezTest) {
+				gMainDeferred_loadPage.resolve([rezTest]);
+				return;
+			}
+		}
+	}
+	
+	if (cur_try_cnt < MAX_TRY_CNT) {
+		xpcomSetTimeout(gTriesTimeout, MAX_TRY_CNT, tryLoadeds.bind(null, aContentWindow, aCallbackSetName, cur_try_cnt + 1)); // setTimeout
+	} else {
+		loadPage_finalizer(
+			{
+				status: 'fail',
+				statusText: 'failed-callbackset',
+				callbackSetName: aCallbackSetName
+			},
+			false
+		);
+	}
+}
 
 function pageTimeouted() {	
 	loadPage_finalizer(
@@ -283,35 +336,7 @@ function pageLoaded(aCallbackSetName, e) {
 			
 			// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/folder_name%3Fstate%3Dblah%23access_token%3Dfda25d1a39fd974a08a0485eccd8cd752ae16dd4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3D32f7854e11b0091c6206d6ff3668a1f6f4f99c52%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 		} else {
-			// test all frames with callback set
-			// if none of the tests of the callback for that return for that frame, then try next frame.
-				// if none of the frames then report failed callbacks fhrResponse object
-				
-			var contentFrames = contentWindow.frames;
-			var contentWindowArr = [contentWindow];
-			for (var i=0; i<contentFrames.length; i++) {
-				contentWindowArr.push(contentFrames[i].window);
-			}
-	
-			for (var h=0; h<contentWindowArr.length; h++) {
-				console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
-				for (var i=0; i<callbackSet[aCallbackSetName].length; i++) {
-					var rezTest = callbackSet[aCallbackSetName][i].test(contentWindowArr[h], contentWindowArr[h].document);
-					if (rezTest) {
-						gMainDeferred_loadPage.resolve([rezTest]);
-						return;
-					}
-				}
-			}
-			loadPage_finalizer(
-				{
-					status: 'fail',
-					statusText: 'failed-callbackset',
-					callbackSetName: aCallbackSetName
-				},
-				false
-			);
-			
+			tryLoadeds(contentWindow, aCallbackSetName);			
 		}
 	}
 }
@@ -440,7 +465,62 @@ var callbackSet = {
 			test: function(aContentWindow, aContentDocument) {
 				var domEl = aContentDocument.getElementById('gaia_loginform');
 				if (domEl) { // :maintain-per-website:
-					return this.fhrResponse;
+					var domElSecond = domEl.querySelector('input[value=PasswordSeparationSignIn]');
+					//var attrAction = domEl.getAttribute('action');
+					//if (attrAction && attrAction == 'https://accounts.google.com/ServiceLoginAuth') {
+					if (domElSecond) {
+						return this.fhrResponse;
+					}
+				}
+			}
+		},
+		{
+			fhrResponse: {
+				status: 'ok',
+				statusText: 'multi-acct-picker',
+				accts: [] // array of objects. each object has 3 keys: uid, screenname, and domElId
+			},
+			test: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById('gaia_loginform');
+				if (domEl) { // :maintain-per-website:
+					var attrAction = domEl.getAttribute('action');
+					if (attrAction && /AccountChooser/i.test(attrAction)) { // .indexOf('/AccountChooser')
+						console.log('ok found account chooser');
+						var acctBtns = domEl.querySelectorAll('button');
+						for (var i=0; i<acctBtns.length; i++) {
+							
+							console.log('total btns:', acctBtns.length, i, acctBtns[i]);
+							
+							var attrEmail = acctBtns[i].getAttribute('value');
+							if (!attrEmail) {
+								console.error('no email found!');
+								return;
+							}
+							
+							var domElId = acctBtns[i].getAttribute('id');
+							if (!domElId) {
+								console.error('no domElId found!');
+								return;
+							}
+							
+							var domElAcctScreenname = acctBtns[i].querySelector('span');
+							var acctScreenname;
+							if (domElAcctScreenname) {
+								// i dont exit if screenname not found as not yet required
+								acctScreenname = domElAcctScreenname.textContent.trim();
+							}
+							
+							var acctInfo = {
+								uid: attrEmail,
+								screenname: acctScreenname,
+								domElId: domElId // dom el id is in format choose-account-# where # starts with 0, well as of 030116
+							};
+							this.fhrResponse.accts.push(acctInfo);
+						}
+						if (Object.keys(this.fhrResponse.accts).length) {
+							return this.fhrResponse;
+						}
+					}
 				}
 			}
 		},
@@ -526,6 +606,24 @@ var callbackSet = {
 					return this.fhrResponse;
 				}
 			}
+		},
+		{
+			fhrResponse: {
+				status: 'fail',
+				statusText: 'server-busy',
+			},
+			test: function(aContentWindow, aContentDocument) {
+				// sometiems i land on ```<head><link rel="alternate stylesheet" type="text/css" href="resource://gre-resources/plaintext.css" title="Wrap Long Lines"></head><body><pre>{"data":{"error":"Imgur is temporarily over capacity. Please try again later."},"success":false,"status":500}</pre></body>```
+				var domEl = aContentDocument.querySelector('pre');
+				if (domEl) { // :maintain-per-website:
+					try {
+						var jPre = JSON.parse(domEl.textContent);
+						if (jPre.status == 500) {
+							return this.fhrResponse;
+						}
+					} catch (ignore) {}
+				}
+			}
 		}
 	],
 	allow_imgur: [
@@ -593,10 +691,23 @@ var clickSet = {
 			exec: function(aContentWindow, aContentDocument) {
 				var domEl = aContentDocument.getElementById('submit_approve_access');
 				if (domEl) {
-					// aContentWindow.setInterval(function() {
-						// console.log('clicking now, disabled:', domEl.getAttribute('disabled'));
+					var attrDisabled = domEl.getAttribute('disabled'); // default value is a blank string, we want it to not be there, so getAttribute returns null at that time
+					if (attrDisabled === null) { // cant check !attrDisabled as (!"") a blank string  is true
 						domEl.click();
-					// }, 1000);
+						return true;
+					} else {
+						console.error('btn is disabled!');
+					}
+				}
+			}
+		}
+	],
+	pickAcct_gdrive: [
+		{
+			exec: function(aContentWindow, aContentDocument) {
+				var domEl = aContentDocument.getElementById(gData.domElId);
+				if (domEl) {
+					domEl.click();
 				}
 				return true;
 			}

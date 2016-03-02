@@ -126,6 +126,7 @@
 			displayName: 'Button',
 			componentDidMount: function() {
 				this.shouldMirrorProps(this.props, true);
+				ReactDOM.findDOMNode(this).addEventListener('command', this.click);
 			},
 			componentWillReceiveProps: function(aNextProps) {
 				this.shouldMirrorProps(aNextProps);
@@ -171,7 +172,7 @@
 					type: this.props.pType || undefined
 				};
 				
-				cProps.onClick = this.click;
+				// cProps.onClick = this.click; // moved to componentDidMount and as onCommand
 				
 				var cChildren;			
 				if (this.props.pMenu && this.props.pMenu.length) {
@@ -203,6 +204,11 @@
 			displayName: 'MenuItem',
 			componentDidMount: function() {
 				this.shouldMirrorProps(this.props, true);
+				if (!this.props.cMenu) {
+					console.log('ok its a menuitem so attach command listener');
+					ReactDOM.findDOMNode(this).addEventListener('command', this.click);
+				}
+				else { console.log('will not add event listener for command because its a menu NOT a menuitem') }
 			},
 			componentWillReceiveProps: function(aNextProps) {
 				this.shouldMirrorProps(aNextProps);
@@ -227,8 +233,8 @@
 				}
 			},
 			click: function(e) {
-				window[aAddonId + '-AB'].contentMMForBrowser(gBrowser.selectedBrowser).sendAsyncMessage(aAddonId + '-AB', this.props.cId);
 				e.stopPropagation(); // if i dont do this, then it also triggers the click of the button. as this whole menu is appended as child in the button
+				window[aAddonId + '-AB'].contentMMForBrowser(gBrowser.selectedBrowser).sendAsyncMessage(aAddonId + '-AB', this.props.cId);
 			},
 			render: function() {
 				// incoming props
@@ -238,8 +244,6 @@
 					label: this.props.cTxt,
 					className: this.props.cClass ? this.props.cClass : undefined
 				};
-				
-				cProps.onClick = this.click;
 
 				if (this.props.cMenu) {
 					// https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XUL/menu#Style_classes
@@ -255,6 +259,8 @@
 					if (this.props.cIcon) {
 						cProps.className = (cProps.className ? cProps.className + ' ' : '') + 'menuitem-iconic';
 					}
+					
+					// cProps.onClick = this.click; // moved to componentDidMount and as onCommand
 					
 					return React.createElement('menuitem', cProps);
 				}

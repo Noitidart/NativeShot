@@ -338,6 +338,32 @@ function refreshCoreForPrefs() {
 	return mainDeferred_refreshCoreForPrefs.promise;
 }
 // end - pref stuff
+
+// start - beutify stuff
+
+var devtools;
+try {
+	var { devtools } = Cu.import('resource://devtools/shared/Loader.jsm', {});
+} catch(ex) {
+	var { devtools } = Cu.import('resource://gre/modules/devtools/Loader.jsm', {});
+}
+var beautify1 = {};
+var beautify2 = {};
+devtools.lazyRequireGetter(beautify1, 'beautify', 'devtools/jsbeautify');
+devtools.lazyRequireGetter(beautify2, 'beautify', 'devtools/shared/jsbeautify/beautify');
+
+function BEAUTIFY() {
+	try {
+		beautify1.beautify.js('""');
+		return beautify1.beautify;
+	} catch (ignore) {}
+	try {
+		beautify2.beautify.js('""');
+		return beautify2.beautify;
+	} catch (ignore) {}
+}
+// end - beutify stuff
+
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
 	switch (core.os.name) {
@@ -1294,6 +1320,17 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		var tabToFocus = gEditorABData_BtnENTRY.data.tabWk.get();
 		tabToFocus.ownerDocument.defaultView.focus(); // focus browser window
 		tabToFocus.ownerDocument.defaultView.gBrowser.selectedTab = tabToFocus; // focus tab
+	},
+	showerror: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Error', BEAUTIFY().js(JSON.stringify(gEditorABData_BtnENTRY.data.errordets)));
+	},
+	pick_acct: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Pick Acct', JSON.stringify(this.menuitem.menudata));
+		var promise_pickAcct = MainWorker.post('authorizeAppForBtnId', [gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, 'get_from_store_only_time_this_is_needed_is_for_multi_acct_picker', this.menuitem.menudata]);
+		promise_pickAcct.then(
+			function(aVal) { console.log('Fullfilled - promise_pickAcct - ', aVal) },
+			genericReject.bind(null, 'promise_pickAcct', 0)
+		).catch(genericCatch.bind(null, 'promise_pickAcct', 0));
 	},
 	'save-browse': function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		gEditorABData_BtnENTRY.setBtnState({
@@ -2692,15 +2729,15 @@ function gEUnload(e) {
 	}
 	
 	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
-	// if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
+	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
 		console.log('need to show notif bar now');
 		gEditorABData_Bar[gEditor.sessionId].shown = true; // otherwise setBtnState will not update react states
 		AB.setState(gEditorABData_Bar[gEditor.sessionId].ABRef);
-	// } else {
-	// 	// no need to show, delete it
-	// 	console.log('no need to show, delete it');
-	// 	delete gEditorABData_Bar[gEditor.sessionId];
-	// }
+	} else {
+		// no need to show, delete it
+		console.log('no need to show, delete it');
+		delete gEditorABData_Bar[gEditor.sessionId];
+	}
 	
 	gEditor.cleanUp();
 }
@@ -4216,7 +4253,7 @@ var MainWorkerMainThreadFuncs = {
 	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
 		var deferredMain_authorizeApp = new Deferred();
 		
-		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aUrl, null, aCallbackSetName);
+		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aUrl, null, aCallbackSetName, null);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
 				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
@@ -4232,7 +4269,7 @@ var MainWorkerMainThreadFuncs = {
 		
 		var deferredMain_clickAllow = new Deferred();
 	
-		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName);
+		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName, null);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
 				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
@@ -4242,6 +4279,22 @@ var MainWorkerMainThreadFuncs = {
 		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_clickAllow));
 		
 		return deferredMain_clickAllow.promise;
+	},
+	clickPickAcct: function(aBtnId, aClickSetName, aCallbackSetName, aLoadPageData) {
+		// aLoadPageData should be aMultiAcctPickInfo (which is acct entry for one of the multiple accts found) is an object that has three  keys, uid and screenname and domElId or domElSelector . :todo: consider putting in domElSelector or domElId
+		var deferredMain_pickAccount = new Deferred();
+	
+		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName, aLoadPageData);
+		console.error('promise_fhrResponse:', promise_fhrResponse);
+		promise_fhrResponse.then(
+			function(aFHRResponse) {
+				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+				deferredMain_pickAccount.resolve([aFHRResponse]);
+			},
+			genericReject.bind(null, 'promise_fhrResponse', deferredMain_pickAccount)
+		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_pickAccount));
+		
+		return deferredMain_pickAccount.promise;
 	},
 	extractData: function(aBtnId, aDataKeysArr) {
 		// takes a copy from btn data object and sends to worker
@@ -5500,7 +5553,7 @@ function FHR() {
 		}, false);
 	}
 	
-	this.loadPage = function(aSrc, aClickSetName, aCallbackSetName, aDeferredMain_setSrc) {
+	this.loadPage = function(aSrc, aClickSetName, aCallbackSetName, aLoadPageData, aDeferredMain_setSrc) {
 		// sets src of frame OR clicks if aClickSetName is set. must either set aSrc OR aClickSetName never both
 		
 		// aCbInfoObj is a collection of callbacks, like for on fail load, on error etc etc
@@ -5516,14 +5569,14 @@ function FHR() {
 			
 			if (!this.inited) {
 				console.log('not yet inited');
-				fhrPostInitCb = this.loadPage.bind(this, aSrc, aClickSetName, aCallbackSetName, deferredMain_setSrc);
+				fhrPostInitCb = this.loadPage.bind(this, aSrc, aClickSetName, aCallbackSetName, aLoadPageData, deferredMain_setSrc);
 			
 				return deferredMain_setSrc.promise;
 			}
 		}
 		
 		console.log('sending msg to message manager fhrFsMsgListenerId:', fhrFsMsgListenerId);
-		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aClickSetName, aCallbackSetName], fhrFsMsgListener.funcScope, function(aFhrResponse) {
+		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aClickSetName, aCallbackSetName, aLoadPageData], fhrFsMsgListener.funcScope, function(aFhrResponse) {
 			console.log('bootstrap', 'aFhrResponse:', aFhrResponse);
 			deferredMain_setSrc.resolve(aFhrResponse);
 		});
