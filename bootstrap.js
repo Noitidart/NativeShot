@@ -1268,6 +1268,16 @@ function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.session
 	return gEditorABData_Btn[gEditorABData_BtnId];
 }
 
+function retryForBtnId(aBtnId) {
+	var cBtnStore = gEditorABData_Btn[aBtnId];
+	cBtnStore.setBtnState({
+		bTxt: 'Waiting...', // :l10n:
+		bType: 'button',
+		bMenu: undefined
+	});
+	doServiceForBtnId(cBtnStore.btnId, cBtnStore.meta.service, cBtnStore.meta.action);
+}
+
 function gEditorABData_getBtnFhr(aBtnId) {
 	// creates fhr for this btn if it doesnt have one. if it has one then it returns that
 	// if created, it adds to the unloaders
@@ -1298,12 +1308,7 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 	},
 	retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'retry', [gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action]);
-		gEditorABData_BtnENTRY.setBtnState({
-			bTxt: 'Waiting...', // :l10n:
-			bType: 'button',
-			bMenu: undefined
-		});
-		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action);
+		retryForBtnId(gEditorABData_BtnENTRY.btnId);
 	},
 	retrywith_menudata: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'retry', [gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action]);
@@ -1315,6 +1320,45 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 			bMenu: undefined
 		});
 		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, this.menuitem.menudata, gEditorABData_BtnENTRY.meta.action);
+	},
+	abort_autoretry_then_retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Aborting...',
+			bType: 'button',
+			bMenu: undefined
+		});
+		gEditorABData_BtnENTRY.autoretryAborting = true; // set to true, and while true any updates via updateAttnBar are ignored
+		var promise_abortAutoretry = MainWorker.post('abortAutoretryForBtnId', [gEditorABData_BtnENTRY.btnId]); // abort a autoretry in case one was in progress
+		promise_abortAutoretry.then(function() {
+			delete gEditorABData_BtnENTRY.autoretryAborting;
+			
+			retryForBtnId(gEditorABData_BtnENTRY.btnId);
+			
+		});
+	},
+	abort_autoretry_then_retrywith_menudata: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Aborting...',
+			bType: 'button',
+			bMenu: undefined
+		});
+		gEditorABData_BtnENTRY.autoretryAborting = true; // set to true, and while true any updates via updateAttnBar are ignored
+		var promise_abortAutoretry = MainWorker.post('abortAutoretryForBtnId', [gEditorABData_BtnENTRY.btnId]); // abort a autoretry in case one was in progress
+		promise_abortAutoretry.then(function() {
+			delete gEditorABData_BtnENTRY.autoretryAborting;
+
+			gEditorABData_BtnENTRY.setBtnState({
+				bTxt: 'Waiting...', // :l10n:
+				bType: 'button',
+				bIcon: core.addon.path.images + this.menuitem.menudata + '16.png', // menudata must be aOAuthService
+				bMenu: undefined
+			});
+			
+			Services.prompt.alert(null, 'nativeshot', this.menuitem.menudata);
+			
+			doServiceForBtnId(gEditorABData_BtnENTRY.btnId, this.menuitem.menudata);
+			
+		}.bind(this));
 	},
 	focus_tab: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		var tabToFocus = gEditorABData_BtnENTRY.data.tabWk.get();
@@ -1340,6 +1384,15 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 			bMenu: undefined
 		});
 		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, 'save-browse');
+	},
+	'save-quick': function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Waiting...', // :l10n:
+			bType: 'button',
+			bIcon: core.addon.path.images + 'save-quick16.png',
+			bMenu: undefined
+		});
+		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, 'save-quick');
 	},
 	none: function() {
 		// used for removing a callback
@@ -4343,10 +4396,16 @@ var MainWorkerMainThreadFuncs = {
 		if(isBtnIdNoData(aBtnId)) {
 			return false;
 		}
+		
 		console.log('newBtnRefData:', newBtnRefData);
 		
 		var cBtnObj = gEditorABData_Btn[aBtnId];
 		console.log('cBtnObj:', cBtnObj);
+		
+		if (cBtnObj.autoretryAborting) {
+			// maybe a timeout message came through before the abort completed so ignore those
+			return;
+		}
 		
 		cBtnObj.setBtnState(newBtnRefData);		
 	}
