@@ -32,7 +32,7 @@ var slipCoverJson = ['html:div', classREF,
 					];
 var gHoverEl = {};
 var gHoverId = -1;
-function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
+function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc, aScreenname) {
 	// September 12, 2015 - 7:41 PM
 	
 	var iconDelete;
@@ -141,7 +141,6 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 										],
 										['br', {}],
 										['br', {}],
-										['br', {}],
 										['a', {href:aImgSrc, class:'card-button mag-view', 'data-card-gettime':aGettime, onclick:'izoView(event, ' + aGettime + ')'},
 											['span', {class:'fa fa-eye'}],
 											justFormatStringFromName(core.addon.l10n.app_main['view'])
@@ -162,6 +161,18 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc) {
 											justFormatStringFromName(core.addon.l10n.app_main['remove'])
 										]
 									 ];
+				if (aScreenname) {
+					gHoverEl[gHoverId].splice(4, 0,	[
+						['br', {}],
+						['span', {style:'color:#999; line-height:20px;'},
+							aScreenname
+						]
+					]);
+				} else {
+					gHoverEl[gHoverId].splice(4, 0,	[
+						['br', {}]
+					]);
+				}
 	}
 }
 
@@ -633,7 +644,7 @@ function matchIsotopeContentsToFileJson(isNotInit) {
 			aREF.href = imgREF.src;
 			gHoverId++;
 			dataCaptionREF['data-caption'] = gHoverId;
-			templatedDataCaption(gJLog[i].t, formattedDate, justFormatStringFromName(core.addon.l10n.app_main['title_' + aTypeIntToTypeStr[gJLog[i].t]]), gJLog[i].d, imgREF.src);
+			templatedDataCaption(gJLog[i].t, formattedDate, justFormatStringFromName(core.addon.l10n.app_main['title_' + aTypeIntToTypeStr[gJLog[i].t]]), gJLog[i].d, imgREF.src, gJLog[i].s);
 			
 			
 			var foundAlreadyInIzotope = false;
@@ -880,7 +891,7 @@ function izoOpen(aGettime) {
 };
 function izoDelete(aGettime) {
 	
-	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['deleteEntryInLog', aGettime]], bootstrapMsgListener.funcScope, function(aStatusObj) {
+	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['deleteEntryInLog', aGettime, null]], bootstrapMsgListener.funcScope, function(aStatusObj) {
 		if (!aStatusObj.status) {
 			// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
 			alert('Failed to delete image. \n\nError Message: ' + aStatusObj.msg);

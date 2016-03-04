@@ -1356,7 +1356,7 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 			bType: 'button',
 			bMenu: undefined
 		});
-		var promise_pickAcct = MainWorker.post('authorizeAppForBtnId', [gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, 'get_from_store_only_time_this_is_needed_is_for_multi_acct_picker', this.menuitem.menudata]);
+		var promise_pickAcct = MainWorker.post('authorizeAppForBtnId', [gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, 'get_from_store_only_time_this_is_needed_is_for_multi_acct_picker', this.menuitem.menudata.uid]);
 		promise_pickAcct.then(
 			function(aVal) { console.log('Fullfilled - promise_pickAcct - ', aVal) },
 			genericReject.bind(null, 'promise_pickAcct', 0)

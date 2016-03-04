@@ -497,6 +497,7 @@ var callbackSet = {
 				accts: [] // array of objects. each object has 3 keys: uid, screenname, and domElId
 			},
 			test: function(aContentWindow, aContentDocument) {
+				// block link484443431111110
 				var domEl = aContentDocument.getElementById('gaia_loginform');
 				if (domEl) { // :maintain-per-website:
 					var attrAction = domEl.getAttribute('action');
@@ -513,12 +514,8 @@ var callbackSet = {
 								return;
 							}
 							
-							var domElId = acctBtns[i].getAttribute('id');
-							if (!domElId) {
-								console.error('no domElId found!');
-								return;
-							}
-							
+							// uid is attrEmail
+
 							var domElAcctScreenname = acctBtns[i].querySelector('span');
 							var acctScreenname;
 							if (domElAcctScreenname) {
@@ -528,8 +525,7 @@ var callbackSet = {
 							
 							var acctInfo = {
 								uid: attrEmail,
-								screenname: acctScreenname,
-								domElId: domElId // dom el id is in format choose-account-# where # starts with 0, well as of 030116
+								screenname: acctScreenname
 							};
 							this.fhrResponse.accts.push(acctInfo);
 						}
@@ -712,7 +708,7 @@ var clickSet = {
 						domEl.click();
 						return true;
 					} else {
-						console.error('btn is disabled!');
+						console.warn('btn is disabled!');
 					}
 				}
 			}
@@ -721,11 +717,43 @@ var clickSet = {
 	pickAcct_gdrive: [
 		{
 			exec: function(aContentWindow, aContentDocument) {
-				var domEl = aContentDocument.getElementById(gData.domElId);
-				if (domEl) {
-					domEl.click();
+				// same algo but modded as block link484443431111110
+				var domEl = aContentDocument.getElementById('gaia_loginform');
+				if (domEl) { // :maintain-per-website:
+					var attrAction = domEl.getAttribute('action');
+					if (attrAction && /AccountChooser/i.test(attrAction)) { // .indexOf('/AccountChooser')
+						console.log('ok found account chooser');
+						console.log('searching for targetUid:', JSON.stringify(gData));
+						var acctBtns = domEl.querySelectorAll('button');
+						for (var i=0; i<acctBtns.length; i++) {
+							
+							console.log('total btns:', acctBtns.length, i, acctBtns[i]);
+							
+							var attrEmail = acctBtns[i].getAttribute('value');
+							console.log('attrEmail:', attrEmail);
+							if (!attrEmail) {
+								console.error('no email found!');
+								return;
+							}
+							// uid is attrEmail
+							if (attrEmail == gData.targetUid) {
+								var attrDisabled = acctBtns[i].getAttribute('disabled'); // default value is a blank string, we want it to not be there, so getAttribute returns null at that time
+								if (attrDisabled === null) { // cant check !attrDisabled as (!"") a blank string  is true
+									acctBtns[i].click();
+									return true;
+								} else {
+									console.warn('btn is disabled!');
+								}
+							}
+						}
+					}
 				}
-				return true;
+				
+				// var domEl = aContentDocument.getElementById(gData.domElId);
+				// if (domEl) {
+				// 	domEl.click();
+				// }
+				// return true;
 			}
 		}
 	],
