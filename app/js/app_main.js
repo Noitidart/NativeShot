@@ -496,7 +496,7 @@ var ServiceSummary = React.createClass({
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['removeTypeInLog', this.props.pServiceName]], bootstrapMsgListener.funcScope, function(aStatusObj) {
 			if (!aStatusObj.status) {
 				// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
-				// alert(aStatusObj.detail);
+				alert('Failed to clear history. \n\nError Message: ' + aStatusObj.msg);
 			} else {
 				gJLog = aStatusObj.jLog;
 				updateCountsToSkillBars();
@@ -883,7 +883,7 @@ function izoDelete(aGettime) {
 	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['deleteEntryInLog', aGettime]], bootstrapMsgListener.funcScope, function(aStatusObj) {
 		if (!aStatusObj.status) {
 			// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
-			// alert(aStatusObj.detail);
+			alert('Failed to delete image. \n\nError Message: ' + aStatusObj.msg);
 		} else {
 			gJLog = aStatusObj.jLog;
 			updateCountsToSkillBars();
@@ -897,7 +897,7 @@ function izoRemove(aGettime) {
 	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInPromiseWorker', ['removeEntryInLog', aGettime]], bootstrapMsgListener.funcScope, function(aStatusObj) {
 		if (!aStatusObj.status) {
 			// do a contentWindow alert on failure. after user closes out the alert it triggers the nsOnFocus which does re-read of the file into the dom
-			// alert(aStatusObj.detail);
+			alert('Failed to remove image from log. \n\nError Message: ' + aStatusObj.msg);
 		} else {
 			gJLog = aStatusObj.jLog;
 			updateCountsToSkillBars();

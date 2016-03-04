@@ -163,6 +163,7 @@ contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FH
 var pageLoading = false;
 var gMainDeferred_loadPage; // resolve it with what you usually resolve XHR with, well as much as you can
 var gData; // set per loadPage and cleaned up when loadPage is done
+var gLoadedCallbackSetName;
 /*
 // resolve with:
 statusText - whatever string explaining status
@@ -190,7 +191,9 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 		gMainDeferred_loadPage = new Deferred();
 		
 		pageLoading = true;
-		addEventListener('DOMContentLoaded', pageLoaded.bind(null, aCallbackSetName), false);
+		console.error('added aCallbackSetName:', aCallbackSetName);
+		gLoadedCallbackSetName = aCallbackSetName;
+		addEventListener('DOMContentLoaded', pageLoaded, false);
 		
 		xpcomSetTimeout(gTimeout, gTimeoutMs, pageTimeouted); //gTimeout = setTimeout(pageTimeouted, gTimeoutMs);
 		
@@ -257,7 +260,7 @@ function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
 		} else {
 			loadPage_finalizer(
 				{
-					status: 'fail',
+					status: false,
 					statusText: 'click-set-failed'
 				},
 				false
@@ -267,6 +270,7 @@ function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
 }
 
 function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
+	console.log('in tryLoadeds:', aCallbackSetName);
 	// test all frames with callback set
 	// if none of the tests of the callback for that return for that frame, then try next frame.
 		// if none of the frames then report failed callbacks fhrResponse object
@@ -289,7 +293,7 @@ function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
 	} else {
 		loadPage_finalizer(
 			{
-				status: 'fail',
+				status: false,
 				statusText: 'failed-callbackset',
 				callbackSetName: aCallbackSetName
 			},
@@ -299,26 +303,34 @@ function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
 }
 
 function pageTimeouted() {	
+	console.error('triggered timeout!');
 	loadPage_finalizer(
 		{
-			status: 'fail',
+			status: false,
 			statusText: 'timeout'
 		},
 		true
 	);
 }
 
-function pageLoaded(aCallbackSetName, e) {
+function pageLoaded(e) {
+	console.error('triggered pageLoaded!');
 	// waits till the loaded event triggers on top window not frames
 	var contentWindow = e.target.defaultView;
 	var contentDocument = contentWindow.document;
 	
 	if (contentWindow.frameElement) {
 		// top window not yet loaded
+		// var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation); // console.log('remove on prod');
+		// var docuri = webnav.document.documentURI; // console.log('remove on prod');
+		// console.error('NOT TOP LOADED:', contentwindow.location, docuri);
 	} else {
 		// ok top finished loading
-
-		loadPage_finalizer();
+		console.error('ok top finished loading');
+		
+		var cLoadedCallbackSetName = gLoadedCallbackSetName; // do this here as loadPage_finalizer clears it out
+		
+		loadPage_finalizer(); // sets the variables to done loading, like removes timeout listener
 		
 		var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 		var docuri = webnav.document.documentURI;
@@ -327,7 +339,7 @@ function pageLoaded(aCallbackSetName, e) {
 			// failed loading
 			loadPage_finalizer(
 				{
-					status: 'fail',
+					status: false,
 					statusText: 'error-loading',
 					docuri: docuri
 				},
@@ -336,7 +348,7 @@ function pageLoaded(aCallbackSetName, e) {
 			
 			// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/folder_name%3Fstate%3Dblah%23access_token%3Dfda25d1a39fd974a08a0485eccd8cd752ae16dd4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3D32f7854e11b0091c6206d6ff3668a1f6f4f99c52%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 		} else {
-			tryLoadeds(contentWindow, aCallbackSetName);			
+			tryLoadeds(contentWindow, cLoadedCallbackSetName);			
 		}
 	}
 }
@@ -348,12 +360,17 @@ function loadPage_finalizer(aFHRResponse, aDoStop) {
 	}
 	
 	gTimeout.cancel(); //clearTimeout(gTimeout);
-	pageLoading = false;
 	removeEventListener('DOMContentLoaded', pageLoaded, false);
+	pageLoading = false;
+	gLoadedCallbackSetName = undefined;
+	
+	console.error('removed pageLoaded');
 	
 	if (aFHRResponse) {
 		gMainDeferred_loadPage.resolve([aFHRResponse]);
 	}
+	
+	console.error('reslved if it was there to resolve');
 }
 
 // custom callbacks specific to NativeShot
@@ -371,7 +388,7 @@ var callbackSet = {
 		// },
 		{
 			fhrResponse: {
-				status: 'fail',
+				status: false,
 				statusText: 'api-error',
 				apiText: '' // populated by .test()
 			},
@@ -385,7 +402,7 @@ var callbackSet = {
 		},
 		{
 			fhrResponse: {
-				status: 'fail',
+				status: false,
 				statusText: 'not-logged-in',
 			},
 			test: function(aContentWindow, aContentDocument) {
@@ -397,26 +414,25 @@ var callbackSet = {
 		},
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'logged-in-allow-screen',
-				username: '' // set by .test() // so oauth worker can test prefs to see if this username was allowed yet
+				screenname: undefined // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
 				
 					// :maintain-per-website:
 					var domEl = aContentDocument.querySelector('.auth-button[name=allow_access]');
 					if (domEl) {
-						var preStart_index = aContentDocument.documentElement.innerHTML.indexOf('"email": "');
-						var start_index = preStart_index + '"email": "'.length;
-						var end_index = aContentDocument.documentElement.innerHTML.indexOf('"', start_index);
-						
-						if (preStart_index > -1 && end_index > -1) {
-							var username = aContentDocument.documentElement.innerHTML.substr(start_index, end_index);
-							console.log('username:', username);
-							this.fhrResponse.username = username;
-							return this.fhrResponse;
-						}
-						console.error('failed to get username');
+						// var preStart_index = aContentDocument.documentElement.innerHTML.indexOf('"email": "');
+						// var start_index = preStart_index + '"email": "'.length;
+						// var end_index = aContentDocument.documentElement.innerHTML.indexOf('"', start_index);
+						// 
+						// if (preStart_index > -1 && end_index > -1) {
+						// 	var screenname = aContentDocument.documentElement.innerHTML.substr(start_index, end_index);
+						// 	console.log('screenname:', screenname);
+						// 	this.fhrResponse.screenname = screenname;
+						// }
+						return this.fhrResponse;
 					}
 				
 
@@ -426,7 +442,7 @@ var callbackSet = {
 	allow_dropbox: [
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'allowed',
 				allowedParams: '' // set by .test()
 			},
@@ -459,7 +475,7 @@ var callbackSet = {
 	authorizeApp_gdrive: [
 		{
 			fhrResponse: {
-				status: 'fail',
+				status: false,
 				statusText: 'not-logged-in',
 			},
 			test: function(aContentWindow, aContentDocument) {
@@ -476,7 +492,7 @@ var callbackSet = {
 		},
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'multi-acct-picker',
 				accts: [] // array of objects. each object has 3 keys: uid, screenname, and domElId
 			},
@@ -526,18 +542,18 @@ var callbackSet = {
 		},
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'logged-in-allow-screen',
-				username: '' // set by .test() // so oauth worker can test prefs to see if this username was allowed yet
+				screenname: undefined // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
 				var domEl = aContentDocument.getElementById('submit_approve_access');
 				if (domEl) { // :maintain-per-website:
 				
-					var loggedInUserDomEl = aContentDocument.querySelector('a[href*=SignOutOptions]');
-					if (loggedInUserDomEl) {
-						this.fhrResponse.username = loggedInUserDomEl.childNodes[0].textContent;
-					}
+					// var loggedInUserDomEl = aContentDocument.querySelector('a[href*=SignOutOptions]');
+					// if (loggedInUserDomEl) {
+					// 	this.fhrResponse.screenname = loggedInUserDomEl.childNodes[0].textContent;
+					// }
 					return this.fhrResponse;
 				}
 			}
@@ -546,7 +562,7 @@ var callbackSet = {
 	allow_gdrive: [
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'allowed',
 				allowedParams: '' // set by .test()
 			},
@@ -579,7 +595,7 @@ var callbackSet = {
 	authorizeApp_imgur: [
 		{
 			fhrResponse: {
-				status: 'fail',
+				status: false,
 				statusText: 'not-logged-in',
 			},
 			test: function(aContentWindow, aContentDocument) {
@@ -591,25 +607,25 @@ var callbackSet = {
 		},
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'logged-in-allow-screen',
-				username: '' // set by .test() // so oauth worker can test prefs to see if this username was allowed yet
+				screenname: undefined // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
 				var domEl = aContentDocument.getElementById('upload-global-logged-in');
 				if (domEl) { // :maintain-per-website:
 				
-					var loggedInUserDomEl = domEl.querySelector('.green');
-					if (loggedInUserDomEl) {
-						this.fhrResponse.username = loggedInUserDomEl.textContent;
-					}
+					// var loggedInUserDomEl = domEl.querySelector('.green');
+					// if (loggedInUserDomEl) {
+					// 	this.fhrResponse.username = loggedInUserDomEl.textContent;
+					// }
 					return this.fhrResponse;
 				}
 			}
 		},
 		{
 			fhrResponse: {
-				status: 'fail',
+				status: false,
 				statusText: 'server-busy',
 			},
 			test: function(aContentWindow, aContentDocument) {
@@ -629,7 +645,7 @@ var callbackSet = {
 	allow_imgur: [
 		{
 			fhrResponse: {
-				status: 'ok',
+				status: true,
 				statusText: 'allowed',
 				allowedParams: '' // set by .test()
 			},

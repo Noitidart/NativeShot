@@ -1268,14 +1268,27 @@ function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.session
 	return gEditorABData_Btn[gEditorABData_BtnId];
 }
 
-function retryForBtnId(aBtnId) {
+function retryForBtnId(aBtnId, aServiceName) {
+	// aServiceName is optional, if it is not provided it uses cBtnStore.meta.service
+	
 	var cBtnStore = gEditorABData_Btn[aBtnId];
+	
+	aServiceName = aServiceName ? aServiceName : cBtnStore.meta.service;
+	if (!aServiceName) {
+		// then this means cBtnStore.meta.service is undefined, this is a huge error
+		console.error('should never happen deverror - then this means cBtnStore.meta.service is undefined, this is a huge error');
+		throw new Error('should never happen')
+	}
+	
+	
 	cBtnStore.setBtnState({
 		bTxt: 'Waiting...', // :l10n:
 		bType: 'button',
+		bIcon: core.addon.path.images + aServiceName + '16.png',
 		bMenu: undefined
 	});
-	doServiceForBtnId(cBtnStore.btnId, cBtnStore.meta.service, cBtnStore.meta.action);
+
+	doServiceForBtnId(cBtnStore.btnId, aServiceName);
 }
 
 function gEditorABData_getBtnFhr(aBtnId) {
@@ -1307,21 +1320,11 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		showFileInOSExplorer(nsifileOfCopyTxt);
 	},
 	retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'retry', [gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action]);
-		retryForBtnId(gEditorABData_BtnENTRY.btnId);
-	},
-	retrywith_menudata: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'retry', [gEditorABData_BtnENTRY.meta.service, gEditorABData_BtnENTRY.meta.action]);
-		console.log('this:', this);
-		gEditorABData_BtnENTRY.setBtnState({
-			bTxt: 'Waiting...', // :l10n:
-			bType: 'button',
-			// bIcon: core.addon.path.images + this.menuitem.menudata + '16.png',
-			bMenu: undefined
-		});
-		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, this.menuitem.menudata, gEditorABData_BtnENTRY.meta.action);
+		// uses menudata if it is present, else it uses meta.action
+		retryForBtnId(gEditorABData_BtnENTRY.btnId, (this.menuitem ? this.menuitem.menudata : undefined)); // if menudata is undefined, retryForBtnId uses cBtnStore.meta.action so retries itself
 	},
 	abort_autoretry_then_retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		// same as retry, but first it aborts
 		gEditorABData_BtnENTRY.setBtnState({
 			bTxt: 'Aborting...',
 			bType: 'button',
@@ -1330,35 +1333,13 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		gEditorABData_BtnENTRY.autoretryAborting = true; // set to true, and while true any updates via updateAttnBar are ignored
 		var promise_abortAutoretry = MainWorker.post('abortAutoretryForBtnId', [gEditorABData_BtnENTRY.btnId]); // abort a autoretry in case one was in progress
 		promise_abortAutoretry.then(function() {
+			
 			delete gEditorABData_BtnENTRY.autoretryAborting;
 			
-			retryForBtnId(gEditorABData_BtnENTRY.btnId);
+			// uses menudata if it is present, else it uses meta.action
+			retryForBtnId(gEditorABData_BtnENTRY.btnId, (this.menuitem ? this.menuitem.menudata : undefined)); // if menudata is undefined, retryForBtnId uses cBtnStore.meta.action so retries itself
 			
 		});
-	},
-	abort_autoretry_then_retrywith_menudata: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		gEditorABData_BtnENTRY.setBtnState({
-			bTxt: 'Aborting...',
-			bType: 'button',
-			bMenu: undefined
-		});
-		gEditorABData_BtnENTRY.autoretryAborting = true; // set to true, and while true any updates via updateAttnBar are ignored
-		var promise_abortAutoretry = MainWorker.post('abortAutoretryForBtnId', [gEditorABData_BtnENTRY.btnId]); // abort a autoretry in case one was in progress
-		promise_abortAutoretry.then(function() {
-			delete gEditorABData_BtnENTRY.autoretryAborting;
-
-			gEditorABData_BtnENTRY.setBtnState({
-				bTxt: 'Waiting...', // :l10n:
-				bType: 'button',
-				bIcon: core.addon.path.images + this.menuitem.menudata + '16.png', // menudata must be aOAuthService
-				bMenu: undefined
-			});
-			
-			Services.prompt.alert(null, 'nativeshot', this.menuitem.menudata);
-			
-			doServiceForBtnId(gEditorABData_BtnENTRY.btnId, this.menuitem.menudata);
-			
-		}.bind(this));
 	},
 	focus_tab: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		var tabToFocus = gEditorABData_BtnENTRY.data.tabWk.get();
@@ -1369,30 +1350,17 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Error', BEAUTIFY().js(JSON.stringify(gEditorABData_BtnENTRY.data.errordets)));
 	},
 	pick_acct: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Pick Acct', JSON.stringify(this.menuitem.menudata));
+		// Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Pick Acct', JSON.stringify(this.menuitem.menudata));
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Waiting...',
+			bType: 'button',
+			bMenu: undefined
+		});
 		var promise_pickAcct = MainWorker.post('authorizeAppForBtnId', [gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, 'get_from_store_only_time_this_is_needed_is_for_multi_acct_picker', this.menuitem.menudata]);
 		promise_pickAcct.then(
 			function(aVal) { console.log('Fullfilled - promise_pickAcct - ', aVal) },
 			genericReject.bind(null, 'promise_pickAcct', 0)
 		).catch(genericCatch.bind(null, 'promise_pickAcct', 0));
-	},
-	'save-browse': function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		gEditorABData_BtnENTRY.setBtnState({
-			bTxt: 'Waiting...', // :l10n:
-			bType: 'button',
-			bIcon: core.addon.path.images + 'save-browse16.png',
-			bMenu: undefined
-		});
-		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, 'save-browse');
-	},
-	'save-quick': function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		gEditorABData_BtnENTRY.setBtnState({
-			bTxt: 'Waiting...', // :l10n:
-			bType: 'button',
-			bIcon: core.addon.path.images + 'save-quick16.png',
-			bMenu: undefined
-		});
-		doServiceForBtnId(gEditorABData_BtnENTRY.btnId, 'save-quick');
 	},
 	none: function() {
 		// used for removing a callback
@@ -2206,48 +2174,40 @@ function createNewBtnStore(aSessionId, aService) {
 	return cBtn;
 }
 
-function doServiceForBtnId(aBtnId, aOAuthService, aActionForService) {
+function doServiceForBtnId(aBtnId, aOAuthService) {
 	// must have arrbuf or appropriate data in button data store object
-	// aActionForService is optional, if it is not provided it uses the cBtnStore.meta.action
 		// if not provided, the service is calculated and set in the meta data
 	
 	var cBtnStore = gEditorABData_Btn[aBtnId];
 	
 	var cMethodForService;
-	if (!aActionForService) {
-		switch (aOAuthService) { // link64098756794556
-			case 'dropbox':
-			case 'imgur':
-			case 'gdrive':
-			case 'imguranon':
-				
-					cMethodForService = 'uploadImgArrBufForBtnId';
-				
-				break;
-			case 'save-quick':
-			case 'save-browse':
-				
-					cMethodForService = 'saveToDiskImgArrBufForBtnId';
-				
-				break;
-			case 'tineye':
-			case 'google-images':
-				
-					cMethodForService = 'reverseSearchImgArrBufForBtnId';
-				
-				break;
-			default:
-				console.error('invalid aOAuthService:', aOAuthService);
-				throw new Error('invalid aOAuthService!!');
-		}
-		cBtnStore.meta.action = cMethodForService;
-	} else {
-		cMethodForService = cBtnStore.meta.action;
-		if (!cMethodForService) {
-			console.error('no service defined for cBtnStore!:', cBtnStore);
-			throw new Error('no service defined for cBtnStore!');
-		}
+	cBtnStore.meta.service = aOAuthService;
+	switch (aOAuthService) { // link64098756794556
+		case 'dropbox':
+		case 'imgur':
+		case 'gdrive':
+		case 'imguranon':
+			
+				cMethodForService = 'uploadImgArrBufForBtnId';
+			
+			break;
+		case 'save-quick':
+		case 'save-browse':
+			
+				cMethodForService = 'saveToDiskImgArrBufForBtnId';
+			
+			break;
+		case 'tineye':
+		case 'google-images':
+			
+				cMethodForService = 'reverseSearchImgArrBufForBtnId';
+			
+			break;
+		default:
+			console.error('invalid aOAuthService:', aOAuthService);
+			throw new Error('invalid aOAuthService!!');
 	}
+	cBtnStore.meta.action = cMethodForService;
 	
 	var promise_methodForService = MainWorker.post(cMethodForService, [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId]); // link888778
 	promise_methodForService.then(
@@ -2291,7 +2251,7 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 			},
 			{
 				cTxt: 'Retry with ' + (cBtnStore.meta.service == 'tineye' ? 'Google Images' : 'Tineye'),
-				cClick: 'retrywith_menudata',
+				cClick: 'retry',
 				menudata: (cBtnStore.meta.service == 'tineye' ? 'google-images' : 'tineye')
 			}
 		]
@@ -3177,11 +3137,12 @@ function shootAllMons(aDOMWindow) {
 						cUnloaders[i]();
 					}
 					var thisBtnIds = gEditorABData_Bar[cSessionId].btnIds; // can yse gEditor.sessionId here as it uses live value apparently - bug fix from test result
-					 for (var i=0; i<thisBtnIds.length; i++) {
-						 delete gEditorABData_Btn[thisBtnIds[i]];
-					 }
-					 delete gEditorABData_Bar[cSessionId];
-					 // :todo: need to ensure that none of th workers are holding onto any data that was stored in gEditorABData_Bar or gEditorABData_Btn
+					for (var i=0; i<thisBtnIds.length; i++) {
+						delete gEditorABData_Btn[thisBtnIds[i]];
+						MainWorker.post('deleteBtnStore', [thisBtnIds[i]]);
+					}
+					delete gEditorABData_Bar[cSessionId];
+					// :todo: need to ensure that none of th workers are holding onto any data that was stored in gEditorABData_Bar or gEditorABData_Btn
 				},
 				aBtns: []
 			},
@@ -4730,8 +4691,13 @@ function shutdown(aData, aReason) {
 	}
 	
 	// destroy any FHR's that the devuser did not clean up
-	for (var i=0; i<gFHR.length; i++) {
-		gFHR[i].destroy();
+	for (var DSTR_I=0; DSTR_I<gFHR.length; DSTR_I++) {
+		if (gFHR[DSTR_I].destroy) {
+			console.log('destroying gFHR DSTR_I:', DSTR_I);
+			gFHR[DSTR_I].destroy();
+			console.log('DSTR_I after destroy:', DSTR_I);
+			DSTR_I--; // because .destroy splices it out of gFHR i do a .forEach, otherwise i have to do i--. but .destroy uses i so im worried theres scoping issues here so i switched to DSTR_I
+		}
 	}
 	
 	Services.mm.removeMessageListener(core.addon.id, fsMsgListener);
