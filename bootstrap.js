@@ -4264,6 +4264,22 @@ var MainWorkerMainThreadFuncs = {
 		
 		return deferredMain_pickAccount.promise;
 	},
+	loadPage: function(aBtnId, aSrc, aClickSetName, aCallbackSetName, aLoadPageData) {
+		// aLoadPageData should be aMultiAcctPickInfo (which is acct entry for one of the multiple accts found) is an object that has three  keys, uid and screenname and domElId or domElSelector . :todo: consider putting in domElSelector or domElId
+		var deferredMain_loadPage = new Deferred();
+	
+		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aSrc, aClickSetName, aCallbackSetName, aLoadPageData);
+		console.log('promise_fhrResponse:', promise_fhrResponse);
+		promise_fhrResponse.then(
+			function(aFHRResponse) {
+				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+				deferredMain_loadPage.resolve([aFHRResponse]);
+			},
+			genericReject.bind(null, 'promise_fhrResponse', deferredMain_loadPage)
+		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_loadPage));
+		
+		return deferredMain_loadPage.promise;
+	},
 	extractData: function(aBtnId, aDataKeysArr) {
 		// takes a copy from btn data object and sends to worker
 		// if the key contains "arrbuf" it is transferred to worker

@@ -244,7 +244,7 @@ function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
 	
 	var rez_clickExec;
 	for (var h=0; h<contentWindowArr.length; h++) {
-		console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
+		try { console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML); } catch(ex) { console.error('ex:', ex) } // ex happens when it loads about:blank and there is no document.documentElement
 		for (var i=0; i<clickSet[aClickSetName].length; i++) {
 			rez_clickExec = clickSet[aClickSetName][i].exec(contentWindowArr[h], contentWindowArr[h].document);
 			if (rez_clickExec) {
@@ -278,7 +278,7 @@ function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
 	var contentWindowArr = getAllContentWins(aContentWindow);
 
 	for (var h=0; h<contentWindowArr.length; h++) {
-		console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML);
+		try { console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML); } catch(ex) { console.error('ex:', ex) } // ex happens when it loads about:blank and there is no document.documentElement
 		for (var i=0; i<callbackSet[aCallbackSetName].length; i++) {
 			var rezTest = callbackSet[aCallbackSetName][i].test(contentWindowArr[h], contentWindowArr[h].document);
 			if (rezTest) {
@@ -477,14 +477,32 @@ var callbackSet = {
 			fhrResponse: {
 				status: false,
 				statusText: 'not-logged-in',
+				signin_url: null // populated if sign in is handled by another web server, but connected into google
 			},
 			test: function(aContentWindow, aContentDocument) {
-				var domEl = aContentDocument.getElementById('gaia_loginform');
-				if (domEl) { // :maintain-per-website:
-					var domElSecond = domEl.querySelector('input[value=PasswordSeparationSignIn]');
-					//var attrAction = domEl.getAttribute('action');
-					//if (attrAction && attrAction == 'https://accounts.google.com/ServiceLoginAuth') {
-					if (domElSecond) {
+				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+				var docuri = webnav.document.documentURI;
+				console.log('docuri:', docuri);
+				console.log('win loc:', aContentWindow.location.href);
+				for (var l in aContentWindow.location) {
+					console.log('win loc:', l, JSON.stringify(aContentWindow.location[l]));
+				}
+				console.error('ok end line');
+				if (aContentWindow.location.hostname == 'accounts.google.com') {
+					var domEl = aContentDocument.getElementById('gaia_loginform');
+					if (domEl) { // :maintain-per-website:
+						// var domElSecond = domEl.querySelector('input[value=PasswordSeparationSignIn]');
+						var attrAction = domEl.getAttribute('action');
+						if (attrAction && attrAction == 'https://accounts.google.com/ServiceLoginAuth') {
+						// if (domElSecond) {
+							return this.fhrResponse;
+						}
+					}
+				} else {
+					if (aContentWindow.location.href.indexOf('http://127.0.0.1/nativeshot') !== 0) {
+						// because it might load the allow screen, which is hostname of "127.0.0.1" and path of "/nativeshot", thats just what i set all my redir urls to. sooo if its not that, then give logged out screen
+						// if hostname is not google, then it is not-logged-in for some google account handler by another web server
+						this.fhrResponse.signin_url = aContentWindow.location.href.substr(0, aContentWindow.location.href.indexOf('accounts.google.com') + 'accounts.google.com'.length)
 						return this.fhrResponse;
 					}
 				}
@@ -665,6 +683,26 @@ var callbackSet = {
 					}
 					
 					this.fhrResponse.allowedParams = receivedParamsKeyVal;
+					return this.fhrResponse;	
+				}
+			}
+		}
+	],
+	main_imgur: [
+		{
+			fhrResponse: {
+				status: true,
+				statusText: 'loaded'
+			},
+			test: function(aContentWindow, aContentDocument) {
+				
+				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+				var docuri = webnav.document.documentURI;
+
+				if (docuri.indexOf('about:') !== 0) {
+					console.log('aContentWindow.location.href:', aContentWindow.location.href);
+					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
+
 					return this.fhrResponse;	
 				}
 			}
