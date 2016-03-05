@@ -539,8 +539,8 @@ function get_gEMenuDomJson() {
 				['xul:menupopup', {id: 'myMenu1'},
 					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-quick']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-quick') }}],
 					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-browse']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-browse') }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_copy']), oncommand:function(e){ gEditor.copyToClipboard(e) }}],
-					['xul:menuitem', {id:'print_menuitem', label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_print']), oncommand:function(e){ gEditor.sendToPrinter(e) }}],
+					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_copy']), oncommand:function(e){ gEditor.uploadOauthDataUrl(e, 'copy') }}],
+					['xul:menuitem', {id:'print_menuitem', label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_print']), oncommand:function(e){ gEditor.uploadOauthDataUrl(e, 'print') }}],
 					['xul:menu', {label:'Upload to Cloud Drive'}, // :l10n:
 						['xul:menupopup', {},
 							// ['xul:menuitem', {label:'Amazon Cloud Drive'}],
@@ -719,57 +719,6 @@ var gCanDim = {
 	}
 };
 
-var gNotifierStrRandomizer = ' '; // because on ubuntu if back to back same exact title and/or msg (not sure the combintation) the native alert wont show the second time but alertshown triggers as if it had shown but didnt, but probably triggered cuz the one before it was the same
-var gENotifListener = {
-	observe: function(aSubject, aTopic, aData) {
-		// aSubject is always null
-		// aData is the aClickCookie, i set aClickCookie to notif id. if its not clickable aClickCookie is not set
-		// aTopic is: alertfinished, alertclickcallback, alertshow
-
-		if (aTopic == 'alertclickcallback')	{
-
-			if (gNotifClickCallback[aData]) {
-				gNotifClickCallback[aData]();
-				delete gNotifClickCallback[aData];
-			}
-		} else if (aTopic == 'alertshow') {
-			//gENotifPending[0].shown = true;
-			var shown = gENotifPending.splice(0, 1);
-
-			gNotifierStrRandomizer = gNotifierStrRandomizer == ' ' ? '' : ' ';
-		} else if (aTopic == 'alertfinished') {
-
-			if (gNotifClickCallback[aData]) {
-				// user didnt click it
-
-				delete gNotifClickCallback[aData];
-			}
-		}
-	}
-};
-var gNotifClickCallback = {};
-var gNotifLastId = 0;  //minimum gNotifLastId is 1 link687412
-var gENotifPending = []; // contains array of objs like: {shown:false, aTitle:'', aMsg:'', aClickCookie:''}
-var gNotifTimerRunning = false;
-// ensures to show notifications in order
-const gNotifTimerInterval = 1000; //ms
-var gENotifCallback = {
-	notify: function() {
-
-		if (gENotifPending.length > 0) {
-			if (gENotifPending[0].aClickCookie !== null) {
-
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, true, gENotifPending[0].aClickCookie, gENotifListener, 'NativeShot');
-			} else {
-				myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + gENotifPending[0].aTitle + gNotifierStrRandomizer, gENotifPending[0].aMsg, null, null, gENotifListener, 'NativeShot');
-			}
-			gNotifTimer.initWithCallback(gENotifCallback, gNotifTimerInterval, Ci.nsITimer.TYPE_ONE_SHOT);
-		} else {
-			gNotifTimerRunning = false;
-			gNotifTimer = null;
-		}
-	}
-};
 var gPostPrintRemovalFunc;
 const reuploadTimerInterval = 10000;
 
@@ -1362,6 +1311,19 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 			genericReject.bind(null, 'promise_pickAcct', 0)
 		).catch(genericCatch.bind(null, 'promise_pickAcct', 0));
 	},
+	open_login: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		var newtab = aBrowser.ownerDocument.defaultView.gBrowser.loadOneTab(this.btn.buttondata, {
+			inBackground: false,
+			relatedToCurrent: false
+		});
+		gEditorABData_BtnENTRY.setBtnState({
+			bTxt: 'Click to retry after logging in',
+			bType: 'button',
+			bClick: 'retry',
+			bMenu: undefined,
+			buttondata: null
+		});
+	},
 	none: function() {
 		// used for removing a callback
 	}
@@ -1731,193 +1693,6 @@ var gEditor = {
 		gEditor.borderSelection();
 		gCanDim.execFunc('restore');
 	},
-	showNotif: function(aTitle, aMsg, aClickCallback) {
-		if (!gNotifTimer) {
-			gNotifTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-		}
-		gNotifLastId++; //minimum gNotifLastId is 1 link687412
-		gENotifPending.push({
-			//shown: false, //no need as as long as it doesnt show its element will be first in the array
-			aTitle: aTitle,
-			aMsg: aMsg,
-			aClickCookie: aClickCallback ? gNotifLastId : null
-		});
-		if (aClickCallback) {
-			gNotifClickCallback[gNotifLastId] = aClickCallback;
-
-		}
-		if (!gNotifTimerRunning) {
-			gENotifCallback.notify(gNotifTimer);
-		}
-	},
-	copyToClipboard: function(e) {
-		this.compositeSelection();
-			
-		// based on:
-			// mostly: https://github.com/mxOBS/deb-pkg_icedove/blob/8f8955df7c9db605cf6903711dcbfc6dd7776e50/mozilla/toolkit/devtools/gcli/commands/screenshot.js#L161
-			// somewhat on: https://github.com/dadler/thumbnail-zoom/blob/76a6edded0ca4ef1eb76d4c1b2bc363b433cde63/src/resources/clipboardService.js#L78-L209
-			
-		var data = this.canComp.toDataURL('image/png', '');
-		var channel = Services.io.newChannel(data, null, null);
-		var input = channel.open();
-		var imgTools = Cc['@mozilla.org/image/tools;1'].getService(Ci.imgITools);
-		
-		var container = {};
-		imgTools.decodeImageData(input, channel.contentType, container);
-
-		var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
-		wrapped.data = container.value;
-		
-		var trans = Transferable(this.gBrowserDOMWindow);
-
-		trans.addDataFlavor(channel.contentType);
-		
-		trans.setTransferData(channel.contentType, wrapped, -1);
-		
-		Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-		
-		/* to consider
-			// have to first set imageURL = createBlob
-		  
-		   // Also put the image's html <img> tag on the clipboard.  This is 
-		   // important (at least on OSX): if we copy just jpg image data,
-		   // programs like Photoshop and Thunderbird seem to receive it as
-		   // uncompressed png data, which is very large, bloating emails and
-		   // causing randomly truncated data.  But if we also include a
-		   // text/html flavor referring to the jpg image on the Internet, 
-		   // those programs retrieve the image directly as the original jpg
-		   // data, so there is no data bloat.
-		  
-		  var str = Components.classes['@mozilla.org/supports-string;1'].createInstance(Ci.nsISupportsString);
-		  if (str) {
-			str.data = '<img src="' + imageURL + '" />';
-			trans.addDataFlavor('text/html');
-			trans.setTransferData('text/html', str, str.data.length * 2);
-		  }    
-		*/
-		
-		gEditor.showNotif(justFormatStringFromName(core.addon.l10n.bootstrap['notif-title_clipboard-ok']), justFormatStringFromName(core.addon.l10n.bootstrap['notif-body_clipboard-ok']));
-		
-		addEntryToLog('copy');
-		
-		this.closeOutEditor(e);
-	},
-	sendToPrinter: function(e) {
-		this.compositeSelection();
-		if (!prefGet('print_preview')) {
-			// print method link678321212
-			var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
-			var doc = win.document;
-			var iframe = doc.createElementNS(NS_HTML, 'iframe');
-			iframe.addEventListener('load', function() {
-				iframe.removeEventListener('load', arguments.callee, true);
-
-
-				gPostPrintRemovalFunc = function() {
-					iframe.parentNode.removeChild(iframe);
-
-					gPostPrintRemovalFunc = null;
-				};
-				iframe.contentWindow.addEventListener('afterprint', function() {
-					// iframe.parentNode.removeChild(iframe);
-
-					//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
-					iframe.setAttribute('src', 'about:blank');
-				}, false);
-				iframe.contentWindow.print();
-			}, true); // if i use false here it doesnt work
-			iframe.setAttribute('src', this.canComp.toDataURL('image/png'));
-			iframe.setAttribute('style', 'display:none');
-			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
-		} else {
-			
-			
-			/*
-			var aPrintPrevWin;
-			// open print preview window on monitor with coords 0,0 wxh 10x10
-			// find monitor dimentiosn that has coord 0,0
-			var primaryScreenPoint = new Rect(1, 1, 1, 1);
-			for (var i=0; i<colMon.length; i++) {
-				if (colMon[i].rect.contains(primaryScreenPoint)) {
-					aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', 'chrome,width=' + colMon[i].w + ',height=' + colMon[i].h + ',screenX=0,screenY=0', null);
-				}
-			}
-			*/
-			// i dont do it that way because i want the available rect so i do this way:
-			// var sDims = {x:{},y:{},w:{},h:{}};
-			// Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager).screenForRect(1,1,1,1).GetAvailRect(sDims.x, sDims.y, sDims.w, sDims.h);
-
-			var aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
-			if (this.printPrevWins) {
-				this.printPrevWins.push(aPrintPrevWin);
-			} else {
-				this.printPrevWins = [aPrintPrevWin];
-			}
-			var savedDataURL = this.canComp.toDataURL('image/png');
-			aPrintPrevWin.addEventListener('load', function() {
-				aPrintPrevWin.removeEventListener('load', arguments.callee, false);
-				aPrintPrevWin.focus();
-				// old stuff
-				var win = aPrintPrevWin;
-				var doc = win.document;
-				var iframe = doc.createElementNS(NS_XUL, 'browser');
-				iframe.addEventListener('load', function() {
-					iframe.removeEventListener('load', arguments.callee, true);
-
-
-					
-					var aPPListener = win.PrintPreviewListener;
-					var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
-					var aOrigPPExit = aPPListener.onExit;
-					aPPListener.onExit = function() {
-						aOrigPPExit.call(aPPListener);
-						iframe.parentNode.removeChild(iframe);
-						aPPListener.onExit = aOrigPPExit;
-						aPPListener.getSourceBrowser = aOrigPPgetSourceBrowser;
-						win.close();
-					};
-					aPPListener.getSourceBrowser = function() {
-						return iframe;
-					};
-					win.PrintUtils.printPreview(aPPListener);
-					
-				}, true); // if i use false here it doesnt work
-				iframe.setAttribute('type', 'content');
-				iframe.setAttribute('src', savedDataURL);
-				iframe.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
-				doc.documentElement.appendChild(iframe); // src page wont load until i append to document
-				// end old stuff
-				
-				
-			}, false);
-		}
-		addEntryToLog('print');
-		
-		this.closeOutEditor(e); // with print preview, cannot do multiple print previews, can probably do multiple other things if its not print preview though
-		
-		/* heres a print method to not show headers etc
-			// https://dxr.mozilla.org/mozilla-central/source/browser/base/content/sync/utils.js?offset=200#148
-			this._preparePPiframe(elid, function(iframe) {
-			  let webBrowserPrint = iframe.contentWindow
-										  .QueryInterface(Ci.nsIInterfaceRequestor)
-										  .getInterface(Ci.nsIWebBrowserPrint);
-			  let printSettings = PrintUtils.getPrintSettings();
-
-			  // Display no header/footer decoration except for the date.
-			  printSettings.headerStrLeft
-				= printSettings.headerStrCenter
-				= printSettings.headerStrRight
-				= printSettings.footerStrLeft
-				= printSettings.footerStrCenter = "";
-			  printSettings.footerStrRight = "&D";
-
-			  try {
-				webBrowserPrint.print(printSettings, null);
-			  } catch (ex) {
-				// print()'s return codes are expressed as exceptions. Ignore.
-			  }
-		*/
-	},
 	shareToTwitter: function(e) {
 		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
 		
@@ -2123,6 +1898,25 @@ var gEditor = {
 			addEntryToLog(serviceTypeStr);
 		}
 	},
+	uploadOauthDataUrl: function(e, aOAuthService) {
+		// print
+		// copy
+		
+		this.compositeSelection();
+		
+		var cDOMWindow = gEditor.gBrowserDOMWindow;
+		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
+		
+		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
+		
+		cBtn.data.dataurl = this.canComp.toDataURL('image/png', '');
+
+		gEditor.closeOutEditor(e);
+		
+		addEntryToLog(aOAuthService);
+		
+		doServiceForBtnId(cBtn.btnId, aOAuthService);
+	},
 	uploadOauth: function(e, aOAuthService) {
 		// aOAuthService - string
 			// dropbox
@@ -2203,19 +1997,179 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 				cMethodForService = 'reverseSearchImgArrBufForBtnId';
 			
 			break;
+		case 'copy':
+			
+				cMethodForService = 'bootstrap_copyForBtnId';
+			
+			break;
+		case 'print':
+			
+				cMethodForService = 'bootstrap_printForBtnId';
+			
+			break;
 		default:
 			console.error('invalid aOAuthService:', aOAuthService);
 			throw new Error('invalid aOAuthService!!');
 	}
 	cBtnStore.meta.action = cMethodForService;
 	
-	var promise_methodForService = MainWorker.post(cMethodForService, [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId]); // link888778
-	promise_methodForService.then(
-		function(aVal) {
-			console.log('Fullfilled - promise_methodForService - ', aVal);
-		},
-		genericReject.bind(null, 'promise_methodForService', 0)
-	).catch(genericCatch.bind(null, 'promise_methodForService', 0));
+	if (cMethodForService.indexOf('bootstrap_') === 0) {
+		BOOTSTRAP[cMethodForService.substr(10)](cBtnStore.btnId);
+	} else {
+		var promise_methodForService = MainWorker.post(cMethodForService, [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId]); // link888778
+		promise_methodForService.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_methodForService - ', aVal);
+			},
+			genericReject.bind(null, 'promise_methodForService', 0)
+		).catch(genericCatch.bind(null, 'promise_methodForService', 0));
+	}
+}
+
+function printForBtnId(aBtnId) {
+	var cBtnStore = gEditorABData_Btn[aBtnId];
+	if (!prefGet('print_preview')) {
+		// print method link678321212
+		var win = Services.wm.getMostRecentWindow('navigator:browser'); //Services.appShell.hiddenDOMWindow;
+		var doc = win.document;
+		var iframe = doc.createElementNS(NS_HTML, 'iframe');
+		iframe.addEventListener('load', function() {
+			iframe.removeEventListener('load', arguments.callee, true);
+
+
+			gPostPrintRemovalFunc = function() {
+				iframe.parentNode.removeChild(iframe);
+
+				gPostPrintRemovalFunc = null;
+			};
+			iframe.contentWindow.addEventListener('afterprint', function() {
+				// iframe.parentNode.removeChild(iframe);
+
+				//discontinued immediate removal as it messes up/deactivates print to file on ubuntu from my testing
+				iframe.setAttribute('src', 'about:blank');
+			}, false);
+			iframe.contentWindow.print();
+		}, true); // if i use false here it doesnt work
+		iframe.setAttribute('src', cBtnStore.data.dataurl);
+		iframe.setAttribute('style', 'display:none');
+		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
+	} else {
+		
+		
+		/*
+		var aPrintPrevWin;
+		// open print preview window on monitor with coords 0,0 wxh 10x10
+		// find monitor dimentiosn that has coord 0,0
+		var primaryScreenPoint = new Rect(1, 1, 1, 1);
+		for (var i=0; i<colMon.length; i++) {
+			if (colMon[i].rect.contains(primaryScreenPoint)) {
+				aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', 'chrome,width=' + colMon[i].w + ',height=' + colMon[i].h + ',screenX=0,screenY=0', null);
+			}
+		}
+		*/
+		// i dont do it that way because i want the available rect so i do this way:
+		// var sDims = {x:{},y:{},w:{},h:{}};
+		// Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager).screenForRect(1,1,1,1).GetAvailRect(sDims.x, sDims.y, sDims.w, sDims.h);
+
+		var aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
+		if (this.printPrevWins) {
+			this.printPrevWins.push(aPrintPrevWin);
+		} else {
+			this.printPrevWins = [aPrintPrevWin];
+		}
+		aPrintPrevWin.addEventListener('load', function() {
+			aPrintPrevWin.removeEventListener('load', arguments.callee, false);
+			aPrintPrevWin.focus();
+			// old stuff
+			var win = aPrintPrevWin;
+			var doc = win.document;
+			var iframe = doc.createElementNS(NS_XUL, 'browser');
+			iframe.addEventListener('load', function() {
+				iframe.removeEventListener('load', arguments.callee, true);
+
+
+				
+				var aPPListener = win.PrintPreviewListener;
+				var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
+				var aOrigPPExit = aPPListener.onExit;
+				aPPListener.onExit = function() {
+					aOrigPPExit.call(aPPListener);
+					iframe.parentNode.removeChild(iframe);
+					aPPListener.onExit = aOrigPPExit;
+					aPPListener.getSourceBrowser = aOrigPPgetSourceBrowser;
+					win.close();
+				};
+				aPPListener.getSourceBrowser = function() {
+					return iframe;
+				};
+				win.PrintUtils.printPreview(aPPListener);
+				
+			}, true); // if i use false here it doesnt work
+			iframe.setAttribute('type', 'content');
+			iframe.setAttribute('src', cBtnStore.data.dataurl);
+			iframe.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
+			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
+			// end old stuff
+			
+			
+		}, false);
+	}
+	
+	cBtnStore.setBtnState({
+		bTxt: 'Sent to Print - Retry', // :l10n:
+		bType: 'button',
+		bClick: 'retry',
+		bIcon: core.addon.path.images + 'print16.png'
+	});
+}
+
+function copyForBtnId(aBtnId) {
+	var cBtnStore = gEditorABData_Btn[aBtnId];
+	
+	var data = cBtnStore.data.dataurl;
+	var channel = Services.io.newChannel(data, null, null);
+	var input = channel.open();
+	var imgTools = Cc['@mozilla.org/image/tools;1'].getService(Ci.imgITools);
+	
+	var container = {};
+	imgTools.decodeImageData(input, channel.contentType, container);
+
+	var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
+	wrapped.data = container.value;
+	
+	var trans = Transferable(this.gBrowserDOMWindow);
+
+	trans.addDataFlavor(channel.contentType);
+	
+	trans.setTransferData(channel.contentType, wrapped, -1);
+	
+	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+	
+	/* to consider
+		// have to first set imageURL = createBlob
+	  
+	   // Also put the image's html <img> tag on the clipboard.  This is 
+	   // important (at least on OSX): if we copy just jpg image data,
+	   // programs like Photoshop and Thunderbird seem to receive it as
+	   // uncompressed png data, which is very large, bloating emails and
+	   // causing randomly truncated data.  But if we also include a
+	   // text/html flavor referring to the jpg image on the Internet, 
+	   // those programs retrieve the image directly as the original jpg
+	   // data, so there is no data bloat.
+	  
+	  var str = Components.classes['@mozilla.org/supports-string;1'].createInstance(Ci.nsISupportsString);
+	  if (str) {
+		str.data = '<img src="' + imageURL + '" />';
+		trans.addDataFlavor('text/html');
+		trans.setTransferData('text/html', str, str.data.length * 2);
+	  }    
+	*/
+	cBtnStore.setBtnState({
+		bTxt: 'Image Copied - Copy Again', // :l10n:
+		bType: 'button',
+		bClick: 'retry',
+		bIcon: core.addon.path.images + 'copy16.png'
+	});
 }
 
 function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPostDataObj) {
@@ -5539,7 +5493,8 @@ function FHR() {
 				this.frame.setAttribute('remote', 'true');
 			// }
 			this.frame.setAttribute('type', 'content');
-			this.frame.setAttribute('style', 'height:100px;border:2px solid steelblue;');
+			// this.frame.setAttribute('style', 'height:100px;border:2px solid steelblue;');
+			this.frame.setAttribute('style', 'height:0;border:0;');
 			
 			aDocument.documentElement.appendChild(this.frame);
 			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);			
