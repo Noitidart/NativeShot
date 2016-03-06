@@ -526,8 +526,6 @@ const gDefLineWidth = '1';
 var gDefResizePtSize = 7;
 const gDefResizePtStyle = '#000';
 
-var gNotifTimer;
-
 var gEMenuDomJson;
 var gEMenuArrRefs = {
 	select_fullscreen: null
@@ -720,13 +718,6 @@ var gCanDim = {
 };
 
 var gPostPrintRemovalFunc;
-const reuploadTimerInterval = 10000;
-
-function notifCB_saveToFile(aOSPath_savedFile) {
-
-	var nsifile = FileUtils.File(aOSPath_savedFile);
-	showFileInOSExplorer(nsifile);
-}
 
 var gMacTypes;
 function initMacTypes() {
@@ -1212,6 +1203,7 @@ function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.session
 		getBtnFHR: gEditorABData_getBtnFhr.bind(null, gEditorABData_BtnId)
 	};
 	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId].BtnRef);
+	this.btnIds.push(gEditorABData_BtnId);
 	gEditorABData_Btn[gEditorABData_BtnId].setBtnState = gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]);
 	
 	return gEditorABData_Btn[gEditorABData_BtnId];
@@ -2116,7 +2108,7 @@ function printForBtnId(aBtnId) {
 	}
 	
 	cBtnStore.setBtnState({
-		bTxt: 'Sent to Print - Retry', // :l10n:
+		bTxt: 'Sent to Print - Send Again', // :l10n:
 		bType: 'button',
 		bClick: 'retry',
 		bIcon: core.addon.path.images + 'print16.png'
@@ -2700,6 +2692,7 @@ function gEUnload(e) {
 		console.log('need to show notif bar now');
 		gEditorABData_Bar[gEditor.sessionId].shown = true; // otherwise setBtnState will not update react states
 		AB.setState(gEditorABData_Bar[gEditor.sessionId].ABRef);
+		ifEditorClosed_andBarHasOnlyOneAction_copyToClip(gEditor.sessionId);
 	} else {
 		// no need to show, delete it
 		console.log('no need to show, delete it');
@@ -4316,6 +4309,9 @@ var MainWorkerMainThreadFuncs = {
 		var cBtnData = gEditorABData_Btn[aBtnId].data;
 		for (var p in aDataObj) {
 			cBtnData[p] = aDataObj[p];
+			if (p == 'copyTxt' || p == 'dataurl') {
+				ifEditorClosed_andBarHasOnlyOneAction_copyToClip(gEditorABData_Btn[aBtnId].sessionId);
+			}
 		}
 		aDataObj = null;
 		
@@ -4342,6 +4338,83 @@ var MainWorkerMainThreadFuncs = {
 	}
 };
 // end - MainWorkerMainThreadFuncs
+
+function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
+	// copy to clipboard if there was only one btn for this bar
+	var cBarData = gEditorABData_Bar[aSessionId];
+	console.log('cBarData:', cBarData, 'shown:', cBarData.shown);
+	if (cBarData.shown && cBarData.btnIds.length == 1) {
+		// only one action done for this so copy it to clipboard,
+		// and close bar within 10sec
+		var onlyBtn = gEditorABData_Btn[cBarData.btnIds[0]];
+		if (onlyBtn.data.copyTxt) {
+			copyTextToClip(onlyBtn.data.copyTxt);
+			var alertNotifTitle = 'Copied to Clipboard';
+			var alertNotifBody = 'Link copied to your clipboard';
+			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + alertNotifTitle, alertNotifBody, null, null, null, 'NativeShot');
+		}
+		autocloseBar(aSessionId);
+	} else {
+		console.error('bar not yet shown');
+	}
+}
+
+var gAutocloseBar = {};
+
+function autocloseBar(aSessionId) {
+	var cBarData = gEditorABData_Bar[aSessionId];
+	console.log('cBarData:', cBarData, 'shown:', cBarData.shown);
+	if (gAutocloseBar[aSessionId]) {
+		return; // already in process of autoclose
+	}
+	if (cBarData.shown) {
+		gAutocloseBar[aSessionId] = {
+			timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer),
+			timeLeft: 16, // sec, is really 10, because i timeLeft-- at start of notify
+			callback: {
+				notify: function() {
+					if (AB.Callbacks[cBarData.ABRef.aId]) {
+						// not yet closed
+						gAutocloseBar[aSessionId].timeLeft--;
+						if (gAutocloseBar[aSessionId].timeLeft === 0) {
+							AB.Callbacks[cBarData.ABRef.aId]();
+							delete gAutocloseBar[aSessionId];
+						} else {
+							cBarData.ABRef.aTxt = cBarData.ABRef.origATxt + ' - One action made so copied to clipboard and closing this bar in ' + gAutocloseBar[aSessionId].timeLeft + 's';
+							AB.setState(cBarData.ABRef);
+							gAutocloseBar[aSessionId].timer.initWithCallback(gAutocloseBar[aSessionId].callback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+						}
+					} else {
+						// user closed it out
+						delete gAutocloseBar[aSessionId];
+					}
+				}
+			}
+		};
+		
+		cBarData.ABRef.origATxt = cBarData.ABRef.aTxt;
+		cBarData.ABRef.aBtns.splice(0, 0, {
+			customIdentifier: 'dont-autoclose',
+			bTxt: 'Keep Bar Open', // :l10n:
+			bClick: function() {
+				gAutocloseBar[aSessionId].timer.cancel();
+				delete gAutocloseBar[aSessionId];
+				for (var i=0; i<this.inststate.aBtns.length; i++) {
+					if (this.inststate.aBtns[i].customIdentifier && this.inststate.aBtns[i].customIdentifier == 'dont-autoclose') {
+						this.inststate.aBtns.splice(i, 1);
+						break;
+					}
+				}
+				this.inststate.aTxt = this.inststate.origATxt;
+				AB.setState(this.inststate);
+			}
+		});
+		AB.setState(cBarData.ABRef);
+		gAutocloseBar[aSessionId].timer.initWithCallback(gAutocloseBar[aSessionId].callback, 0, Ci.nsITimer.TYPE_ONE_SHOT);
+	} else {
+		console.error('bar not yet shown');
+	}
+}
 
 var nodataBtnFhrs = {}; // key is nodataBtnId and value is the fhr
 function fhr_ifBtnIdNodata(aBtnId) {
@@ -4617,6 +4690,7 @@ function shutdown(aData, aReason) {
 	CustomizableUI.destroyWidget('cui_nativeshot');
 	
 	AB.uninit();
+	AB.Callbacks = {}; // so the autoclosers know not to keep trying
 	
 	//windowlistener more
 	windowListener.unregister();
