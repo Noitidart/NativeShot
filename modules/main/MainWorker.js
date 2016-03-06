@@ -388,7 +388,6 @@ function destroyFhr_idBtnIdIsNoData(aBtnId) {
 function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRentryData) {
 	
 	var cBtnStore = getBtnStore(aBtnId);
-	// var deferredMain_saveToDiskImgArrBufForBtnId = aPreExistingDeferred_dueToReentry ? aPreExistingDeferred_dueToReentry : new Deferred();
 	
 	self.postMessage(['updateAttnBar', aBtnId, {bTxt: 'Saving...'}]); // :l10n:
 	
@@ -424,7 +423,6 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 						self.postMessage(['callInBootstrap', ['macSetLevelOfBrowseFile']]);
 					}
 					
-					// return deferredMain_saveToDiskImgArrBufForBtnId.promise;
 					return cBtnStore.getDeferred().promise;
 			
 				break;
@@ -499,11 +497,6 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 					}]); // :l10n:
 				});
 				
-				deferredMain_saveToDiskImgArrBufForBtnId.resolve({
-					status: false,
-					msg: 'Failed while trying to save to disk',
-					OSFileError: OSFileError
-				});
 				throw OSFileError; // break;
 			}
 			break;
@@ -758,14 +751,14 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	}
 	
 	// ok purely dev checking
-	for (var dataKey in defaultDataKeys_all) { // console.log('remove on production')
-		defaultDataKeys_service[aServiceName][dataKey] = undefined; // console.log('remove on production')
-	} // console.log('remove on production')
-	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName], true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing
+	for (var dataKey in defaultDataKeys_all) { // console.log('purely dev checking')
+		defaultDataKeys_service[aServiceName][dataKey] = undefined; // console.log('purely dev checking')
+	} // console.log('purely dev checking')
+	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName], true); // console.log('purely dev checking') // will throw if extra keys are found. the aboves would have already throw if any required key was missing
 	
-	if (aData.noWriteObj) {
-		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj, true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing
-	}
+	if (aData.noWriteObj) { // console.log('purely dev checking') 
+		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj, true);  // console.log('purely dev checking') // will throw if extra keys are found. the aboves would have already throw if any required key was missing
+	} // console.log('purely dev checking') 
 	
 	// read in log
 	// readHistoryLog();
@@ -815,7 +808,7 @@ function logDataMergeObjects(aOptions, aOptionsDefaults, throwOnExtraKey) {
 		for (var aOptKey in aOptions) {
 			if (!(aOptKey in aOptionsDefaults)) {
 				console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
-				throw new Error('ya throw');
+				throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults');
 			}
 		}
 	}
