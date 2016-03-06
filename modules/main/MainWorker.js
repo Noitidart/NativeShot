@@ -1072,7 +1072,7 @@ function autogenScreenshotFileName(aDateGettime) {
 	
 	var Mmm = core.addon.l10n.dateFormat['month.' + (nowDate.getMonth() + 1) + '.Mmm'];
 	var YYYY = nowDate.getFullYear();
-	var DD = nowDate.getDate() - 1;
+	var DD = nowDate.getDate();
 	
 	var mm = nowDate.getMinutes();
 	var hh = nowDate.getHours(); // 0 - 23
