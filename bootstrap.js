@@ -4353,7 +4353,9 @@ function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 			var alertNotifBody = 'Link copied to your clipboard';
 			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + alertNotifTitle, alertNotifBody, null, null, null, 'NativeShot');
 		}
-		autocloseBar(aSessionId);
+		if (onlyBtn.data.copyTxt || onlyBtn.data.dataurl) { // these two keys signify completion
+			autocloseBar(aSessionId);
+		}
 	} else {
 		console.error('bar not yet shown');
 	}
