@@ -4736,6 +4736,10 @@ function shutdown(aData, aReason) {
 		OCRADWorker._worker.terminate();
 	}
 	
+	if (bootstrap.TesseractWorker) {
+		TesseractWorker._worker.terminate();
+	}
+	
 	// destroy any FHR's that the devuser did not clean up
 	for (var DSTR_I=0; DSTR_I<gFHR.length; DSTR_I++) {
 		if (gFHR[DSTR_I].destroy) {
