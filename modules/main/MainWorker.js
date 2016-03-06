@@ -741,11 +741,11 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	gUsedD.push(aData.d);
 	
 	console.log('now checking service keys');
-	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName]); // ensure it is correct for this type // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
+	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName]); // ensure it is correct for this type // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution
 	console.log('check passed');
 	
 	// before adding in noWriteObj lets save a copy of it without it, needed for appending
-	delete aData.noWriteObj; // blank one gets added by the logDataMergeObjects above, need to go after that though, because that adds in things like w:2 (nothing else as of now), that line will go away on production so then i can remove this line to. console.log('remove on prod')
+	delete aData.noWriteObj; // blank one gets added by the logDataMergeObjects above, need to go after that though, because that adds in things like w:2 (nothing else as of now), that line will go away on production so then i can remove this line to.
 	var dataWithoutNoWriteObjStr = JSON.stringify(aData);
 	
 	if (defaultDataKeys_service[aServiceName].noWriteObj) {
@@ -754,7 +754,7 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 		
 		// format depends (and expects) the keys in the write part of the data obj to be present and valid, so i make sure to throw in previous block if something was not set. and thats why i do formatLogEntryNoWriteObj after all of them are set
 		formatLogEntryNoWriteObj(aData);
-		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj); // ensure the noWriteObj for this object has the write keys // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution // console.log('remove this line on prod');
+		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj); // ensure the noWriteObj for this object has the write keys // this is to ensure no deverror, i can remove it on production. the validateOptionsObj for defaultDataKeys_all is not for deverror at all, as they are used to merge in like t and d so must remain even in prodcution
 	}
 	
 	// ok purely dev checking
