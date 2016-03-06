@@ -157,8 +157,24 @@ function xpcomSetTimeout(aNsiTimer, aDelayTimerMS, aTimerCallback) {
 //////////////////////////////////////////////////////// end - boilerplate
 
 // START - framescript functionality
+if (content.document.readyState == 'complete') {
+	console.error('frame script ready, readyState is complete and location is:', content.location.href)
+	contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FHRFrameScriptReady']);
+} else {
+	console.error('frame script NOT YET ready, readyState is "' + content.document.readyState + '" and location is:', content.location.href)
+	addEventListener('DOMContentLoaded', listenInitialReady, false);
+}
 
-contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FHRFrameScriptReady']);
+function listenInitialReady(e) {
+	var contentWindow = e.target.defaultView;
+	if (contentWindow.frameElement) {
+		// not yet top most
+	} else {
+		console.error('ok now initial page loaded, readyState:', contentWindow.document.readyState, 'and loc:', contentWindow.location.href); // well readyState is interactive, it is not complete. but thats ok, because i only have listeners for `DOMContentLoaded`, nothing for `load`
+		removeEventListener('DOMContentLoaded', listenInitialReady, false);
+		contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FHRFrameScriptReady']);
+	}
+}
 
 var pageLoading = false;
 var gMainDeferred_loadPage; // resolve it with what you usually resolve XHR with, well as much as you can
