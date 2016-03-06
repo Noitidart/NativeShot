@@ -761,11 +761,11 @@ function addEntryToLog(aServiceName, aData={}, returnDefaultDataKeys) {
 	for (var dataKey in defaultDataKeys_all) { // console.log('remove on production')
 		defaultDataKeys_service[aServiceName][dataKey] = undefined; // console.log('remove on production')
 	} // console.log('remove on production')
-	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName], true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing // console.log('remove on production')
+	logDataMergeObjects(aData, defaultDataKeys_service[aServiceName], true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing
 	
-	if (aData.noWriteObj) { // console.log('remove on production')
-		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj, true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing // console.log('remove on production')
-	} // console.log('remove on production')
+	if (aData.noWriteObj) {
+		logDataMergeObjects(aData.noWriteObj, defaultDataKeys_service[aServiceName].noWriteObj, true); // will throw if extra keys are found. the aboves would have already throw if any required key was missing
+	}
 	
 	// read in log
 	// readHistoryLog();
