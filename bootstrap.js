@@ -1405,7 +1405,9 @@ var gEditor = {
 			if (setAsSelected) {
 				gESelected = true;
 				gESelectedRect = setAsSelected.clone();
-				gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]);
+				gEditor.setSelectionStyles();
+				gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
+				gEditor.restorePreSelectionStyles();
 			}
 		}
 	},
@@ -1478,6 +1480,7 @@ var gEditor = {
 	selectMonitor: function(iMon, e) {
 		// iMon -1 for current monitor
 		// iMon -2 for all monitors
+		gEditor.setSelectionStyles();
 		switch (iMon) {
 			case -2:
 			
@@ -1500,7 +1503,7 @@ var gEditor = {
 					colMon[iMon].E.ctxDim.clearRect(0, 0, colMon[iMon].w, colMon[iMon].h);
 		}
 		gESelected = true;
-		
+		gEditor.restorePreSelectionStyles();
 	},
 	selectWindow: function(e) {
 		
@@ -1627,15 +1630,20 @@ var gEditor = {
 		}
 	},
 	borderSelection: function() {
+		// must have called setSelectionStyles before calling border selection
 		if (!gESelected) {
 			// console.log('no selection');
+			return;
+		}
+		
+		if (gESelectedRect.width == 0 && gESelectedRect.height == 0) {
 			return;
 		}
 		
 		// draw dashed border
 		gCanDim.execFunc('beginPath');
 		gCanDim.execFunc('translate', [0.5, 0.5]);
-		gCanDim.execFunc('rect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height]); // draw invisible rect for stroke
+		gCanDim.execFunc('rect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3}); // draw invisible rect for stroke
 		gCanDim.execFunc('stroke');
 		
 		// gCanDim.execProp('strokeStyle', gDefAltStrokeStyle);
@@ -1648,16 +1656,16 @@ var gEditor = {
 		gCanDim.execProp('fillStyle', gDefResizePtStyle);
 		gCanDim.execFunc('setLineDash', [[0]]);
 		
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize]); // top left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize]); // top center
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize]); // top right
+		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top left
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top center
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top right
 		                  
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize]); // middle left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize]); // middle right
+		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // middle left
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // middle right
 		                  
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize]); // bottom left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize]); // bottom center
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2)  + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize]); // bottom right
+		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom left
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom center
+		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2)  + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom right
 		
 		gCanDim.execFunc('fill');
 		gCanDim.execFunc('translate', [0.5, 0.5]);
