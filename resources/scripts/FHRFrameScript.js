@@ -219,7 +219,11 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 		xpcomSetTimeout(gTimeout, gTimeoutMs, pageTimeouted); //gTimeout = setTimeout(pageTimeouted, gTimeoutMs);
 		
 		if (aSrc) {
-			content.location = aSrc;
+			if (aSrc == 'RELOAD') {
+				content.location.reload(true);
+			} else {
+				content.location = aSrc;
+			}
 		} else if (aClickSetName) {
 			if (!clickSet[aClickSetName]) {
 				console.error('clickSet name not found!! aClickSetName:', aClickSetName);
