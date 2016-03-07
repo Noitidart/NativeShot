@@ -203,6 +203,11 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 			throw new Error('cannot load yet, as previous page is still loading');
 		}
 		
+		var contentWindowArr = getAllContentWins(content);
+		for (var h=0; h<contentWindowArr.length; h++) {
+			contentWindowArr[h].stop();
+		}
+		
 		gData = aData;
 		gMainDeferred_loadPage = new Deferred();
 		
@@ -364,7 +369,7 @@ function pageLoaded(e) {
 			
 			// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/folder_name%3Fstate%3Dblah%23access_token%3Dfda25d1a39fd974a08a0485eccd8cd752ae16dd4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3D32f7854e11b0091c6206d6ff3668a1f6f4f99c52%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 		} else {
-			tryLoadeds(contentWindow, cLoadedCallbackSetName);			
+			tryLoadeds(content, cLoadedCallbackSetName); // i dont know why, but if i put contentWindow here, i get cant access dead object. with the imgur retry after login. so when reuse fhr. so weird. :todo: figure this out for real
 		}
 	}
 }
@@ -372,7 +377,10 @@ function pageLoaded(e) {
 function loadPage_finalizer(aFHRResponse, aDoStop) {
 	
 	if (aDoStop) {
-		content.stop();
+		var contentWindowArr = getAllContentWins(content);
+		for (var h=0; h<contentWindowArr.length; h++) {
+			contentWindowArr[h].stop();
+		}
 	}
 	
 	gTimeout.cancel(); //clearTimeout(gTimeout);
@@ -718,8 +726,8 @@ var callbackSet = {
 				if (docuri.indexOf('about:') !== 0) {
 					console.log('aContentWindow.location.href:', aContentWindow.location.href);
 					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
-
-					return this.fhrResponse;	
+					
+					return this.fhrResponse;
 				}
 			}
 		}
