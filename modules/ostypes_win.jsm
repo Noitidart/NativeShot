@@ -220,6 +220,14 @@ var winTypes = function() {
 		{ dwFlags:		this.DWORD },
 		{ szDevice:		this.TCHAR.array(struct_const.CCHDEVICENAME) }
 	]);
+	this.MSG = ctypes.StructType('tagMSG', [
+		{ hwnd: this.HWND },
+		{ message: this.UINT },
+		{ wParam: this.WPARAM },
+		{ lParam: this.LPARAM },
+		{ time: this.DWORD },
+		{ pt: this.POINT }
+	]);
     this.PRECT = this.RECT.ptr;
     this.LPRECT = this.RECT.ptr;
     this.LPCRECT = this.RECT.ptr;
@@ -255,7 +263,9 @@ var winTypes = function() {
 		{ bV5Reserved:		this.DWORD }
 	]);
 	this.LPMONITORINFOEX = this.MONITORINFOEX.ptr;
-
+	this.LPMSG = this.MSG.ptr;
+	this.PMSG = this.MSG.ptr
+	
 	// FURTHER ADV STRUCTS
 	this.PBITMAPINFO = this.BITMAPINFO.ptr;
 	
@@ -326,9 +336,14 @@ var winInit = function() {
 		FOF_ALLOWUNDO: 64,
 		FOF_SILENT: 4,
 		FOF_NOCONFIRMATION: 16,
-		FOF_NOERRORUI: 1024
+		FOF_NOERRORUI: 1024,
 		// FOF_NOCONFIRMMKDIR: ,
 		// FOF_WANTNUKEWARNING: 
+		
+		PM_REMOVE: 1,
+		WM_HOTKEY: 0x0312,
+		MOD_NOREPEAT: 0x4000,
+		VK_SNAPSHOT: 0x2C
 	};
 
 	var _lib = {}; // cache for lib
@@ -788,6 +803,42 @@ var winInit = function() {
 				self.TYPE.DWORD		// dwFlags
 			);
 		},
+		PeekMessage: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms644943%28v=vs.85%29.aspx
+			 * BOOL WINAPI PeekMessage(
+			 *   __out_    LPMSG lpMsg,
+			 *   __in_opt_ HWND  hWnd,
+			 *   __in_     UINT  wMsgFilterMin,
+			 *   __in_     UINT  wMsgFilterMax,
+			 *   __in_     UINT  wRemoveMsg
+			 * );
+			 */
+			return lib('user32').declare(ifdef_UNICODE ? 'PeekMessageW' : 'PeekMessageA', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.LPMSG,	// lpMsg
+				self.TYPE.HWND, 	// hWnd
+				self.TYPE.UINT, 	// wMsgFilterMin
+				self.TYPE.UINT,		// wMsgFilterMax
+				self.TYPE.UINT		// wRemoveMsg
+			);
+		},
+		RegisterHotKey: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms646309%28v=vs.85%29.aspx
+			 * BOOL WINAPI RegisterHotKey(
+			 *   __in_opt_ HWND hWnd,
+			 *   __in_     int  id,
+			 *   __in_     UINT fsModifiers,
+			 *   __in_     UINT vk
+			 * );
+			 */
+			return lib('user32').declare('RegisterHotKey', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.HWND,		// hWnd
+				self.TYPE.int,		// id
+				self.TYPE.UINT,		// fsModifiers
+				self.TYPE.UINT		// vk
+			);
+		},
 		ReleaseDC: function() {
 			/* http://msdn.microsoft.com/en-us/library/windows/desktop/dd162920%28v=vs.85%29.aspx
 			 * int ReleaseDC(
@@ -857,6 +908,19 @@ var winInit = function() {
 			return lib('shell32').declare(ifdef_UNICODE ? 'SHFileOperationW' : 'SHFileOperationA', self.TYPE.ABI,
 				self.TYPE.INT,				// return
 				self.TYPE.LPSHFILEOPSTRUCT	// lpFileOp
+			);
+		},
+		UnregisterHotKey: function() {
+			/* https://msdn.microsoft.com/en-us/library/windows/desktop/ms646327%28v=vs.85%29.aspx
+			 * BOOL WINAPI UnregisterHotKey(
+			 *   __in_opt_ HWND hWnd,
+			 *   __in_     int  id
+			 * );
+			 */
+			return lib('user32').declare('UnregisterHotKey', self.TYPE.ABI,
+				self.TYPE.BOOL,		// return
+				self.TYPE.HWND,		// hWnd
+				self.TYPE.int		// id
 			);
 		}
 	};

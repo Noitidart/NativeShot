@@ -31,6 +31,7 @@ var core = { // core has stuff added into by MainWorker (currently MainWorker) a
 			content_accessible: 'chrome://nativeshot-accessible/content/',
 			images: 'chrome://nativeshot/content/resources/images/',
 			locale: 'chrome://nativeshot/locale/',
+			modules: 'chrome://nativeshot/content/modules/',
 			resources: 'chrome://nativeshot/content/resources/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/'
@@ -3077,6 +3078,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 
 function shootAllMons(aDOMWindow) {
 	
+	gEditor.gBrowserDOMWindow = aDOMWindow;
 	gESelected = false;
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime(); // in other words, this is time of screenshot of this session
@@ -4180,6 +4182,22 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
+// start - HotkeyWorkerMainThreadFuncs
+var HotkeyWorkerMainThreadFuncs = {
+	takeShot: function() {
+		if (gEditor.sessionId) {
+			console.warn('geditor is currently open, so will not open another one'); // so user pressed prnt screen while it was already open
+			return;
+		}
+		if (gDelayedShotObj) {
+			cancelAndCleanupDelayedShot();
+		}
+		// imemdiate freeze
+		shootAllMons(Services.wm.getMostRecentWindow('navigator:browser'));
+	}
+};
+// end - HotkeyWorkerMainThreadFuncs
+
 // start - MainWorkerMainThreadFuncs
 var MainWorkerMainThreadFuncs = {
 	callInPromiseWorker: function(aWorkerName, aArrOfFuncnameThenArgs) {
@@ -4543,6 +4561,8 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 MainWorkerMainThreadFuncs.callInBootstrap = fsFuncs.callInBootstrap;
 // MainWorkerMainThreadFuncs.callInBootstrap = fsFuncs.callInPromiseWorker;
 
+HotkeyWorkerMainThreadFuncs.callInBootstrap = fsFuncs.callInBootstrap;
+
 var fsMsgListener = {
 	funcScope: fsFuncs,
 	receiveMessage: function(aMsgEvent) {
@@ -4621,7 +4641,6 @@ function startup(aData, aReason) {
 			tooltiptext: justFormatStringFromName(core.addon.l10n.bootstrap['cui_nativeshot_tip']),
 			onCommand: function(aEvent) {
 				var aDOMWin = aEvent.target.ownerDocument.defaultView;
-				gEditor.gBrowserDOMWindow = aDOMWin;
 				if (aEvent.shiftKey == 1) {
 					// default time delay queue
 					if (gDelayedShotObj) {
@@ -4665,6 +4684,15 @@ function startup(aData, aReason) {
 		AB.init();
 		
 		Services.mm.addMessageListener(core.addon.id, fsMsgListener);
+		
+		var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
+		promise_initHotkeys.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_initHotkeys - ', aVal);
+				
+			},
+			genericReject.bind(null, 'promise_initHotkeys', 0)
+		).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
 	};
 	
 	var do_afterPrefsInit = function() {
@@ -4738,16 +4766,27 @@ function shutdown(aData, aReason) {
 		MainWorker._worker.terminate();
 	}
 
-	if (bootstrap.GOCRWorker) {
+	if (bootstrap.GOCRWorker && GOCRWorker.launchTimeStamp) {
 		GOCRWorker._worker.terminate();
 	}
 	
-	if (bootstrap.OCRADWorker) {
+	if (bootstrap.OCRADWorker && OCRADWorker.launchTimeStamp) {
 		OCRADWorker._worker.terminate();
 	}
 	
-	if (bootstrap.TesseractWorker) {
+	if (bootstrap.TesseractWorker && TesseractWorker.launchTimeStamp) {
 		TesseractWorker._worker.terminate();
+	}
+	
+	if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
+		var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
+		promise_requestTerm.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_requestTerm - ', aVal);
+				HotkeyWorker._worker.terminate();
+			},
+			genericReject.bind(null, 'promise_requestTerm', 0)
+		).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
 	}
 	
 	// destroy any FHR's that the devuser did not clean up
