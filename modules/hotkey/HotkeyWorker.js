@@ -166,13 +166,18 @@ function init(objCore) { // function name init required for SIPWorker
 	console.log('brought in ostypes');
 	
 	// OS Specific Init
-	switch (core.os.name) {
+	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
 				
 				OSStuff.msg = ostypes.TYPE.MSG();
 				
+			break;
+		case 'gtk':
+		
+				OSStuff.xev = ostypes.TYPE.XEvent();
+		
 			break;
 		default:
 			// do nothing special
@@ -188,7 +193,7 @@ function init(objCore) { // function name init required for SIPWorker
 
 // start - addon functionality
 var gEventLoopInterval;
-const gEventLoopIntervalMS = 100;
+const gEventLoopIntervalMS = 3000;
 
 function prepTerm() {
 	
@@ -207,6 +212,8 @@ function prepTerm() {
 		case 'gtk':
 		
 				// 
+				var rez_ungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.key, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
+				console.log('rez_ungrab:', rez_ungrab);
 				
 			break;
 		case 'darwin':
@@ -217,6 +224,8 @@ function prepTerm() {
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
 	}
+	
+	ostypes.HELPER.ifOpenedXCloseDisplay();
 	
 	console.error('ok HotkeyWorker prepped for term');
 }
@@ -233,7 +242,29 @@ function registerHotkey() {
 			break
 		case 'gtk':
 		
-				// 
+				// based on https://jnativehook.googlecode.com/svn/branches/test_code/linux/XGrabKey.c
+				//	i copied it here as it might come in handy - https://gist.github.com/Noitidart/e12ad03d21bbb91cd214
+				
+				//Try to attach to the default X11 display.
+				var display = ostypes.HELPER.cachedXOpenDisplay();
+				
+				//Get the default global window to listen on for the selected X11 display.
+				var grabWin = ostypes.HELPER.cachedDefaultRootWindow();
+				var rez_allow = ostypes.API('XAllowEvents')(display, ostypes.CONST.AsyncKeyboard, ostypes.CONST.CurrentTime);
+				console.log('rez_allow:', rez_allow);
+				// XkbSetDetectableAutoRepeat(display, true, NULL);
+				
+				//Find the X11 KeyCode we are listening for.
+				var key = ostypes.API('XKeysymToKeycode')(display, ostypes.CONST.XK_Print);
+				console.log('key:', key);
+				OSStuff.key = key;
+				
+				//No Modifier
+				var rez_grab = ostypes.API('XGrabKey')(display, key, ostypes.CONST.None, grabWin, true, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
+				console.log('rez_grab:', rez_grab);
+				
+				// var rez_sel = ostypes.API('XSelectInput')(display, grabWin, ostypes.CONST.KeyPressMask);
+				// console.log('rez_sel:', rez_sel);
 				
 			break;
 		case 'darwin':
@@ -277,7 +308,22 @@ function checkEventLoop() {
 			break
 		case 'gtk':
 		
-				// 
+				var rez_pending = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
+				console.log('rez_pending:', rez_pending);
+				
+				var evPendingCnt = parseInt(cutils.jscGetDeepest(rez_pending));
+				console.log('evPendingCnt:', evPendingCnt);
+				for (var i=0; i<evPendingCnt; i++) {
+					//Block waiting for the next event.
+					console.log('ok going to block');
+					var rez_next = ostypes.API('XNextEvent')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.xev.address());
+					console.log('rez_next:', rez_next);
+					
+					console.log('xev.xkey.type:', cutils.jscGetDeepest(OSStuff.xev.xkey.type));
+					if (cutils.jscEqual(OSStuff.xev.xkey.type, ostypes.CONST.KeyPress)) {
+						console.error('okkkkk key pressed!!!');
+					}
+				}
 				
 			break;
 		case 'darwin':

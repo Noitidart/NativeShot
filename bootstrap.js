@@ -4783,7 +4783,7 @@ function shutdown(aData, aReason) {
 		promise_requestTerm.then(
 			function(aVal) {
 				console.log('Fullfilled - promise_requestTerm - ', aVal);
-				HotkeyWorker._worker.terminate();
+				// HotkeyWorker._worker.terminate();
 			},
 			genericReject.bind(null, 'promise_requestTerm', 0)
 		).catch(genericCatch.bind(null, 'promise_requestTerm', 0));

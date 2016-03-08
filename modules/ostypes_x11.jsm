@@ -88,7 +88,23 @@ var xlibTypes = function() {
 			])
 		}
 	]);
-	
+	this.XKeyEvent = ctypes.StructType('XKeyEvent', [ // https://tronche.com/gui/x/xlib/events/keyboard-pointer/keyboard-pointer.html#XKeyEvent
+		{ type: this.int },
+		{ serial: this.unsigned_long },
+		{ send_event: this.Bool },
+		{ display: this.Display.ptr },
+		{ window: this.Window },
+		{ root: this.Window },
+		{ subwindow: this.Window },
+		{ time: this.Time },
+		{ x: this.int },
+		{ y: this.int },
+		{ x_root: this.int },
+		{ y_root: this.int },
+		{ state: this.unsigned_int },
+		{ keycode: this.unsigned_int },
+		{ same_screen: this.Bool }
+	]);
 	this.XWindowAttributes = ctypes.StructType('XWindowAttributes', [
 		{ x: this.int },
 		{ y: this.int },							// location of window
@@ -120,6 +136,13 @@ var xlibTypes = function() {
 		{ encoding: this.Atom },			// encoding
 		{ format: this.int },				// format
 		{ nitems: this.unsigned_long }		// nitems
+	]);
+	
+	// ADVANCED STRUCTS
+	// XEvent is one huge union, js-ctypes doesnt have union so i just set it to what I use for my addon
+	this.XEvent = ctypes.StructType('_XEvent', [ // http://tronche.com/gui/x/xlib/events/structures.html
+		// { xclient: this.XClientMessageEvent }
+		{ xkey: this.XKeyEvent }
 	]);
 	
 	// start - xrandr stuff
@@ -197,11 +220,6 @@ var xlibTypes = function() {
 		{ format: this.int },
 		{ data: this.long.array(5) }	// union of either this.char.array(20), this.short.array(10), or this.long.array(5) // if go with long format must be set to 32, if short then 16 else if char then 8
 	]);
-	
-	// XEvent is one huge union, js-ctypes doesnt have union so i just set it to what I use for my addon
-	this.XEvent = ctypes.StructType('_XEvent', [ // http://tronche.com/gui/x/xlib/events/structures.html
-		{ xclient: this.XClientMessageEvent }
-	])
 	
 	/////////////// GTK stuff temporary for test, i want to use x11 for everything
 	// SIMPLE TYPES
@@ -301,7 +319,28 @@ var x11Init = function() {
 		_NET_WM_STATE_ADD: 1,
 		_NET_WM_STATE_TOGGLE: 2,
 		SubstructureRedirectMask: 1048576,
-		SubstructureNotifyMask: 524288
+		SubstructureNotifyMask: 524288,
+		
+		CurrentTime: 0,
+		
+		GrabModeSync: 0,
+		GrabModeAsync: 1,
+		GrabSuccess: 0,
+		AlreadyGrabbed: 1,
+		GrabInvalidTime: 2,
+		GrabNotViewable: 3,
+		GrabFrozen: 4,
+		
+		KeyPressMask: 1,
+		KeyReleaseMask: 2,
+		KeyPress: 2,
+		KeyRelease: 3,
+		AsyncKeyboard: 3,
+		SyncKeyboard: 4,
+		
+		XK_A: 0x0041, // lower case "a" // https://github.com/semonalbertyeah/noVNC_custom/blob/60daa01208a7e25712d17f67282497626de5704d/include/keysym.js#L216
+		XK_Print: 0xff61,
+		XK_Sys_Req: 0xff15
 	};
 	
 	var _lib = {}; // cache for lib
@@ -607,6 +646,29 @@ var x11Init = function() {
 				self.TYPE.size_t	// count
 			);
 		},
+		XAllPlanes: function() {
+			/* http://tronche.com/gui/x/xlib/display/display-macros.html
+			 * unsigned long XAllPlanes()
+			 */
+			return lib('x11').declare('XAllPlanes', self.TYPE.ABI,
+				self.TYPE.unsigned_long	// return
+			);
+		},
+		XAllowEvents: function() {
+			/* http://www.x.org/releases/X11R7.6/doc/man/man3/XAllowEvents.3.xhtml
+			 * int XAllowEvents(
+			 *   Display *display,
+			 *   int event_mode,
+			 *   Time time
+			 * );
+			 */
+			return lib('x11').declare('XAllowEvents', self.TYPE.ABI,
+				self.TYPE.unsigned_long,	// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.int,				// event_mode
+				self.TYPE.Time				// time
+			);
+		},
 		XChangeProperty: function() {
 			/* http://www.xfree86.org/4.4.0/XChangeProperty.3.html
 			 * int XChangeProperty(
@@ -757,6 +819,31 @@ var x11Init = function() {
 				self.TYPE.unsigned_int.ptr	// *depth_return
 			); 
 		},
+		XGetImage: function() {
+			/* http://www.xfree86.org/4.4.0/XGetImage.3.html
+			 * XImage *XGetImage (
+			 *   Display *display,
+			 *   Drawable d,
+			 *   int x,
+			 *   int y,
+			 *   unsigned int width,
+			 *   unsigned int height,
+			 *   unsigned long plane_mask,
+			 *   int format
+			 * ); 
+			 */
+			return lib('x11').declare('XGetImage', self.TYPE.ABI,
+				self.TYPE.XImage.ptr,		// return
+				self.TYPE.Display.ptr,		// *display,
+				self.TYPE.Drawable,			// d,
+				self.TYPE.int,				// x,
+				self.TYPE.int,				// y,
+				self.TYPE.unsigned_int,		// width,
+				self.TYPE.unsigned_int,		// height,
+				self.TYPE.unsigned_long,	// plane_mask,
+				self.TYPE.int				// format
+			);
+		},
 		XGetWindowAttributes: function() {
 			/* http://www.xfree86.org/4.4.0/XGetWindowAttributes.3.html
 			 * Status XGetWindowAttributes(
@@ -823,6 +910,19 @@ var x11Init = function() {
 				self.TYPE.unsigned_char.ptr.ptr	// **prop_return
 			);
 		},
+		XKeysymToKeycode: function() {
+			/* http://domesjö.se/xlib/utilities/keyboard/XKeysymToKeycode.html
+			 * KeyCode XKeysymToKeycode(
+			 *   Display *display,
+			 *   KeySym keysym
+			 * )
+			 */
+			return lib('x11').declare('XKeysymToKeycode', self.TYPE.ABI,
+				self.TYPE.KeyCode,		// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.KeySym		// keysym
+			);
+		},
 		XListProperties: function() {
 			/* http://tronche.com/gui/x/xlib/window-information/XListProperties.html
 			 * Atom *XListProperties(
@@ -853,6 +953,30 @@ var x11Init = function() {
 				self.TYPE.XTextProperty.ptr		// *text_prop_return
 			);
 		},
+		XGrabKey: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XGrabKey.3.xhtml
+			 * https://tronche.com/gui/x/xlib/input/XGrabKey.html
+			 * int XGrabKey(
+			 * Display *display,
+			 * int keycode,
+			 * unsigned int modifiers,
+			 * Window grab_window,
+			 * Bool owner_events,
+			 * int pointer_mode,
+			 * int keyboard_mode
+			 * )
+			 */
+			return lib('x11').declare('XGrabKey', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.int,			// keycode
+				self.TYPE.unsigned_int,	// modifiers
+				self.TYPE.Window,		// grab_window
+				self.TYPE.Bool,			// owner_events
+				self.TYPE.int,			// pointer_mode
+				self.TYPE.int			// keyboard_mode
+			);
+		},
 		XInternAtom: function() {
 			/* http://www.xfree86.org/4.4.0/XInternAtom.3.html
 			 * Atom XInternAtom(
@@ -868,6 +992,19 @@ var x11Init = function() {
 				self.TYPE.Bool			// only_if_exists
 			);
 		},
+		XNextEvent: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XNextEvent.3.xhtml
+			 * int XNextEvent (
+			 *   Display *display,
+			 *   XEvent *event_return
+			 * );
+			 */
+			return lib('x11').declare('XNextEvent', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.XEvent.ptr	// *event_return
+			);
+		},
 		XOpenDisplay: function() {
 			/* http://www.xfree86.org/4.4.0/XOpenDisplay.3.html
 			 * Display *XOpenDisplay(
@@ -879,26 +1016,37 @@ var x11Init = function() {
 				self.TYPE.char.ptr		// *display_name
 			); 
 		},
-		XQueryTree: function() {
-			/* http://www.xfree86.org/4.4.0/XQueryTree.3.html
-			 * Status XQueryTree(
-			 *   Display		*display,
-			 *   Window			w,
-			 *   Window			*root_return,
-			 *   Window			*parent_return,
-			 *   Window			**children_return,
-			 *   unsigned int	*nchildren_return
+		XPending: function() {
+			/* http://tronche.com/gui/x/xlib/event-handling/XPending.html
+			 * int XPending (
+			 *   Display *display
 			 * );
 			 */
+			return lib('x11').declare('XPending', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr	// *display
+			);
+		},
+		XQueryTree: function() {
+			/* http://tronche.com/gui/x/xlib/window-information/XQueryTree.html
+			 * Status XQueryTree (
+			 *   Display *display,
+			 *   Window w,
+			 *   Window *root_return,
+			 *   Window *parent_return,
+			 *   Window **children_return,
+			 *   unsigned int *nchildren_return
+			 * )
+			 */
 			return lib('x11').declare('XQueryTree', self.TYPE.ABI,
-				self.TYPE.Status,				// return
+				self.TYPE.Status,			// return
 				self.TYPE.Display.ptr,		// *display
-				self.TYPE.Window,				// w
-				self.TYPE.Window.ptr,			// *root_return
-				self.TYPE.Window.ptr,			// *parent_return
-				self.TYPE.Window.ptr.ptr,		// **children_return
+				self.TYPE.Window,			// w
+				self.TYPE.Window.ptr,		// *root_return
+				self.TYPE.Window.ptr,		// *parent_return
+				self.TYPE.Window.ptr.ptr,	// **children_return
 				self.TYPE.unsigned_int.ptr	// *nchildren_return
-			); 
+			);
 		},
 		XTranslateCoordinates: function() {
 			/* http://www.xfree86.org/4.4.0/XTranslateCoordinates.3.html
@@ -925,39 +1073,6 @@ var x11Init = function() {
 				self.TYPE.Window.ptr		// *child_return
 			); 
 		},
-		XAllPlanes: function() {
-			/* http://tronche.com/gui/x/xlib/display/display-macros.html
-			 * unsigned long XAllPlanes()
-			 */
-			return lib('x11').declare('XAllPlanes', self.TYPE.ABI,
-				self.TYPE.unsigned_long	// return
-			);
-		},
-		XGetImage: function() {
-			/* http://www.xfree86.org/4.4.0/XGetImage.3.html
-			 * XImage *XGetImage (
-			 *   Display *display,
-			 *   Drawable d,
-			 *   int x,
-			 *   int y,
-			 *   unsigned int width,
-			 *   unsigned int height,
-			 *   unsigned long plane_mask,
-			 *   int format
-			 * ); 
-			 */
-			return lib('x11').declare('XGetImage', self.TYPE.ABI,
-				self.TYPE.XImage.ptr,		// return
-				self.TYPE.Display.ptr,		// *display,
-				self.TYPE.Drawable,			// d,
-				self.TYPE.int,				// x,
-				self.TYPE.int,				// y,
-				self.TYPE.unsigned_int,		// width,
-				self.TYPE.unsigned_int,		// height,
-				self.TYPE.unsigned_long,	// plane_mask,
-				self.TYPE.int				// format
-			);
-		},
 		XSendEvent: function() {
 			/* http://www.xfree86.org/4.4.0/XSendEvent.3.html
 			 * Status XSendEvent(
@@ -977,25 +1092,36 @@ var x11Init = function() {
 				self.TYPE.XEvent.ptr	// *event_sent
 			); 
 		},
-		XQueryTree: function() {
-			/* http://tronche.com/gui/x/xlib/window-information/XQueryTree.html
-			 * Status XQueryTree (
-			 *   Display *display,
-			 *   Window w,
-			 *   Window *root_return,
-			 *   Window *parent_return,
-			 *   Window **children_return,
-			 *   unsigned int *nchildren_return
-			 * )
+		XSelectInput: function() {
+			/* http://www.x.org/releases/X11R7.6/doc/man/man3/XSelectInput.3.xhtml
+			 * int XSelectInput(
+			 *   Display *display;
+			 *   Window w;
+			 *   long event_mask;
+			 * );
 			 */
-			return lib('x11').declare('XQueryTree', self.TYPE.ABI,
-				self.TYPE.Status,			// return
-				self.TYPE.Display.ptr,		// *display
-				self.TYPE.Window,			// w
-				self.TYPE.Window.ptr,		// *root_return
-				self.TYPE.Window.ptr,		// *parent_return
-				self.TYPE.Window.ptr.ptr,	// **children_return
-				self.TYPE.unsigned_int.ptr	// *nchildren_return
+			return lib('x11').declare('XSelectInput', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window,		// w
+				self.TYPE.long			// event_mask
+			); 
+		},
+		XUngrabKey: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XGrabKey.3.xhtml
+			 * int XUngrabKey(
+			 *   Display *display,
+			 *   int keycode,
+			 *   unsigned int modifiers,
+			 *   Window grab_window
+			 * );
+			 */
+			return lib('x11').declare('XUngrabKey', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.int,			// keycode
+				self.TYPE.unsigned_int,	// modifiers
+				self.TYPE.Window		// grab_window
 			);
 		},
 		// start - XRANDR
@@ -1309,6 +1435,7 @@ var x11Init = function() {
 		},
 		ifOpenedXCloseDisplay: function() {
 			if (self._cache.XOpenDisplay) {
+				console.log('yes it was open, terminiating it');
 				self.API('XCloseDisplay')(self._cache.XOpenDisplay);
 			}
 		},
