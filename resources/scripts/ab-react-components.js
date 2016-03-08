@@ -9,7 +9,7 @@
 		Notification: React.createClass({
 			displayName: 'Notification',
 			componentDidMount: function() {
-				console.error('ok mounted'); // for some reason this doesnt trigger
+
 				window[aAddonId + '-AB'].Insts[this.props.aId].setState = this.setState.bind(this);
 				window[aAddonId + '-AB'].Node = node;
 				
@@ -76,12 +76,12 @@
 			},
 			shouldMirrorProps: function(aNextProps, aIsMount) { // works with this.customAttrs
 				var node = ReactDOM.findDOMNode(this);
-				console.log('node:', node);
+
 				
 				for (var nProp in aNextProps) {
 					if (nProp in this.customAttrs) {
 						if (aIsMount || this.props[nProp] !== aNextProps[nProp]) { // // i do aIsMount check, because on mount, old prop is same as new prop, becase i call in componentDidMount shouldMirrorProps(this.props)
-							console.log(['setting custom attr "' + nProp + '"','old: ' + this.props[nProp], 'new: ' + aNextProps[nProp]].join('\n'));
+
 							if (!aIsMount && (aNextProps[nProp] === null || aNextProps[nProp] === undefined)) {
 								node.removeAttribute(this.customAttrs[nProp]);
 							} else {
@@ -139,11 +139,11 @@
 			},
 			shouldMirrorProps: function(aNextProps, aIsMount) { // works with this.customAttrs
 				var node = ReactDOM.findDOMNode(this);
-				console.log('node:', node);
+
 				for (var nProp in aNextProps) {
 					if (nProp in this.customAttrs) {
 						if (aIsMount || this.props[nProp] !== aNextProps[nProp]) { // // i do aIsMount check, because on mount, old prop is same as new prop, becase i call in componentDidMount shouldMirrorProps(this.props)
-							console.log(['setting custom attr "' + nProp + '"','old: ' + this.props[nProp], 'new: ' + aNextProps[nProp]].join('\n'));
+
 							if (!aIsMount && (aNextProps[nProp] === null || aNextProps[nProp] === undefined)) {
 								node.removeAttribute(this.customAttrs[nProp]);
 							} else {
@@ -205,10 +205,10 @@
 			componentDidMount: function() {
 				this.shouldMirrorProps(this.props, true);
 				if (!this.props.cMenu) {
-					console.log('ok its a menuitem so attach command listener');
+
 					ReactDOM.findDOMNode(this).addEventListener('command', this.click);
 				}
-				else { console.log('will not add event listener for command because its a menu NOT a menuitem') }
+
 			},
 			componentWillReceiveProps: function(aNextProps) {
 				this.shouldMirrorProps(aNextProps);
@@ -218,11 +218,11 @@
 			},
 			shouldMirrorProps: function(aNextProps, aIsMount) { // works with this.customAttrs
 				var node = ReactDOM.findDOMNode(this);
-				console.log('node:', node);
+
 				for (var nProp in aNextProps) {
 					if (nProp in this.customAttrs) {
 						if (aIsMount || this.props[nProp] !== aNextProps[nProp]) { // // i do aIsMount check, because on mount, old prop is same as new prop, becase i call in componentDidMount shouldMirrorProps(this.props)
-							console.log(['setting custom attr "' + nProp + '"','old: ' + this.props[nProp], 'new: ' + aNextProps[nProp]].join('\n'));
+
 							if (!aIsMount && (aNextProps[nProp] === null || aNextProps[nProp] === undefined)) {
 								node.removeAttribute(this.customAttrs[nProp]);
 							} else {

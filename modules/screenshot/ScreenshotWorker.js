@@ -612,9 +612,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					//var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
 					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, 0, 0, 0, 0, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
 				}
-				console.log('will force focus now');
+
 				var rez_winForceFocus = winForceForegroundWindow(hwndPtr); // use the last hwndPtr, i just need to focus one of my canvas windows // so if user hits esc it will work, otherwise the keyboard focus is in the other app even though my canvas window is top most
-				// console.log('rez_winForceFocus:', rez_winForceFocus);
+
 				
 			break;
 		case 'gtk':
@@ -1085,7 +1085,7 @@ function shootAllMons() {
 					if (s == 0) {
 						var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
 						var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
-						// console.log('dpiX:', dpiX, 'dpiY:', dpiY);
+
 						dpiScaleX = dpiX / 96; // because 96 is default which is 1
 						dpiScaleY = dpiY / 96;
 					}
@@ -1104,10 +1104,10 @@ function shootAllMons() {
 							collMonInfos[s].win81ScaleY = win81ScaleY;
 						}
 					} else if (dpiScaleX != 1 || dpiScaleY != 1) {
-						// console.log('dpiScaleX, dpiScaleY', dpiScaleX, dpiScaleY);
+
 						collMonInfos[s].win81ScaleX = dpiScaleX;
 						collMonInfos[s].win81ScaleY = dpiScaleY;
-						// console.log('win81ScaleX, win81ScaleY', collMonInfos[s].win81ScaleX, collMonInfos[s].win81ScaleY);
+
 					}
 					
 					var w = collMonInfos[s].w;
@@ -1115,7 +1115,7 @@ function shootAllMons() {
 
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
-					// console.log('useW:', useW, 'w:', w);
+
 					
 					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
 
@@ -1809,25 +1809,25 @@ function winForceForegroundWindow(aHwndToFocus) {
 	if (hFrom.isNull()) {
 		// nothing in foreground, so calling process is free to focus anything
 		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+
 		return rez_SetSetForegroundWindow ? true : false;
 	}
 
 	if (cutils.comparePointers(hTo, hFrom) === 0) {
 		// window is already focused
-		console.log('window is already focused');
+
 		return true;
 	}
 	
 	var pidFrom = ostypes.TYPE.DWORD();
 	var threadidFrom = ostypes.API('GetWindowThreadProcessId')(hFrom, pidFrom.address());
-	console.info('threadidFrom:', threadidFrom);
-	console.info('pidFrom:', pidFrom);
+
+
 	
 	var pidTo = ostypes.TYPE.DWORD();
 	var threadidTo = ostypes.API('GetWindowThreadProcessId')(hTo, pidTo.address()); // threadidTo is thread of my firefox id, and hTo is that of my firefox id so this is possible to do
-	console.info('threadidTo:', threadidTo);
-	console.info('pidTo:', pidTo);
+
+
 	
 	// impossible to get here if `cutils.jscEqual(threadidFrom, threadidTo)` because if thats the case, then the window is already focused!!
 	// if (cutils.jscEqual(threadidFrom, threadidTo) {
@@ -1838,28 +1838,28 @@ function winForceForegroundWindow(aHwndToFocus) {
 		// or
 		// the pid that needs to be focused is not currently focused, but the calling pid is currently focused. the current pid is allowed to shift focus to anything else it wants
 		// if (cutils.jscEqual(pidFrom, pidTo)) {
-		// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
+
 		// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
-			console.log('the process, of the window that is currently focused, is of this calling thread, so i can go ahead and just focus it - no need for attach');
+
 		// }
 		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+
 		return rez_SetSetForegroundWindow ? true : false;
 	}
 	
 	var threadidOfCallingProcess = ostypes.API('GetCurrentThreadId')();
-	console.log('threadidOfCallingProcess:', threadidOfCallingProcess);
+
 	
 	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, true);
-	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+
 	if (!rez_AttachThreadInput) {
 		throw new Error('failed to attach thread input');
 	}
 	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+
 
 	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, false);
-	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+
 	
 	return rez_SetSetForegroundWindow ? true : false;
 }
@@ -1883,11 +1883,11 @@ function trashFile(aFilePlatPath) {
 				sfo.hNameMappings = null;
 				sfo.lpszProgressTitle = null;
 				
-				console.log('sfo.pFrom:', sfo.pFrom.toString());
+
 				
 				var rez_trash = ostypes.API('SHFileOperation')(sfo.address());
-				console.log('rez_trash:', rez_trash);
-				console.log('sfo.fAnyOperationsAborted:', sfo.fAnyOperationsAborted);
+
+
 				
 				if (cutils.jscEqual(rez_trash, 0)) {
 					return true;
@@ -1900,10 +1900,10 @@ function trashFile(aFilePlatPath) {
 		case 'gtk':
 
 				var cGFile = ostypes.API('g_file_new_for_path')(aFilePlatPath);
-				console.log('cGFile:', cGFile);
+
 				
 				var rez_trash = ostypes.API('g_file_trash')(cGFile, null, null);
-				console.log('rez_trash:', rez_trash);
+
 				
 				if (cutils.jscEqual(rez_trash, 1)) {
 					return true;
@@ -1923,24 +1923,24 @@ function trashFile(aFilePlatPath) {
 					// var cNSArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('array'));
 					
 					var NSURL = ostypes.HELPER.class('NSURL');
-					console.log('aFilePlatPath:', aFilePlatPath);
+
 					
 					var cMacUrl = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('fileURLWithPath:isDirectory:'), trashNSStrings.get(aFilePlatPath), ostypes.CONST.NO);
-					console.log('cMacUrl:', cMacUrl);
+
 					if (cMacUrl.isNull()) {
-						console.error('failed to create NSURL');
+
 						return false;
 					}
 					
 					var cMacUrlArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('arrayWithObject:'), cMacUrl);
-					console.log('cMacUrlArray:', cMacUrlArray);
+
 
 					var NSWorkspace = ostypes.HELPER.class('NSWorkspace');
 					
 					var sharedWorkspace = ostypes.API('objc_msgSend')(NSWorkspace, ostypes.HELPER.sel('sharedWorkspace'));
 					
 					var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, ostypes.CONST.NIL); // verified that NIL is not modified it is still 0x0 after calling this
-					console.log('rez_trash:', rez_trash); // value is meaningless
+
 					
 					// as val of rez_trash is meaningless i have to check until its trashed. i dont think this function blocks till trash completes, so i loop below
 					var TRASHED_CHECK_INTERVAL = 100; // ms
@@ -1948,7 +1948,7 @@ function trashFile(aFilePlatPath) {
 					var trashed_check_i = 0;
 					while (trashed_check_i < MAX_TRASHED_CHECK_CNT) {
 						var trashedFileExists = OS.File.exists(aFilePlatPath);
-						console.log(trashed_check_i, 'trashedFileExists:', trashedFileExists);
+
 						if (!trashedFileExists) {
 							// yes it was trashed
 							return true;
@@ -1963,9 +1963,9 @@ function trashFile(aFilePlatPath) {
 					// OSStuff[handlerId] = {};
 					// 
 					// OSStuff[handlerId].myHandler_js = function(NSURLs, error) {
-					// 	console.error('handler called');
+
 					// 	
-					// 	console.log('error:', error, error.toString(), error.isNull());
+
 					// 	
 					// 	// return nothing as per its IMP
 					// };
@@ -1976,7 +1976,7 @@ function trashFile(aFilePlatPath) {
 					// var myBlock_c = ostypes.HELPER.createBlock(OSStuff[handlerId].myHandler_c);
 					// 
 					// var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, myBlock_c.address()); // verified that NIL is not modified it is still 0x0 after calling this
-					// console.log('rez_trash:', rez_trash);
+
 					
 					
 				} finally {				
