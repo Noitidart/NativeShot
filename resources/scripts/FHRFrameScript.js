@@ -189,6 +189,16 @@ and any other stuff
 var gTimeout = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer); // hold timeout object
 var gTimeoutMs = 10000;
 
+var gInitialParams = [];
+function initiallyFullyLoaded() {
+	// meant to wait for fully load before doing loadPage
+	if (content.document.readyState == 'complete') {
+		console.error('ok fully loaded, going to loadPage now');
+		removeEventListener('load', initiallyFullyLoaded, false);
+		pageLoading = false;
+		bootstrapCallbacks.loadPage(gInitialParams.shift(), gInitialParams.shift(), gInitialParams.shift(), gInitialParams.shift());
+	}
+}
 var bootstrapCallbacks = { // can use whatever, but by default it uses this
 	// put functions you want called by bootstrap/server here
 	loadPage: function(aSrc, aClickSetName, aCallbackSetName, aData) {
@@ -203,13 +213,31 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 			throw new Error('cannot load yet, as previous page is still loading');
 		}
 		
-		var contentWindowArr = getAllContentWins(content);
-		for (var h=0; h<contentWindowArr.length; h++) {
-			contentWindowArr[h].stop();
-		}
-		
 		gData = aData;
 		gMainDeferred_loadPage = new Deferred();
+		
+		console.error(aSrc, aClickSetName, aCallbackSetName, aData);
+		
+		if (content.document.readState && content.document.readState != 'complete') {
+			console.error('NOT FULLY LOADED, so doing that stuff for args:', aSrc, aClickSetName, aCallbackSetName, aData);
+			pageLoading = true; // so nothing re-enters here
+			if (aClickSetName) {
+				// then wait for the full page to be loaded, otherwise javascript and other stuff will be stoped with .stop()
+				gInitialParams.push(aSrc);
+				gInitialParams.push(aClickSetName);
+				gInitialParams.push(aCallbackSetName);
+				gInitialParams.push(aData);
+				addEventListener('load', initiallyFullyLoaded, false);
+				return gMainDeferred_loadPage.promise;
+			} else {
+				// stop all pages, otherwise DOMContentLoaded will fire prematurely
+				var contentWindowArr = getAllContentWins(content);
+				for (var h=0; h<contentWindowArr.length; h++) {
+					console.error('stopping frame:', h, contentWindowArr[h].document.readState, contentWindowArr[h].location.href);
+					contentWindowArr[h].stop();
+				}
+			}
+		}
 		
 		pageLoading = true;
 		console.error('added aCallbackSetName:', aCallbackSetName);
