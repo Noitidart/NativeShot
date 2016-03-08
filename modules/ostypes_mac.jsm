@@ -53,28 +53,33 @@ var macTypes = function() {
 	this.CGWindowListOption = ctypes.uint32_t;
 	this.ConstStr255Param = ctypes.unsigned_char.ptr;
 	this.ConstStringPtr = ctypes.unsigned_char.ptr;
-	this.OpaqueDialogPtr = ctypes.StructType("OpaqueDialogPtr");
+	this.ItemCount = ctypes.unsigned_long;
 	this.SInt16 = ctypes.short;
 	this.SInt32 = ctypes.long;
 	this.UInt16 = ctypes.unsigned_short;
 	this.UInt32 = ctypes.unsigned_long;
 	this.UInt64 = ctypes.unsigned_long_long;
 	this.UniChar = ctypes.jschar;
+	this.void = ctypes.void_t;
 	this.VOID = ctypes.void_t;
 	
 	// ADVANCED TYPES // as per how it was defined in WinNT.h // defined by "simple types"
 	this.AlertType = this.SInt16;
 	this.DialogItemIndex = this.SInt16;
-	this.DialogPtr = this.OpaqueDialogPtr.ptr;
 	this.EventKind = this.UInt16;
+	this.FourCharCode = this.UInt32;
 	this.FSEventStreamCreateFlags = this.UInt32;
 	this.FSEventStreamEventFlags = this.UInt32;
 	this.FSEventStreamEventId = this.UInt64;
 	this.EventModifiers = this.UInt16;
+	this.OptionBits = this.UInt32;
 	this.OSErr = this.SInt16;
+	this.OSStatus = this.SInt32;
 	
 	// SUPER ADVANCED TYPES // defined by "advanced types"
-	this.DialogRef = this.DialogPtr;
+	this.OSType = this.FourCharCode;
+	
+	
 	
 	// SUPER DUPER ADVANCED TYPES // defined by "super advanced types"
 
@@ -105,11 +110,25 @@ var macTypes = function() {
 		{ width: this.CGFloat },
 		{ height: this.CGFloat }
 	]);
+	this.EventHotKeyID = ctypes.StructType('EventHotKeyID', [
+		{ signature: this.OSType },
+		{ id: this.UInt32 }
+	]);
+	this.EventTypeSpec = ctypes.StructType('EventTypeSpec', [
+		{ eventClass: this.OSType },
+		{ eventKind: this.UInt32 }
+	]);
+	this.OpaqueDialogPtr = ctypes.StructType('OpaqueDialogPtr');
+	this.OpaqueEventHandlerCallRef = ctypes.StructType('OpaqueEventHandlerCallRef');
+	this.OpaqueEventHandlerRef = ctypes.StructType('OpaqueEventHandlerRef');
+	this.OpaqueEventHotKeyRef = ctypes.StructType('OpaqueEventHotKeyRef');
+	this.OpaqueEventRef = ctypes.StructType('OpaqueEventRef');
+	this.OpaqueEventTargetRef = ctypes.StructType('OpaqueEventTargetRef');
 	this.Point = ctypes.StructType('Point', [
 		{ v: this.short },
 		{ h: this.short }
 	]);
-	this.ProcessSerialNumber = new ctypes.StructType('ProcessSerialNumber', [
+	this.ProcessSerialNumber = ctypes.StructType('ProcessSerialNumber', [
 		{ highLongOfPSN: this.UInt32 },
 		{ lowLongOfPSN: this.UInt32 }
 	]);
@@ -117,7 +136,7 @@ var macTypes = function() {
 		{ tv_sec: this.time_t },
 		{ tv_nsec: this.long }
 	]);
-	
+
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first
 	this.CFAllocatorRef = this.__CFAllocator.ptr;
 	this.CFArrayRef = this.__CFArray.ptr;
@@ -131,17 +150,24 @@ var macTypes = function() {
 		{ size: this.CGSize }
 	]);
 	this.ConstFSEventStreamRef = this.__FSEventStream.ptr;
-	this.EventRecord = ctypes.StructType("EventRecord", [
+	this.DialogPtr = this.OpaqueDialogPtr.ptr;
+	this.EventHandlerCallRef = this.OpaqueEventHandlerCallRef.ptr;
+	this.EventHandlerRef = this.OpaqueEventHandlerRef.ptr;
+	this.EventHotKeyRef = this.OpaqueEventHotKeyRef.ptr;
+	this.EventRecord = ctypes.StructType('EventRecord', [
 		{ what: this.EventKind },
 		{ message: this.unsigned_long },
 		{ when: this.UInt32 },
 		{ where: this.Point },
 		{ modifiers: this.EventModifiers }
 	]);
+	this.EventRef = this.OpaqueEventRef.ptr;
+	this.EventTargetRef = this.OpaqueEventTargetRef.ptr;
 	this.FSEventStreamRef = this.__FSEventStream.ptr;
 	
 	// FURTHER ADVANCED STRUCTS
-
+	this.DialogRef = this.DialogPtr;
+	
 	// FURTHER ADV STRUCTS
 
 	// FUNCTION TYPES
@@ -152,10 +178,12 @@ var macTypes = function() {
 	this.CFArrayEqualCallBack = ctypes.FunctionType(this.CALLBACK_ABI, this.Boolean, [this.void.ptr, this.void.ptr]).ptr;
 	this.CFArrayReleaseCallBack = ctypes.FunctionType(this.CALLBACK_ABI, this.void, [this.CFAllocatorRef, this.void.ptr]).ptr;
 	this.CFArrayRetainCallBack = ctypes.FunctionType(this.CALLBACK_ABI, this.void.ptr, [this.CFAllocatorRef, this.void.ptr]).ptr;
+	this.EventHandlerProcPtr = ctypes.FunctionType(this.CALLBACK_ABI, this.OSStatus, [this.EventHandlerCallRef, this.EventRef, this.void.ptr]).ptr;
 	this.FSEventStreamCallback = ctypes.FunctionType(this.CALLBACK_ABI, this.void, [this.ConstFSEventStreamRef, this.void.ptr, this.size_t, this.void.ptr, this.FSEventStreamEventFlags.ptr, this.FSEventStreamEventId.ptr]).ptr;
 	this.ModalFilterProcPtr = ctypes.FunctionType(this.CALLBACK_ABI, this.Boolean, [this.DialogRef, this.EventRecord.ptr, this.DialogItemIndex.ptr]).ptr;
 	
 	// ADVANCED FUNCTION TYPES
+	this.EventHandlerUPP = this.EventHandlerProcPtr;
 	this.ModalFilterUPP = this.ModalFilterProcPtr;
 	
 	// STRUCTS USING FUNC TYPES
@@ -281,7 +309,16 @@ var macInit = function() {
 		BLOCK_HAS_CTOR: 1 << 26,
 		BLOCK_IS_GLOBAL: 1 << 28,
 		BLOCK_HAS_STRET: 1 << 29,
-		BLOCK_HAS_SIGNATURE: 1 << 30
+		BLOCK_HAS_SIGNATURE: 1 << 30,
+		
+		// https://github.com/cbednarski/nv/blob/73da1a303f5051e1e012025085402157bb3deece/PTHotKeys/PTKeyCombo.m#L113-L121
+		cmdKey: is64bit ? 0x23180000 : 0x00002318,
+		optionKey: is64bit ? 0x23250000 : 0x00002325,
+		controlKey: is64bit ? 0x005E0000 : 0x0000005E,
+		shiftKey: is64bit ? 0x21e70000 : 0x000021e7,
+		
+		kEventClassKeyboard: self.TYPE.OSType('0x6B657962'), // :todo: figure out if i can just use this without wrapping it in OSType. this is a number of 1801812322
+		kEventHotKeyPressed: 5
 	};
 
 	var _lib = {}; // cache for lib
@@ -593,6 +630,69 @@ var macInit = function() {
 				self.TYPE.CGRect,
 				self.TYPE.CGRect,
 				self.TYPE.CGRect
+			);
+		},
+		GetApplicationEventTarget: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/GetApplicationEventTarget
+			 *  EventTargetRef GetApplicationEventTarget (
+			 *    void
+			 * );  
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('GetApplicationEventTarget', self.TYPE.ABI,
+				ostypes.TYPE.EventTargetRef	// return
+			);
+		},
+		InstallEventHandler: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/InstallEventHandler
+			 * OSStatus InstallEventHandler (
+			 *   EventTargetRef inTarget,
+			 *   EventHandlerUPP inHandler,
+			 *   ItemCount inNumTypes,
+			 *   const EventTypeSpec *inList,
+			 *   void *inUserData,
+			 *   EventHandlerRef *outRef
+			 * ); 
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('InstallEventHandler', self.TYPE.ABI,
+				ostypes.TYPE.OSStatus,				// return
+				ostypes.TYPE.EventTargetRef,		// inTarget,
+				ostypes.TYPE.EventHandlerUPP,		// inHandler,
+				ostypes.TYPE.ItemCount,				// inNumTypes,
+				ostypes.TYPE.EventTypeSpec.ptr,		// *inList,
+				ostypes.TYPE.void.ptr,				// *inUserData,
+				ostypes.TYPE.EventHandlerRef.ptr	// *outRef
+			);
+		},
+		RegisterEventHotKey: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/RegisterEventHotKey
+			 * OSStatus RegisterEventHotKey (
+			 *   UInt32 inHotKeyCode,
+			 *   UInt32 inHotKeyModifiers,
+			 *   EventHotKeyID inHotKeyID,
+			 *   EventTargetRef inTarget,
+			 *   OptionBits inOptions,
+			 *   EventHotKeyRef *outRef
+			 * ); 
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('RegisterEventHotKey', self.TYPE.ABI,
+				self.TYPE.OSStatus,				// return
+				self.TYPE.UInt32,				// inHotKeyCode
+				self.TYPE.UInt32,				// inHotKeyModifiers
+				self.TYPE.EventHotKeyID,		// inHotKeyID
+				self.TYPE.EventTargetRef,		// inTarget
+				self.TYPE.OptionBits,			// inOptions
+				self.TYPE.EventHotKeyRef.ptr	// *outRef
+			);
+		},
+		UnregisterEventHotKey: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/UnregisterEventHotKey
+			 * OSStatus UnregisterEventHotKey (
+			 *   EventHotKeyRef inHotKeyCode
+			 * ); 
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('UnregisterEventHotKey', self.TYPE.ABI,
+				self.TYPE.OSStatus,			// return
+				self.TYPE.EventHotKeyRef	// inHotKeyCode
 			);
 		},
 		dispatch_get_main_queue: function() {

@@ -193,7 +193,7 @@ function init(objCore) { // function name init required for SIPWorker
 
 // start - addon functionality
 var gEventLoopInterval;
-const gEventLoopIntervalMS = 3000;
+const gEventLoopIntervalMS = 50;
 
 function prepTerm() {
 	
@@ -269,7 +269,24 @@ function registerHotkey() {
 			break;
 		case 'darwin':
 		
-				// 
+				var eventType = ostypes.TYPE.EventTypeSpec();
+				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
+				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
+				
+				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
+				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
+				
+				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
+				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerProcPtr(macHotKeyHandler);
+				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.cHotKeyHandler, 1, eventType.address(), null, null);
+				console.log('rez_install:', rez_install);
+				
+				gMyHotKeyID.signature =  ostypes.TYPE.OSType('1752460081'); // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
+				gMyHotKeyID.id = 1;
+				
+				var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
+				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
+				console.log('rez_reg:', rez_reg);
 				
 			break;
 		default:
@@ -334,6 +351,12 @@ function checkEventLoop() {
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
 	}
+}
+
+function macHotKeyHandler(nextHandler, theEvent, userDataPtr) {
+	// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
+	console.error('wooohoo ah!! called hotkey!');
+	return 1; // must be of type ostypes.TYPE.OSStatus
 }
 // end - addon functionality
 
