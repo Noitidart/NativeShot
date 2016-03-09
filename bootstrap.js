@@ -4183,6 +4183,116 @@ var AB = { // AB stands for attention bar
 // end - AttentionBar mixin
 
 // start - HotkeyWorkerMainThreadFuncs
+var gHotkeyStatus = false; // false for stopped, true for started
+var OSStuff = {};
+
+function startHotkey() {
+	switch (core.os.mname) {
+		case 'winnt':
+				if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
+					console.warn('hotkey already running');
+					return;
+				}
+				var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
+				promise_initHotkeys.then(
+					function(aVal) {
+						console.log('Fullfilled - promise_initHotkeys - ', aVal);
+						
+					},
+					genericReject.bind(null, 'promise_initHotkeys', 0)
+				).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
+			break;
+		case 'gtk':
+				if (gHotkeyStatus) {
+					console.warn('hotkey already running');
+					return;
+				}
+				gHotkeyStatus = true;
+				Cu.import('resource://gre/modules/ctypes.jsm');
+				Services.scriptloader.loadSubScript(core.addon.path.content + 'modules/cutils.jsm', BOOTSTRAP);
+				Services.scriptloader.loadSubScript(core.addon.path.content + 'modules/ostypes_x11.jsm', BOOTSTRAP);
+				Services.scriptloader.loadSubScript(core.addon.path.content + 'modules/ctypes_math.jsm', BOOTSTRAP);
+
+			break;
+		case 'darwin':
+				if (gHotkeyStatus) {
+					console.warn('hotkey already running');
+					return;
+				}
+				gHotkeyStatus = true;
+				Cu.import('resource://gre/modules/ctypes.jsm');
+				Services.scriptloader.loadSubScript(core.addon.path.content + 'modules/cutils.jsm', BOOTSTRAP);
+				Services.scriptloader.loadSubScript(core.addon.path.content + 'modules/ostypes_mac.jsm', BOOTSTRAP);
+				Services.scriptloader.loadSubScript(core.addon.path.content + 'modules/ctypes_math.jsm', BOOTSTRAP);
+				
+				var eventType = ostypes.TYPE.EventTypeSpec();
+				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
+				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
+				
+				
+				
+				var rez_appTarget = ostypes.API('GetEventMonitorTarget')();
+				console.log('rez_appTarget:', rez_appTarget.toString());
+				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerUPP(macHotKeyHandler);
+				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.cHotKeyHandler, 1, eventType.address(), null, null);
+				console.log('rez_install:', rez_install.toString());
+				
+				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
+				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
+				gMyHotKeyID.signature =  ostypes.TYPE.OSType('1752460081'); // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
+				gMyHotKeyID.id = 1;
+				
+				// var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
+				// console.log('rez_appTarget2:', rez_appTarget2.toString());
+				var rez_reg = ostypes.API('RegisterEventHotKey')(50, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget, 0, gMyHotKeyRef.address());
+				console.log('rez_reg:', rez_reg.toString());
+				ostypes.HELPER.convertLongOSStatus(rez_reg);
+				
+			break;
+		default:
+			throw new Error('hotkey on your os is not supported');
+	}
+}
+
+function stopHotkey() {
+	switch (core.os.mname) {
+		case 'winnt':
+				if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
+					var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
+					promise_requestTerm.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_requestTerm - ', aVal);
+							// HotkeyWorker._worker.terminate();
+						},
+						genericReject.bind(null, 'promise_requestTerm', 0)
+					).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
+				}
+			break;
+		case 'gtk':
+				if (!gHotkeyStatus) {
+					console.warn('hotkey already stopped');
+					return;
+				}
+				gHotkeyStatus = false;
+			break;
+		case 'darwin':
+				if (!gHotkeyStatus) {
+					console.warn('hotkey already stopped');
+					return;
+				}
+				gHotkeyStatus = false;
+			break;
+		default:
+			throw new Error('hotkey on your os is not supported');
+	}
+}
+
+function macHotKeyHandler(nextHandler, theEvent, userDataPtr) {
+	// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
+	console.error('wooohoo ah!! called hotkey!');
+	return 1; // must be of type ostypes.TYPE.OSStatus
+}
+
 var HotkeyWorkerMainThreadFuncs = {
 	takeShot: function() {
 		if (gEditor.sessionId) {
@@ -4685,14 +4795,7 @@ function startup(aData, aReason) {
 		
 		Services.mm.addMessageListener(core.addon.id, fsMsgListener);
 		
-		var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
-		promise_initHotkeys.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_initHotkeys - ', aVal);
-				
-			},
-			genericReject.bind(null, 'promise_initHotkeys', 0)
-		).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
+		startHotkey();
 	};
 	
 	var do_afterPrefsInit = function() {
@@ -4778,16 +4881,7 @@ function shutdown(aData, aReason) {
 		TesseractWorker._worker.terminate();
 	}
 	
-	if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
-		var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
-		promise_requestTerm.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_requestTerm - ', aVal);
-				// HotkeyWorker._worker.terminate();
-			},
-			genericReject.bind(null, 'promise_requestTerm', 0)
-		).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
-	}
+	stopHotkey(); // if its not started, then it does nothing
 	
 	// destroy any FHR's that the devuser did not clean up
 	for (var DSTR_I=0; DSTR_I<gFHR.length; DSTR_I++) {

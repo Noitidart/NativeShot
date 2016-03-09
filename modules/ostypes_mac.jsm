@@ -674,6 +674,16 @@ var macInit = function() {
 				self.TYPE.EventTargetRef	// return
 			);
 		},
+		GetEventMonitorTarget: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/GetEventMonitorTarget
+			 *  EventTargetRef GetEventMonitorTarget (
+			 *    void
+			 * );  
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('GetEventMonitorTarget', self.TYPE.ABI,
+				self.TYPE.EventTargetRef	// return
+			);
+		},
 		InstallEventHandler: function() {
 			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/InstallEventHandler
 			 * OSStatus InstallEventHandler (
