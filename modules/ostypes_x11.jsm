@@ -481,8 +481,57 @@ var x11Init = function() {
 		XCB_ALLOW_REPLAY_KEYBOARD: 5,
 		XCB_ALLOW_ASYNC_BOTH: 6,
 		XCB_ALLOW_SYNC_BOTH: 7,
+			
+		XCB_KEY_PRESS: 2,
+		XCB_KEY_RELEASE: 3,
+		XCB_BUTTON_PRESS: 4,
+		XCB_BUTTON_RELEASE: 5,
+		XCB_MOTION_NOTIFY: 6,
+		XCB_ENTER_NOTIFY: 7,
+		XCB_LEAVE_NOTIFY: 8,
+		XCB_FOCUS_IN: 9,
+		XCB_FOCUS_OUT: 10,
+		XCB_KEYMAP_NOTIFY: 11,
+		XCB_EXPOSE: 12,
+		XCB_GRAPHICS_EXPOSURE: 13,
+		XCB_NO_EXPOSURE: 14,
+		XCB_VISIBILITY_NOTIFY: 15,
+		XCB_CREATE_NOTIFY: 16,
+		XCB_DESTROY_NOTIFY: 17,
+		XCB_UNMAP_NOTIFY: 18,
+		XCB_MAP_NOTIFY: 19,
+		XCB_MAP_REQUEST: 20,
+		XCB_REPARENT_NOTIFY: 21,
+		XCB_CONFIGURE_NOTIFY: 22,
+		XCB_CONFIGURE_REQUEST: 23,
+		XCB_GRAVITY_NOTIFY: 24,
 		
-		XCB_KEY_PRESS: 2
+		XCB_EVENT_MASK_NO_EVENT: 0,
+		XCB_EVENT_MASK_KEY_PRESS: 1,
+		XCB_EVENT_MASK_KEY_RELEASE: 2,
+		XCB_EVENT_MASK_BUTTON_PRESS: 4,
+		XCB_EVENT_MASK_BUTTON_RELEASE: 8,
+		XCB_EVENT_MASK_ENTER_WINDOW: 16,
+		XCB_EVENT_MASK_LEAVE_WINDOW: 32,
+		XCB_EVENT_MASK_POINTER_MOTION: 64,
+		XCB_EVENT_MASK_POINTER_MOTION_HINT: 128,
+		XCB_EVENT_MASK_BUTTON_1_MOTION: 256,
+		XCB_EVENT_MASK_BUTTON_2_MOTION: 512,
+		XCB_EVENT_MASK_BUTTON_3_MOTION: 1024,
+		XCB_EVENT_MASK_BUTTON_4_MOTION: 2048,
+		XCB_EVENT_MASK_BUTTON_5_MOTION: 4096,
+		XCB_EVENT_MASK_BUTTON_MOTION: 8192,
+		XCB_EVENT_MASK_KEYMAP_STATE: 16384,
+		XCB_EVENT_MASK_EXPOSURE: 32768,
+		XCB_EVENT_MASK_VISIBILITY_CHANGE: 65536,
+		XCB_EVENT_MASK_STRUCTURE_NOTIFY: 131072,
+		XCB_EVENT_MASK_RESIZE_REDIRECT: 262144,
+		XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY: 524288,
+		XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT: 1048576,
+		XCB_EVENT_MASK_FOCUS_CHANGE: 2097152,
+		XCB_EVENT_MASK_PROPERTY_CHANGE: 4194304,
+		XCB_EVENT_MASK_COLOR_MAP_CHANGE: 8388608,
+		XCB_EVENT_MASK_OWNER_GRAB_BUTTON: 16777216
 		
 	};
 	
@@ -1659,13 +1708,20 @@ var x11Init = function() {
 			);
 		},
 		xcb_ungrab_key: function() {
-			// https://github.com/emmanueldenloye/firefox-pentadactyl/blob/52bcaf3a49f81350110210a90552690b2db332a0/unused_plugins/fix-focus.js#L241
+			/* http://www.x.org/archive/current/doc/man/man3/xcb_ungrab_key.3.xhtml
+			 * xcb_void_cookie_t xcb_ungrab_key(
+			 *   xcb_connection_t *conn,
+			 *   xcb_keycode_t key,
+			 *   xcb_window_t grab_window,
+			 *   uint16_t modifiers
+			 * );
+			 */
 			return lib('xcb').declare('xcb_ungrab_key', self.TYPE.ABI,
 				self.TYPE.xcb_void_cookie_t,	// return
-				self.TYPE.xcb_connection_t.ptr,
-				self.TYPE.xcb_keycode_t,
-				self.TYPE.xcb_window_t,
-				self.TYPE.uint16_t
+				self.TYPE.xcb_connection_t.ptr,	// *conn
+				self.TYPE.xcb_keycode_t,		// key
+				self.TYPE.xcb_window_t,			// xcb_window_t
+				self.TYPE.uint16_t				// modifiers
 			);
 		},
 		xcb_wait_for_event: function() {

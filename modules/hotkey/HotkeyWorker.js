@@ -211,11 +211,20 @@ function prepTerm() {
 			break
 		case 'gtk':
 		
-				// 
-				var rez_ungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.key, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
-				console.log('rez_ungrab:', rez_ungrab);
+				////// var rez_ungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.key, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
+				////// console.log('rez_ungrab:', rez_ungrab);
+				////// 
+				////// ostypes.HELPER.ifOpenedXCloseDisplay();
+				for (var i=0; i<OSStuff.grabWins.length; i++) {
+					console.log('ungrabbing win i:', i, OSStuff.grabWins[i]);
+					for (var j=0; j<OSStuff.keycodesArr.length; j++) {
+						console.log('ungrabbing key:', j, OSStuff.keycodesArr[j])
+						var rez_ungrab = ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_ANY);
+						console.log('rez_ungrab:', rez_ungrab);
+					}
+				}
 				
-				ostypes.HELPER.ifOpenedXCloseDisplay();
+				ostypes.API('xcb_disconnect')(OSStuff.conn);
 				
 			break;
 		case 'darwin':
@@ -296,6 +305,7 @@ function registerHotkey() {
 					addressOfElement = ctypes_math.UInt64.add(addressOfElement, ostypes.TYPE.xcb_keycode_t.size);
 				}
 				
+				OSStuff.keycodesArr = keycodesArr;
 				console.log('keycodesArr:', keycodesArr);
 				if (!keycodesArr.length) {
 					console.error('no keycodes!! so nothing to grab!');
@@ -314,6 +324,7 @@ function registerHotkey() {
 				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
 				console.log('screens:', screens);
 				
+				OSStuff.grabWins = [];
 				var screensCnt = parseInt(cutils.jscGetDeepest(screens.rem));
 				console.log('screensCnt:', screensCnt);
 				for (var i=0; i<screensCnt; i++) {
@@ -324,6 +335,7 @@ function registerHotkey() {
 						var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_ANY, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_SYNC, ostypes.CONST.XCB_GRAB_MODE_SYNC);
 						console.log('rez_grab:', rez_grab);
 					}
+					OSStuff.grabWins.push(screens.data.contents.root);
 					ostypes.API('xcb_screen_next')(screens.address()); // returns undefined
 				}
 				/*
@@ -423,6 +435,7 @@ function checkEventLoop() {
 				var evt = ostypes.API('xcb_poll_for_event')(OSStuff.conn);
 				console.log('evt:', evt);
 				if (!evt.isNull()) {
+					console.log('evt.contents:', evt.contents);
 					ostypes.API('free')(evt);
 				}
 				
