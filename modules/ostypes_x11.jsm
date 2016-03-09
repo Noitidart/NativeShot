@@ -292,11 +292,12 @@ var xlibTypes = function() {
 	/////////////// XCB stuff
 	// SIMPLE TYPES
 	// lots of types i cant find out there are found here file:///C:/Users/Vayeate/Downloads/xcb%20types/libxcb-1.9/doc/tutorial/index.html BUT this i am realizing is just from xproto.h - https://github.com/netzbasis/openbsd-xenocara/blob/e6500f41b55e38013ac9b489f66fe49df6b8b68c/lib/libxcb/src/xproto.h#L453
-	this.xcb_window_t = this.uint32_t;
-	this.xcb_visualid_t = this.uint32_t;
 	this.xcb_colormap_t = this.uint32_t;
 	this.xcb_keycode_t = this.uint8_t;
 	this.xcb_keysym_t = this.uint32_t; // https://github.com/netzbasis/openbsd-xenocara/blob/e6500f41b55e38013ac9b489f66fe49df6b8b68c/lib/libxcb/src/xproto.h#L159
+	this.xcb_timestamp_t = this.uint32_t;
+	this.xcb_visualid_t = this.uint32_t;
+	this.xcb_window_t = this.uint32_t;
 	
 	// SIMPLE STRUCTS
 	this.xcb_connection_t = ctypes.StructType('xcb_connection_t');
@@ -359,6 +360,23 @@ var xlibTypes = function() {
 		{ pad: this.uint32_t.array(7) },
 		{ full_sequence: this.uint32_t }
 	]);
+	
+	this.xcb_key_press_event_t = ctypes.StructType('xcb_key_press_event_t', [ // https://github.com/netzbasis/openbsd-xenocara/blob/e6500f41b55e38013ac9b489f66fe49df6b8b68c/lib/libxcb/src/xproto.h#L523
+		{ response_type: this.uint8_t },
+		{ detail: this.xcb_keycode_t },
+		{ sequence: this.uint16_t },
+		{ time: this.xcb_timestamp_t },
+		{ root: this.xcb_window_t },
+		{ event: this.xcb_window_t },
+		{ child: this.xcb_window_t },
+		{ root_x: this.int16_t },
+		{ root_y: this.int16_t },
+		{ event_x: this.int16_t },
+		{ event_y: this.int16_t },
+		{ state: this.uint16_t },
+		{ same_screen: this.uint8_t },
+		{ pad0: this.uint8_t }
+	]);
 	// end - xcb
 };
 
@@ -417,6 +435,7 @@ var x11Init = function() {
 		
 		XK_A: 0x0041, // lower case "a" // https://github.com/semonalbertyeah/noVNC_custom/blob/60daa01208a7e25712d17f67282497626de5704d/include/keysym.js#L216
 		XK_Print: 0xff61,
+		XK_Space: 0x0020,
 		
 		// GTK CONSTS
 		GDK_FILTER_CONTINUE: 0,
@@ -431,6 +450,8 @@ var x11Init = function() {
 		XCB_EVENT_MASK_BUTTON_RELEASE: 8,
 		XCB_CW_EVENT_MASK: 2048,
 		
+		XCB_NONE: 0,
+		XCB_CURRENT_TIME: 0,
 		XCB_NO_SYMBOL: 0, // C:\Users\Mercurius\Downloads\libxcb-1.11.1\src\xcb.h line 206 ```#define XCB_NO_SYMBOL 0L```
 		
 		XCB_MOD_MASK_SHIFT: 1,
@@ -450,7 +471,18 @@ var x11Init = function() {
 		XCB_GRAB_STATUS_ALREADY_GRABBED: 1,
 		XCB_GRAB_STATUS_INVALID_TIME: 2,
 		XCB_GRAB_STATUS_NOT_VIEWABLE: 3,
-		XCB_GRAB_STATUS_FROZEN: 4
+		XCB_GRAB_STATUS_FROZEN: 4,
+		
+		XCB_ALLOW_ASYNC_POINTER: 0,
+		XCB_ALLOW_SYNC_POINTER: 1,
+		XCB_ALLOW_REPLAY_POINTER: 2,
+		XCB_ALLOW_ASYNC_KEYBOARD: 3,
+		XCB_ALLOW_SYNC_KEYBOARD: 4,
+		XCB_ALLOW_REPLAY_KEYBOARD: 5,
+		XCB_ALLOW_ASYNC_BOTH: 6,
+		XCB_ALLOW_SYNC_BOTH: 7,
+		
+		XCB_KEY_PRESS: 2
 		
 	};
 	
@@ -1472,6 +1504,21 @@ var x11Init = function() {
 				self.TYPE.void.ptr	// total guess, i cant find this guy declared anywhere
 			);
 		},
+		xcb_allow_events: function() {
+			/* http://www.x.org/releases/X11R7.7/doc/man/man3/xcb_allow_events.3.xhtml
+			 * xcb_void_cookie_t xcb_allow_events(
+			 *   xcb_connection_t *conn,
+			 *   uint8_t mode,
+			 *   xcb_timestamp_t time
+			 * );
+			 */
+			return lib('xcb').declare('xcb_allow_events', self.TYPE.ABI,
+				self.TYPE.xcb_void_cookie_t,		// return
+				self.TYPE.xcb_connection_t.ptr,		// *conn
+				self.TYPE.uint8_t,					// mode
+				self.TYPE.xcb_timestamp_t			// time
+			);
+		},
 		xcb_connect: function() {
 			// http://xcb.freedesktop.org/PublicApi/#index2h2
 			return lib('xcb').declare('xcb_connect', self.TYPE.ABI,
@@ -1585,6 +1632,15 @@ var x11Init = function() {
 				self.TYPE.xcb_void_cookie_t,	// return
 				self.TYPE.xcb_connection_t.ptr,		// *conn
 				self.TYPE.xcb_window_t				// window
+			);
+		},
+		xcb_poll_for_event: function() {
+			/* https://xcb.freedesktop.org/PublicApi/#index11h2
+			 * xcb_generic_event_t *xcb_poll_for_event (xcb_connection_t *c);
+			 */
+			return lib('xcb').declare('xcb_poll_for_event', self.TYPE.ABI,
+				self.TYPE.xcb_generic_event_t.ptr,		// return
+				self.TYPE.xcb_connection_t.ptr			// *c 
 			);
 		},
 		xcb_screen_next: function() {

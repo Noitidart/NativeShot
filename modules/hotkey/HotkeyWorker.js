@@ -281,7 +281,7 @@ function registerHotkey() {
 				console.log('keysyms:', keysyms);
 				
 				// xcb_keycode_t *keycodes = xcb_key_symbols_get_keycode(keysyms, XK_space), keycode;
-				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, ostypes.CONST.XK_A);
+				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, ostypes.CONST.XK_Space);
 				console.log('keycodesPtr:', keycodesPtr, uneval(keycodesPtr));
 				
 				var keycodesArr = [];
@@ -332,6 +332,8 @@ function registerHotkey() {
 				ok screenI: 2 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9bc")), -2, 40) HotkeyWorker.js:323:6
 				ok screenI: 3 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9e4")), -3, 40)
 				*/
+				var rez_flush = ostypes.API('xcb_flush')(conn);
+				console.log('rez_flush:', rez_flush);
 				
 			break;
 		case 'darwin':
@@ -414,6 +416,15 @@ function checkEventLoop() {
 				////// 	}
 				////// 	setTimeout(checkEventLoop, 0);
 				////// }
+				
+				// var evt = ostypes.API('xcb_wait_for_event')(OSStuff.conn);
+				// console.log('evt:', evt.response_type, evt.contents);
+				
+				var evt = ostypes.API('xcb_poll_for_event')(OSStuff.conn);
+				console.log('evt:', evt);
+				if (!evt.isNull()) {
+					ostypes.API('free')(evt);
+				}
 				
 			break;
 		case 'darwin':
