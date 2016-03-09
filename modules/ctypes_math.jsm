@@ -7,6 +7,9 @@ var ctypes_math = (function() {
   const Unt64 = ctypes.Unt64;
 
   function UInt64_add(a, b) {
+	if (a.constructor.name != 'UInt64') { a = ctypes.UInt64(a) }
+	if (b.constructor.name != 'UInt64') { b = ctypes.UInt64(b) }
+	
     var hi = UInt64.hi(a) + UInt64.hi(b);
     var lo = UInt64.lo(a) + UInt64.lo(b);
     if (lo > 0x100000000) {
@@ -17,6 +20,9 @@ var ctypes_math = (function() {
   }
 
   function UInt64_sub(a, b) {
+	if (a.constructor.name != 'UInt64') { a = ctypes.UInt64(a) }
+	if (b.constructor.name != 'UInt64') { b = ctypes.UInt64(b) }
+	
     var hi = UInt64.hi(a) - UInt64.hi(b);
     var lo = UInt64.lo(a) - UInt64.lo(b);
     if (lo < 0) {
@@ -27,6 +33,9 @@ var ctypes_math = (function() {
   }
 
   function UInt64_mul(a, b) {
+	if (a.constructor.name != 'UInt64') { a = ctypes.UInt64(a) }
+	if (b.constructor.name != 'UInt64') { b = ctypes.UInt64(b) }
+	
     var ah = UInt64.hi(a);
     var al = UInt64.lo(a);
 

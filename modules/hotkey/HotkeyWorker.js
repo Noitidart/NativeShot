@@ -242,29 +242,96 @@ function registerHotkey() {
 			break
 		case 'gtk':
 		
-				// based on https://jnativehook.googlecode.com/svn/branches/test_code/linux/XGrabKey.c
-				//	i copied it here as it might come in handy - https://gist.github.com/Noitidart/e12ad03d21bbb91cd214
+				////// // var rez_init = ostypes.API('XInitThreads')(); // This function returns a nonzero status if initialization was successful; otherwise, it returns zero. On systems that do not support threads, this function always returns zero. 
+				////// // console.log('rez_init:', rez_init);
+				////// 
+				////// // based on https://jnativehook.googlecode.com/svn/branches/test_code/linux/XGrabKey.c
+				////// //	i copied it here as it might come in handy - https://gist.github.com/Noitidart/e12ad03d21bbb91cd214
+				////// 
+				////// //Try to attach to the default X11 display.
+				////// var display = ostypes.HELPER.cachedXOpenDisplay();
+				////// 
+				////// //Get the default global window to listen on for the selected X11 display.
+				////// var grabWin = ostypes.HELPER.cachedDefaultRootWindow();
+				////// // var rez_allow = ostypes.API('XAllowEvents')(display, ostypes.CONST.AsyncKeyboard, ostypes.CONST.CurrentTime);
+				////// // console.log('rez_allow:', rez_allow);
+				////// // XkbSetDetectableAutoRepeat(display, true, NULL);
+				////// 
+				////// //Find the X11 KeyCode we are listening for.
+				////// var key = ostypes.API('XKeysymToKeycode')(display, ostypes.CONST.XK_Print);
+				////// console.log('key:', key);
+				////// OSStuff.key = key;
+				////// 
+				////// //No Modifier
+				////// var rez_grab = ostypes.API('XGrabKey')(display, key, ostypes.CONST.None, grabWin, true, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
+				////// console.log('rez_grab:', rez_grab);
+				////// 
+				////// // var rez_sel = ostypes.API('XSelectInput')(display, grabWin, ostypes.CONST.KeyPressMask);
+				////// // console.log('rez_sel:', rez_sel);
 				
-				//Try to attach to the default X11 display.
-				var display = ostypes.HELPER.cachedXOpenDisplay();
+				// based on http://stackoverflow.com/q/14553810/1828637
 				
-				//Get the default global window to listen on for the selected X11 display.
-				var grabWin = ostypes.HELPER.cachedDefaultRootWindow();
-				var rez_allow = ostypes.API('XAllowEvents')(display, ostypes.CONST.AsyncKeyboard, ostypes.CONST.CurrentTime);
-				console.log('rez_allow:', rez_allow);
-				// XkbSetDetectableAutoRepeat(display, true, NULL);
+				// Connect to the X server.
+				var conn = ostypes.API('xcb_connect')(null, null);
+				console.log('conn:', conn);
+				OSStuff.conn = conn;
 				
-				//Find the X11 KeyCode we are listening for.
-				var key = ostypes.API('XKeysymToKeycode')(display, ostypes.CONST.XK_Print);
-				console.log('key:', key);
-				OSStuff.key = key;
+				// xcb_key_symbols_t *keysyms = xcb_key_symbols_alloc(c);
+				var keysyms = ostypes.API('xcb_key_symbols_alloc')(conn);
+				console.log('keysyms:', keysyms);
 				
-				//No Modifier
-				var rez_grab = ostypes.API('XGrabKey')(display, key, ostypes.CONST.None, grabWin, true, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
-				console.log('rez_grab:', rez_grab);
+				// xcb_keycode_t *keycodes = xcb_key_symbols_get_keycode(keysyms, XK_space), keycode;
+				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, ostypes.CONST.XK_A);
+				console.log('keycodesPtr:', keycodesPtr, uneval(keycodesPtr));
 				
-				// var rez_sel = ostypes.API('XSelectInput')(display, grabWin, ostypes.CONST.KeyPressMask);
-				// console.log('rez_sel:', rez_sel);
+				var keycodesArr = [];
+				var addressOfElement = ctypes.UInt64(cutils.strOfPtr(keycodesPtr));
+				while(true) {
+					var el = ostypes.TYPE.xcb_keycode_t.ptr(addressOfElement);
+					var val = el.contents; // no need for cutils.jscGetDeepest because xcb_keycode_t is ctypes.uint_8 which is a number
+					if (val == ostypes.CONST.XCB_NO_SYMBOL) {
+						break;
+					}
+					keycodesArr.push(val);
+					addressOfElement = ctypes_math.UInt64.add(addressOfElement, ostypes.TYPE.xcb_keycode_t.size);
+				}
+				
+				console.log('keycodesArr:', keycodesArr);
+				if (!keycodesArr.length) {
+					console.error('no keycodes!! so nothing to grab!');
+					return;
+				}
+				
+				ostypes.API('free')(keycodesPtr); // returns undefined
+				
+				ostypes.API('xcb_key_symbols_free')(keysyms); // returns undefined
+				
+				// add bindings for all screens
+				// iter = xcb_setup_roots_iterator (xcb_get_setup (c));
+				var setup = ostypes.API('xcb_get_setup')(conn);
+				console.log('setup:', setup);
+				
+				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
+				console.log('screens:', screens);
+				
+				var screensCnt = parseInt(cutils.jscGetDeepest(screens.rem));
+				console.log('screensCnt:', screensCnt);
+				for (var i=0; i<screensCnt; i++) {
+					console.log('ok screen i:', i, 'screens:', screens);
+					console.log('screens.data.contents:', screens.data.contents);
+					for (var j=0; j<keycodesArr.length; j++) {
+						// xcb_grab_key(c, true, iter.data->root, XCB_MOD_MASK_ANY, keycode, XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_SYNC);
+						var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_ANY, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_SYNC, ostypes.CONST.XCB_GRAB_MODE_SYNC);
+						console.log('rez_grab:', rez_grab);
+					}
+					ostypes.API('xcb_screen_next')(screens.address()); // returns undefined
+				}
+				/*
+				ok screenI: 0 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1a93b754")), 0, 5856) HotkeyWorker.js:323:6
+				ok screenI: 1 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed994")), -1, 2826816) HotkeyWorker.js:323:6
+				ok screenI: 2 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9bc")), -2, 40) HotkeyWorker.js:323:6
+				ok screenI: 3 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9e4")), -3, 40)
+				*/
 				
 			break;
 		case 'darwin':
@@ -330,22 +397,23 @@ function checkEventLoop() {
 			break
 		case 'gtk':
 		
-				var rez_pending = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
-				console.log('rez_pending:', rez_pending);
-				
-				var evPendingCnt = parseInt(cutils.jscGetDeepest(rez_pending));
-				console.log('evPendingCnt:', evPendingCnt);
-				for (var i=0; i<evPendingCnt; i++) {
-					//Block waiting for the next event.
-					console.log('ok going to block');
-					var rez_next = ostypes.API('XNextEvent')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.xev.address());
-					console.log('rez_next:', rez_next);
-					
-					console.log('xev.xkey.type:', cutils.jscGetDeepest(OSStuff.xev.xkey.type));
-					if (cutils.jscEqual(OSStuff.xev.xkey.type, ostypes.CONST.KeyPress)) {
-						console.error('okkkkk key pressed!!!');
-					}
-				}
+				////// var rez_pending = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
+				////// console.log('rez_pending:', rez_pending);
+				////// 
+				////// var evPendingCnt = parseInt(cutils.jscGetDeepest(rez_pending));
+				////// console.log('evPendingCnt:', evPendingCnt);
+				////// for (var i=0; i<evPendingCnt; i++) {
+				////// 	//Block waiting for the next event.
+				////// 	console.log('ok going to block');
+				////// 	var rez_next = ostypes.API('XNextEvent')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.xev.address());
+				////// 	console.log('rez_next:', rez_next);
+				////// 	
+				////// 	console.log('xev.xkey.type:', cutils.jscGetDeepest(OSStuff.xev.xkey.type));
+				////// 	if (cutils.jscEqual(OSStuff.xev.xkey.type, ostypes.CONST.KeyPress)) {
+				////// 		console.error('okkkkk key pressed!!!');
+				////// 	}
+				////// 	setTimeout(checkEventLoop, 0);
+				////// }
 				
 			break;
 		case 'darwin':
