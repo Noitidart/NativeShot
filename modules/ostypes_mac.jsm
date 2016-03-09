@@ -53,6 +53,7 @@ var macTypes = function() {
 	this.CGWindowListOption = ctypes.uint32_t;
 	this.ConstStr255Param = ctypes.unsigned_char.ptr;
 	this.ConstStringPtr = ctypes.unsigned_char.ptr;
+	this.EventTime = ctypes.double;
 	this.ItemCount = ctypes.unsigned_long;
 	this.SInt16 = ctypes.short;
 	this.SInt32 = ctypes.long;
@@ -67,6 +68,8 @@ var macTypes = function() {
 	this.AlertType = this.SInt16;
 	this.DialogItemIndex = this.SInt16;
 	this.EventKind = this.UInt16;
+	this.EventMask = this.UInt16;
+	this.EventTimeout = this.EventTime;
 	this.FourCharCode = this.UInt32;
 	this.FSEventStreamCreateFlags = this.UInt32;
 	this.FSEventStreamEventFlags = this.UInt32;
@@ -124,6 +127,7 @@ var macTypes = function() {
 	this.OpaqueEventHotKeyRef = ctypes.StructType('OpaqueEventHotKeyRef');
 	this.OpaqueEventRef = ctypes.StructType('OpaqueEventRef');
 	this.OpaqueEventTargetRef = ctypes.StructType('OpaqueEventTargetRef');
+	this.OpaqueRgnHandle = ctypes.StructType('OpaqueRgnHandle');
 	this.Point = ctypes.StructType('Point', [
 		{ v: this.short },
 		{ h: this.short }
@@ -164,6 +168,7 @@ var macTypes = function() {
 	this.EventRef = this.OpaqueEventRef.ptr;
 	this.EventTargetRef = this.OpaqueEventTargetRef.ptr;
 	this.FSEventStreamRef = this.__FSEventStream.ptr;
+	this.RgnHandle = this.OpaqueRgnHandle.ptr;
 	
 	// FURTHER ADVANCED STRUCTS
 	this.DialogRef = this.DialogPtr;
@@ -471,6 +476,23 @@ var macInit = function() {
 				self.TYPE.CFTypeRef	// cf
 			);
 		},
+		CFRunLoopRun: function() {
+			/* https://developer.apple.com/library/ios/documentation/CoreFoundation/Reference/CFRunLoopRef/index.html#//apple_ref/c/func/CFRunLoopRun
+			*/
+			return lib('CoreFoundation').declare('CFRunLoopRun', self.TYPE.ABI,
+				self.TYPE.VOID
+			);
+		},
+		CFRunLoopRunInMode: function() {
+			/* https://developer.apple.com/library/ios/documentation/CoreFoundation/Reference/CFRunLoopRef/index.html#//apple_ref/c/func/CFRunLoopRunInMode
+			*/
+			return lib('CoreFoundation').declare("CFRunLoopRunInMode", self.TYPE.ABI,
+				self.TYPE.SInt32,
+				self.TYPE.CFStringRef,
+				self.TYPE.CFTimeInterval,
+				self.TYPE.Boolean
+			);
+		},
 		CGContextClearRect: function() {
 			return lib('CoreGraphics').declare('CGContextClearRect', self.TYPE.ABI,
 				self.TYPE.void,
@@ -639,7 +661,17 @@ var macInit = function() {
 			 * );  
 			 */
 			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('GetApplicationEventTarget', self.TYPE.ABI,
-				ostypes.TYPE.EventTargetRef	// return
+				self.TYPE.EventTargetRef	// return
+			);
+		},
+		GetEventDispatcherTarget: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/GetApplicationEventTarget
+			 *  EventTargetRef GetEventDispatcherTarget (
+			 *    void
+			 * );  
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('GetEventDispatcherTarget', self.TYPE.ABI,
+				self.TYPE.EventTargetRef	// return
 			);
 		},
 		InstallEventHandler: function() {
@@ -651,16 +683,16 @@ var macInit = function() {
 			 *   const EventTypeSpec *inList,
 			 *   void *inUserData,
 			 *   EventHandlerRef *outRef
-			 * ); 
+			 * );
 			 */
 			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('InstallEventHandler', self.TYPE.ABI,
-				ostypes.TYPE.OSStatus,				// return
-				ostypes.TYPE.EventTargetRef,		// inTarget,
-				ostypes.TYPE.EventHandlerUPP,		// inHandler,
-				ostypes.TYPE.ItemCount,				// inNumTypes,
-				ostypes.TYPE.EventTypeSpec.ptr,		// *inList,
-				ostypes.TYPE.void.ptr,				// *inUserData,
-				ostypes.TYPE.EventHandlerRef.ptr	// *outRef
+				self.TYPE.OSStatus,				// return
+				self.TYPE.EventTargetRef,		// inTarget,
+				self.TYPE.EventHandlerUPP,		// inHandler,
+				self.TYPE.ItemCount,			// inNumTypes,
+				self.TYPE.EventTypeSpec.ptr,	// *inList,
+				self.TYPE.void.ptr,				// *inUserData,
+				self.TYPE.EventHandlerRef.ptr	// *outRef
 			);
 		},
 		RegisterEventHotKey: function() {
@@ -684,6 +716,17 @@ var macInit = function() {
 				self.TYPE.EventHotKeyRef.ptr	// *outRef
 			);
 		},
+		RunCurrentEventLoop: function() {
+			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/RunCurrentEventLoop
+			 * OSStatus RunCurrentEventLoop (
+			 *   EventTimeout inTimeout
+			 * ); 
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('UnregisterEventHotKey', self.TYPE.ABI,
+				self.TYPE.OSStatus,		// return
+				self.TYPE.EventTimeout	// inTimeout
+			);
+		},
 		UnregisterEventHotKey: function() {
 			/* https://developer.apple.com/legacy/library/documentation/Carbon/Reference/Carbon_Event_Manager_Ref/index.html#//apple_ref/c/func/UnregisterEventHotKey
 			 * OSStatus UnregisterEventHotKey (
@@ -693,6 +736,18 @@ var macInit = function() {
 			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('UnregisterEventHotKey', self.TYPE.ABI,
 				self.TYPE.OSStatus,			// return
 				self.TYPE.EventHotKeyRef	// inHotKeyCode
+			);
+		},
+		WaitNextEvent: function() {
+			/* 
+			 *
+			 */
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('WaitNextEvent', self.TYPE.ABI,
+				self.TYPE.Boolean,
+				self.TYPE.EventMask,
+				self.TYPE.EventRecord.ptr,
+				self.TYPE.UInt32,
+				self.TYPE.RgnHandle
 			);
 		},
 		dispatch_get_main_queue: function() {
@@ -913,6 +968,12 @@ var macInit = function() {
 			bl.descriptor = desc.address();
 
 			return bl;
+		},
+		convertLongOSStatus: function(aJSInt) {
+			var daHex = '0x' + parseInt(aJSInt).toString(16);
+			var daOSStatus = ctypes.cast(ctypes.long_long(aJSInt), ctypes.int).value; // this can be looked up here - https://developer.apple.com/library/mac/documentation/Security/Reference/keychainservices/index.html#//apple_ref/c/econst/errSecAllocate
+			console.log(aJSInt, daHex, daOSStatus);
+			// so like aJSInt of 4294967246 is hex 0xffffffce which is OSStatus of -50 which is errSecParam which means - One or more parameters passed to the function were not valid.
 		}
 	};
 }

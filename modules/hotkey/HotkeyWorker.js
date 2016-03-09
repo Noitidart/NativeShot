@@ -20,7 +20,7 @@ var OSStuff = {}; // global vars populated by init, based on OS
 // I don't import ostypes_*.jsm yet as I want to init core first, as they use core stuff like core.os.isWinXP etc
 // imported scripts have access to global vars on MainWorker.js
 importScripts(core.addon.path.modules + 'cutils.jsm');
-// importScripts(core.addon.path.modules + 'ctypes_math.jsm');
+importScripts(core.addon.path.modules + 'ctypes_math.jsm');
 
 // Setup PromiseWorker
 // SIPWorker - rev9 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
@@ -215,6 +215,8 @@ function prepTerm() {
 				var rez_ungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.key, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
 				console.log('rez_ungrab:', rez_ungrab);
 				
+				ostypes.HELPER.ifOpenedXCloseDisplay();
+				
 			break;
 		case 'darwin':
 		
@@ -224,8 +226,6 @@ function prepTerm() {
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
 	}
-	
-	ostypes.HELPER.ifOpenedXCloseDisplay();
 	
 	console.error('ok HotkeyWorker prepped for term');
 }
@@ -277,16 +277,21 @@ function registerHotkey() {
 				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
 				
 				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
-				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerProcPtr(macHotKeyHandler);
+				console.log('rez_appTarget:', rez_appTarget);
+				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerUPP(macHotKeyHandler);
 				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.cHotKeyHandler, 1, eventType.address(), null, null);
 				console.log('rez_install:', rez_install);
 				
 				gMyHotKeyID.signature =  ostypes.TYPE.OSType('1752460081'); // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
 				gMyHotKeyID.id = 1;
 				
-				var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
-				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
+				var rez_appTarget2 = ostypes.API('GetEventDispatcherTarget')();
+				console.log('rez_appTarget2:', rez_appTarget2);
+				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ctypes.UInt64(ostypes.CONST.shiftKey), ctypes.UInt64(ostypes.CONST.cmdKey)), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg);
+				ostypes.HELPER.convertLongOSStatus(rez_reg);
+				
+				OSStuff.runLoopMode = ostypes.HELPER.makeCFStr('com.mozilla.firefox.nativeshot');
 				
 			break;
 		default:
@@ -345,7 +350,16 @@ function checkEventLoop() {
 			break;
 		case 'darwin':
 		
-				// 
+				// var cursorRgn = ostypes.TYPE.RgnHandle();
+				var evRec = ostypes.TYPE.EventRecord();
+				var everyEvent = 0;
+				
+				// var rez_waitEv = ostypes.API('WaitNextEvent')(everyEvent, evRec.address(), ostypes.TYPE.UInt32('32767'), cursorRgn);
+				var rez_waitEv = ostypes.API('WaitNextEvent')(everyEvent, evRec.address(), 0, null);
+				console.log('rez_waitEv:', rez_waitEv);
+				
+				// var rez_run = ostypes.API('RunCurrentEventLoop')(1);
+				// console.log('rez_run:', rez_run);
 				
 			break;
 		default:
