@@ -332,8 +332,14 @@ function registerHotkey() {
 					console.log('screens.data.contents:', screens.data.contents);
 					for (var j=0; j<keycodesArr.length; j++) {
 						// xcb_grab_key(c, true, iter.data->root, XCB_MOD_MASK_ANY, keycode, XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_SYNC);
-						var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_ANY, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_SYNC, ostypes.CONST.XCB_GRAB_MODE_SYNC);
+						var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_ANY, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
 						console.log('rez_grab:', rez_grab);
+						
+						var rez_err = ostypes.API('xcb_request_check')(conn, rez_grab);
+						console.log('rez_err:', rez_err);
+						if (!rez_err.isNull()) {
+							console.log('rez_err.contents:', rez_err.contents);
+						}
 					}
 					OSStuff.grabWins.push(screens.data.contents.root);
 					ostypes.API('xcb_screen_next')(screens.address()); // returns undefined

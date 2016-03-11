@@ -15,7 +15,8 @@ var xlibTypes = function() {
 	this.CALLBACK_ABI = ctypes.default_abi;
 	this.ABI = ctypes.default_abi;
 	
-	// C TYPES
+	///// C TYPES
+	// SIMPLE TYPES
 	this.char = ctypes.char;
 	this.fd_set = ctypes.uint8_t; // This is supposed to be fd_set*, but on Linux at least fd_set is just an array of bitfields that we handle manually. this is for my fd_set_set helper functions link4765403
 	this.int = ctypes.int;
@@ -30,7 +31,13 @@ var xlibTypes = function() {
 	this.uint8_t = ctypes.uint8_t;
 	this.void = ctypes.void_t;
 	
+	// SIMPLE STRUCTS
+	this.timeval = ctypes.StructType('timeval', [
+		{ 'tv_sec': this.long },
+		{ 'tv_usec': this.long }
+	]);
 	
+	///// X11 TYPES
 	// SIMPLE TYPES // http://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/libx11-ddefs.html
 	this.Atom = ctypes.unsigned_long;
 	this.Bool = ctypes.int;
@@ -66,6 +73,33 @@ var xlibTypes = function() {
 	this.Depth = ctypes.StructType('Depth');
 	
 	// SIMPLE STRUCTS
+	this.XButtonEvent = ctypes.StructType('XButtonEvent', [ // http://tronche.com/gui/x/xlib/events/keyboard-pointer/keyboard-pointer.html#XButtonEvent
+		{ type: this.int },
+		{ serial: this.unsigned_long },
+		{ send_event: this.Bool },
+		{ display: this.Display.ptr },
+		{ window: this.Window },
+		{ root: this.Window },
+		{ subwindow: this.Window },
+		{ time: this.Time },
+		{ x: this.int },
+		{ y: this.int },
+		{ x_root: this.int },
+		{ y_root: this.int },
+		{ state: this.unsigned_int },
+		{ button: this.unsigned_int },
+		{ same_screen: this.Bool }
+	]);
+	this.XClientMessageEvent = ctypes.StructType('XClientMessageEvent', [ // http://www.man-online.org/page/3-XClientMessageEvent/
+		{ type: this.int },				// ClientMessage
+		{ serial: this.unsigned_long },	// # of last request processed by server
+		{ send_event: this.Bool },		// true if this came from a SendEvent request
+		{ display: this.Display.ptr },	// Display the event was read from
+		{ window: this.Window },
+		{ message_type: this.Atom },
+		{ format: this.int },
+		{ data: this.long.array(5) }	// union of either this.char.array(20), this.short.array(10), or this.long.array(5) // if go with long format must be set to 32, if short then 16 else if char then 8
+	]);
 	this.XImage = ctypes.StructType('_XImage', [	// https://github.com/pombreda/rpythonic/blob/23857bbeda30a4574b7ae3a3c47e88b87080ef3f/examples/xlib/__init__.py#L1593
 		{ width: this.int },
 		{ height: this.int },						// size of image
@@ -111,6 +145,12 @@ var xlibTypes = function() {
 		{ keycode: this.unsigned_int },
 		{ same_screen: this.Bool }
 	]);
+	this.XTextProperty = ctypes.StructType('XTextProperty', [
+		{ value: this.unsigned_char.ptr },	// *value
+		{ encoding: this.Atom },			// encoding
+		{ format: this.int },				// format
+		{ nitems: this.unsigned_long }		// nitems
+	]);
 	this.XWindowAttributes = ctypes.StructType('XWindowAttributes', [
 		{ x: this.int },
 		{ y: this.int },							// location of window
@@ -137,18 +177,12 @@ var xlibTypes = function() {
 		{ screen: this.Screen.ptr }					// back pointer to correct screen
 	]);
 	
-	this.XTextProperty = ctypes.StructType('XTextProperty', [
-		{ value: this.unsigned_char.ptr },	// *value
-		{ encoding: this.Atom },			// encoding
-		{ format: this.int },				// format
-		{ nitems: this.unsigned_long }		// nitems
-	]);
-	
 	// ADVANCED STRUCTS
 	// XEvent is one huge union, js-ctypes doesnt have union so i just set it to what I use for my addon
 	this.XEvent = ctypes.StructType('_XEvent', [ // http://tronche.com/gui/x/xlib/events/structures.html
 		// { xclient: this.XClientMessageEvent }
-		{ xkey: this.XKeyEvent }
+		{ xbutton: this.XButtonEvent }
+		// { xkey: this.XKeyEvent }
 	]);
 	
 	// start - xrandr stuff
@@ -216,17 +250,6 @@ var xlibTypes = function() {
 		{ possible: this.RROutput.ptr }
 	]);
 	
-	this.XClientMessageEvent = ctypes.StructType('XClientMessageEvent', [ // http://www.man-online.org/page/3-XClientMessageEvent/
-		{ type: this.int },				// ClientMessage
-		{ serial: this.unsigned_long },	// # of last request processed by server
-		{ send_event: this.Bool },		// true if this came from a SendEvent request
-		{ display: this.Display.ptr },	// Display the event was read from
-		{ window: this.Window },
-		{ message_type: this.Atom },
-		{ format: this.int },
-		{ data: this.long.array(5) }	// union of either this.char.array(20), this.short.array(10), or this.long.array(5) // if go with long format must be set to 32, if short then 16 else if char then 8
-	]);
-	
 	/////////////// GTK stuff temporary for test, i want to use x11 for everything
 	// SIMPLE TYPES
 	this.CARD32 = /^(Alpha|hppa|ia64|ppc64|s390|x86_64)-/.test(core.os.xpcomabi) ? ctypes.unsigned_int : ctypes.unsigned_long;
@@ -253,7 +276,6 @@ var xlibTypes = function() {
 	this.GFileMonitor = ctypes.StructType('_GFileMonitor');
 	this.gint = ctypes.int;
 	this.gpointer = ctypes.void_t.ptr;
-	this.GQuark = ctypes.uint32_t;
 	this.GtkWidget = ctypes.StructType('GtkWidget');
 	this.GtkWindow = ctypes.StructType('GtkWindow');
 	this.GtkWindowPosition = ctypes.int;
@@ -377,6 +399,18 @@ var xlibTypes = function() {
 		{ same_screen: this.uint8_t },
 		{ pad0: this.uint8_t }
 	]);
+	
+	this.xcb_generic_error_t = ctypes.StructType('xcb_generic_error_t', [
+		{ response_type: this.uint8_t },
+		{ error_code: this.uint8_t },
+		{ sequence: this.uint16_t },
+		{ resource_id: this.uint32_t },
+		{ minor_code: this.uint16_t },
+		{ major_code: this.uint8_t },
+		{ pad0: this.uint8_t },
+		{ pad: this.uint32_t.array(5) },
+		{ full_sequence: this.uint32_t }
+	]);
 	// end - xcb
 };
 
@@ -415,7 +449,10 @@ var x11Init = function() {
 		_NET_WM_STATE_TOGGLE: 2,
 		SubstructureRedirectMask: 1048576,
 		SubstructureNotifyMask: 524288,
-		
+		ButtonPressMask: 4,
+		ButtonReleaseMask: 8,
+		ButtonPress: 4,
+		ButtonRelease: 5,
 		CurrentTime: 0,
 		
 		GrabModeSync: 0,
@@ -426,8 +463,24 @@ var x11Init = function() {
 		GrabNotViewable: 3,
 		GrabFrozen: 4,
 		
+		AsyncPointer: 0,
+		SyncPointer: 1,
+		ReplayPointer: 2,
+		AsyncKeyboard: 3,
+		SyncKeyboard: 4,
+		ReplayKeyboard: 5,
+		AsyncBoth: 6,
+		SyncBoth: 7,
+		
+		NoEventMask: 0,
 		KeyPressMask: 1,
 		KeyReleaseMask: 2,
+		ButtonPressMask: 4,
+		ButtonReleaseMask: 8,
+		EnterWindowMask: 16,
+		LeaveWindowMask: 32,
+		PointerMotionMask: 64,
+		
 		KeyPress: 2,
 		KeyRelease: 3,
 		AsyncKeyboard: 3,
@@ -819,6 +872,36 @@ var x11Init = function() {
 				self.TYPE.Time				// time
 			);
 		},
+		XBlackPixel: function() {
+			/* http://tronche.com/gui/x/xlib/display/display-macros.html
+			 * unsigned long XBlackPixel(
+			 *   Display *display;
+			 *   int screen_number;
+			 * );
+			 */
+			return lib('x11').declare('XBlackPixel', self.TYPE.ABI,
+				self.TYPE.unsigned_long,	// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.int				// screen_number
+			);
+		},
+		XChangeActivePointerGrab: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XGrabPointer.3.xhtml
+			 * int XChangeActivePointerGrab (
+			 *   Display *display,
+			 *   unsigned_int event_mask,
+			 *   Cursor cursor,
+			 *   Time time
+			 * );
+			*/
+			return lib('x11').declare('XChangeActivePointerGrab', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.unsigned_int,	// event_mask
+				self.TYPE.Cursor,		// cursor
+				self.TYPE.Time 			// time
+			);
+		},
 		XChangeProperty: function() {
 			/* http://www.xfree86.org/4.4.0/XChangeProperty.3.html
 			 * int XChangeProperty(
@@ -842,6 +925,69 @@ var x11Init = function() {
 				self.TYPE.int,				// mode
 				self.TYPE.unsigned_char.ptr,	// *data
 				self.TYPE.int					// nelements
+			);
+		},
+		XCheckMaskEvent: function() {
+			/* https://tronche.com/gui/x/xlib/event-handling/manipulating-event-queue/XCheckMaskEvent.html
+			 * Bool XCheckMaskEvent(
+			 *   Display *display,
+			 *   long event_mask,
+			 *   XEvent *event_return
+			 * );
+			 */
+			return lib('x11').declare('XCheckMaskEvent', self.TYPE.ABI,
+				self.TYPE.Bool,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.long,			// event_mask
+				self.TYPE.XEvent.ptr	// *event_return
+			);
+		},
+		XCloseDisplay: function() {
+			/* http://www.xfree86.org/4.4.0/XCloseDisplay.3.html
+			 * int XCloseDisplay(
+			 *   Display	*display
+			 * );
+			 */
+			return lib('x11').declare('XCloseDisplay', self.TYPE.ABI,
+				self.TYPE.int,		// return
+				self.TYPE.Display.ptr	// *display
+			);
+		},
+		XConnectionNumber: function() {
+			/* http://tronche.com/gui/x/xlib/display/display-macros.html
+			 * int XConnectionNumber(
+			 *   Display *display;
+			 * );
+			 */
+			return lib('x11').declare('XConnectionNumber', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr	// *display
+			);
+		},
+		XCreateSimpleWindow: function() {
+			/* http://tronche.com/gui/x/xlib/window/XCreateWindow.html
+			 * Window XCreateSimpleWindow(
+			 *   Display *display,
+			 *   Window parent,
+			 *   int x,
+			 *   int y,
+			 *   unsigned_int width, height,
+			 *   unsigned_int border_width,
+			 *   unsigned_long border,
+			 *   unsigned_long background
+			 * );
+			 */
+			return lib('x11').declare('XCreateSimpleWindow', self.TYPE.ABI,
+				self.TYPE.Window,			// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.Window,			// parent
+				self.TYPE.int,				// x
+				self.TYPE.int,				// y
+				self.TYPE.unsigned_int,		// width
+				self.TYPE.unsigned_int,		// height
+				self.TYPE.unsigned_int,		// border_width
+				self.TYPE.unsigned_long,	// border
+				self.TYPE.unsigned_long		// background
 			);
 		},
 		XDefaultRootWindow: function() {
@@ -876,39 +1022,6 @@ var x11Init = function() {
 				self.TYPE.Display.ptr		// *display
 			);
 		},
-		XHeightOfScreen: function() {
-			/* http://www.xfree86.org/4.4.0/HeightOfScreen.3.html
-			 * int HeightOfScreen(
-			 *   Screen	*screen 
-			 * );
-			 */
-			return lib('x11').declare('XHeightOfScreen', self.TYPE.ABI,
-				self.TYPE.int,		// return
-				self.TYPE.Screen.ptr	// *screen
-			);
-		},
-		XWidthOfScreen: function() {
-			/* http://www.xfree86.org/4.4.0/WidthOfScreen.3.html
-			 * int WidthOfScreen(
-			 *   Screen	*screen 
-			 * );
-			 */
-			return lib('x11').declare('XWidthOfScreen', self.TYPE.ABI,
-				self.TYPE.int,		// return
-				self.TYPE.Screen.ptr	// *screen
-			);
-		},
-		XCloseDisplay: function() {
-			/* http://www.xfree86.org/4.4.0/XCloseDisplay.3.html
-			 * int XCloseDisplay(
-			 *   Display	*display
-			 * );
-			 */
-			return lib('x11').declare('XCloseDisplay', self.TYPE.ABI,
-				self.TYPE.int,		// return
-				self.TYPE.Display.ptr	// *display
-			);
-		},
 		XFlush: function() {
 			/* http://www.xfree86.org/4.4.0/XFlush.3.html
 			 * int XFlush(
@@ -940,6 +1053,24 @@ var x11Init = function() {
 			return lib('x11').declare('XFreeStringList', self.TYPE.ABI,
 				self.TYPE.void,			// return
 				self.TYPE.char.ptr.ptr	// **list
+			);
+		},
+		XGetAtomNames: function() {
+			/* NOTE: XGetAtomNames() is more efficient, but doesn't exist in X11R5. Source: https://github.com/JohnArchieMckown/nedit/blob/b4560954930d28113086b5471ffcda27a3d28e77/source/server_common.c#L130
+			 * http://www.x.org/releases/X11R7.5/doc/man/man3/XGetAtomNames.3.html
+			 * Status XGetAtomNames (
+			 *   Display *display,
+			 *   Atom *atoms,
+			 *   int count,
+			 *   char **names_return
+			 * );
+			 */
+			return lib('x11').declare('XGetAtomNames', self.TYPE.ABI,
+				self.TYPE.Status,		// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Atom.ptr,		// *atoms
+				self.TYPE.int,			// count
+				self.TYPE.char.ptr.ptr	// **names_return
 			);
 		},
 		XGetGeometry: function() {
@@ -994,6 +1125,21 @@ var x11Init = function() {
 				self.TYPE.int				// format
 			);
 		},
+		XGetInputFocus: function() {
+			/* http://www.x.org/releases/X11R7.6/doc/man/man3/XGetInputFocus.3.xhtml
+			 * int XGetInputFocus(
+			 *   Display *display,
+			 *   Window *focus_return,
+			 *   int *revert_to_return
+			 * );
+			 */
+			return lib('x11').declare('XGetInputFocus', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window.ptr,	// *focus_return
+				self.TYPE.int.ptr		// *revert_to_return
+			);
+		},
 		XGetWindowAttributes: function() {
 			/* http://www.xfree86.org/4.4.0/XGetWindowAttributes.3.html
 			 * Status XGetWindowAttributes(
@@ -1008,24 +1154,6 @@ var x11Init = function() {
 				self.TYPE.Window,				// w
 				self.TYPE.XWindowAttributes.ptr	// *window_attributes_return
 			); 
-		},
-		XGetAtomNames: function() {
-			/* NOTE: XGetAtomNames() is more efficient, but doesn't exist in X11R5. Source: https://github.com/JohnArchieMckown/nedit/blob/b4560954930d28113086b5471ffcda27a3d28e77/source/server_common.c#L130
-			 * http://www.x.org/releases/X11R7.5/doc/man/man3/XGetAtomNames.3.html
-			 * Status XGetAtomNames (
-			 *   Display *display,
-			 *   Atom *atoms,
-			 *   int count,
-			 *   char **names_return
-			 * );
-			 */
-			return lib('x11').declare('XGetAtomNames', self.TYPE.ABI,
-				self.TYPE.Status,		// return
-				self.TYPE.Display.ptr,	// *display
-				self.TYPE.Atom.ptr,		// *atoms
-				self.TYPE.int,			// count
-				self.TYPE.char.ptr.ptr	// **names_return
-			);
 		},
 		XGetWindowProperty: function() {
 			/* http://www.xfree86.org/4.4.0/XGetWindowProperty.3.html
@@ -1058,44 +1186,6 @@ var x11Init = function() {
 				self.TYPE.unsigned_long.ptr,	// *nitems_return
 				self.TYPE.unsigned_long.ptr,	// *bytes_after_return
 				self.TYPE.unsigned_char.ptr.ptr	// **prop_return
-			);
-		},
-		XInitThreads: function() {
-			/* http://www.x.org/archive/X11R6.8.1/doc/XInitThreads.3.html
-			 * Status XInitThreads (
-			 *   void
-			 * )
-			 */
-			return lib('x11').declare('XInitThreads', self.TYPE.ABI,
-				self.TYPE.Status
-			);
-		},
-		XKeysymToKeycode: function() {
-			/* http://domesjö.se/xlib/utilities/keyboard/XKeysymToKeycode.html
-			 * KeyCode XKeysymToKeycode(
-			 *   Display *display,
-			 *   KeySym keysym
-			 * )
-			 */
-			return lib('x11').declare('XKeysymToKeycode', self.TYPE.ABI,
-				self.TYPE.KeyCode,		// return
-				self.TYPE.Display.ptr,	// *display
-				self.TYPE.KeySym		// keysym
-			);
-		},
-		XListProperties: function() {
-			/* http://tronche.com/gui/x/xlib/window-information/XListProperties.html
-			 * Atom *XListProperties(
-			 *   Display *display,
-			 *   Window w,
-			 *   int *num_prop_return
-			 * )
-			 */
-			return lib('x11').declare('XListProperties', self.TYPE.ABI,
-				self.TYPE.Atom.ptr,			// return
-				self.TYPE.Display.ptr,		// *display
-				self.TYPE.Window,			// w
-				self.TYPE.int.ptr			// *num_prop_return
 			);
 		},
 		XGetWMName: function() {
@@ -1137,6 +1227,54 @@ var x11Init = function() {
 				self.TYPE.int			// keyboard_mode
 			);
 		},
+		XGrabPointer: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XGrabPointer.3.xhtml
+			 * int XGrabPointer(
+			 *   Display *display,
+			 *   Window grab_window,
+			 *   Bool owner_events,
+			 *   unsigned int event_mask,
+			 *   int pointer_mode,
+			 *   int keyboard_mode,
+			 *   Window confine_to,
+			 *   Cursor cursor,
+			 *   Time time
+			 * );
+			*/
+			return lib('x11').declare('XGrabPointer', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window, 		// grab_window
+				self.TYPE.Bool, 		// owner_events
+				self.TYPE.unsigned_int,	// event_mask
+				self.TYPE.int, 			// pointer_mode
+				self.TYPE.int, 			// keyboard_mode
+				self.TYPE.Window, 		// confine_to
+				self.TYPE.Cursor, 		// cursor
+				self.TYPE.Time 			// time
+			);
+		},
+		XHeightOfScreen: function() {
+			/* http://www.xfree86.org/4.4.0/HeightOfScreen.3.html
+			 * int HeightOfScreen(
+			 *   Screen	*screen 
+			 * );
+			 */
+			return lib('x11').declare('XHeightOfScreen', self.TYPE.ABI,
+				self.TYPE.int,		// return
+				self.TYPE.Screen.ptr	// *screen
+			);
+		},
+		XInitThreads: function() {
+			/* http://www.x.org/archive/X11R6.8.1/doc/XInitThreads.3.html
+			 * Status XInitThreads (
+			 *   void
+			 * )
+			 */
+			return lib('x11').declare('XInitThreads', self.TYPE.ABI,
+				self.TYPE.Status
+			);
+		},
 		XInternAtom: function() {
 			/* http://www.xfree86.org/4.4.0/XInternAtom.3.html
 			 * Atom XInternAtom(
@@ -1150,6 +1288,62 @@ var x11Init = function() {
 				self.TYPE.Display.ptr,	// *display
 				self.TYPE.char.ptr,		// *atom_name
 				self.TYPE.Bool			// only_if_exists
+			);
+		},
+		XKeysymToKeycode: function() {
+			/* http://domesjö.se/xlib/utilities/keyboard/XKeysymToKeycode.html
+			 * KeyCode XKeysymToKeycode(
+			 *   Display *display,
+			 *   KeySym keysym
+			 * )
+			 */
+			return lib('x11').declare('XKeysymToKeycode', self.TYPE.ABI,
+				self.TYPE.KeyCode,		// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.KeySym		// keysym
+			);
+		},
+		XListProperties: function() {
+			/* http://tronche.com/gui/x/xlib/window-information/XListProperties.html
+			 * Atom *XListProperties(
+			 *   Display *display,
+			 *   Window w,
+			 *   int *num_prop_return
+			 * )
+			 */
+			return lib('x11').declare('XListProperties', self.TYPE.ABI,
+				self.TYPE.Atom.ptr,			// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.Window,			// w
+				self.TYPE.int.ptr			// *num_prop_return
+			);
+		},
+		XMapWindow: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XMapWindow.3.xhtml
+			 * int XMapWindow (
+			 *   Display *display,
+			 *   Window w
+			 * );
+			 */
+			return lib('x11').declare('XMapWindow', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window		// w
+			);
+		},
+		XMaskEvent: function() {
+			/* https://tronche.com/gui/x/xlib/event-handling/manipulating-event-queue/XMaskEvent.html
+			 * int XMaskEvent(
+			 *   Display *display,
+			 *   long event_mask,
+			 *   XEvent *event_return
+			 * );
+			 */
+			return lib('x11').declare('XMaskEvent', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.long,			// event_mask
+				self.TYPE.XEvent.ptr	// *event_return
 			);
 		},
 		XNextEvent: function() {
@@ -1187,6 +1381,19 @@ var x11Init = function() {
 				self.TYPE.Display.ptr	// *display
 			);
 		},
+		XPutBackEvent: function() {
+			/* www.xfree86.org/4.4.0/XPutBackEvent.3.html
+			 * XPutBackEvent(
+			 *   Display *display,
+			 *   XEvent *event
+			 * );
+			 */
+			return lib('x11').declare('XPutBackEvent', self.TYPE.ABI,
+				self.TYPE.void,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.XEvent.ptr	// *event
+			);
+		},
 		XQueryTree: function() {
 			/* http://tronche.com/gui/x/xlib/window-information/XQueryTree.html
 			 * Status XQueryTree (
@@ -1208,30 +1415,18 @@ var x11Init = function() {
 				self.TYPE.unsigned_int.ptr	// *nchildren_return
 			);
 		},
-		XTranslateCoordinates: function() {
-			/* http://www.xfree86.org/4.4.0/XTranslateCoordinates.3.html
-			 * Bool XTranslateCoordinates(
-			 *   Display	*display,
-			 *   Window		src_w,
-			 *   Window		dest_w,
-			 *   int		src_x,
-			 *   int		src_y,
-			 *   int		*dest_x_return,
-			 *   int		*dest_y_return,
-			 *   Window		*child_return
+		XRootWindow: function() {
+			/* http://tronche.com/gui/x/xlib/display/display-macros.html
+			 * Window XRootWindow (
+			 *   Display *display,
+			 *   int screen_number
 			 * );
 			 */
-			return lib('x11').declare('XTranslateCoordinates', self.TYPE.ABI,
-				self.TYPE.Bool,			// return
-				self.TYPE.Display.ptr,	// *display
-				self.TYPE.Window,			// src_w
-				self.TYPE.Window,			// dest_w
-				self.TYPE.int,			// src_x
-				self.TYPE.int,			// src_y
-				self.TYPE.int.ptr,		// *dest_x_return
-				self.TYPE.int.ptr,		// *dest_y_return
-				self.TYPE.Window.ptr		// *child_return
-			); 
+			return lib('x11').declare('XRootWindow', self.TYPE.ABI,
+				self.TYPE.Window,			// return
+				self.TYPE.Display.ptr,		// *display
+				self.TYPE.int				// screen_number
+			);			
 		},
 		XSendEvent: function() {
 			/* http://www.xfree86.org/4.4.0/XSendEvent.3.html
@@ -1267,6 +1462,50 @@ var x11Init = function() {
 				self.TYPE.long			// event_mask
 			); 
 		},
+		XSendEvent: function() {
+			/* http://www.xfree86.org/4.4.0/XSendEvent.3.html
+			 * Status XSendEvent(
+			 *   Display *display,
+			 *   Window w,
+			 *   Bool propagate,
+			 *   long event_mask,
+			 *   XEvent *event_send
+			 * ); 
+			 */
+			return lib('x11').declare('XSendEvent', self.TYPE.ABI,
+				self.TYPE.Status,		// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window,		// w
+				self.TYPE.Bool,			// propagate
+				self.TYPE.long,			// event_mask
+				self.TYPE.XEvent.ptr	// *event_sent
+			); 
+		},
+		XTranslateCoordinates: function() {
+			/* http://www.xfree86.org/4.4.0/XTranslateCoordinates.3.html
+			 * Bool XTranslateCoordinates(
+			 *   Display	*display,
+			 *   Window		src_w,
+			 *   Window		dest_w,
+			 *   int		src_x,
+			 *   int		src_y,
+			 *   int		*dest_x_return,
+			 *   int		*dest_y_return,
+			 *   Window		*child_return
+			 * );
+			 */
+			return lib('x11').declare('XTranslateCoordinates', self.TYPE.ABI,
+				self.TYPE.Bool,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Window,			// src_w
+				self.TYPE.Window,			// dest_w
+				self.TYPE.int,			// src_x
+				self.TYPE.int,			// src_y
+				self.TYPE.int.ptr,		// *dest_x_return
+				self.TYPE.int.ptr,		// *dest_y_return
+				self.TYPE.Window.ptr		// *child_return
+			); 
+		},
 		XUngrabKey: function() {
 			/* http://www.x.org/releases/current/doc/man/man3/XGrabKey.3.xhtml
 			 * int XUngrabKey(
@@ -1282,6 +1521,30 @@ var x11Init = function() {
 				self.TYPE.int,			// keycode
 				self.TYPE.unsigned_int,	// modifiers
 				self.TYPE.Window		// grab_window
+			);
+		},
+		XUngrabPointer: function() {
+			/* http://www.x.org/releases/current/doc/man/man3/XUngrabPointer.3.xhtml
+			 * int XUngrabPointer(
+			 *   Display *display,
+			 *   Time time
+			 * );
+			*/
+			return lib('x11').declare('XUngrabPointer', self.TYPE.ABI,
+				self.TYPE.int,			// return
+				self.TYPE.Display.ptr,	// *display
+				self.TYPE.Time 			// time
+			);
+		},
+		XWidthOfScreen: function() {
+			/* http://www.xfree86.org/4.4.0/WidthOfScreen.3.html
+			 * int WidthOfScreen(
+			 *   Screen	*screen 
+			 * );
+			 */
+			return lib('x11').declare('XWidthOfScreen', self.TYPE.ABI,
+				self.TYPE.int,		// return
+				self.TYPE.Screen.ptr	// *screen
 			);
 		},
 		// start - XRANDR
@@ -1363,54 +1626,6 @@ var x11Init = function() {
 		},
 		// end - XRANDR
 		// start - gtk
-		gtk_widget_get_window: function() {
-			/* https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-window
-			 * GdkWindow *gtk_widget_get_window (
-			 *   GtkWidget *widget
-			 * );
-			 */
-			return lib('gtk2').declare('gtk_widget_get_window', self.TYPE.ABI,
-				self.TYPE.GdkWindow.ptr,	// *return
-				self.TYPE.GtkWidget.ptr		// *widget
-			);
-		},
-		gdk_x11_drawable_get_xid: function() {
-			/* https://developer.gnome.org/gdk2/stable/gdk2-X-Window-System-Interaction.html#gdk-x11-drawable-get-xid
-			 * XID gdk_x11_drawable_get_xid (
-			 *   GdkDrawable *drawable
-			 * );
-			 */
-			return lib('gdk2').declare('gdk_x11_drawable_get_xid', self.TYPE.ABI,
-				self.TYPE.XID,				// return
-				self.TYPE.GdkDrawable.ptr	// *drawable
-			);
-		},
-		gdk_window_get_user_data: function() {
-			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-get-user-data
-			 * void gdk_window_get_user_data (
-			 *   GdkWindow *window,
-			 *   gpointer *data
-			 * );
-			 */
-			return lib('gdk2').declare('gdk_window_get_user_data', self.TYPE.ABI,
-				self.TYPE.void,				// return
-				self.TYPE.GdkWindow.ptr,	// *window
-				self.TYPE.gpointer.ptr		// *data
-			);
-		},
-		gdk_x11_window_lookup_for_display: function() {
-			/* https://developer.gnome.org/gdk2/stable/gdk2-X-Window-System-Interaction.html#gdk-x11-window-lookup-for-display
-			 * GdkWindow *gdk_x11_window_lookup_for_display (
-			 *   GdkDisplay *display,
-			 *   Window window
-			 * );
-			 */
-			return lib('gdk2').declare('gdk_x11_window_lookup_for_display', self.TYPE.ABI,
-				self.TYPE.GdkWindow.ptr,	// *return
-				self.TYPE.GdkDisplay.ptr,	// *display
-				self.TYPE.Window			// window
-			);
-		},
 		g_app_info_launch_uris: function() {
 			/* https://developer.gnome.org/gio/unstable/GAppInfo.html#g-app-info-launch-uris
 			 * gboolean g_app_info_launch_uris (
@@ -1480,6 +1695,19 @@ var x11Init = function() {
 				self.TYPE.gpointer			// data
 			);
 		},
+		gdk_window_get_user_data: function() {
+			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-get-user-data
+			 * void gdk_window_get_user_data (
+			 *   GdkWindow *window,
+			 *   gpointer *data
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_window_get_user_data', self.TYPE.ABI,
+				self.TYPE.void,				// return
+				self.TYPE.GdkWindow.ptr,	// *window
+				self.TYPE.gpointer.ptr		// *data
+			);
+		},
 		gdk_window_remove_filter: function() {
 			/* https://developer.gnome.org/gdk3/stable/gdk3-Windows.html#gdk-window-remove-filter
 			 * void gdk_window_add_filter (
@@ -1493,6 +1721,41 @@ var x11Init = function() {
 				self.TYPE.GdkWindow.ptr,	// *window
 				self.TYPE.GdkFilterFunc,	// function
 				self.TYPE.gpointer			// data
+			);
+		},
+		gdk_x11_drawable_get_xid: function() {
+			/* https://developer.gnome.org/gdk2/stable/gdk2-X-Window-System-Interaction.html#gdk-x11-drawable-get-xid
+			 * XID gdk_x11_drawable_get_xid (
+			 *   GdkDrawable *drawable
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_x11_drawable_get_xid', self.TYPE.ABI,
+				self.TYPE.XID,				// return
+				self.TYPE.GdkDrawable.ptr	// *drawable
+			);
+		},
+		gdk_x11_window_lookup_for_display: function() {
+			/* https://developer.gnome.org/gdk2/stable/gdk2-X-Window-System-Interaction.html#gdk-x11-window-lookup-for-display
+			 * GdkWindow *gdk_x11_window_lookup_for_display (
+			 *   GdkDisplay *display,
+			 *   Window window
+			 * );
+			 */
+			return lib('gdk2').declare('gdk_x11_window_lookup_for_display', self.TYPE.ABI,
+				self.TYPE.GdkWindow.ptr,	// *return
+				self.TYPE.GdkDisplay.ptr,	// *display
+				self.TYPE.Window			// window
+			);
+		},
+		gtk_widget_get_window: function() {
+			/* https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-window
+			 * GdkWindow *gtk_widget_get_window (
+			 *   GtkWidget *widget
+			 * );
+			 */
+			return lib('gtk2').declare('gtk_widget_get_window', self.TYPE.ABI,
+				self.TYPE.GdkWindow.ptr,	// *return
+				self.TYPE.GtkWidget.ptr		// *widget
 			);
 		},
 		gtk_window_set_keep_above: function() {
@@ -1699,6 +1962,16 @@ var x11Init = function() {
 				self.TYPE.xcb_screen_iterator_t.ptr
 			);
 		},
+		xcb_request_check: function() {
+			/* https://xcb.freedesktop.org/manual/group__XCB__Core__API.html#ga3ee7f1ad9cf0a9f1716d5c22405598fc
+			 * xcb_generic_error_t* xcb_request_check 	( 	xcb_connection_t *  	c, xcb_void_cookie_t  	cookie );
+			 */
+			return lib('xcb').declare('xcb_request_check', self.TYPE.ABI,
+				self.TYPE.xcb_generic_error_t.ptr,	// return
+				self.TYPE.xcb_connection_t.ptr,		// *c
+				self.TYPE.xcb_void_cookie_t			// cookie
+			);
+		},
 		xcb_setup_roots_iterator: function() {
 			// https://github.com/netzbasis/openbsd-xenocara/blob/e6500f41b55e38013ac9b489f66fe49df6b8b68c/lib/libxcb/src/xproto.h#L5409
 			// xcb_screen_iterator_t xcb_setup_roots_iterator (xcb_setup_t *R);
@@ -1737,6 +2010,24 @@ var x11Init = function() {
 	// end - function declares
 
 	this.MACRO = { // http://tronche.com/gui/x/xlib/display/display-macros.html
+		ConnectionNumber: function(display) {
+			/* The ConnectionNumber macro returns a connection number for the specified display.
+			 * http://tronche.com/gui/x/xlib/display/display-macros.html
+			 * int ConnectionNumber(
+			 *   Display *display
+			 * ); 
+			 */
+			return self.API('XConnectionNumber')(display);
+		},
+		BlackPixel: function() {
+			/* 
+			 * BlackPixel(
+			 *   display,
+			 *   screen_number
+			 * )
+			 */
+			return self.API('XBlackPixel');
+		},
 		DefaultRootWindow: function() {
 			/* The DefaultRootWindow macro returns the root window for the default screen. 
 			 * Argument `display` specifies the connection to the X server.
@@ -1756,6 +2047,17 @@ var x11Init = function() {
 			 */
 			return self.API('XDefaultScreenOfDisplay');
 		},
+		DefaultScreen: function() {
+			/* The DefaultScreen macro returns the default screen number referenced in the XOpenDisplay routine.
+			 * Argument `display` specifies the connection to the X server. 
+			 * Return the default screen number referenced by the XOpenDisplay() function. This macro or function should be used to retrieve the screen number in applications that will use only a single screen. 
+			 * http://www.xfree86.org/4.4.0/DefaultScreen.3.html
+			 * int DefaultScreen(
+			 *   Display *display
+			 * );
+			 */
+			return self.API('XDefaultScreen');
+		},
 		HeightOfScreen: function() {
 			/* http://www.xfree86.org/4.4.0/HeightOfScreen.3.html
 			 * int HeightOfScreen(
@@ -1771,17 +2073,6 @@ var x11Init = function() {
 			 * );
 			 */
 			return self.API('XWidthOfScreen');
-		},
-		DefaultScreen: function() {
-			/* The DefaultScreen macro returns the default screen number referenced in the XOpenDisplay routine.
-			 * Argument `display` specifies the connection to the X server. 
-			 * Return the default screen number referenced by the XOpenDisplay() function. This macro or function should be used to retrieve the screen number in applications that will use only a single screen. 
-			 * http://www.xfree86.org/4.4.0/DefaultScreen.3.html
-			 * int DefaultScreen(
-			 *   Display *display
-			 * );
-			 */
-			return self.API('XDefaultScreen');
 		}
 	};
 	
@@ -1881,7 +2172,7 @@ var x11Init = function() {
 				var atom = self.API('XInternAtom')(self.HELPER.cachedXOpenDisplay(), aAtomName, createAtomIfDne ? self.CONST.False : self.CONST.True); //passing 3rd arg of false, means even if atom doesnt exist it returns a created atom, this can be used with GetProperty to see if its supported etc, this is how Chromium does it
 				if (!createAtomIfDne) {
 					if (atom == self.CONST.None) { // if i pass 3rd arg as False, it will will never equal self.CONST.None it gets creatd if it didnt exist on line before
-
+						console.warn('No atom with name:', aAtomName, 'return val of atom:', atom.toString());
 						throw new Error('No atom with name "' + aAtomName + '"), return val of atom:"' +  atom.toString() + '"');
 					}
 				}
@@ -1893,27 +2184,107 @@ var x11Init = function() {
 			// devUserRequestedType is req_type arg passed to XGetWindowProperty
 			// this tells us what the return of XGetWindowProperty means and if it needs XFree'ing
 			// returns < 0 if nitems_return is empty and no need for XFree. > 0 if needs XFree as there are items. 0 if no items but needs XFree, i have never seen this situation and so have not set up this to return 0 // actually scratch this xfree thing it seems i have to xfree it everytime: // XGetWindowProperty() always allocates one extra byte in prop_return (even if the property is zero length) and sets it to zero so that simple properties consisting of characters do not have to be copied into yet another string before use.  // wait tested it, and i was getting some weird errors so only XFree when not empty, interesting
-
-
-
+				// -1 - console.log('The specified property does not exist for the specified window. The delete argument was ignored. The nitems_return argument will be empty.');
+				// -2 - must set dontThrowOnDevTypeMismatch to true else it throws - console.log('Specified property/atom exists on window but here because returns actual type does not match the specified type (the xgwpArg.req_type) you supplied to function. The delete argument was ignored. The nitems_return argument will be empty.');
+				// 1 - console.log('The specified property exists and either you assigned AnyPropertyType to the req_type argument or the specified type matched the actual property type of the returned data.');
 			
 			if (cutils.jscEqual(funcReturnedType, self.CONST.None) && cutils.jscEqual(funcReturnedFormat, 0) && cutils.jscEqual(funcBytesAfterReturned, 0)) {
-
+				// console.log('The specified property does not exist for the specified window. The delete argument was ignored. The nitems_return argument will be empty.');
 				return -1;
 			} else if (!cutils.jscEqual(devUserRequestedType, self.CONST.AnyPropertyType) && !cutils.jscEqual(devUserRequestedType, funcReturnedType)) {
-
-
-
+				// console.log('Specified property/atom exists on window but here because returns actual type does not match the specified type (the xgwpArg.req_type) you supplied to function. The delete argument was ignored. The nitems_return argument will be empty.');
+				console.info('devUserRequestedType:', cutils.jscGetDeepest(devUserRequestedType));
+				console.info('funcReturnedType:', cutils.jscGetDeepest(funcReturnedType));
 				if (!dontThrowOnDevTypeMismatch) {
 					throw new Error('devuser supplied wrong type for title, fix it stupid, or maybe not a throw? maybe intentionally wrong? to just check if it exists on the window but dont want any data returend as dont want to XFree?');
 				}
 				return -2;
 			} else if (cutils.jscEqual(devUserRequestedType, self.CONST.AnyPropertyType) || cutils.jscEqual(devUserRequestedType, funcReturnedType)) {
-
+				// console.log('The specified property exists and either you assigned AnyPropertyType to the req_type argument or the specified type matched the actual property type of the returned data.');
 				return 1;
 			}  else {
 				throw new Error('should never get here')
 			}
+		},
+		// link4765403
+		fd_set_get_idx: function(fd) {
+			// https://github.com/pioneers/tenshi/blob/9b3273298c34b9615e02ac8f021550b8e8291b69/angel-player/src/chrome/content/common/serport_posix.js#L497
+			if (core.os.name == 'darwin' /*is_mac*/) {
+				// We have an array of int32. This should hopefully work on Darwin
+				// 32 and 64 bit.
+				let elem32 = Math.floor(fd / 32);
+				let bitpos32 = fd % 32;
+				let elem8 = elem32 * 8;
+				let bitpos8 = bitpos32;
+				if (bitpos8 >= 8) {     // 8
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 16
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 24
+					bitpos8 -= 8;
+					elem8++;
+				}
+			
+				return {'elem8': elem8, 'bitpos8': bitpos8};
+			} else { // else if (core.os.name == 'linux' /*is_linux*/) { // removed the else if so this supports bsd and solaris now
+				// :todo: add 32bit support
+				// Unfortunately, we actually have an array of long ints, which is
+				// a) platform dependent and b) not handled by typed arrays. We manually
+				// figure out which byte we should be in. We assume a 64-bit platform
+				// that is little endian (aka x86_64 linux).
+				let elem64 = Math.floor(fd / 64);
+				let bitpos64 = fd % 64;
+				let elem8 = elem64 * 8;
+				let bitpos8 = bitpos64;
+				if (bitpos8 >= 8) {     // 8
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 16
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 24
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 32
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 40
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 48
+					bitpos8 -= 8;
+					elem8++;
+				}
+				if (bitpos8 >= 8) {     // 56
+					bitpos8 -= 8;
+					elem8++;
+				}
+
+				return {'elem8': elem8, 'bitpos8': bitpos8};
+			}
+		},
+		fd_set_set: function(fdset, fd) {
+			// https://github.com/pioneers/tenshi/blob/9b3273298c34b9615e02ac8f021550b8e8291b69/angel-player/src/chrome/content/common/serport_posix.js#L497
+			let { elem8, bitpos8 } = self.HELPER.fd_set_get_idx(fd);
+			console.info('elem8:', elem8.toString());
+			console.info('bitpos8:', bitpos8.toString());
+			fdset[elem8] = 1 << bitpos8;
+		},
+		fd_set_isset: function(fdset, fd) {
+			// https://github.com/pioneers/tenshi/blob/9b3273298c34b9615e02ac8f021550b8e8291b69/angel-player/src/chrome/content/common/serport_posix.js#L497
+			let { elem8, bitpos8 } = self.HELPER.fd_set_get_idx(fd);
+			console.info('elem8:', elem8.toString());
+			console.info('bitpos8:', bitpos8.toString());
+			return !!(fdset[elem8] & (1 << bitpos8));
 		}
 	};
 };
