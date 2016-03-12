@@ -278,51 +278,51 @@ function registerHotkey() {
 				////// // var rez_sel = ostypes.API('XSelectInput')(display, grabWin, ostypes.CONST.KeyPressMask);
 				////// // console.log('rez_sel:', rez_sel);
 				
-				// based on http://stackoverflow.com/a/28351174/1828637
-				// Connect to the X server.
-				var conn = ostypes.API('xcb_connect')(null, null);
-				console.log('conn:', conn);
-				OSStuff.conn = conn;
-				
-				var rez_conerr = ostypes.API('xcb_connection_has_error')(conn);
-				console.log('rez_conerr:', rez_conerr);
-				
-				if (!cutils.jscEqual(rez_conerr, 0)) {
-					console.error('error in the connection!!!!!');
-					throw new Error('error in xcb connection!!');
-				}
-				
-				// get first screen
-				var setup = ostypes.API('xcb_get_setup')(conn);
-				console.log('setup:', setup);
-				
-				var screen = ostypes.API('xcb_setup_roots_iterator')(setup);
-				console.log('screen:', screen);
-				
-				
-				// define the application as window manager
-				var select_input_val = ostypes.TYPE.uint32_t.array()([
-											ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-											| ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-											| ostypes.CONST.XCB_EVENT_MASK_ENTER_WINDOW
-											| ostypes.CONST.XCB_EVENT_MASK_LEAVE_WINDOW
-											| ostypes.CONST.XCB_EVENT_MASK_STRUCTURE_NOTIFY
-											| ostypes.CONST.XCB_EVENT_MASK_PROPERTY_CHANGE
-											| ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS
-											| ostypes.CONST.XCB_EVENT_MASK_BUTTON_RELEASE
-											| ostypes.CONST.XCB_EVENT_MASK_FOCUS_CHANGE
-											| ostypes.CONST.XCB_EVENT_MASK_KEY_PRESS
-											| ostypes.CONST.XCB_EVENT_MASK_KEY_RELEASE
-										]);
-				console.log('select_input_val:', select_input_val);
-				console.log('screen.data.contents.root:', screen.data.contents.root);
-				
-				var rez_chg = ostypes.API('xcb_change_window_attributes')(conn, screen.data.contents.root, ostypes.CONST.XCB_CW_EVENT_MASK, select_input_val);
-				console.log('rez_chg:', rez_chg);
-				
-				// Need to xcb_flush to validate error handler
-				var rez_sync = ostypes.API('xcb_aux_sync')(conn);
-				console.log('rez_sync:', rez_sync);
+				//////////////// // based on http://stackoverflow.com/a/28351174/1828637
+				//////////////// // Connect to the X server.
+				//////////////// var conn = ostypes.API('xcb_connect')(null, null);
+				//////////////// console.log('conn:', conn);
+				//////////////// OSStuff.conn = conn;
+				//////////////// 
+				//////////////// var rez_conerr = ostypes.API('xcb_connection_has_error')(conn);
+				//////////////// console.log('rez_conerr:', rez_conerr);
+				//////////////// 
+				//////////////// if (!cutils.jscEqual(rez_conerr, 0)) {
+				//////////////// 	console.error('error in the connection!!!!!');
+				//////////////// 	throw new Error('error in xcb connection!!');
+				//////////////// }
+				//////////////// 
+				//////////////// // get first screen
+				//////////////// var setup = ostypes.API('xcb_get_setup')(conn);
+				//////////////// console.log('setup:', setup);
+				//////////////// 
+				//////////////// var screen = ostypes.API('xcb_setup_roots_iterator')(setup);
+				//////////////// console.log('screen:', screen);
+				//////////////// 
+				//////////////// 
+				//////////////// // define the application as window manager
+				//////////////// var select_input_val = ostypes.TYPE.uint32_t.array()([
+				//////////////// 							ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_ENTER_WINDOW
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_LEAVE_WINDOW
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_STRUCTURE_NOTIFY
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_PROPERTY_CHANGE
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_BUTTON_RELEASE
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_FOCUS_CHANGE
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_KEY_PRESS
+				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_KEY_RELEASE
+				//////////////// 						]);
+				//////////////// console.log('select_input_val:', select_input_val);
+				//////////////// console.log('screen.data.contents.root:', screen.data.contents.root);
+				//////////////// 
+				//////////////// var rez_chg = ostypes.API('xcb_change_window_attributes')(conn, screen.data.contents.root, ostypes.CONST.XCB_CW_EVENT_MASK, select_input_val);
+				//////////////// console.log('rez_chg:', rez_chg);
+				//////////////// 
+				//////////////// // Need to xcb_flush to validate error handler
+				//////////////// var rez_sync = ostypes.API('xcb_aux_sync')(conn);
+				//////////////// console.log('rez_sync:', rez_sync);
 				
 				// var rez_poll = ostypes.API('xcb_poll_for_event')(conn);
 				// console.log('rez_poll:', rez_poll);
@@ -369,7 +369,7 @@ function registerHotkey() {
 				////////	var rezFlush = ostypes.API('xcb_flush')(conn);
 				////////	console.log('rezFlush:', rezFlush);
 				////////
-				/*
+				
 				// based on http://stackoverflow.com/q/14553810/1828637
 				
 				// Connect to the X server.
@@ -434,12 +434,19 @@ function registerHotkey() {
 						var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_ANY, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
 						console.log('rez_grab:', rez_grab);
 						
-						var rez_err = ostypes.API('xcb_request_check')(conn, rez_grab);
-						console.log('rez_err:', rez_err);
-						if (!rez_err.isNull()) {
-							console.log('rez_err.contents:', rez_err.contents);
-						}
+						// var rez_err = ostypes.API('xcb_request_check')(conn, rez_grab);
+						// console.log('rez_err:', rez_err);
+						// if (!rez_err.isNull()) {
+						// 	console.log('rez_err.contents:', rez_err.contents);
+						// }
 					}
+					
+					var chgValueList = ostypes.TYPE.uint32_t.array()([
+						ostypes.CONST.XCB_EVENT_MASK_EXPOSURE | ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS
+					]);
+					var rez_chg = ostypes.API('xcb_change_window_attributes')(conn, screens.data.contents.root, ostypes.CONST.XCB_CW_EVENT_MASK, chgValueList);
+					console.log('rez_chg:', rez_chg);
+					
 					OSStuff.grabWins.push(screens.data.contents.root);
 					ostypes.API('xcb_screen_next')(screens.address()); // returns undefined
 				}
@@ -451,7 +458,6 @@ function registerHotkey() {
 				
 				var rez_flush = ostypes.API('xcb_flush')(conn);
 				console.log('rez_flush:', rez_flush);
-				*/
 				
 			break;
 		case 'darwin':
@@ -538,8 +544,8 @@ function checkEventLoop() {
 				// var evt = ostypes.API('xcb_wait_for_event')(OSStuff.conn);
 				// console.log('evt:', evt);
 				// if (!evt.isNull()) {
-				// 	console.log('evt.contents:', evt.contents);
-				// 	ostypes.API('free')(evt);
+					// console.log('evt.contents:', evt.contents);
+					// ostypes.API('free')(evt);
 				// }
 				
 				var evt = ostypes.API('xcb_poll_for_event')(OSStuff.conn);
