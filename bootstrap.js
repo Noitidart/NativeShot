@@ -4629,6 +4629,9 @@ function openBgWin() {
 									.getInterface(Ci.nsIXULWindow);
 
 	xulWindow.QueryInterface(Ci.nsIBaseWindow).visibility = false;
+	xulWindow.QueryInterface(Ci.nsIBaseWindow).enabled = false;
+	
+	Services.appShell.unregisterTopLevelWindow(xulWindow);
 }
 // end - bg window stuff
 

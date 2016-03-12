@@ -499,8 +499,6 @@ var x11Init = function() {
 		XCB_CW_BACK_PIXEL: 2,
 		XCB_WINDOW_CLASS_INPUT_OUTPUT: 1,
 		XCB_COPY_FROM_PARENT: 0,
-		XCB_EVENT_MASK_BUTTON_PRESS: 4,
-		XCB_EVENT_MASK_BUTTON_RELEASE: 8,
 		XCB_CW_EVENT_MASK: 2048,
 		
 		XCB_NONE: 0,
@@ -726,6 +724,30 @@ var x11Init = function() {
 							case 'gnu/kfreebsd': // physically unverified
 							case 'linux':
 								preferred = 'libxcb-keysyms.so';
+								break;
+							default:
+								// do nothing
+						}
+						
+						libAttempter(path, preferred, possibles);
+						
+					break;
+				case 'xcbutil':
+
+						var possibles = ['libxcb-util.so', 'libxcb-util.so.1'];
+						
+						var preferred;
+						// all values of preferred MUST exist in possibles reason is link123543939
+						switch (core.os.name) {
+							case 'freebsd': // physically unverified
+							case 'openbsd': // physically unverified
+							case 'android': // physically unverified
+							case 'sunos': // physically unverified
+							case 'netbsd': // physically unverified
+							case 'dragonfly': // physcially unverified
+							case 'gnu/kfreebsd': // physically unverified
+							case 'linux':
+								preferred = 'libxcb-util.so';
 								break;
 							default:
 								// do nothing
@@ -1831,12 +1853,49 @@ var x11Init = function() {
 				self.TYPE.xcb_timestamp_t			// time
 			);
 		},
+		xcb_aux_sync: function() {
+			/* http://www.x.org/archive/X11R7.5/doc/libxcb/tutorial/index.html
+			 * int xcb_aux_sync (
+			 *   xcb_connection_t *c
+			 * );
+			 */
+			return lib('xcbutil').declare('xcb_aux_sync', self.TYPE.ABI,
+				self.TYPE.int,					// return
+				self.TYPE.xcb_connection_t.ptr	// *c
+			);
+		},
+		xcb_change_window_attributes: function() {
+			/* https://xcb.freedesktop.org/manual/group__XCB____API.html#ga3724f4ccfdfa063439258831b75f6224
+			 * xcb_void_cookie_t xcb_change_window_attributes (
+			 *   xcb_connection_t 	*c,
+			 *   xcb_window_t		window,
+			 *   uint32_t			value_mask,
+			 *   const uint32_t		*value_list 
+			 * )
+			 */
+			return lib('xcb').declare('xcb_change_window_attributes', self.TYPE.ABI,
+				self.TYPE.xcb_void_cookie_t,			// return
+				self.TYPE.xcb_connection_t.ptr,			// *c
+				self.TYPE.xcb_window_t,					// window
+				self.TYPE.uint32_t,						// value_mask
+				self.TYPE.uint32_t.ptr					// *value_list
+			);
+		},
 		xcb_connect: function() {
 			// http://xcb.freedesktop.org/PublicApi/#index2h2
 			return lib('xcb').declare('xcb_connect', self.TYPE.ABI,
 				self.TYPE.xcb_connection_t.ptr,	// return
 				self.TYPE.char.ptr,				// *display
 				self.TYPE.int.ptr				// *screen
+			);
+		},
+		xcb_connection_has_error: function() {
+			/* https://xcb.freedesktop.org/manual/group__XCB__Core__API.html#ga70a6bade94bd2824db552abcf5fbdbe3
+			 * int xcb_connection_has_error 	( 	xcb_connection_t *  	c	) 	
+			 */
+			return lib('xcb').declare('xcb_connection_has_error', self.TYPE.ABI,
+				self.TYPE.int,					// return
+				self.TYPE.xcb_connection_t.ptr	// *c
 			);
 		},
 		xcb_create_window: function() {

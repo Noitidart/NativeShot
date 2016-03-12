@@ -193,7 +193,7 @@ function init(objCore) { // function name init required for SIPWorker
 
 // start - addon functionality
 var gEventLoopInterval;
-const gEventLoopIntervalMS = 50;
+const gEventLoopIntervalMS = 5000;
 
 function prepTerm() {
 	
@@ -278,12 +278,111 @@ function registerHotkey() {
 				////// // var rez_sel = ostypes.API('XSelectInput')(display, grabWin, ostypes.CONST.KeyPressMask);
 				////// // console.log('rez_sel:', rez_sel);
 				
+				// based on http://stackoverflow.com/a/28351174/1828637
+				// Connect to the X server.
+				var conn = ostypes.API('xcb_connect')(null, null);
+				console.log('conn:', conn);
+				OSStuff.conn = conn;
+				
+				var rez_conerr = ostypes.API('xcb_connection_has_error')(conn);
+				console.log('rez_conerr:', rez_conerr);
+				
+				if (!cutils.jscEqual(rez_conerr, 0)) {
+					console.error('error in the connection!!!!!');
+					throw new Error('error in xcb connection!!');
+				}
+				
+				// get first screen
+				var setup = ostypes.API('xcb_get_setup')(conn);
+				console.log('setup:', setup);
+				
+				var screen = ostypes.API('xcb_setup_roots_iterator')(setup);
+				console.log('screen:', screen);
+				
+				
+				// define the application as window manager
+				var select_input_val = ostypes.TYPE.uint32_t.array()([
+											ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+											| ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+											| ostypes.CONST.XCB_EVENT_MASK_ENTER_WINDOW
+											| ostypes.CONST.XCB_EVENT_MASK_LEAVE_WINDOW
+											| ostypes.CONST.XCB_EVENT_MASK_STRUCTURE_NOTIFY
+											| ostypes.CONST.XCB_EVENT_MASK_PROPERTY_CHANGE
+											| ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS
+											| ostypes.CONST.XCB_EVENT_MASK_BUTTON_RELEASE
+											| ostypes.CONST.XCB_EVENT_MASK_FOCUS_CHANGE
+											| ostypes.CONST.XCB_EVENT_MASK_KEY_PRESS
+											| ostypes.CONST.XCB_EVENT_MASK_KEY_RELEASE
+										]);
+				console.log('select_input_val:', select_input_val);
+				console.log('screen.data.contents.root:', screen.data.contents.root);
+				
+				var rez_chg = ostypes.API('xcb_change_window_attributes')(conn, screen.data.contents.root, ostypes.CONST.XCB_CW_EVENT_MASK, select_input_val);
+				console.log('rez_chg:', rez_chg);
+				
+				// Need to xcb_flush to validate error handler
+				var rez_sync = ostypes.API('xcb_aux_sync')(conn);
+				console.log('rez_sync:', rez_sync);
+				
+				// var rez_poll = ostypes.API('xcb_poll_for_event')(conn);
+				// console.log('rez_poll:', rez_poll);
+				// if (!rez_poll.isNull()) {
+				// 	console.error('another window manager is already running');
+				// }
+				
+				// var rez_flush = ostypes.API('xcb_flush')(conn);
+				// console.log('rez_flush:', rez_flush);
+				
+				// tried creating a window to see if i can get events from there, it worked
+				////////
+				////////	var w = ostypes.API('xcb_generate_id')(conn);
+				////////	console.log('w:', w);
+				////////	
+				////////	var mask = ostypes.CONST.XCB_CW_BACK_PIXEL | ostypes.CONST.XCB_CW_EVENT_MASK;
+				////////	
+				////////	var value_list = ostypes.TYPE.uint32_t.array()([
+				////////		screen.data.contents.black_pixel, // Background color of the window (XCB_CW_BACK_PIXEL)
+				////////		ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS | ostypes.CONST.XCB_EVENT_MASK_BUTTON_RELEASE // Event masks (XCB_CW_EVENT_MASK)
+				////////	]);
+				////////	
+				////////	var rezXcbCreateWindow = ostypes.API('xcb_create_window')(
+				////////		conn,											// Connection
+				////////		ostypes.CONST.XCB_COPY_FROM_PARENT,				// Depth
+				////////		w,												// Window ID
+				////////		screen.data.contents.root,						// Parent window
+				////////		0,												// x
+				////////		0,												// y
+				////////		150,											// width
+				////////		150,											// height
+				////////		10,												// Border width in pixels
+				////////		ostypes.CONST.XCB_WINDOW_CLASS_INPUT_OUTPUT,	// Window class
+				////////		screen.data.contents.root_visual,				// Visual
+				////////		mask,
+				////////		value_list										// Window properties mask and values.
+				////////	);
+				////////	console.log('rezXcbCreateWindow:', rezXcbCreateWindow);
+				////////	
+				////////	// Map the window and ensure the server receives the map request.
+				////////	var rezMap = ostypes.API('xcb_map_window')(conn, w);
+				////////	console.log('rezMap:', rezMap);
+				////////	
+				////////	var rezFlush = ostypes.API('xcb_flush')(conn);
+				////////	console.log('rezFlush:', rezFlush);
+				////////
+				/*
 				// based on http://stackoverflow.com/q/14553810/1828637
 				
 				// Connect to the X server.
 				var conn = ostypes.API('xcb_connect')(null, null);
 				console.log('conn:', conn);
 				OSStuff.conn = conn;
+				
+				var rez_conerr = ostypes.API('xcb_connection_has_error')(conn);
+				console.log('rez_conerr:', rez_conerr);
+				if (!cutils.jscEqual(rez_conerr, 0)) {
+					console.error('error in the connection!!!!!');
+					throw new Error('error in xcb connection!!');
+				}
 				
 				// xcb_key_symbols_t *keysyms = xcb_key_symbols_alloc(c);
 				var keysyms = ostypes.API('xcb_key_symbols_alloc')(conn);
@@ -344,14 +443,15 @@ function registerHotkey() {
 					OSStuff.grabWins.push(screens.data.contents.root);
 					ostypes.API('xcb_screen_next')(screens.address()); // returns undefined
 				}
-				/*
-				ok screenI: 0 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1a93b754")), 0, 5856) HotkeyWorker.js:323:6
-				ok screenI: 1 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed994")), -1, 2826816) HotkeyWorker.js:323:6
-				ok screenI: 2 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9bc")), -2, 40) HotkeyWorker.js:323:6
-				ok screenI: 3 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9e4")), -3, 40)
-				*/
+				
+				// ok screenI: 0 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1a93b754")), 0, 5856) HotkeyWorker.js:323:6
+				// ok screenI: 1 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed994")), -1, 2826816) HotkeyWorker.js:323:6
+				// ok screenI: 2 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9bc")), -2, 40) HotkeyWorker.js:323:6
+				// ok screenI: 3 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9e4")), -3, 40)
+				
 				var rez_flush = ostypes.API('xcb_flush')(conn);
 				console.log('rez_flush:', rez_flush);
+				*/
 				
 			break;
 		case 'darwin':
@@ -436,7 +536,11 @@ function checkEventLoop() {
 				////// }
 				
 				// var evt = ostypes.API('xcb_wait_for_event')(OSStuff.conn);
-				// console.log('evt:', evt.response_type, evt.contents);
+				// console.log('evt:', evt);
+				// if (!evt.isNull()) {
+				// 	console.log('evt.contents:', evt.contents);
+				// 	ostypes.API('free')(evt);
+				// }
 				
 				var evt = ostypes.API('xcb_poll_for_event')(OSStuff.conn);
 				console.log('evt:', evt);
