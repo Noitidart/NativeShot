@@ -72,6 +72,7 @@ var winTypes = function() {
 	this.LPWSTR = this.WCHAR.ptr;
 	this.LRESULT = this.LONG_PTR;
 	this.OLECHAR = this.WCHAR; // typedef WCHAR OLECHAR; // https://github.com/wine-mirror/wine/blob/bdeb761357c87d41247e0960f71e20d3f05e40e6/include/wtypes.idl#L286
+	this.PCZZSTR = ifdef_UNICODE ? this.WCHAR.ptr : this.CHAR.ptr; // EDUCATED GUESS BASED ON TYPEDEF FROM --> // ansi / unicode - https://github.com/wine-mirror/wine/blob/b1ee60f22fbd6b854c3810a89603458ec0585369/include/winnt.h#L483 --- 
 	this.PLONG = this.LONG.ptr;
 	this.PULONG = this.ULONG.ptr;
 	this.PULONG_PTR = this.ULONG.ptr;
@@ -100,6 +101,7 @@ var winTypes = function() {
 	this.LPOLESTR = this.OLECHAR.ptr; // typedef [string] OLECHAR *LPOLESTR; // https://github.com/wine-mirror/wine/blob/bdeb761357c87d41247e0960f71e20d3f05e40e6/include/wtypes.idl#L287 // http://stackoverflow.com/a/1607335/1828637 // LPOLESTR is usually to be allocated with CoTaskMemAlloc()
 	this.LPTSTR = ifdef_UNICODE ? this.LPWSTR : this.LPSTR;
 	this.PCTSTR = ifdef_UNICODE ? this.LPCWSTR : this.LPCSTR;
+	this.PCZZTSTR = this.PCZZSTR; // double null terminated from msdn docs // typedef from https://github.com/wine-mirror/wine/blob/b1ee60f22fbd6b854c3810a89603458ec0585369/include/winnt.h#L535
 	
 	// SUPER DUPER ADVANCED TYPES // defined by "super advanced types"
 	this.HCURSOR = this.HICON;
@@ -167,6 +169,16 @@ var winTypes = function() {
         { right: this.LONG },
         { bottom: this.LONG }
     ]);
+	this.SHFILEOPSTRUCT = ctypes.StructType('_SHFILEOPSTRUCT', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/bb759795%28v=vs.85%29.aspx
+		{ hwnd: this.HWND },
+		{ wFunc: this.UINT },
+		{ pFrom: this.PCZZTSTR },
+		{ pTo: this.PCZZTSTR },
+		{ fFlags: this.FILEOP_FLAGS },
+		{ fAnyOperationsAborted: this.BOOL },
+		{ hNameMappings: this.LPVOID },
+		{ lpszProgressTitle: this.PCTSTR }
+	]);
 
 	// ADVANCED STRUCTS // based on "simple structs" to be defined first
 	this.BITMAPINFO = ctypes.StructType('BITMAPINFO', [
@@ -232,6 +244,7 @@ var winTypes = function() {
     this.LPRECT = this.RECT.ptr;
     this.LPCRECT = this.RECT.ptr;
 	this.LPPOINT = this.POINT.ptr;
+	this.LPSHFILEOPSTRUCT = this.SHFILEOPSTRUCT.ptr;
 	this.PBITMAPINFOHEADER = this.BITMAPINFOHEADER.ptr;
 	this.PDISPLAY_DEVICE = this.DISPLAY_DEVICE.ptr;
 
@@ -273,22 +286,7 @@ var winTypes = function() {
 	this.MONITORENUMPROC = ctypes.FunctionType(this.CALLBACK_ABI, this.BOOL, [this.HMONITOR, this.HDC, this.LPRECT, this.LPARAM]);
 
 	// STRUCTS USING FUNC TYPES
-
-
-	this.PCZZSTR = ifdef_UNICODE ? this.WCHAR.ptr : this.CHAR.ptr; // EDUCATED GUESS BASED ON TYPEDEF FROM --> // ansi / unicode - https://github.com/wine-mirror/wine/blob/b1ee60f22fbd6b854c3810a89603458ec0585369/include/winnt.h#L483 --- 
-	this.PCZZTSTR = this.PCZZSTR; // double null terminated from msdn docs // typedef from https://github.com/wine-mirror/wine/blob/b1ee60f22fbd6b854c3810a89603458ec0585369/include/winnt.h#L535
-
-	this.SHFILEOPSTRUCT = ctypes.StructType('_SHFILEOPSTRUCT', [ // https://msdn.microsoft.com/en-us/library/windows/desktop/bb759795%28v=vs.85%29.aspx
-		{ hwnd: this.HWND },
-		{ wFunc: this.UINT },
-		{ pFrom: this.PCZZTSTR },
-		{ pTo: this.PCZZTSTR },
-		{ fFlags: this.FILEOP_FLAGS },
-		{ fAnyOperationsAborted: this.BOOL },
-		{ hNameMappings: this.LPVOID },
-		{ lpszProgressTitle: this.PCTSTR }
-	]);
-	this.LPSHFILEOPSTRUCT = this.SHFILEOPSTRUCT.ptr;
+	
 }
 
 var winInit = function() {
