@@ -19,8 +19,8 @@ var OSStuff = {}; // global vars populated by init, based on OS
 // Imports that use stuff defined in chrome
 // I don't import ostypes_*.jsm yet as I want to init core first, as they use core stuff like core.os.isWinXP etc
 // imported scripts have access to global vars on MainWorker.js
-importScripts(core.addon.path.modules + 'cutils.jsm');
-importScripts(core.addon.path.modules + 'ctypes_math.jsm');
+importScripts(core.addon.path.modules + 'ostypes/cutils.jsm');
+importScripts(core.addon.path.modules + 'ostypes/ctypes_math.jsm');
 
 // Setup PromiseWorker
 // SIPWorker - rev9 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
@@ -152,13 +152,13 @@ function init(objCore) { // function name init required for SIPWorker
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
-			importScripts(core.addon.path.modules + 'ostypes_win.jsm');
+			importScripts(core.addon.path.modules + 'ostypes/ostypes_win.jsm');
 			break
 		case 'gtk':
-			importScripts(core.addon.path.modules + 'ostypes_x11.jsm');
+			importScripts(core.addon.path.modules + 'ostypes/ostypes_x11.jsm');
 			break;
 		case 'darwin':
-			importScripts(core.addon.path.modules + 'ostypes_mac.jsm');
+			importScripts(core.addon.path.modules + 'ostypes/ostypes_mac.jsm');
 			break;
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
