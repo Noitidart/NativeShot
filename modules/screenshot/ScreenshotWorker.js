@@ -453,6 +453,50 @@ function getAllWin(aOptions) {
 						var thisWin = {};
 						var c_win = ostypes.API('CFArrayGetValueAtIndex')(cfarr_win, i);
 						
+						if (aOptions.hwndAsPtr) {
+							var windowNumber = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowNumber')); // (NSString *)[window objectForKey:@"kCGWindowName"];
+							// console.log('windowNumber:', windowNumber, cutils.jscGetDeepest(windowNumber), cutils.jscGetDeepest(windowNumber, 10), cutils.jscGetDeepest(windowNumber, 16)); // >>> windowNumber: ctypes.voidptr_t(ctypes.UInt64("0xb37")) ctypes.voidptr_t(ctypes.UInt64("0xb37")) 2871 b37
+							
+							var windowNumberIntVal = ostypes.API('objc_msgSend')(windowNumber, ostypes.HELPER.sel('intValue'));
+							// console.log('windowNumberIntVal:', windowNumberIntVal, cutils.jscGetDeepest(windowNumberIntVal), cutils.jscGetDeepest(windowNumberIntVal, 10), cutils.jscGetDeepest(windowNumberIntVal, 16)) // >>> windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0xb")) ctypes.voidptr_t(ctypes.UInt64("0xb")) 11 b
+							
+							// results of console logging
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x6137")) ctypes.voidptr_t(ctypes.UInt64("0x6137")) 24887 6137 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x61")) ctypes.voidptr_t(ctypes.UInt64("0x61")) 97 61 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x1d37")) ctypes.voidptr_t(ctypes.UInt64("0x1d37")) 7479 1d37 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x1d")) ctypes.voidptr_t(ctypes.UInt64("0x1d")) 29 1d ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x1237")) ctypes.voidptr_t(ctypes.UInt64("0x1237")) 4663 1237 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x12")) ctypes.voidptr_t(ctypes.UInt64("0x12")) 18 12 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x1737")) ctypes.voidptr_t(ctypes.UInt64("0x1737")) 5943 1737 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x17")) ctypes.voidptr_t(ctypes.UInt64("0x17")) 23 17 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x1137")) ctypes.voidptr_t(ctypes.UInt64("0x1137")) 4407 1137 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x11")) ctypes.voidptr_t(ctypes.UInt64("0x11")) 17 11 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x1337")) ctypes.voidptr_t(ctypes.UInt64("0x1337")) 4919 1337 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x13")) ctypes.voidptr_t(ctypes.UInt64("0x13")) 19 13 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x337")) ctypes.voidptr_t(ctypes.UInt64("0x337")) 823 337 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x3")) ctypes.voidptr_t(ctypes.UInt64("0x3")) 3 3 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0xd37")) ctypes.voidptr_t(ctypes.UInt64("0xd37")) 3383 d37 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0xd")) ctypes.voidptr_t(ctypes.UInt64("0xd")) 13 d ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x6537")) ctypes.voidptr_t(ctypes.UInt64("0x6537")) 25911 6537 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x65")) ctypes.voidptr_t(ctypes.UInt64("0x65")) 101 65 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x19a37")) ctypes.voidptr_t(ctypes.UInt64("0x19a37")) 105015 19a37 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x19a")) ctypes.voidptr_t(ctypes.UInt64("0x19a")) 410 19a ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x18237")) ctypes.voidptr_t(ctypes.UInt64("0x18237")) 98871 18237 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x182")) ctypes.voidptr_t(ctypes.UInt64("0x182")) 386 182 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x18737")) ctypes.voidptr_t(ctypes.UInt64("0x18737")) 100151 18737 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x187")) ctypes.voidptr_t(ctypes.UInt64("0x187")) 391 187 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x437")) ctypes.voidptr_t(ctypes.UInt64("0x437")) 1079 437 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x4")) ctypes.voidptr_t(ctypes.UInt64("0x4")) 4 4 ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0xe37")) ctypes.voidptr_t(ctypes.UInt64("0xe37")) 3639 e37 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0xe")) ctypes.voidptr_t(ctypes.UInt64("0xe")) 14 e ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0xb37")) ctypes.voidptr_t(ctypes.UInt64("0xb37")) 2871 b37 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0xb")) ctypes.voidptr_t(ctypes.UInt64("0xb")) 11 b ScreenshotWorker.js:461:1
+							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x237")) ctypes.voidptr_t(ctypes.UInt64("0x237")) 567 237 ScreenshotWorker.js:458:1
+							// windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0x2")) ctypes.voidptr_t(ctypes.UInt64("0x2")) 2 2 ScreenshotWorker.js:461:1
+							
+							thisWin.hwndCGWindowID = parseInt(cutils.jscGetDeepest(windowNumberIntVal, 10));
+						}
+						
 						if (aOptions.getTitle) {
 							var windowName = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowName')); // (NSString *)[window objectForKey:@"kCGWindowName"];
 							var windowNameLen = ostypes.API('objc_msgSend')(windowName, ostypes.HELPER.sel('length'));
