@@ -4611,30 +4611,6 @@ var fsMsgListener = {
 };
 // end - main framescript communication
 
-// start - bg window stuff
-function openBgWin() {
-    var backgroundWindow = Services.ww.openWindow(
-		null, // parent
-		core.addon.path.content + 'bgwin.xul',
-		null, // window name
-		null, // features
-		null // extra arguments
-    );
-	
-	var xulWindow = backgroundWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-									.getInterface(Ci.nsIWebNavigation)
-									.QueryInterface(Ci.nsIDocShellTreeItem)
-									.treeOwner
-									.QueryInterface(Ci.nsIInterfaceRequestor)
-									.getInterface(Ci.nsIXULWindow);
-
-	xulWindow.QueryInterface(Ci.nsIBaseWindow).visibility = false;
-	xulWindow.QueryInterface(Ci.nsIBaseWindow).enabled = false;
-	
-	Services.appShell.unregisterTopLevelWindow(xulWindow);
-}
-// end - bg window stuff
-
 function install() {}
 function uninstall(aData, aReason) {
 	// delete imgur history file
