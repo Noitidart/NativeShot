@@ -389,7 +389,7 @@ function registerHotkey() {
 				console.log('keysyms:', keysyms);
 				
 				// xcb_keycode_t *keycodes = xcb_key_symbols_get_keycode(keysyms, XK_space), keycode;
-				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, ostypes.CONST.XK_Space);
+				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, ostypes.CONST.XK_A);
 				console.log('keycodesPtr:', keycodesPtr, uneval(keycodesPtr));
 				
 				var keycodesArr = [];
@@ -397,6 +397,7 @@ function registerHotkey() {
 				while(true) {
 					var el = ostypes.TYPE.xcb_keycode_t.ptr(addressOfElement);
 					var val = el.contents; // no need for cutils.jscGetDeepest because xcb_keycode_t is ctypes.uint_8 which is a number
+					console.log('val:', val);
 					if (val == ostypes.CONST.XCB_NO_SYMBOL) {
 						break;
 					}
@@ -478,9 +479,9 @@ function registerHotkey() {
 				gMyHotKeyID.signature =  ostypes.TYPE.OSType('1752460081'); // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
 				gMyHotKeyID.id = 1;
 				
-				var rez_appTarget2 = ostypes.API('GetEventDispatcherTarget')();
-				console.log('rez_appTarget2:', rez_appTarget2);
-				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ctypes.UInt64(ostypes.CONST.shiftKey), ctypes.UInt64(ostypes.CONST.cmdKey)), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
+				// var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
+				// console.log('rez_appTarget2:', rez_appTarget2);
+				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ostypes.CONST.shiftKey + ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg);
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
 				

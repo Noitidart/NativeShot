@@ -1,0 +1,75 @@
+Cu.import('resource://gre/modules/ctypes.jsm');
+
+
+var libxPoss = ['libX11.dylib', 'libX11.so.7', 'libX11.so.61.0', 'libX11.so', 'libX11.so.6', 'libX11.so.0.1'];
+var libx;
+for (var i=0; i<libxPoss.length; i++) {
+	try {
+		libx = ctypes.open(libxPoss[i]);
+		break;
+	} catch(ignore) {}
+}
+var XOpenDisplay = libx.declare('XOpenDisplay', ctypes.default_abi, ctypes.voidptr_t, ctypes.char.ptr);
+var XDefaultRootWindow = libx.declare('XDefaultRootWindow', ctypes.default_abi, ctypes.int, ctypes.voidptr_t);
+var XKeysymToKeycode = libx.declare('XKeysymToKeycode', ctypes.default_abi, ctypes.unsigned_char, ctypes.voidptr_t, ctypes.unsigned_long);
+var XGrabKey = libx.declare('XGrabKey', ctypes.default_abi, ctypes.int, ctypes.voidptr_t, ctypes.int, ctypes.unsigned_int, ctypes.int, ctypes.bool, ctypes.int, ctypes.int);
+var XAllowEvents = libx.declare('XAllowEvents', ctypes.default_abi, ctypes.int, ctypes.voidptr_t, ctypes.int, ctypes.unsigned_long);
+var XK_Print = 0x0041; // 0xff61;
+
+var xd = XOpenDisplay(null);
+var xroot = XDefaultRootWindow(xd);
+var xkeycode = XKeysymToKeycode(xd, XK_Print);
+console.log('xkeycode:', xkeycode);
+
+// var ae = XAllowEvents(xd, 3 /*AsyncKeyboard*/, 0 /*CurrentTime*/);
+// console.log('ae:', ae, ae.toString());
+var rv = XGrabKey(xd, xkeycode, 32768 /*AnyModifier*/, xroot, true, 1 /*GrabModeAsync*/, 1 /*GrabModeAsync*/);
+console.log('rv:', rv, rv.toString());
+
+
+
+var GdkXEvent = ctypes.StructType('XKeyEvent', [ // https://tronche.com/gui/x/xlib/events/keyboard-pointer/keyboard-pointer.html#XKeyEvent
+	{ type: ctypes.int },
+	{ serial: ctypes.unsigned_long },
+	{ send_event: ctypes.bool },
+	{ display: ctypes.voidptr_t },
+	{ window: ctypes.unsigned_long },
+	{ root: ctypes.unsigned_long },
+	{ subwindow: ctypes.unsigned_long },
+	{ time: ctypes.unsigned_long },
+	{ x: ctypes.int },
+	{ y: ctypes.int },
+	{ x_root: ctypes.int },
+	{ y_root: ctypes.int },
+	{ state: ctypes.unsigned_int },
+	{ keycode: ctypes.unsigned_int },
+	{ same_screen: ctypes.bool }
+]);
+
+var GdkFilterFunc = ctypes.FunctionType(ctypes.default_abi, ctypes.int, [GdkXEvent.ptr, ctypes.voidptr_t, ctypes.voidptr_t]).ptr;
+
+var libg = ctypes.open(parseInt(Services.appinfo.version) <= 45 ? 'libgdk-x11-2.0.so.0' : 'libgdk-3.so.0');
+var gdk_window_remove_filter = libg.declare('gdk_window_remove_filter', ctypes.default_abi, ctypes.void_t, ctypes.voidptr_t, GdkFilterFunc, ctypes.voidptr_t);
+var gdk_window_add_filter = libg.declare('gdk_window_add_filter', ctypes.default_abi, ctypes.void_t, ctypes.voidptr_t, GdkFilterFunc, ctypes.voidptr_t);
+var gdk_window_set_events = libg.declare('gdk_window_set_events', ctypes.default_abi, ctypes.void_t, ctypes.voidptr_t, ctypes.int);
+var gdk_screen_get_root_window = libg.declare('gdk_screen_get_root_window', ctypes.default_abi, ctypes.voidptr_t, ctypes.voidptr_t);
+var gdk_screen_get_default = libg.declare('gdk_screen_get_default', ctypes.default_abi, ctypes.voidptr_t);
+
+var gscr = gdk_screen_get_default();
+var groot = gdk_screen_get_root_window(gscr);
+gdk_window_set_events(groot, 0x400/*GDK_KEY_PRESS_MASK*/)
+
+var OSStuff = {};
+OSStuff.hotkeyCallback = GdkFilterFunc(function(xeventPtr, eventPtr, data) {
+	// console.error('type:', xeventPtr.contents.type);
+	
+	if (xeventPtr.contents.type == 2) { // KeyPress
+		console.error('keycode:', xeventPtr.contents.keycode);
+	}
+	
+	// return 2; // block it
+	return 0; // dont block
+});
+
+gdk_window_add_filter(null, OSStuff.hotkeyCallback, null);
+
