@@ -317,10 +317,14 @@ var macInit = function() {
 		BLOCK_HAS_SIGNATURE: 1 << 30,
 		
 		// https://github.com/cbednarski/nv/blob/73da1a303f5051e1e012025085402157bb3deece/PTHotKeys/PTKeyCombo.m#L113-L121
-		cmdKey: is64bit ? 0x23180000 : 0x00002318,
-		optionKey: is64bit ? 0x23250000 : 0x00002325,
-		controlKey: is64bit ? 0x005E0000 : 0x0000005E,
-		shiftKey: is64bit ? 0x21e70000 : 0x000021e7,
+    cmdKey: 256,
+    shiftKey: 512,
+    alphaLock: 1024,
+    optionKey: 2048,
+    controlKey: 4096,
+    rightShiftKey: 8192,
+    rightOptionKey: 16384,
+    rightControlKey: 32768,
 		
 		kEventClassKeyboard: self.TYPE.OSType('0x6B657962'), // :todo: figure out if i can just use this without wrapping it in OSType. this is a number of 1801812322
 		kEventHotKeyPressed: 5
