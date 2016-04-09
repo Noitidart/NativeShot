@@ -4229,15 +4229,17 @@ function startHotkey() {
 				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
 				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
 				
-				console.log('pre install eventType:', eventType, 'eventType.eventClass:', eventType.eventClass, 'eventType.eventKind:', eventType.eventKind);
+				ostypes.HELPER.convertLongOSStatus(0x6B657962);
 				
-				var rez_appTarget = ostypes.API('GetEventMonitorTarget')();
-				console.log('rez_appTarget:', rez_appTarget.toString());
+				console.log('pre install eventType:', eventType.toString(), 'eventType.eventClass:', eventType.eventClass.toString(), 'eventType.eventKind:', eventType.eventKind.toString());
+				
+				var rez_appTarget = ostypes.API('GetEventDispatcherTarget')();
+				console.log('rez_appTarget GetEventDispatcherTarget:', rez_appTarget.toString());
 				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerUPP(macHotKeyHandler);
 				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.cHotKeyHandler, 1, eventType.address(), null, null);
 				console.log('rez_install:', rez_install.toString());
 				
-				console.log('post install eventType:', eventType, 'eventType.eventClass:', eventType.eventClass, 'eventType.eventKind:', eventType.eventKind);
+				console.log('post install eventType:', eventType.toString(), 'eventType.eventClass:', eventType.eventClass.toString(), 'eventType.eventKind:', eventType.eventKind.toString());
 				
 				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
 				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
@@ -4246,6 +4248,7 @@ function startHotkey() {
 				
 				// var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
 				// console.log('rez_appTarget2:', rez_appTarget2.toString());
+				console.log('rez_appTarget:', rez_appTarget.toString());
 				var rez_reg = ostypes.API('RegisterEventHotKey')(50, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg.toString());
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
