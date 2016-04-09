@@ -4623,10 +4623,22 @@ var fsMsgListener = {
 
 function install() {}
 function uninstall(aData, aReason) {
+	// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'uninstall', aReason);
+	
 	// delete imgur history file
 	if (aReason == ADDON_UNINSTALL) {
 		Services.prefs.clearUserPref(core.addon.prefbranch + 'quick_save_dir');
 		Services.prefs.clearUserPref(core.addon.prefbranch + 'print_preview');
+
+		if (aReason == ADDON_UNINSTALL) {
+			var deleteLog = Services.prompt.confirmEx(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot Uninstalling - Delete Log?', 'The data shown in your dashboard (about:nativeshot) is saved in a log file. Would you like do delete this?\n\nOnly reason to keep it, is if you think you will install NativeShot again in the future, and will want the delete URLs for your uploaded images.', Services.prompt.BUTTON_POS_0 * Services.prompt.BUTTON_TITLE_IS_STRING + Services.prompt.BUTTON_POS_1 * Services.prompt.BUTTON_TITLE_IS_STRING, 'Delete Log', 'Keep Log', '', null, {value: false});
+			if (deleteLog === 0) {
+				OS.File.removeDir(OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id), {
+					ignoreAbsent: true,
+					ignorePermissions: true
+				});
+			}
+		}
 	}
 }
 
@@ -4810,6 +4822,9 @@ function shutdown(aData, aReason) {
 	}
 	
 	Services.mm.removeMessageListener(core.addon.id, fsMsgListener);
+	
+	// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'shutdown', aReason);
+
 }
 
 // start - custom addon functionalities
