@@ -741,7 +741,7 @@ var macInit = function() {
 			 *   EventTimeout inTimeout
 			 * ); 
 			 */
-			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('UnregisterEventHotKey', self.TYPE.ABI,
+			return lib('/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox').declare('RunCurrentEventLoop', self.TYPE.ABI,
 				self.TYPE.OSStatus,		// return
 				self.TYPE.EventTimeout	// inTimeout
 			);

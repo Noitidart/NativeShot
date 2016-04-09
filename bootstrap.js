@@ -4249,6 +4249,9 @@ function startHotkey() {
 				
 				var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
 				console.log('rez_appTarget2 GetApplicationEventTarget:', rez_appTarget2.toString());
+				
+				console.log('gMyHotKeyID:', gMyHotKeyID);
+				
 				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ostypes.CONST.shiftKey + ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg.toString());
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
