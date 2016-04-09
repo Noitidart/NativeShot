@@ -4249,7 +4249,7 @@ function startHotkey() {
 				
 				var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
 				console.log('rez_appTarget2 GetApplicationEventTarget:', rez_appTarget2.toString());
-				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ostypes.CONST.shiftKey, ostypes.CONST.cmdKey), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
+				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ostypes.CONST.shiftKey + ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg.toString());
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
 				
