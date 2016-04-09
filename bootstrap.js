@@ -4229,13 +4229,15 @@ function startHotkey() {
 				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
 				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
 				
-				
+				console.log('pre install eventType:', eventType, 'eventType.eventClass:', eventType.eventClass, 'eventType.eventKind:', eventType.eventKind);
 				
 				var rez_appTarget = ostypes.API('GetEventMonitorTarget')();
 				console.log('rez_appTarget:', rez_appTarget.toString());
 				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerUPP(macHotKeyHandler);
 				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.cHotKeyHandler, 1, eventType.address(), null, null);
 				console.log('rez_install:', rez_install.toString());
+				
+				console.log('post install eventType:', eventType, 'eventType.eventClass:', eventType.eventClass, 'eventType.eventKind:', eventType.eventKind);
 				
 				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
 				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
