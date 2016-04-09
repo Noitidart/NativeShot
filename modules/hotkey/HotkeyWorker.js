@@ -287,7 +287,7 @@ function registerHotkey() {
 				
 				var rez_appTarget2 = ostypes.API('GetEventDispatcherTarget')();
 				console.log('rez_appTarget2:', rez_appTarget2);
-				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ctypes.UInt64(ostypes.CONST.shiftKey), ctypes.UInt64(ostypes.CONST.cmdKey)), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
+				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ostypes.CONST.shiftKey, ostypes.CONST.cmdKey), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg);
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
 				
