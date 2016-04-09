@@ -331,7 +331,7 @@ var macInit = function() {
 		rightOptionKey: 16384,
 		rightControlKey: 32768,
 		
-		kEventClassKeyboard: self.TYPE.OSType('0x6B657962'), // :todo: figure out if i can just use this without wrapping it in OSType. this is a number of 1801812322
+		kEventClassKeyboard: 0x6B657962, // :todo: figure out if i can just use this without wrapping it in OSType. this is a number of 1801812322
 		kEventHotKeyPressed: 5
 	};
 

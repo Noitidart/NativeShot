@@ -4247,8 +4247,8 @@ function startHotkey() {
 				gMyHotKeyID.signature =  ostypes.TYPE.OSType('1752460081'); // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
 				gMyHotKeyID.id = 1876;
 				
-				var rez_appTarget2 = ostypes.API('GetEventDispatcherTarget')();
-				console.log('rez_appTarget2 GetEventDispatcherTarget:', rez_appTarget2.toString());
+				var rez_appTarget2 = ostypes.API('GetApplicationEventTarget')();
+				console.log('rez_appTarget2 GetApplicationEventTarget:', rez_appTarget2.toString());
 				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ostypes.CONST.shiftKey, ostypes.CONST.cmdKey), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg.toString());
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
