@@ -433,37 +433,47 @@ var observers = {
 	}
 };
 //end obs stuff
-
 // start - about module
-var aboutFactory_nativeshot;
-function AboutNativeShot() {}
+var aboutFactory_instance;
+function AboutPage() {}
 
-function initAndRegisterAboutNativeShot() {
+function initAndRegisterAbout() {
 	// init it
-	AboutNativeShot.prototype = Object.freeze({
+	AboutPage.prototype = Object.freeze({
 		classDescription: justFormatStringFromName(core.addon.l10n.bootstrap.about_page_desc),
 		contractID: '@mozilla.org/network/protocol/about;1?what=nativeshot',
 		classID: Components.ID('{2079bd20-3369-11e5-a2cb-0800200c9a66}'),
 		QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
 
 		getURIFlags: function(aURI) {
-			return Ci.nsIAboutModule.ALLOW_SCRIPT | Ci.nsIAboutModule.URI_CAN_LOAD_IN_CHILD;
+			return Ci.nsIAboutModule.ALLOW_SCRIPT;
 		},
 
-		newChannel: function(aURI, aSecurity) {
-			var channel;
+		newChannel: function(aURI, aSecurity_or_aLoadInfo) {
+			var redirUrl;
 			if (aURI.path.toLowerCase().indexOf('?options') > -1) {
-				channel = Services.io.newChannel(core.addon.path.content + 'app/options.xhtml', null, null);
+				redirUrl = core.addon.path.content + 'app/options.xhtml';
 			} else {
-				channel = Services.io.newChannel(core.addon.path.content + 'app/main.xhtml', null, null);
+				redirUrl = core.addon.path.content + 'app/main.xhtml';
+			}
+			
+			var channel;
+			if (Services.vc.compare(core.firefox.version, '47.*') > 0) {
+				var redirURI = Services.io.newURI(redirUrl, null, null);
+				channel = Services.io.newChannelFromURIWithLoadInfo(redirURI, aSecurity_or_aLoadInfo);
+			} else {
+				channel = Services.io.newChannel(redirUrl, null, null);
 			}
 			channel.originalURI = aURI;
+			
 			return channel;
 		}
 	});
 	
 	// register it
-	aboutFactory_nativeshot = new AboutFactory(AboutNativeShot);
+	aboutFactory_instance = new AboutFactory(AboutPage);
+	
+	console.log('aboutFactory_instance:', aboutFactory_instance);
 }
 
 function AboutFactory(component) {
@@ -4679,7 +4689,7 @@ function startup(aData, aReason) {
 		}
 		//end observers stuff more
 		
-		initAndRegisterAboutNativeShot();
+		initAndRegisterAbout();
 		
 		AB.init();
 		
@@ -4756,7 +4766,7 @@ function shutdown(aData, aReason) {
 		delete gColReuploadTimers[id];
 	}
 	
-	aboutFactory_nativeshot.unregister();
+	aboutFactory_instance.unregister();
 	
 	// destroy workers
 	if (ScreenshotWorker && ScreenshotWorker.launchTimeStamp) { // as when i went to rev5, its not insantly inited, so there is a chance that it doesnt need terminate
