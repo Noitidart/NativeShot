@@ -4138,7 +4138,6 @@ function initHotkey() {
 		case 'wince':
 		case 'winmo':
 		case 'winnt':
-		case 'gtk':
 
 				var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
 				promise_initHotkeys.then(
@@ -4150,9 +4149,53 @@ function initHotkey() {
 				).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
 				
 			break;
+		case 'gtk':
+		
+				initOstypes();
+				
+				var XK_Print = 0xff61;
+				var XK_a = 0x0041;
+				var xkeycode = ostypes.API('XKeysymToKeycode')(ostypes.HELPER.cachedXOpenDisplay(), XK_a);
+				console.log('xkeycode:', xkeycode);
+				
+				var xgrab = ostypes.API('XGrabKey')(ostypes.HELPER.cachedXOpenDisplay(), xkeycode, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow(), 1, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
+				console.log('xgrab:', xgrab);
+				
+				// need to flush or the key isnt grabbed
+				var xflush = ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay());
+				console.log('xflush:', xflush);
+				
+				OSStuff.hotkeyKeycode = xkeycode;
+				OSStuff.hotkeyTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
+				OSStuff.hotkeyXevtsWasZeroed = true;
+				
+				OSStuff.hotkeyFakeEventLoop = function() {
+					xpcomSetTimeout(OSStuff.hotkeyTimer, 1000, function() {
+						
+						var xevts = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
+						console.log('xevts:', xevts);
+						if (xevts > 0) {
+							if (OSStuff.hotkeyXevtsWasZeroed) {
+								OSStuff.hotkeyXevtsWasZeroed = false;
+								console.error('hotkey pressed!');
+							}
+							ostypes.API('XSync')(ostypes.HELPER.cachedXOpenDisplay(), true); // discard or it wont reset xevts to 0 and it wont increment if user hits hotkey again
+						} else {
+							OSStuff.hotkeyXevtsWasZeroed = true;
+						}
+						
+						OSStuff.hotkeyFakeEventLoop();
+						
+					});
+				};
+				
+				OSStuff.hotkeyFakeEventLoop();
+			
+			break;
 		case 'darwin':
 			
 				initOstypes();
+				
 				OSStuff.hotkeyCallback = ostypes.TYPE.EventHandlerUPP(function(nextHandler, theEvent, userDataPtr) {
 					// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
 					console.log('wooohoo ah!! called hotkey!');
@@ -4197,7 +4240,6 @@ function uninitHotkey() {
 		case 'wince':
 		case 'winmo':
 		case 'winnt':
-		case 'gtk':
 
 				if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
 					var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
@@ -4211,6 +4253,29 @@ function uninitHotkey() {
 					).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
 				}
 
+			break;
+		case 'gtk':
+			
+				if (OSStuff.hotkeyTimer) {
+					OSStuff.hotkeyTimer.cancel();
+					var xungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.hotkeyKeycode, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
+					console.log('xungrab:', xungrab.toString());
+					
+					// need to flush or the key remains grabbed until firefox is exited
+					var xflush = ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay());
+					console.log('xflush:', xflush);
+					
+					delete OSStuff.hotkeyKeycode;
+					
+					// :todo: maybe if OSStuff.hotkeyXevtsWasZeroed == false then i should run XSync (and check with XPending) here till it zeroes out
+					
+					delete OSStuff.hotkeyXevtsWasZeroed;
+					
+					delete OSStuff.hotkeyTimer;
+					delete OSStuff.hotkeyFakeEventLoop;
+					
+				}
+			
 			break;
 		case 'darwin':
 			
@@ -5767,5 +5832,13 @@ function getNativeHandlePtrStr(aDOMWindow) {
 								   .QueryInterface(Ci.nsIInterfaceRequestor)
 								   .getInterface(Ci.nsIBaseWindow);
 	return aDOMBaseWindow.nativeHandle;
+}
+
+function xpcomSetTimeout(aNsiTimer, aDelayTimerMS, aTimerCallback) {
+	aNsiTimer.initWithCallback({
+		notify: function() {
+			aTimerCallback();
+		}
+	}, aDelayTimerMS, Ci.nsITimer.TYPE_ONE_SHOT);
 }
 // end - common helper functions
