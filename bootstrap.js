@@ -4155,7 +4155,7 @@ function initHotkey() {
 				
 				var XK_Print = 0xff61;
 				var XK_a = 0x0041;
-				var xkeycode = ostypes.API('XKeysymToKeycode')(ostypes.HELPER.cachedXOpenDisplay(), XK_a);
+				var xkeycode = ostypes.API('XKeysymToKeycode')(ostypes.HELPER.cachedXOpenDisplay(), XK_Print);
 				console.log('xkeycode:', xkeycode);
 				
 				var xgrab = ostypes.API('XGrabKey')(ostypes.HELPER.cachedXOpenDisplay(), xkeycode, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow(), 1, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
@@ -4169,15 +4169,21 @@ function initHotkey() {
 				OSStuff.hotkeyTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
 				OSStuff.hotkeyXevtsWasZeroed = true;
 				
+				OSStuff.hotkeyLastTriggered = 0;
+				
 				OSStuff.hotkeyFakeEventLoop = function() {
-					xpcomSetTimeout(OSStuff.hotkeyTimer, 1000, function() {
+					xpcomSetTimeout(OSStuff.hotkeyTimer, 50, function() {
 						
 						var xevts = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
-						console.log('xevts:', xevts);
+						// console.log('xevts:', xevts);
 						if (xevts > 0) {
 							if (OSStuff.hotkeyXevtsWasZeroed) {
 								OSStuff.hotkeyXevtsWasZeroed = false;
-								console.error('hotkey pressed!');
+								if ((new Date()).getTime() - OSStuff.hotkeyLastTriggered > 1000) { // because XGrabKey grabs key down and key release, it will come in as two, so i ignore to try to avoid back to back calls, because timer interval is 50ms thats fast so it can clear it while the key is still down i guess
+									console.log('hotkey pressed!');
+									OSStuff.hotkeyLastTriggered = (new Date()).getTime();
+									HotkeyWorkerMainThreadFuncs.takeShot();
+								}
 							}
 							ostypes.API('XSync')(ostypes.HELPER.cachedXOpenDisplay(), true); // discard or it wont reset xevts to 0 and it wont increment if user hits hotkey again
 						} else {
