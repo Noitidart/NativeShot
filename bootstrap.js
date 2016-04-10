@@ -50,6 +50,7 @@ var core = { // core has stuff added into by MainWorker (currently MainWorker) a
 		version: Services.appinfo.version
 	}
 };
+core.os.mname = core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name; // mname stands for modified-name // this will treat solaris, linux, unix, *bsd systems as the same. as they are all gtk based
 
 var bootstrap = this;
 var BOOTSTRAP = this;
@@ -58,6 +59,8 @@ const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 
 const TWITTER_URL = 'https://twitter.com/';
 const TWITTER_IMG_SUFFIX = ':large';
+
+var OSStuff = {};
 
 // Lazy Imports
 const myServices = {};
@@ -81,6 +84,11 @@ var gPrefMeta = { // short for pref meta data // dictates dom structure in optio
 	},
 	print_preview: {
 		defaultValue: false,
+		values: [false, true],
+		type: 'Bool'
+	},
+	system_hotkey: {
+		defaultValue: true,
 		values: [false, true],
 		type: 'Bool'
 	},
@@ -730,63 +738,6 @@ var gCanDim = {
 
 var gPostPrintRemovalFunc;
 
-var gMacTypes;
-function initMacTypes() {
-	if (ctypes.voidptr_t.size == 4 /* 32-bit */) {
-		var is64bit = false;
-	} else if (ctypes.voidptr_t.size == 8 /* 64-bit */) {
-		var is64bit = true;
-	} else {
-		throw new Error('huh??? not 32 or 64 bit?!?!');
-	}
-	gMacTypes = {};
-	gMacTypes.NIL = ctypes.voidptr_t(ctypes.UInt64('0x0'));
-	gMacTypes.BOOL = ctypes.signed_char;
-	gMacTypes.YES = gMacTypes.BOOL(1);
-	gMacTypes.objc = ctypes.open(ctypes.libraryName("objc"));
-	gMacTypes.id = ctypes.voidptr_t;
-	gMacTypes.SEL = ctypes.voidptr_t;
-	gMacTypes.CGFloat = is64bit ? ctypes.double : ctypes.float;
-	gMacTypes.NSInteger = is64bit ? ctypes.long: ctypes.int;
-	
-	gMacTypes.NSPoint = ctypes.StructType('_NSPoint', [
-		{ 'x': gMacTypes.CGFloat },
-		{ 'y': gMacTypes.CGFloat }
-	]);
-	gMacTypes.NSSize = ctypes.StructType('_NSSize', [
-		{ 'width': gMacTypes.CGFloat },
-		{ 'height': gMacTypes.CGFloat }
-	]);
-	gMacTypes.NSRect = ctypes.StructType('_NSRect', [
-		{ 'origin': gMacTypes.NSPoint },
-		{ 'size': gMacTypes.NSSize }
-	]);
-	
-gMacTypes.objc_getClass = gMacTypes.objc.declare("objc_getClass",
-ctypes.default_abi,
-gMacTypes.id,
-ctypes.char.ptr);
-
-gMacTypes.sel_registerName = gMacTypes.objc.declare("sel_registerName",
-ctypes.default_abi,
-gMacTypes.SEL,
-ctypes.char.ptr);
-
-gMacTypes.objc_msgSend = gMacTypes.objc.declare("objc_msgSend",
-ctypes.default_abi,
-gMacTypes.id,
-gMacTypes.id,
-gMacTypes.SEL,
-"...");
-
-gMacTypes.objc_msgSend_NSRECT = gMacTypes.objc.declare("objc_msgSend",
-ctypes.default_abi,
-gMacTypes.NSRect,
-gMacTypes.id,
-gMacTypes.SEL,
-"...");
-
-}
 var userAckPending = [ // object holding on to data till user is notified of the tabs, images have succesfully been dropped into tabs, and user ancknolwedges by makeing focus to tabs (as i may need to hold onto the data, if user is not signed in, or if user want to use another account [actually i dont think ill bother with other account thing, just signed in])
 // {gEditorSessionId:,tab:,fs:,imgDatas:{dataURL,uploadedURL,attachedToTweet,sentToFS}} // array of objects, weak reference to tab, framescript, the 4 (because thats max allowed by twitter per tweet) data uri of imgs for that tab, and then after upload it holds the image urls for copy to clipboard
 ];
@@ -2796,22 +2747,14 @@ function gEPopupShowing(e) {
 function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	
 	var iMon = aData; //parseInt(aEditorDOMWindow.location.search.substr('?iMon='.length)); // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-
 	
 	var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
 	
 	if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
 		throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
 	}
-	
-	var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-										.getInterface(Ci.nsIWebNavigation)
-										.QueryInterface(Ci.nsIDocShellTreeItem)
-										.treeOwner
-										.QueryInterface(Ci.nsIInterfaceRequestor)
-										.getInterface(Ci.nsIBaseWindow)
-										.nativeHandle;
-	
+
+	var aHwndPtrStr = getNativeHandlePtrStr(aEditorDOMWindow);
 	colMon[iMon].hwndPtrStr = aHwndPtrStr;
 
 	if (core.os.name != 'darwin') {
@@ -2846,56 +2789,36 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 
 				// start - do stuff here - promise_setWinAlwaysTop
 				if (core.os.name == 'darwin') {
-					if (!gMacTypes) {
-						initMacTypes();
-					}
+					initOstypes();
 					// link98476884
-					gMacTypes.NSMainMenuWindowLevel = aVal;
+					OSStuff.NSMainMenuWindowLevel = aVal;
 					
-					var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-														.getInterface(Ci.nsIWebNavigation)
-														.QueryInterface(Ci.nsIDocShellTreeItem)
-														.treeOwner
-														.QueryInterface(Ci.nsIInterfaceRequestor)
-														.getInterface(Ci.nsIBaseWindow)
-														.nativeHandle;
+					var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);							
+					var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
 
-					var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-
-												
-					var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
-					
-					// var orderFrontRegardless = gMacTypes.sel_registerName('orderFrontRegardless');
-					// var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFrontRegardless, ctypes.long(aVal));
+					// var rez_orderFront = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('orderFrontRegardless'));
 
 					
-						var setLevel = gMacTypes.sel_registerName('setLevel:');
-						gMacTypes.setLevel = setLevel;
-						var rez_setLevel = gMacTypes.objc_msgSend(NSWindowPtr, setLevel, gMacTypes.NSInteger(aVal + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
-
+						var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
+						console.log('rez_setLevel:', rez_setLevel.toString());
 						
-						var newSize = gMacTypes.NSSize(colMon[iMon].w, colMon[iMon].h);
-						var rez_setContentSize = gMacTypes.objc_msgSend(NSWindowPtr, gMacTypes.sel_registerName('setContentSize:'), newSize);
-
+						var newSize = ostypes.TYPE.NSSize(colMon[iMon].w, colMon[iMon].h);
+						var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
+						console.log('rez_setContentSize:', rez_setContentSize.toString());
 						
 						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
 						
 
 					/*
 					aEditorDOMWindow.setTimeout(function() {
-							var NSSavePanel = gMacTypes.objc_getClass('NSSavePanel');
-							var savePanel = gMacTypes.sel_registerName('savePanel');
-							var aSavePanel = gMacTypes.objc_msgSend(NSSavePanel, savePanel);
+							var aSavePanel = ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSSavePanel'), ostypes.HELPER.sel('savePanel'));
 							
-							// var setFloatingPanel = gMacTypes.sel_registerName('setFloatingPanel:');
-							// var rez_setFloatingPanel = gMacTypes.objc_msgSend(aSavePanel, setFloatingPanel, gMacTypes.YES);
+							// var rez_setFloatingPanel = ostypes.API('objc_msgSend')(aSavePanel, ostypes.HELPER.sel('setFloatingPanel:'), ostypes.CONST.YES);
 
 							
-							var rezFloatingPanel = gMacTypes.objc_msgSend(aSavePanel, setLevel, gMacTypes.NSInteger(3));
+							var rezFloatingPanel = ostypes.API('objc_msgSend')(aSavePanel, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(3));
 
-							
-							var runModal = gMacTypes.sel_registerName('runModal')
-							var rez_savepanel = gMacTypes.objc_msgSend(aSavePanel, runModal);
+							var rez_savepanel = ostypes.API('objc_msgSend')(aSavePanel, ostypes.HELPER.sel('runModal'));
 
 					}, 2000);
 					*/
@@ -2919,39 +2842,19 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 		/*
 		// main thread ctypes
 		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(function() {
-			if (!gMacTypes) {
-				initMacTypes();
-			}
-			// var NSWindow = ctypes.voidptr_t(ctypes.UInt64(aHwndPtrStr));
-			// // var rez_setLevel = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('setLevel:'), ctypes.long(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
+			initOstypes();
+			// var NSWindow = ostypes.TYPE.NSWindow(ctypes.UInt64(aHwndPtrStr));
+			// // var rez_setLevel = ostypes.API('objc_msgSend')(NSWindow, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
 
-			// var rez_orderFront = gMacTypes.objc_msgSend(NSWindow, gMacTypes.sel_registerName('orderFrontRegardless'));
+			// var rez_orderFront = ostypes.API('objc_msgSend')(NSWindow, ostypes.HELPER.sel('orderFrontRegardless'));
 
-	
-			var baseWindow = Services.wm.getMostRecentWindow('navigator:browser').QueryInterface(Ci.nsIInterfaceRequestor)
-										  .getInterface(Ci.nsIWebNavigation)
-										  .QueryInterface(Ci.nsIDocShellTreeItem)
-										  .treeOwner
-										  .QueryInterface(Ci.nsIInterfaceRequestor)
-										  .getInterface(Ci.nsIBaseWindow);
+			var NSWindowString = getNativeHandlePtrStr(Services.wm.getMostRecentWindow('navigator:browser'));
 
-			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
-
-			
-			var aHwndPtrStr = aEditorDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-												.getInterface(Ci.nsIWebNavigation)
-												.QueryInterface(Ci.nsIDocShellTreeItem)
-												.treeOwner
-												.QueryInterface(Ci.nsIInterfaceRequestor)
-												.getInterface(Ci.nsIBaseWindow)
-												.nativeHandle;
-
-			var NSWindowString = aHwndPtrStr; // baseWindow.nativeHandle;
+			var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);
 
 										
-			var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
-			var orderFront = gMacTypes.sel_registerName('setLevel:');
-			var rez_orderFront = gMacTypes.objc_msgSend(NSWindowPtr, orderFront, ctypes.long(3));
+			var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
+			var rez_orderFront = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('orderFront:'), ostypes.TYPE.NSInteger(3));
 
 		}, 5000);
 		*/
@@ -3522,7 +3425,7 @@ var windowListener = {
 	//DO NOT EDIT HERE
 	onOpenWindow: function (aXULWindow) {
 		// Wait for the window to finish loading
-		var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal || Ci.nsIDOMWindow);
+		var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow);
 		aDOMWindow.addEventListener('load', function () {
 			aDOMWindow.removeEventListener('load', arguments.callee, false);
 			windowListener.loadIntoWindow(aDOMWindow);
@@ -4180,7 +4083,7 @@ var AB = { // AB stands for attention bar
 	winListener: {
 		onOpenWindow: function (aXULWindow) {
 			// Wait for the window to finish loading
-			var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal || Ci.nsIDOMWindow);
+			var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow);
 			aDOMWindow.addEventListener('load', function () {
 				aDOMWindow.removeEventListener('load', arguments.callee, false);
 				AB.loadInstancesIntoWindow(aDOMWindow);
@@ -4192,7 +4095,7 @@ var AB = { // AB stands for attention bar
 };
 // end - AttentionBar mixin
 
-// start - HotkeyWorkerMainThreadFuncs
+// start - System hotkey stuff
 var HotkeyWorkerMainThreadFuncs = {
 	takeShot: function() {
 		if (gEditor.sessionId) {
@@ -4206,7 +4109,126 @@ var HotkeyWorkerMainThreadFuncs = {
 		shootAllMons(Services.wm.getMostRecentWindow('navigator:browser'));
 	}
 };
-// end - HotkeyWorkerMainThreadFuncs
+
+function initOstypes() {
+	if (typeof ostypes == 'undefined') {
+		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/cutils.jsm', BOOTSTRAP); // need to load cutils first as ostypes_mac uses it for HollowStructure
+		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ctypes_math.jsm', BOOTSTRAP);
+		switch (core.os.mname) {
+			case 'winnt':
+			case 'winmo':
+			case 'wince':
+				console.log('loading:', core.addon.path.modules + 'ostypes/ostypes_win.jsm');
+				Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ostypes_win.jsm', BOOTSTRAP);
+				break
+			case 'gtk':
+				Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ostypes_x11.jsm', BOOTSTRAP);
+				break;
+			case 'darwin':
+				Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ostypes_mac.jsm', BOOTSTRAP);
+				break;
+			default:
+				throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
+		}
+	}
+}
+
+function initHotkey() {
+	switch (core.os.mname) {
+		case 'wince':
+		case 'winmo':
+		case 'winnt':
+		case 'gtk':
+
+				var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
+				promise_initHotkeys.then(
+					function(aVal) {
+						console.log('Fullfilled - promise_initHotkeys - ', aVal);
+						
+					},
+					genericReject.bind(null, 'promise_initHotkeys', 0)
+				).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
+				
+			break;
+		case 'darwin':
+			
+				initOstypes();
+				OSStuff.hotkeyCallback = ostypes.TYPE.EventHandlerUPP(function(nextHandler, theEvent, userDataPtr) {
+					// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
+					console.log('wooohoo ah!! called hotkey!');
+					HotkeyWorkerMainThreadFuncs.takeShot();
+					return 1; // must be of type ostypes.TYPE.OSStatus
+				});
+				
+				var eventType = ostypes.TYPE.EventTypeSpec();
+				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
+				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
+				
+				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
+				// console.log('rez_appTarget GetApplicationEventTarget:', rez_appTarget.toString());
+				console.log('OSStuff.hotkeyCallback:', OSStuff.hotkeyCallback.toString());
+				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.hotkeyCallback, 1, eventType.address(), null, null);
+				console.log('rez_install:', rez_install.toString());
+				
+				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
+				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
+				gMyHotKeyID.signature = 1752460081; // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
+				gMyHotKeyID.id = 1876;
+				
+				// console.log('gMyHotKeyID:', gMyHotKeyID.toString());
+				// console.log('gMyHotKeyID.address():', gMyHotKeyID.address().toString());
+				
+				// console.log('ostypes.CONST.shiftKey + ostypes.CONST.cmdKey:', ostypes.CONST.shiftKey + ostypes.CONST.cmdKey);
+				// console.log('gMyHotKeyRef.address():', gMyHotKeyRef.address().toString());
+				
+				var rez_reg = ostypes.API('RegisterEventHotKey')(20, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget, 0, gMyHotKeyRef.address());
+				console.log('rez_reg:', rez_reg.toString(), ostypes.HELPER.convertLongOSStatus(rez_reg));
+				
+				OSStuff.gMyHotKeyRef = gMyHotKeyRef;
+			
+			break;
+		default:
+			console.error('system hotkey not supported on your os');
+	}
+}
+
+function uninitHotkey() {
+	switch (core.os.mname) {
+		case 'wince':
+		case 'winmo':
+		case 'winnt':
+		case 'gtk':
+
+				if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
+					var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
+					promise_requestTerm.then(
+						function(aVal) {
+							console.log('Fullfilled - promise_requestTerm - ', aVal);
+							HotkeyWorker._worker.terminate();
+							delete bootstrap.HotkeyWorker;
+						},
+						genericReject.bind(null, 'promise_requestTerm', 0)
+					).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
+				}
+
+			break;
+		case 'darwin':
+			
+				if (OSStuff.hotkeyCallback) {
+					
+					var rez_unreg = ostypes.API('UnregisterEventHotKey')(OSStuff.gMyHotKeyRef);
+					console.log('rez_unreg:', rez_unreg.toString(), ostypes.HELPER.convertLongOSStatus(rez_unreg));
+					
+					delete OSStuff.hotkeyCallback;
+					delete OSStuff.gMyHotKeyRef;
+				}
+			
+			break;
+		default:
+			console.error('system hotkey not supported on your os');
+	}
+}
+// end - System hotkey stuff
 
 // start - MainWorkerMainThreadFuncs
 var MainWorkerMainThreadFuncs = {
@@ -4629,6 +4651,7 @@ function uninstall(aData, aReason) {
 	if (aReason == ADDON_UNINSTALL) {
 		Services.prefs.clearUserPref(core.addon.prefbranch + 'quick_save_dir');
 		Services.prefs.clearUserPref(core.addon.prefbranch + 'print_preview');
+		Services.prefs.clearUserPref(core.addon.prefbranch + 'system_hotkey');
 
 		if (aReason == ADDON_UNINSTALL) {
 			var deleteLog = Services.prompt.confirmEx(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot Uninstalling - Delete Log?', 'The data shown in your dashboard (about:nativeshot) is saved in a log file. Would you like do delete this?\n\nOnly reason to keep it, is if you think you will install NativeShot again in the future, and will want the delete URLs for your uploaded images.', Services.prompt.BUTTON_POS_0 * Services.prompt.BUTTON_TITLE_IS_STRING + Services.prompt.BUTTON_POS_1 * Services.prompt.BUTTON_TITLE_IS_STRING, 'Delete Log', 'Keep Log', '', null, {value: false});
@@ -4707,14 +4730,9 @@ function startup(aData, aReason) {
 		
 		Services.mm.addMessageListener(core.addon.id, fsMsgListener);
 		
-		var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
-		promise_initHotkeys.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_initHotkeys - ', aVal);
-				
-			},
-			genericReject.bind(null, 'promise_initHotkeys', 0)
-		).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
+		if (prefGet('system_hotkey')) {
+			initHotkey();
+		}
 	};
 	
 	var do_afterPrefsInit = function() {
@@ -4800,16 +4818,7 @@ function shutdown(aData, aReason) {
 		TesseractWorker._worker.terminate();
 	}
 	
-	if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
-		var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
-		promise_requestTerm.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_requestTerm - ', aVal);
-				HotkeyWorker._worker.terminate();
-			},
-			genericReject.bind(null, 'promise_requestTerm', 0)
-		).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
-	}
+	uninitHotkey();
 	
 	// destroy any FHR's that the devuser did not clean up
 	for (var DSTR_I=0; DSTR_I<gFHR.length; DSTR_I++) {
@@ -4933,7 +4942,7 @@ function browseFile(aDialogTitle, aOptions={}) {
 }
 
 function macSetLevelOfBrowseFile() {
-	// can use gMacTypes.setLevel and gMacTypes.NSMainMenuWindowLevel because this only ever triggers after link98476884 runs for sure for sure
+	// can use setLevel and OSStuff.NSMainMenuWindowLevel because this only ever triggers after link98476884 runs for sure for sure
 	console.error('in macSetLevelOfBrowseFile');
 	/*
 	var cWin = Services.wm.getMostRecentWindow(null);
@@ -4946,51 +4955,35 @@ function macSetLevelOfBrowseFile() {
 		console.error('cWinTitle:', cWinTitle);
 	} catch(ignore) {}
 	
-	var aHwndPtrStr = Services.wm.getMostRecentWindow(null).QueryInterface(Ci.nsIInterfaceRequestor)
-										.getInterface(Ci.nsIWebNavigation)
-										.QueryInterface(Ci.nsIDocShellTreeItem)
-										.treeOwner
-										.QueryInterface(Ci.nsIInterfaceRequestor)
-										.getInterface(Ci.nsIBaseWindow)
-										.nativeHandle;
-	var NSWindowString = aHwndPtrStr;
+	var NSWindowString = getNativeHandlePtrStr(Services.wm.getMostRecentWindow(null));
 
 								
-	var NSWindowPtr = ctypes.voidptr_t(ctypes.UInt64(NSWindowString));
+	var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
 	*/
-	var NSApplication = gMacTypes.objc_getClass('NSApplication');
-	var sharedApplication = gMacTypes.sel_registerName('sharedApplication');
 	
-	var sharedApp = gMacTypes.objc_msgSend(NSApplication, sharedApplication);
+	var sharedApp = ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSApplication'), ostypes.HELPER.sel('sharedApplication'));
 	console.log('sharedApp:', sharedApp, sharedApp.toString(), uneval(sharedApp));
 	
-	var keyWindow = gMacTypes.sel_registerName('keyWindow');
-	var rez_keyWin = gMacTypes.objc_msgSend(sharedApp, keyWindow);
+	var rez_keyWin = ostypes.API('objc_msgSend')(sharedApp, ostypes.HELPER.sel('keyWindow'));
 	console.log('rez_keyWin:', rez_keyWin, rez_keyWin.toString(), uneval(rez_keyWin));
 	if (rez_keyWin.isNull()) {
 		console.error('no keyWindow yet, apparently its possible, im guessing maybe while the window is opening, im not sure but just to be safe wait a bit and call again');
-		setTimeout(macSetLevelOfBrowseFile, 100);
+		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(macSetLevelOfBrowseFile, 100);
 		return;
 	}
 	
-	var title = gMacTypes.sel_registerName('title');
-	var rez_title = gMacTypes.objc_msgSend(rez_keyWin, title);
+	var rez_title = ostypes.API('objc_msgSend')(rez_keyWin, ostypes.HELPER.sel('title'));
 	console.log('rez_title:', rez_title, rez_title.toString(), uneval(rez_title));
-	
-	var UTF8String = gMacTypes.sel_registerName('UTF8String');
-	var rez_titleUTF8 = gMacTypes.objc_msgSend(rez_title, UTF8String);
-	console.log('rez_titleUTF8:', rez_titleUTF8, rez_titleUTF8.toString(), uneval(rez_titleUTF8));
-	
-	var cCharPtr = ctypes.cast(rez_titleUTF8, ctypes.char.ptr);
-	var cWinTitle = cCharPtr.readString(); // :note: // link123111119 i do read string, so the text i open browseFile with should be readable by this
+
+	var cWinTitle = ostypes.HELPER.readNSString(rez_title); // cCharPtr.readString(); // :note: // link123111119 i do read string, so the text i open browseFile with should be readable by this
 	console.log('cWinTitle:', cWinTitle);
 	
 	if (cWinTitle != core.addon.l10n.bootstrap['filepicker-title-save-screenshot']) {
 		console.error('keyWindow is not the browse file picker dialog yet so try again in a bit');
-		setTimeout(macSetLevelOfBrowseFile, 100);
+		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(macSetLevelOfBrowseFile, 100);
 		return;
 	} else {	
-		var rez_setLevel = gMacTypes.objc_msgSend(rez_keyWin, gMacTypes.setLevel, gMacTypes.NSInteger(gMacTypes.NSMainMenuWindowLevel + 1)); // i guess 0 is NSNormalWindowLevel // link98476884 // link847455111
+		var rez_setLevel = ostypes.API('objc_msgSend')(rez_keyWin, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // i guess 0 is NSNormalWindowLevel // link98476884 // link847455111
 		console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString(), uneval(rez_setLevel));
 	}
 	console.error('done macSetLevelOfBrowseFile');
@@ -5765,5 +5758,14 @@ function justFormatStringFromName(aLocalizableStr, aReplacements) {
     }
 
     return cLocalizedStr;
+}
+function getNativeHandlePtrStr(aDOMWindow) {
+	var aDOMBaseWindow = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+								   .getInterface(Ci.nsIWebNavigation)
+								   .QueryInterface(Ci.nsIDocShellTreeItem)
+								   .treeOwner
+								   .QueryInterface(Ci.nsIInterfaceRequestor)
+								   .getInterface(Ci.nsIBaseWindow);
+	return aDOMBaseWindow.nativeHandle;
 }
 // end - common helper functions

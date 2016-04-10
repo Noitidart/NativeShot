@@ -133,6 +133,26 @@ function initGDOMStructureLocalized() {
 					click: 'callback:printprev-toggle-click'
 				}
 			]
+		},
+		{
+			id: 'systemhotkey',
+			pref: 'system_hotkey',
+			label: core.addon.l10n.app_options.system_hotkey,
+			values: {
+				'false': core.addon.l10n.app_options.off,
+				'true': core.addon.l10n.app_options.on
+			},
+			descs: [
+				core.os.mname == 'darwin' ? core.addon.l10n.app_options.system_hotkey_desc1_mac.replace('\\u2318', '\u2318') : core.addon.l10n.app_options.system_hotkey_desc1_winnix,
+				core.addon.l10n.app_options.system_hotkey_desc2
+			],
+			btns: [
+				{
+					id: 'systemhotkey-toggle',
+					label: 'callback:systemhotkey-toggle',
+					click: 'callback:systemhotkey-toggle-click'
+				}
+			]
 		}
 	];
 }
@@ -142,6 +162,9 @@ var gDOMStructureCallbacks = {
 	// callbacks used in click are binded to `this` of the componenet
 	// all other callbacks are passed the state of the block
 	'callback:printprev-toggle': function(aBlockState) {
+		return (!aBlockState.value ? core.addon.l10n.app_options.on : core.addon.l10n.app_options.off);
+	},
+	'callback:systemhotkey-toggle': function(aBlockState) {
 		return (!aBlockState.value ? core.addon.l10n.app_options.on : core.addon.l10n.app_options.off);
 	},
 	'callback:autoup-toggle': function(aBlockState) {
@@ -179,6 +202,22 @@ var gDOMStructureCallbacks = {
 				sBlockValues: JSON.parse(JSON.stringify(gDOMState))
 			});
 		});
+	},
+	'callback:systemhotkey-toggle-click': function() {
+		var newPrefValue = !core.addon.prefs.system_hotkey.value;
+		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'system_hotkey', !core.addon.prefs.system_hotkey.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
+			core.addon.prefs.system_hotkey = aCorePrefNameObj;
+			refreshGDOMState();
+			MyStore.setState({
+				sBlockValues: JSON.parse(JSON.stringify(gDOMState))
+			});
+		});
+		if (newPrefValue) {
+			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['callInBootstrap', ['initHotkey']]);
+		} else {
+			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['callInBootstrap', ['uninitHotkey']]);
+		}
 	},
 	'callback:autoup-toggle-click': function() {
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'autoupdate', !core.addon.prefs.autoupdate.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
@@ -351,6 +390,7 @@ var Block = React.createClass({
 		
 		var cBlockDescs = [];
 		var cDescs = this.props.pBlock.descs;
+		console.error('cDescs:', cDescs);
 		for (var i=0; i<cDescs.length; i++) {
 			cBlockDescs.push(React.createElement('li', {},
 				cDescs[i]

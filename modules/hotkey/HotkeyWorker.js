@@ -193,7 +193,7 @@ function init(objCore) { // function name init required for SIPWorker
 
 // start - addon functionality
 var gEventLoopInterval;
-const gEventLoopIntervalMS = 5000;
+const gEventLoopIntervalMS = 50;
 
 function prepTerm() {
 	

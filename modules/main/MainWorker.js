@@ -412,6 +412,7 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 							console.log('got file path:', aBrowsedDetails.filepath);
 							saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aBrowsedDetails);
 						} else {
+							self.postMessage(['updateAttnBar', aBtnId, {bTxt: 'Cancelled'}]); // :l10n:
 							cBtnStore.resolveDeferred({
 								status: true,
 								msg: 'Cancelled'
