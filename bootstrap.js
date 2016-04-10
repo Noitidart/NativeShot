@@ -4138,65 +4138,21 @@ function initHotkey() {
 		case 'wince':
 		case 'winmo':
 		case 'winnt':
+		case 'gtk':
 
 				var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
 				promise_initHotkeys.then(
-					function(aVal) {
-						console.log('Fullfilled - promise_initHotkeys - ', aVal);
+					function(aHotkeyRegisterError) {
+						console.log('Fullfilled - promise_initHotkeys - ', aHotkeyRegisterError);
 						
+						// on error aHotkeyRegisterError is a string
+						if (aHotkeyRegisterError) {
+							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Error', 'The global hotkey failed to register.\n\n' + aHotkeyRegisterError);
+						}
 					},
 					genericReject.bind(null, 'promise_initHotkeys', 0)
 				).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
 				
-			break;
-		case 'gtk':
-		
-				initOstypes();
-				
-				var XK_Print = 0xff61;
-				var XK_a = 0x0041;
-				var xkeycode = ostypes.API('XKeysymToKeycode')(ostypes.HELPER.cachedXOpenDisplay(), XK_Print);
-				console.log('xkeycode:', xkeycode);
-				
-				var xgrab = ostypes.API('XGrabKey')(ostypes.HELPER.cachedXOpenDisplay(), xkeycode, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow(), 1, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
-				console.log('xgrab:', xgrab);
-				
-				// need to flush or the key isnt grabbed
-				var xflush = ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay());
-				console.log('xflush:', xflush);
-				
-				OSStuff.hotkeyKeycode = xkeycode;
-				OSStuff.hotkeyTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-				OSStuff.hotkeyXevtsWasZeroed = true;
-				
-				OSStuff.hotkeyLastTriggered = 0;
-				
-				OSStuff.hotkeyFakeEventLoop = function() {
-					xpcomSetTimeout(OSStuff.hotkeyTimer, 50, function() {
-						
-						var xevts = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
-						// console.log('xevts:', xevts);
-						if (xevts > 0) {
-							if (OSStuff.hotkeyXevtsWasZeroed) {
-								OSStuff.hotkeyXevtsWasZeroed = false;
-								if ((new Date()).getTime() - OSStuff.hotkeyLastTriggered > 1000) { // because XGrabKey grabs key down and key release, it will come in as two, so i ignore to try to avoid back to back calls, because timer interval is 50ms thats fast so it can clear it while the key is still down i guess
-									console.log('hotkey pressed!');
-									OSStuff.hotkeyLastTriggered = (new Date()).getTime();
-									HotkeyWorkerMainThreadFuncs.takeShot();
-								}
-							}
-							ostypes.API('XSync')(ostypes.HELPER.cachedXOpenDisplay(), true); // discard or it wont reset xevts to 0 and it wont increment if user hits hotkey again
-						} else {
-							OSStuff.hotkeyXevtsWasZeroed = true;
-						}
-						
-						OSStuff.hotkeyFakeEventLoop();
-						
-					});
-				};
-				
-				OSStuff.hotkeyFakeEventLoop();
-			
 			break;
 		case 'darwin':
 			
@@ -4246,6 +4202,7 @@ function uninitHotkey() {
 		case 'wince':
 		case 'winmo':
 		case 'winnt':
+		case 'gtk':
 
 				if (bootstrap.HotkeyWorker && HotkeyWorker.launchTimeStamp) {
 					var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
@@ -4259,29 +4216,6 @@ function uninitHotkey() {
 					).catch(genericCatch.bind(null, 'promise_requestTerm', 0));
 				}
 
-			break;
-		case 'gtk':
-			
-				if (OSStuff.hotkeyTimer) {
-					OSStuff.hotkeyTimer.cancel();
-					var xungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.hotkeyKeycode, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
-					console.log('xungrab:', xungrab.toString());
-					
-					// need to flush or the key remains grabbed until firefox is exited
-					var xflush = ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay());
-					console.log('xflush:', xflush);
-					
-					delete OSStuff.hotkeyKeycode;
-					
-					// :todo: maybe if OSStuff.hotkeyXevtsWasZeroed == false then i should run XSync (and check with XPending) here till it zeroes out
-					
-					delete OSStuff.hotkeyXevtsWasZeroed;
-					
-					delete OSStuff.hotkeyTimer;
-					delete OSStuff.hotkeyFakeEventLoop;
-					
-				}
-			
 			break;
 		case 'darwin':
 			

@@ -184,7 +184,14 @@ function init(objCore) { // function name init required for SIPWorker
 	}
 	
 	// General Init
-	registerHotkey();
+	var regError = registerHotkey();
+	if (regError) {
+		gHotkeyRegistered = false;
+		return regError;
+	} else {
+		gHotkeyRegistered = true;
+	}
+	
 	startEventLoop();
 	
 	console.log('HotkeyWorker init success');
@@ -194,6 +201,7 @@ function init(objCore) { // function name init required for SIPWorker
 // start - addon functionality
 var gEventLoopInterval;
 const gEventLoopIntervalMS = 50;
+var gHotkeyRegistered = false;
 
 function prepTerm() {
 	
@@ -205,9 +213,11 @@ function prepTerm() {
 		case 'winmo':
 		case 'wince':
 		
-				var rez_unregKey = ostypes.API('UnregisterHotKey')(null, 1);
-				console.log('rez_unregKey:', rez_unregKey, 'winLastError:', ctypes.winLastError);
-			
+				if (gHotkeyRegistered) {
+					var rez_unregKey = ostypes.API('UnregisterHotKey')(null, 1);
+					console.log('rez_unregKey:', rez_unregKey, 'winLastError:', ctypes.winLastError);
+				}
+				
 			break
 		case 'gtk':
 		
@@ -215,16 +225,33 @@ function prepTerm() {
 				////// console.log('rez_ungrab:', rez_ungrab);
 				////// 
 				////// ostypes.HELPER.ifOpenedXCloseDisplay();
-				for (var i=0; i<OSStuff.grabWins.length; i++) {
-					console.log('ungrabbing win i:', i, OSStuff.grabWins[i]);
-					for (var j=0; j<OSStuff.keycodesArr.length; j++) {
-						console.log('ungrabbing key:', j, OSStuff.keycodesArr[j])
-						var rez_ungrab = ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_ANY);
-						console.log('rez_ungrab:', rez_ungrab);
+				
+				if (gHotkeyRegistered) {
+					for (var i=0; i<OSStuff.grabWins.length; i++) {
+						console.log('ungrabbing win i:', i, OSStuff.grabWins[i]);
+						for (var j=0; j<OSStuff.keycodesArr.length; j++) {
+							console.log('ungrabbing key:', j, OSStuff.keycodesArr[j])
+							var rez_ungrab = ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_NONE);
+							console.log('rez_ungrab:', rez_ungrab);
+							
+							ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_LOCK); // caps lock
+							ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_2); // num lock
+							ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_LOCK | ostypes.CONST.XCB_MOD_MASK_2); // caps lock AND num lock
+						}
 					}
+
+					var rez_flush = ostypes.API('xcb_flush')(OSStuff.conn);
+					console.log('rez_flush:', rez_flush);
+					
+					delete OSStuff.keycodesArr;
+					delete OSStuff.grabWins;
+					delete OSStuff.hotkeyLastTriggered;
 				}
 				
-				ostypes.API('xcb_disconnect')(OSStuff.conn);
+				if (OSStuff.conn) {
+					ostypes.API('xcb_disconnect')(OSStuff.conn);
+					delete OSStuff.conn;
+				}
 				
 			break;
 		case 'darwin':
@@ -240,6 +267,8 @@ function prepTerm() {
 }
 
 function registerHotkey() {
+	// return undefined if no error. if error returns a string stating error
+	
 	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
@@ -251,213 +280,91 @@ function registerHotkey() {
 			break
 		case 'gtk':
 		
-				////// // var rez_init = ostypes.API('XInitThreads')(); // This function returns a nonzero status if initialization was successful; otherwise, it returns zero. On systems that do not support threads, this function always returns zero. 
-				////// // console.log('rez_init:', rez_init);
-				////// 
-				////// // based on https://jnativehook.googlecode.com/svn/branches/test_code/linux/XGrabKey.c
-				////// //	i copied it here as it might come in handy - https://gist.github.com/Noitidart/e12ad03d21bbb91cd214
-				////// 
-				////// //Try to attach to the default X11 display.
-				////// var display = ostypes.HELPER.cachedXOpenDisplay();
-				////// 
-				////// //Get the default global window to listen on for the selected X11 display.
-				////// var grabWin = ostypes.HELPER.cachedDefaultRootWindow();
-				////// // var rez_allow = ostypes.API('XAllowEvents')(display, ostypes.CONST.AsyncKeyboard, ostypes.CONST.CurrentTime);
-				////// // console.log('rez_allow:', rez_allow);
-				////// // XkbSetDetectableAutoRepeat(display, true, NULL);
-				////// 
-				////// //Find the X11 KeyCode we are listening for.
-				////// var key = ostypes.API('XKeysymToKeycode')(display, ostypes.CONST.XK_Print);
-				////// console.log('key:', key);
-				////// OSStuff.key = key;
-				////// 
-				////// //No Modifier
-				////// var rez_grab = ostypes.API('XGrabKey')(display, key, ostypes.CONST.None, grabWin, true, ostypes.CONST.GrabModeAsync, ostypes.CONST.GrabModeAsync);
-				////// console.log('rez_grab:', rez_grab);
-				////// 
-				////// // var rez_sel = ostypes.API('XSelectInput')(display, grabWin, ostypes.CONST.KeyPressMask);
-				////// // console.log('rez_sel:', rez_sel);
-				
-				//////////////// // based on http://stackoverflow.com/a/28351174/1828637
-				//////////////// // Connect to the X server.
-				//////////////// var conn = ostypes.API('xcb_connect')(null, null);
-				//////////////// console.log('conn:', conn);
-				//////////////// OSStuff.conn = conn;
-				//////////////// 
-				//////////////// var rez_conerr = ostypes.API('xcb_connection_has_error')(conn);
-				//////////////// console.log('rez_conerr:', rez_conerr);
-				//////////////// 
-				//////////////// if (!cutils.jscEqual(rez_conerr, 0)) {
-				//////////////// 	console.error('error in the connection!!!!!');
-				//////////////// 	throw new Error('error in xcb connection!!');
-				//////////////// }
-				//////////////// 
-				//////////////// // get first screen
-				//////////////// var setup = ostypes.API('xcb_get_setup')(conn);
-				//////////////// console.log('setup:', setup);
-				//////////////// 
-				//////////////// var screen = ostypes.API('xcb_setup_roots_iterator')(setup);
-				//////////////// console.log('screen:', screen);
-				//////////////// 
-				//////////////// 
-				//////////////// // define the application as window manager
-				//////////////// var select_input_val = ostypes.TYPE.uint32_t.array()([
-				//////////////// 							ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_ENTER_WINDOW
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_LEAVE_WINDOW
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_STRUCTURE_NOTIFY
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_PROPERTY_CHANGE
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_BUTTON_RELEASE
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_FOCUS_CHANGE
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_KEY_PRESS
-				//////////////// 							| ostypes.CONST.XCB_EVENT_MASK_KEY_RELEASE
-				//////////////// 						]);
-				//////////////// console.log('select_input_val:', select_input_val);
-				//////////////// console.log('screen.data.contents.root:', screen.data.contents.root);
-				//////////////// 
-				//////////////// var rez_chg = ostypes.API('xcb_change_window_attributes')(conn, screen.data.contents.root, ostypes.CONST.XCB_CW_EVENT_MASK, select_input_val);
-				//////////////// console.log('rez_chg:', rez_chg);
-				//////////////// 
-				//////////////// // Need to xcb_flush to validate error handler
-				//////////////// var rez_sync = ostypes.API('xcb_aux_sync')(conn);
-				//////////////// console.log('rez_sync:', rez_sync);
-				
-				// var rez_poll = ostypes.API('xcb_poll_for_event')(conn);
-				// console.log('rez_poll:', rez_poll);
-				// if (!rez_poll.isNull()) {
-				// 	console.error('another window manager is already running');
-				// }
-				
-				// var rez_flush = ostypes.API('xcb_flush')(conn);
-				// console.log('rez_flush:', rez_flush);
-				
-				// tried creating a window to see if i can get events from there, it worked
-				////////
-				////////	var w = ostypes.API('xcb_generate_id')(conn);
-				////////	console.log('w:', w);
-				////////	
-				////////	var mask = ostypes.CONST.XCB_CW_BACK_PIXEL | ostypes.CONST.XCB_CW_EVENT_MASK;
-				////////	
-				////////	var value_list = ostypes.TYPE.uint32_t.array()([
-				////////		screen.data.contents.black_pixel, // Background color of the window (XCB_CW_BACK_PIXEL)
-				////////		ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS | ostypes.CONST.XCB_EVENT_MASK_BUTTON_RELEASE // Event masks (XCB_CW_EVENT_MASK)
-				////////	]);
-				////////	
-				////////	var rezXcbCreateWindow = ostypes.API('xcb_create_window')(
-				////////		conn,											// Connection
-				////////		ostypes.CONST.XCB_COPY_FROM_PARENT,				// Depth
-				////////		w,												// Window ID
-				////////		screen.data.contents.root,						// Parent window
-				////////		0,												// x
-				////////		0,												// y
-				////////		150,											// width
-				////////		150,											// height
-				////////		10,												// Border width in pixels
-				////////		ostypes.CONST.XCB_WINDOW_CLASS_INPUT_OUTPUT,	// Window class
-				////////		screen.data.contents.root_visual,				// Visual
-				////////		mask,
-				////////		value_list										// Window properties mask and values.
-				////////	);
-				////////	console.log('rezXcbCreateWindow:', rezXcbCreateWindow);
-				////////	
-				////////	// Map the window and ensure the server receives the map request.
-				////////	var rezMap = ostypes.API('xcb_map_window')(conn, w);
-				////////	console.log('rezMap:', rezMap);
-				////////	
-				////////	var rezFlush = ostypes.API('xcb_flush')(conn);
-				////////	console.log('rezFlush:', rezFlush);
-				////////
-				
-				// based on http://stackoverflow.com/q/14553810/1828637
-				
-				// Connect to the X server.
 				var conn = ostypes.API('xcb_connect')(null, null);
-				console.log('conn:', conn);
+				console.log('conn:', conn.toString());
 				OSStuff.conn = conn;
 				
-				var rez_conerr = ostypes.API('xcb_connection_has_error')(conn);
-				console.log('rez_conerr:', rez_conerr);
-				if (!cutils.jscEqual(rez_conerr, 0)) {
-					console.error('error in the connection!!!!!');
-					throw new Error('error in xcb connection!!');
-				}
-				
-				// xcb_key_symbols_t *keysyms = xcb_key_symbols_alloc(c);
 				var keysyms = ostypes.API('xcb_key_symbols_alloc')(conn);
-				console.log('keysyms:', keysyms);
-				
-				// xcb_keycode_t *keycodes = xcb_key_symbols_get_keycode(keysyms, XK_space), keycode;
-				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, ostypes.CONST.XK_Space);
-				console.log('keycodesPtr:', keycodesPtr, uneval(keycodesPtr));
-				
+				console.log('keysyms:', keysyms.toString());
+
+				var XK_A = 0x0041; // lower case "a" // https://github.com/semonalbertyeah/noVNC_custom/blob/60daa01208a7e25712d17f67282497626de5704d/include/keysym.js#L216
+				var XK_Print = 0xff61;
+				var XK_Space = 0x0020;
+
+				// var XCB_EVENT_MASK_KEY_PRESS = 1;
+				// var XCB_EVENT_MASK_BUTTON_PRESS = 4;
+				// var XCB_EVENT_MASK_EXPOSURE = 32768;
+				// var XCB_CW_EVENT_MASK = 2048;
+
+				var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, XK_Print);
+				console.log('keycodesPtr:', keycodesPtr.toString());
+
 				var keycodesArr = [];
-				var addressOfElement = ctypes.UInt64(cutils.strOfPtr(keycodesPtr));
-				while(true) {
-					var el = ostypes.TYPE.xcb_keycode_t.ptr(addressOfElement);
-					var val = el.contents; // no need for cutils.jscGetDeepest because xcb_keycode_t is ctypes.uint_8 which is a number
-					if (val == ostypes.CONST.XCB_NO_SYMBOL) {
+				for (var i=0; i<10; i++) { // im just thinking 10 is a lot, usually you only have 1 keycode. mayyybe 2. 10 should cover it
+					var keycodesArrC = ctypes.cast(keycodesPtr, ostypes.TYPE.xcb_keycode_t.array(i+1).ptr).contents;
+					console.log('keycodesArrC:', keycodesArrC);
+					if (keycodesArrC[i] == ostypes.CONST.XCB_NO_SYMBOL) {
 						break;
 					}
-					keycodesArr.push(val);
-					addressOfElement = ctypes_math.UInt64.add(addressOfElement, ostypes.TYPE.xcb_keycode_t.size);
+					keycodesArr.push(keycodesArrC[i]);
 				}
-				
-				OSStuff.keycodesArr = keycodesArr;
+
 				console.log('keycodesArr:', keycodesArr);
 				if (!keycodesArr.length) {
-					console.error('no keycodes!! so nothing to grab!');
-					return;
+					return 'linux no keycodes found';
+					throw new Error('linux no keycodes found');
 				}
 				
-				ostypes.API('free')(keycodesPtr); // returns undefined
-				
-				ostypes.API('xcb_key_symbols_free')(keysyms); // returns undefined
-				
-				// add bindings for all screens
-				// iter = xcb_setup_roots_iterator (xcb_get_setup (c));
+				ostypes.API('free')(keycodesPtr);
+
+				ostypes.API('xcb_key_symbols_free')(keysyms);
+
 				var setup = ostypes.API('xcb_get_setup')(conn);
-				console.log('setup:', setup);
-				
+				console.log('setup:', setup.contents);
+
 				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
-				console.log('screens:', screens);
-				
-				OSStuff.grabWins = [];
-				var screensCnt = parseInt(cutils.jscGetDeepest(screens.rem));
+
+				var grabWins = []; // so iterate through these and ungrab on remove of hotkey
+				var screensCnt = screens.rem;
 				console.log('screensCnt:', screensCnt);
+
 				for (var i=0; i<screensCnt; i++) {
-					console.log('ok screen i:', i, 'screens:', screens);
-					console.log('screens.data.contents:', screens.data.contents);
+					console.log('screen[' + i + ']:', screens);
+					console.log('screen[' + i + '].data:', screens.data.contents);
 					for (var j=0; j<keycodesArr.length; j++) {
-						// xcb_grab_key(c, true, iter.data->root, XCB_MOD_MASK_ANY, keycode, XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_SYNC);
-						var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_ANY, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
+						// var rez_grab = ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_NONE, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
+						var rez_grab = ostypes.API('xcb_grab_key_checked')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_NONE, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
 						console.log('rez_grab:', rez_grab);
+
+						var rez_check = ostypes.API('xcb_request_check')(conn, rez_grab);
+						console.log('rez_check:', rez_check.toString());
+						if (!rez_check.isNull()) {
+							// console.error('grab failed! error:', rez_check.contents);
+							return 'The hotkey "PrntScrn" is already in use by another function. Please go to your system control panel and find the "Global Keyboard Shortcuts" section. Then disable whatever shortcut is using "PrntScrn" as a hotkey.';
+							throw new Error('linux grab failed');
+						}
 						
-						// var rez_err = ostypes.API('xcb_request_check')(conn, rez_grab);
-						// console.log('rez_err:', rez_err);
-						// if (!rez_err.isNull()) {
-						// 	console.log('rez_err.contents:', rez_err.contents);
-						// }
+						ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_LOCK, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC); // caps lock
+						ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_2, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC); // num lock
+						ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_LOCK | ostypes.CONST.XCB_MOD_MASK_2, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC); // caps lock AND num lock
 					}
-					
-					var chgValueList = ostypes.TYPE.uint32_t.array()([
-						ostypes.CONST.XCB_EVENT_MASK_EXPOSURE | ostypes.CONST.XCB_EVENT_MASK_BUTTON_PRESS
-					]);
-					var rez_chg = ostypes.API('xcb_change_window_attributes')(conn, screens.data.contents.root, ostypes.CONST.XCB_CW_EVENT_MASK, chgValueList);
-					console.log('rez_chg:', rez_chg);
-					
-					OSStuff.grabWins.push(screens.data.contents.root);
-					ostypes.API('xcb_screen_next')(screens.address()); // returns undefined
+
+					// var chgValueList = ctypes.uint32_t.array()([
+					//  XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_PRESS
+					// ]);
+					// var rez_chg = xcb_change_window_attributes(conn, screens.data.contents.root, XCB_CW_EVENT_MASK, chgValueList);
+					// console.log('rez_chg:', rez_chg);
+
+					grabWins.push(screens.data.contents.root);
+					ostypes.API('xcb_screen_next')(screens.address());
 				}
-				
-				// ok screenI: 0 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1a93b754")), 0, 5856) HotkeyWorker.js:323:6
-				// ok screenI: 1 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed994")), -1, 2826816) HotkeyWorker.js:323:6
-				// ok screenI: 2 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9bc")), -2, 40) HotkeyWorker.js:323:6
-				// ok screenI: 3 screens: xcb_screen_iterator_t(xcb_screen_t.ptr(ctypes.UInt64("0x7f9e1abed9e4")), -3, 40)
-				
+
 				var rez_flush = ostypes.API('xcb_flush')(conn);
 				console.log('rez_flush:', rez_flush);
+				
+				OSStuff.keycodesArr = keycodesArr;
+				OSStuff.grabWins = grabWins;
+				OSStuff.hotkeyLastTriggered = 0;
 				
 			break;
 		case 'darwin':
@@ -522,36 +429,27 @@ function checkEventLoop() {
 			
 			break
 		case 'gtk':
-		
-				////// var rez_pending = ostypes.API('XPending')(ostypes.HELPER.cachedXOpenDisplay());
-				////// console.log('rez_pending:', rez_pending);
-				////// 
-				////// var evPendingCnt = parseInt(cutils.jscGetDeepest(rez_pending));
-				////// console.log('evPendingCnt:', evPendingCnt);
-				////// for (var i=0; i<evPendingCnt; i++) {
-				////// 	//Block waiting for the next event.
-				////// 	console.log('ok going to block');
-				////// 	var rez_next = ostypes.API('XNextEvent')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.xev.address());
-				////// 	console.log('rez_next:', rez_next);
-				////// 	
-				////// 	console.log('xev.xkey.type:', cutils.jscGetDeepest(OSStuff.xev.xkey.type));
-				////// 	if (cutils.jscEqual(OSStuff.xev.xkey.type, ostypes.CONST.KeyPress)) {
-				////// 		console.error('okkkkk key pressed!!!');
-				////// 	}
-				////// 	setTimeout(checkEventLoop, 0);
-				////// }
-				
-				// var evt = ostypes.API('xcb_wait_for_event')(OSStuff.conn);
-				// console.log('evt:', evt);
-				// if (!evt.isNull()) {
-					// console.log('evt.contents:', evt.contents);
-					// ostypes.API('free')(evt);
-				// }
 				
 				var evt = ostypes.API('xcb_poll_for_event')(OSStuff.conn);
-				console.log('evt:', evt);
+				// console.log('evt:', evt);
 				if (!evt.isNull()) {
-					console.log('evt.contents:', evt.contents);
+					console.error('evt.contents:', evt.contents);
+					for (var i=0; i<OSStuff.keycodesArr.length; i++) {
+						if (evt.contents.response_type == ostypes.CONST.XCB_KEY_PRESS) {
+							if (evt.contents.pad0 == OSStuff.keycodesArr[i]) {
+								console.error('hotkey pressed! evt.pad0:', evt.contents.pad0, 'keycodesArr:', OSStuff.keycodesArr);
+								var hotkeyNowTriggered = (new Date()).getTime();
+								if (hotkeyNowTriggered - OSStuff.hotkeyLastTriggered > 1000) {
+									OSStuff.hotkeyLastTriggered = hotkeyNowTriggered;
+									console.warn('taking shot');
+									self.postMessage(['takeShot']);
+								} else {
+									console.warn('will not takeShot as 1sec has not yet elapsed since last triggering hotkey');
+								}
+								break;
+							}
+						}
+					}
 					ostypes.API('free')(evt);
 				}
 				
