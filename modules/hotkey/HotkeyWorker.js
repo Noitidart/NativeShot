@@ -340,7 +340,7 @@ function registerHotkey() {
 						console.log('rez_check:', rez_check.toString());
 						if (!rez_check.isNull()) {
 							// console.error('grab failed! error:', rez_check.contents);
-							return 'The hotkey "PrntScrn" is already in use by another function. Please go to your system control panel and find the "Global Keyboard Shortcuts" section. Then disable whatever shortcut is using "PrntScrn" as a hotkey.';
+							return 'The hotkey "PrntScrn" is already in use by another function. Please go to your system control panel and find the "Global Keyboard Shortcuts" section. Then disable whatever shortcut is using "PrntScrn" as a hotkey. Then come back to Firefox, go to NativeShot options page, and toggle the "System Hotkey" setting to "Off" then back to "On".';
 							throw new Error('linux grab failed');
 						}
 						
