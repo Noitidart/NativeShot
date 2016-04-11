@@ -38,7 +38,7 @@ var core = { // core has stuff added into by MainWorker (currently MainWorker) a
 		},
 		prefbranch: 'extensions.NativeShot@jetpack.',
 		prefs: {},
-		cache_key: Math.random() // set to version on release
+		cache_key: 'v1.7' // set to version on release
 	},
 	os: {
 		name: OS.Constants.Sys.Name.toLowerCase(),
@@ -163,7 +163,7 @@ function prefGet(aPrefName) {
 			
 			break;
 		default:
-			console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
+
 			throw new Error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName');
 	}
 	
@@ -174,7 +174,7 @@ function prefGet(aPrefName) {
 		
 		gotVal.then(
 			function(aVal) {
-				console.log('Fullfilled - gotVal - ', aVal);
+
 				// start - copy block1029221000
 				if (isValidPrefVal(aPrefName, aVal)) {
 					core.addon.prefs[aPrefName] = { // link3838375435343
@@ -183,7 +183,7 @@ function prefGet(aPrefName) {
 					};
 					deferred_waitGetter.resolve(aVal);
 				} else {
-					console.error('got invalid value for pref name:', aPrefName, 'value got was:', '"' + aVal + '"', 'so returning default');
+
 					core.addon.prefs[aPrefName] = { // link3838375435343
 						value: gPrefMeta[aPrefName].defaultValue,
 						defaultValue: gPrefMeta[aPrefName].defaultValue
@@ -198,7 +198,7 @@ function prefGet(aPrefName) {
 					name: 'gotVal',
 					aReason: aReason
 				};
-				console.error('Rejected - gotVal - ', rejObj);
+
 				core.addon.prefs[aPrefName] = { // link3838375435343
 					value: gPrefMeta[aPrefName].defaultValue,
 					defaultValue: gPrefMeta[aPrefName].defaultValue
@@ -212,7 +212,7 @@ function prefGet(aPrefName) {
 					name: 'gotVal',
 					aCaught: aCaught
 				};
-				console.error('Caught - gotVal - ', rejObj);
+
 				core.addon.prefs[aPrefName] = gPrefMeta[aPrefName].defaultValue; // link3838375435343
 				// deferred_waitGetter.resolve(getFromCore_curValOrDefault(aPrefName)); // link444522952112
 				deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
@@ -260,7 +260,7 @@ function prefSet(aPrefName, aNewVal) {
 				
 				break;
 			default:
-				console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
+
 				throw new Error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName');
 		}
 		core.addon.prefs[aPrefName] = { // link3838375435343
@@ -279,7 +279,7 @@ function isValidPrefVal(aPrefName, aVal) {
 	
 	var cValues = gPrefMeta[aPrefName].values;
 	if (!cValues) {
-		console.error('valid values not set for aPrefName:', aPrefName);
+
 		throw new Error('valid values not set for aPrefName!');
 	}
 	for (var i=0; i<cValues.length; i++) {
@@ -337,7 +337,7 @@ function refreshCoreForPrefs() {
 		var promiseAll_getterRequests = Promise.all(promiseAllArr_getterRequests);
 		promiseAll_getterRequests.then(
 			function(aVal) {
-				console.log('Fullfilled - promiseAll_getterRequests - ', aVal);
+
 				mainDeferred_refreshCoreForPrefs.resolve(core.addon.prefs);
 			},
 			genericReject.bind(null, 'promiseAll_getterRequests', mainDeferred_refreshCoreForPrefs)
@@ -481,7 +481,7 @@ function initAndRegisterAbout() {
 	// register it
 	aboutFactory_instance = new AboutFactory(AboutPage);
 	
-	console.log('aboutFactory_instance:', aboutFactory_instance);
+
 }
 
 function AboutFactory(component) {
@@ -1119,7 +1119,7 @@ function gEditorABData_setBtnState(aNewState) { // is binded to gEditorABData_Bt
 	if (gEditorABData_Bar[this.sessionId].shown) {
 		AB.setState(gEditorABData_Bar[this.sessionId].ABRef);
 	}
-	else { console.error('bar not yet shown') }
+
 	
 	// return gEditorABData_Btn[gEditorABData_BtnId];
 }
@@ -1140,7 +1140,7 @@ function replaceClickNameWithClickCallback(aObjEntryForRep, a_gEditorABData_BtnE
 	var keyClick = aObjEntryForRep.bClick ? 'bClick' : 'cClick';
 	// if i ever change bClick or cClick to a func, it gets taken out, so i dont have to check if it changed or its type is string, because its type for sure is string, but i just do it to show my future self
 	if (typeof(aObjEntryForRep[keyClick]) != 'string') {
-		console.error('this should never ever happen, typeof is:', typeof(aObjEntryForRep[keyClick]));
+
 		return;
 	}
 	
@@ -1179,7 +1179,7 @@ function retryForBtnId(aBtnId, aServiceName) {
 	aServiceName = aServiceName ? aServiceName : cBtnStore.meta.service;
 	if (!aServiceName) {
 		// then this means cBtnStore.meta.service is undefined, this is a huge error
-		console.error('should never happen deverror - then this means cBtnStore.meta.service is undefined, this is a huge error');
+
 		throw new Error('should never happen')
 	}
 	
@@ -1214,11 +1214,11 @@ function gEditorABData_getBtnFhr(aBtnId) {
 
 var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its gEditorABData_Btn obj
 	copy: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		// console.log('this:', this, 'gEditorABData_BtnENTRY:', gEditorABData_BtnENTRY, 'doClose:', doClose, 'aBrowser:', aBrowser);
+
 		copyTextToClip(gEditorABData_BtnENTRY.data.copyTxt);
 	},
 	openInFinder: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		// console.log('this:', this, 'gEditorABData_BtnENTRY:', gEditorABData_BtnENTRY, 'doClose:', doClose, 'aBrowser:', aBrowser);
+
 		var nsifileOfCopyTxt = new FileUtils.File(gEditorABData_BtnENTRY.data.copyTxt); // i can do this because for save-quick save-browse copyTxt is platform path
 		showFileInOSExplorer(nsifileOfCopyTxt);
 	},
@@ -1262,7 +1262,7 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		var promise_pickAcct = MainWorker.post('authorizeAppForBtnId', [gEditorABData_BtnENTRY.btnId, gEditorABData_BtnENTRY.meta.service, 'get_from_store_only_time_this_is_needed_is_for_multi_acct_picker', this.menuitem.menudata.uid]);
 		promise_pickAcct.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_pickAcct - ', aVal)
+
 			},
 			genericReject.bind(null, 'promise_pickAcct', 0)
 		).catch(genericCatch.bind(null, 'promise_pickAcct', 0));
@@ -1347,7 +1347,7 @@ var gEditor = {
 		}
 	},
 	repeatLastSelection: function() {
-		console.log('gESelectedRect:', gESelectedRect);
+
 
 		if (gESelectedRectLastLast || gESelectedRectLast) {
 			var setAsSelected;
@@ -1375,7 +1375,7 @@ var gEditor = {
 	},
 	moveSelection: function(dX, dY, by10) {
 		if (!gESelected) {
-			// console.log('no selection');
+
 			return;
 		}
 		
@@ -1400,7 +1400,7 @@ var gEditor = {
 	resizeSelection: function(dW, dH, by10) {
 		// can never resize to 0
 		if (!gESelected) {
-			// console.log('no selection');
+
 			return;
 		}
 		
@@ -1594,7 +1594,7 @@ var gEditor = {
 	borderSelection: function() {
 		// must have called setSelectionStyles before calling border selection
 		if (!gESelected) {
-			// console.log('no selection');
+
 			return;
 		}
 		
@@ -1798,7 +1798,7 @@ var gEditor = {
 		};
 		
 		var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
-		console.log('cImgData:', cImgData);
+
 		gEditor.closeOutEditor(e);
 		
 		var promiseAllArr_ocr = [];
@@ -1816,7 +1816,7 @@ var gEditor = {
 		var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
 		promiseAll_ocr.then(
 			function(aTxtArr) {
-				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
+
 				cImgData = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
 				var alertStrArr = [];
 				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
@@ -1840,17 +1840,17 @@ var gEditor = {
 					var selectedChoiceIndex = {};
 					var rez_select = Services.prompt.select(cDOMWindow, core.addon.l10n.bootstrap.ocr_choice_title, core.addon.l10n.bootstrap.ocr_choice_msg, choices.length, choices, selectedChoiceIndex)
 					if (rez_select) {
-						console.log('selectedChoiceIndex:', selectedChoiceIndex); // this is ```Object { value: 2 }```
+
 						if (selectedChoiceIndex.value == 0) {
 							copyTextToClip(alertStr, cDOMWindow);
-							console.log('copied all to clip:', alertStr);
+
 							for (var realServiceTypeStr in serviceTypeFunc) {
 								addEntryToLog(realServiceTypeStr);
 							}
 						} else {
 							copyTextToClip(aTxtArr[selectedChoiceIndex.value - 1], cDOMWindow);
 							addEntryToLog(allArr_serviceTypeStr[selectedChoiceIndex.value - 1]);
-							console.log('copied just ', selectedChoiceIndex.value, ' to clip:', aTxtArr[selectedChoiceIndex.value - 1]);
+
 						}
 					}
 				}
@@ -1972,7 +1972,7 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 			
 			break;
 		default:
-			console.error('invalid aOAuthService:', aOAuthService);
+
 			throw new Error('invalid aOAuthService!!');
 	}
 	cBtnStore.meta.action = cMethodForService;
@@ -1983,7 +1983,7 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 		var promise_methodForService = MainWorker.post(cMethodForService, [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId]); // link888778
 		promise_methodForService.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_methodForService - ', aVal);
+
 			},
 			genericReject.bind(null, 'promise_methodForService', 0)
 		).catch(genericCatch.bind(null, 'promise_methodForService', 0));
@@ -2148,8 +2148,8 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 		}
 	}
 	
-	if (!ansifileFieldFound) { console.error('deverror, must have a field in aPostDataObj in where to place the nsi file, this field must be a string when sent from worker and should be {{ansifile}}'); throw new Error('deverror, must have a field in aPostDataObj in where to place the nsi file, this field must be a string when sent from worker and should be {{ansifile}}'); }
-	console.log('aPostDataObj:', aPostDataObj);
+
+
 	
 	var tab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(aServiceSearchUrl, {
 		inBackground: false,
@@ -2498,7 +2498,7 @@ function gEMouseDown(e) {
 			if (gEditor.winArr) {
 				// go through all windows in z order and draw sel around the window rect that contains cEMDX, cEMDY
 
-				// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(gEditor.winArr)) // :debug: console.log('remove on prod');
+
 				//var clickedPoint = new Rect(cEMDX, cEMDY, 1, 1);
 				var first_nativeshot_canvas_found = false;
 				for (var i=0; i<gEditor.winArr.length; i++) {
@@ -2596,7 +2596,7 @@ function gEMouseDown(e) {
 					];
 					
 					gCanDim.execStyle('cursor', resizeCursors[gEResizing - 1]);
-					console.log('gEResizing:', gEResizing);
+
 					colMon[gIMonMouseDownedIn].E.DOMWindow.addEventListener('mousemove', gEMouseMove, false);
 					return;
 				}
@@ -2661,13 +2661,13 @@ function gEUnload(e) {
 	
 	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
 	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
-		console.log('need to show notif bar now');
+
 		gEditorABData_Bar[gEditor.sessionId].shown = true; // otherwise setBtnState will not update react states
 		AB.setState(gEditorABData_Bar[gEditor.sessionId].ABRef);
 		ifEditorClosed_andBarHasOnlyOneAction_copyToClip(gEditor.sessionId);
 	} else {
 		// no need to show, delete it
-		console.log('no need to show, delete it');
+
 		delete gEditorABData_Bar[gEditor.sessionId];
 	}
 	
@@ -2724,7 +2724,7 @@ function gEKeyDown(e) {
 		}
 		gEditor.restorePreSelectionStyles();
 	}
-	// else { console.log('e.keyCode:', e.keyCode); }
+
 }
 
 function gEPopupHiding(e) {
@@ -2800,11 +2800,11 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 
 					
 						var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
-						console.log('rez_setLevel:', rez_setLevel.toString());
+
 						
 						var newSize = ostypes.TYPE.NSSize(colMon[iMon].w, colMon[iMon].h);
 						var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
-						console.log('rez_setContentSize:', rez_setContentSize.toString());
+
 						
 						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
 						
@@ -3548,7 +3548,7 @@ function contextMenuBootstrapStartup() {
 
 function contextMenuHiding(e) {
 	// only triggered when it was shown due to right click on cui_nativeshot
-	console.log('context menu hiding');
+
 	
 	e.target.removeEventListener('popuphiding', contextMenuHiding, false);
 	
@@ -3569,7 +3569,7 @@ function contextMenuHiding(e) {
 }
 
 function contextMenuShowing(e) {
-	console.log('context menu showing', 'popupNode:', e.target.ownerDocument.popupNode);
+
 	
 	var cPopupNode = e.target.ownerDocument.popupNode;
 	if (cPopupNode.getAttribute('id') == 'cui_nativeshot') {
@@ -3631,7 +3631,7 @@ function contextMenuSetup(aDOMWindow) {
 		cCustomizationPanelItemContextMenu.addEventListener('popupshowing', contextMenuShowing, false);
 	}
 	
-	// console.log('ok good setup');
+
 }
 
 function contextMenuDestroy(aDOMWindow) {
@@ -3659,7 +3659,7 @@ function contextMenuDestroy(aDOMWindow) {
 		cCustomizationPanelItemContextMenu.removeEventListener('popupshowing', contextMenuShowing, false);
 	}
 	
-	// console.log('ok good destroyed');
+
 	
 }
 // end - context menu items
@@ -3752,7 +3752,7 @@ var AB = { // AB stands for attention bar
 			if (winAB) {
 				if (aInstId in winAB.Insts) {
 					// unmount this
-					console.error('aInstId:', aInstId, 'notificationbox-' + aInstId + '--' + AB.domIdPrefix);
+
 					var cNotificationBox = aDOMWindow.document.getElementById('notificationbox-' + aInstId + '--' + AB.domIdPrefix);
 					aDOMWindow.ReactDOM.unmountComponentAtNode(cNotificationBox);
 					cNotificationBox.parentNode.removeChild(cNotificationBox);
@@ -3886,7 +3886,7 @@ var AB = { // AB stands for attention bar
 				aDOMWindow[core.addon.id + '-AB'].Insts[aInstState.aId].state = aDOMWindow.JSON.parse(aDOMWindow.JSON.stringify(aInstState));
 				var cDeck = aDOMWindow.document.getElementById('content-deck');
 				var cNotificationBox = aDOMWindow.document.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'notificationbox');
-				console.error('inserting', 'notificationbox-' + aInstState.aId + '--' + AB.domIdPrefix);
+
 				cNotificationBox.setAttribute('id', 'notificationbox-' + aInstState.aId + '--' + AB.domIdPrefix);
 				if (!aInstState.aPos) {
 					cDeck.parentNode.appendChild(cNotificationBox);
@@ -3951,19 +3951,19 @@ var AB = { // AB stands for attention bar
 		if (!aDOMWindow[core.addon.id + '-AB']) {
 			return;
 		}
-		console.error('doing uninit from window');
+
 		// start - original block link77728110
 		var winAB = aDOMWindow[core.addon.id + '-AB'];
 		for (var aInstsId in winAB.Insts) {
 			// unmount this
-			console.error('aInstsId:', aInstsId, 'notificationbox-' + aInstsId + '--' + AB.domIdPrefix);
+
 			var cNotificationBox = aDOMWindow.document.getElementById('notificationbox-' + aInstsId + '--' + AB.domIdPrefix);
 			aDOMWindow.ReactDOM.unmountComponentAtNode(cNotificationBox);
 			cNotificationBox.parentNode.removeChild(cNotificationBox);
 		}
 		// end - original block link77728110
 		delete aDOMWindow[core.addon.id + '-AB'];
-		console.error('done uninit');
+
 	},
 	ensureInitedIntoWindow: function(aDOMWindow) {
 		// dont run this yoruself, ensureInstancesToWindow runs this. so if you want to run yourself, then run ensureInstancesToWindow(aDOMWindow)
@@ -3973,12 +3973,12 @@ var AB = { // AB stands for attention bar
 				domIdPrefix: AB.domIdPrefix
 			}; // ab stands for attention bar
 			if (!aDOMWindow.React) {
-				console.log('WILL NOW LOAD IN REACT');
+
 				// resource://devtools/client/shared/vendor/react.js
 				Services.scriptloader.loadSubScript(core.addon.path.scripts + 'react-with-addons.js?' + core.addon.cache_key, aDOMWindow); // even if i load it into aDOMWindow.blah and .blah is an object, it goes into global, so i just do aDOMWindow now
 			}
 			if (!aDOMWindow.ReactDOM) {
-				console.log('WILL NOW LOAD IN REACTDOM');
+
 				// resource://devtools/client/shared/vendor/react-dom.js
 				Services.scriptloader.loadSubScript(core.addon.path.scripts + 'react-dom.js?' + core.addon.cache_key, aDOMWindow);
 			}
@@ -4011,7 +4011,7 @@ var AB = { // AB stands for attention bar
 	msgListener: {
 		receiveMessage: function(aMsgEvent) {
 			var aMsgEventData = aMsgEvent.data;
-			console.error('getting aMsgEvent, data:', aMsgEventData);
+
 			// this means trigger a callback with id aMsgEventData
 			var cCallbackId = aMsgEventData;
 			var cBrowser = aMsgEvent.target;
@@ -4046,7 +4046,7 @@ var AB = { // AB stands for attention bar
 			for (var aInstId in AB.Insts) {
 				var aInstState = AB.Insts[aInstId].state;
 				if (aInstState.aId in aDOMWindow[core.addon.id + '-AB'].Insts) {
-					console.error('this is really weird, it should never happen, as i only call this function when a new window opens');
+
 					aDOMWindow[core.addon.id + '-AB'].Insts[aInstState.aId].state = aDOMWindow.JSON.parse(aDOMWindow.JSON.stringify(aInstState));
 					aDOMWindow[core.addon.id + '-AB'].Insts[aInstState.aId].setState(JSON.parse(JSON.stringify(aInstState)));
 				} else {
@@ -4055,7 +4055,7 @@ var AB = { // AB stands for attention bar
 					aDOMWindow[core.addon.id + '-AB'].Insts[aInstState.aId].state = aDOMWindow.JSON.parse(aDOMWindow.JSON.stringify(aInstState));
 					var cDeck = aDOMWindow.document.getElementById('content-deck');
 					var cNotificationBox = aDOMWindow.document.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'notificationbox');
-					console.error('inserting', 'notificationbox-' + aInstState.aId + '--' + AB.domIdPrefix);
+
 					cNotificationBox.setAttribute('id', 'notificationbox-' + aInstState.aId + '--' + AB.domIdPrefix);
 					if (!aInstState.aPos) {
 						cDeck.parentNode.appendChild(cNotificationBox);
@@ -4099,7 +4099,7 @@ var AB = { // AB stands for attention bar
 var HotkeyWorkerMainThreadFuncs = {
 	takeShot: function() {
 		if (gEditor.sessionId) {
-			console.warn('geditor is currently open, so will not open another one'); // so user pressed prnt screen while it was already open
+
 			return;
 		}
 		if (gDelayedShotObj) {
@@ -4118,7 +4118,7 @@ function initOstypes() {
 			case 'winnt':
 			case 'winmo':
 			case 'wince':
-				console.log('loading:', core.addon.path.modules + 'ostypes/ostypes_win.jsm');
+
 				Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ostypes_win.jsm', BOOTSTRAP);
 				break
 			case 'gtk':
@@ -4143,7 +4143,7 @@ function initHotkey() {
 				var promise_initHotkeys = SIPWorker('HotkeyWorker', core.addon.path.content + 'modules/hotkey/HotkeyWorker.js', core, HotkeyWorkerMainThreadFuncs).post();
 				promise_initHotkeys.then(
 					function(aHotkeyRegisterError) {
-						console.log('Fullfilled - promise_initHotkeys - ', aHotkeyRegisterError);
+
 						
 						// on error aHotkeyRegisterError is a string
 						if (aHotkeyRegisterError) {
@@ -4160,7 +4160,7 @@ function initHotkey() {
 				
 				OSStuff.hotkeyCallback = ostypes.TYPE.EventHandlerUPP(function(nextHandler, theEvent, userDataPtr) {
 					// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
-					console.log('wooohoo ah!! called hotkey!');
+
 					HotkeyWorkerMainThreadFuncs.takeShot();
 					return 1; // must be of type ostypes.TYPE.OSStatus
 				});
@@ -4170,30 +4170,30 @@ function initHotkey() {
 				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
 				
 				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
-				// console.log('rez_appTarget GetApplicationEventTarget:', rez_appTarget.toString());
-				console.log('OSStuff.hotkeyCallback:', OSStuff.hotkeyCallback.toString());
+
+
 				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.hotkeyCallback, 1, eventType.address(), null, null);
-				console.log('rez_install:', rez_install.toString());
+
 				
 				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
 				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
 				gMyHotKeyID.signature = 1752460081; // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
 				gMyHotKeyID.id = 1876;
 				
-				// console.log('gMyHotKeyID:', gMyHotKeyID.toString());
-				// console.log('gMyHotKeyID.address():', gMyHotKeyID.address().toString());
+
+
 				
-				// console.log('ostypes.CONST.shiftKey + ostypes.CONST.cmdKey:', ostypes.CONST.shiftKey + ostypes.CONST.cmdKey);
-				// console.log('gMyHotKeyRef.address():', gMyHotKeyRef.address().toString());
+
+
 				
 				var rez_reg = ostypes.API('RegisterEventHotKey')(20, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget, 0, gMyHotKeyRef.address());
-				console.log('rez_reg:', rez_reg.toString(), ostypes.HELPER.convertLongOSStatus(rez_reg));
+
 				
 				OSStuff.gMyHotKeyRef = gMyHotKeyRef;
 			
 			break;
 		default:
-			console.error('system hotkey not supported on your os');
+
 	}
 }
 
@@ -4208,7 +4208,7 @@ function uninitHotkey() {
 					var promise_requestTerm = HotkeyWorker.post('prepTerm', []);
 					promise_requestTerm.then(
 						function(aVal) {
-							console.log('Fullfilled - promise_requestTerm - ', aVal);
+
 							HotkeyWorker._worker.terminate();
 							delete bootstrap.HotkeyWorker;
 						},
@@ -4222,7 +4222,7 @@ function uninitHotkey() {
 				if (OSStuff.hotkeyCallback) {
 					
 					var rez_unreg = ostypes.API('UnregisterEventHotKey')(OSStuff.gMyHotKeyRef);
-					console.log('rez_unreg:', rez_unreg.toString(), ostypes.HELPER.convertLongOSStatus(rez_unreg));
+
 					
 					delete OSStuff.hotkeyCallback;
 					delete OSStuff.gMyHotKeyRef;
@@ -4230,7 +4230,7 @@ function uninitHotkey() {
 			
 			break;
 		default:
-			console.error('system hotkey not supported on your os');
+
 	}
 }
 // end - System hotkey stuff
@@ -4242,13 +4242,13 @@ var MainWorkerMainThreadFuncs = {
 		
 		var mainDeferred_callInPromiseWorker = new Deferred();
 		
-		console.log('aWorkerName:', aWorkerName);
-		console.log('aArrOfFuncnameThenArgs:', aArrOfFuncnameThenArgs);
+
+
 		
 		var rez_pwcall = BOOTSTRAP[aWorkerName].post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
 		rez_pwcall.then(
 			function(aVal) {
-				console.log('Fullfilled - rez_pwcall - ', aVal);
+
 				if (Array.isArray(aVal)) {
 					mainDeferred_callInPromiseWorker.resolve(aVal);
 				} else {
@@ -4260,7 +4260,7 @@ var MainWorkerMainThreadFuncs = {
 					name: 'rez_pwcall',
 					aReason: aReason
 				};
-				console.error('Rejected - rez_pwcall - ', rejObj);
+
 				mainDeferred_callInPromiseWorker.resolve([rejObj]);
 			}
 		).catch(
@@ -4269,7 +4269,7 @@ var MainWorkerMainThreadFuncs = {
 					name: 'rez_pwcall',
 					aCaught: aCaught
 				};
-				console.error('Caught - rez_pwcall - ', rejObj);
+
 				mainDeferred_callInPromiseWorkerr.resolve([rejObj]);
 			}
 		);
@@ -4282,7 +4282,7 @@ var MainWorkerMainThreadFuncs = {
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aUrl, null, aCallbackSetName, null);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
-				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+
 				deferredMain_authorizeApp.resolve([aFHRResponse]);
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_authorizeApp)
@@ -4298,7 +4298,7 @@ var MainWorkerMainThreadFuncs = {
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName, null);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
-				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+
 				deferredMain_clickAllow.resolve([aFHRResponse]);
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_clickAllow)
@@ -4311,10 +4311,10 @@ var MainWorkerMainThreadFuncs = {
 		var deferredMain_pickAccount = new Deferred();
 	
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName, aLoadPageData);
-		console.error('promise_fhrResponse:', promise_fhrResponse);
+
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
-				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+
 				deferredMain_pickAccount.resolve([aFHRResponse]);
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_pickAccount)
@@ -4327,10 +4327,10 @@ var MainWorkerMainThreadFuncs = {
 		var deferredMain_loadPage = new Deferred();
 	
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aSrc, aClickSetName, aCallbackSetName, aLoadPageData);
-		console.log('promise_fhrResponse:', promise_fhrResponse);
+
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
-				console.log('Fullfilled - promise_fhrResponse - ', aFHRResponse);
+
 				deferredMain_loadPage.resolve([aFHRResponse]);
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_loadPage)
@@ -4362,10 +4362,10 @@ var MainWorkerMainThreadFuncs = {
 		}
 		
 		if (cTransfers.length) {
-			console.log('extracting with transfer');
+
 			return [cSendData, cTransfers, SIP_TRANS_WORD];
 		} else {
-			console.log('extracting as all copies');
+
 			return [cSendData];
 		}
 	},
@@ -4389,10 +4389,10 @@ var MainWorkerMainThreadFuncs = {
 			return false;
 		}
 		
-		console.log('newBtnRefData:', newBtnRefData);
+
 		
 		var cBtnObj = gEditorABData_Btn[aBtnId];
-		console.log('cBtnObj:', cBtnObj);
+
 		
 		if (cBtnObj.autoretryAborting) {
 			// maybe a timeout message came through before the abort completed so ignore those
@@ -4407,7 +4407,7 @@ var MainWorkerMainThreadFuncs = {
 function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 	// copy to clipboard if there was only one btn for this bar
 	var cBarData = gEditorABData_Bar[aSessionId];
-	console.log('cBarData:', cBarData, 'shown:', cBarData.shown);
+
 	if (cBarData.shown && cBarData.btnIds.length == 1) {
 		// only one action done for this so copy it to clipboard,
 		// and close bar within 10sec
@@ -4422,7 +4422,7 @@ function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 			autocloseBar(aSessionId);
 		}
 	} else {
-		console.error('bar not yet shown');
+
 	}
 }
 
@@ -4430,7 +4430,7 @@ var gAutocloseBar = {};
 
 function autocloseBar(aSessionId) {
 	var cBarData = gEditorABData_Bar[aSessionId];
-	console.log('cBarData:', cBarData, 'shown:', cBarData.shown);
+
 	if (gAutocloseBar[aSessionId]) {
 		return; // already in process of autoclose
 	}
@@ -4479,7 +4479,7 @@ function autocloseBar(aSessionId) {
 		AB.setState(cBarData.ABRef);
 		gAutocloseBar[aSessionId].timer.initWithCallback(gAutocloseBar[aSessionId].callback, 0, Ci.nsITimer.TYPE_ONE_SHOT);
 	} else {
-		console.error('bar not yet shown');
+
 	}
 }
 
@@ -4516,7 +4516,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 		var rez_pwcall = MainWorker.post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
 		rez_pwcall.then(
 			function(aVal) {
-				console.log('Fullfilled - rez_pwcall - ', aVal);
+
 				if (Array.isArray(aVal)) {
 					mainDeferred_callInPromiseWorker.resolve(aVal);
 				} else {
@@ -4528,7 +4528,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 					name: 'rez_pwcall',
 					aReason: aReason
 				};
-				console.error('Rejected - rez_pwcall - ', rejObj);
+
 				mainDeferred_callInPromiseWorker.resolve([rejObj]);
 			}
 		).catch(
@@ -4537,7 +4537,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 					name: 'rez_pwcall',
 					aCaught: aCaught
 				};
-				console.error('Caught - rez_pwcall - ', rejObj);
+
 				mainDeferred_callInPromiseWorkerr.resolve([rejObj]);
 			}
 		);
@@ -4551,14 +4551,14 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 		
 		var cBootMethod = aArrOfFuncnameThenArgs.shift();
 		if (!(cBootMethod in BOOTSTRAP)) {
-			console.error('method is not in bootstrap! cBootMethod:', cBootMethod);
+
 			throw new Error('method is not in bootstrap!');
 		}
 		var rez_pwcall = BOOTSTRAP[cBootMethod].apply(null, aArrOfFuncnameThenArgs);
 		if (rez_pwcall && rez_pwcall.constructor.name == 'Promise') { // rez_pwcall may be undefined if it didnt return a promise
 			rez_pwcall.then(
 				function(aVal) {
-					console.log('Fullfilled - rez_pwcall - ', aVal);
+
 					if (Array.isArray(aVal)) {
 						mainDeferred_callInBootstrap.resolve(aVal);
 					} else {
@@ -4570,7 +4570,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 						name: 'rez_pwcall',
 						aReason: aReason
 					};
-					console.error('Rejected - rez_pwcall - ', rejObj);
+
 					mainDeferred_callInBootstrap.resolve([rejObj]);
 				}
 			).catch(
@@ -4579,7 +4579,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 						name: 'rez_pwcall',
 						aCaught: aCaught
 					};
-					console.error('Caught - rez_pwcall - ', rejObj);
+
 					mainDeferred_callInBootstrapr.resolve([rejObj]);
 				}
 			);
@@ -4604,7 +4604,7 @@ var fsMsgListener = {
 	funcScope: fsFuncs,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-		console.log('fsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
+
 		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
 		
 		var callbackPendingId;
@@ -4627,12 +4627,12 @@ var fsMsgListener = {
 							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
-							console.error('aReject:', aReason);
+
 							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
-							console.error('aCatch:', aCatch);
+
 							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
@@ -4642,7 +4642,7 @@ var fsMsgListener = {
 				}
 			}
 		}
-		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 		
 	}
 };
@@ -4744,7 +4744,7 @@ function startup(aData, aReason) {
 		var promise_getInit = SIPWorker('MainWorker', core.addon.path.content + 'modules/main/MainWorker.js', core, MainWorkerMainThreadFuncs).post();
 		promise_getInit.then(
 			function(aVal) {
-				console.log('Fullfilled - promise_getInit - ', aVal);
+
 				do_afterWorkerInit(aVal);
 			},
 			genericReject.bind(null, 'promise_getInit', 0)
@@ -4758,7 +4758,7 @@ function startup(aData, aReason) {
 	
 	promise_initPrefs.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_initPrefs - ', aVal);
+
 			do_afterPrefsInit();
 		},
 		genericReject.bind(null, 'promise_initPrefs', 0)
@@ -4828,9 +4828,9 @@ function shutdown(aData, aReason) {
 	// destroy any FHR's that the devuser did not clean up
 	for (var DSTR_I=0; DSTR_I<gFHR.length; DSTR_I++) {
 		if (gFHR[DSTR_I].destroy) {
-			console.log('destroying gFHR DSTR_I:', DSTR_I);
+
 			gFHR[DSTR_I].destroy();
-			console.log('DSTR_I after destroy:', DSTR_I);
+
 			DSTR_I--; // because .destroy splices it out of gFHR i do a .forEach, otherwise i have to do i--. but .destroy uses i so im worried theres scoping issues here so i switched to DSTR_I
 		}
 	}
@@ -4928,7 +4928,7 @@ function browseFile(aDialogTitle, aOptions={}) {
 
 		}// else { // cancelled	}
 		if (aOptions.async) {
-			console.error('async resolving');
+
 			mainDeferred_browseFile.resolve(retFP);
 		} else {
 			return retFP;
@@ -4948,16 +4948,16 @@ function browseFile(aDialogTitle, aOptions={}) {
 
 function macSetLevelOfBrowseFile() {
 	// can use setLevel and OSStuff.NSMainMenuWindowLevel because this only ever triggers after link98476884 runs for sure for sure
-	console.error('in macSetLevelOfBrowseFile');
+
 	/*
 	var cWin = Services.wm.getMostRecentWindow(null);
 	try {
 		var cWinType = cWin.document.documentElement.getAttribute('windowtype');
-		console.error('cWinType:', cWinType);
+
 	} catch(ignore) {}
 	try {
 		var cWinTitle = cWin.document.documentElement.getAttribute('title');
-		console.error('cWinTitle:', cWinTitle);
+
 	} catch(ignore) {}
 	
 	var NSWindowString = getNativeHandlePtrStr(Services.wm.getMostRecentWindow(null));
@@ -4967,31 +4967,31 @@ function macSetLevelOfBrowseFile() {
 	*/
 	
 	var sharedApp = ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSApplication'), ostypes.HELPER.sel('sharedApplication'));
-	console.log('sharedApp:', sharedApp, sharedApp.toString(), uneval(sharedApp));
+
 	
 	var rez_keyWin = ostypes.API('objc_msgSend')(sharedApp, ostypes.HELPER.sel('keyWindow'));
-	console.log('rez_keyWin:', rez_keyWin, rez_keyWin.toString(), uneval(rez_keyWin));
+
 	if (rez_keyWin.isNull()) {
-		console.error('no keyWindow yet, apparently its possible, im guessing maybe while the window is opening, im not sure but just to be safe wait a bit and call again');
+
 		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(macSetLevelOfBrowseFile, 100);
 		return;
 	}
 	
 	var rez_title = ostypes.API('objc_msgSend')(rez_keyWin, ostypes.HELPER.sel('title'));
-	console.log('rez_title:', rez_title, rez_title.toString(), uneval(rez_title));
+
 
 	var cWinTitle = ostypes.HELPER.readNSString(rez_title); // cCharPtr.readString(); // :note: // link123111119 i do read string, so the text i open browseFile with should be readable by this
-	console.log('cWinTitle:', cWinTitle);
+
 	
 	if (cWinTitle != core.addon.l10n.bootstrap['filepicker-title-save-screenshot']) {
-		console.error('keyWindow is not the browse file picker dialog yet so try again in a bit');
+
 		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(macSetLevelOfBrowseFile, 100);
 		return;
 	} else {	
 		var rez_setLevel = ostypes.API('objc_msgSend')(rez_keyWin, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // i guess 0 is NSNormalWindowLevel // link98476884 // link847455111
-		console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString(), uneval(rez_setLevel));
+
 	}
-	console.error('done macSetLevelOfBrowseFile');
+
 	
 	// in my tests, i didnt need to every wait, as keyWindow was set and it was the picker
 }
@@ -5043,7 +5043,7 @@ function addEntryToLog(aTypeStr, aData={}) {
 	var promise_appendLog = MainWorker.post('addEntryToLog', [aTypeStr, aData]);
 	promise_appendLog.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_appendLog - ', aVal);
+
 		},
 		genericReject.bind(null, 'promise_appendLog', 0)
 	).catch(genericCatch.bind(null, 'promise_appendLog', 0));
@@ -5139,7 +5139,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 					var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
 					promise_initWorker.then(
 						function(aVal) {
-							console.log('Fullfilled - promise_initWorker - ', aVal);
+
 							// start - do stuff here - promise_initWorker
 							if (pFun) {
 								doOrigPost();
@@ -5157,7 +5157,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 					var promise_origPosted = bootstrap[workerScopeName].post(pFun, pArgs, pCosure, pTransfers);
 					promise_origPosted.then(
 						function(aVal) {
-							console.log('Fullfilled - promise_origPosted - ', aVal);
+
 							deferredMain_post.resolve(aVal);
 						},
 						genericReject.bind(null, 'promise_origPosted', deferredMain_post)
@@ -5179,22 +5179,22 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 				// got an error that PromiseWorker did not know how to serialize. so we didnt get a {fail:.....} postMessage. so in onerror it does pop of the deferred. however with allowing promiseworker to return async, we cant simply pop if there are more then 1 promises pending
 				var cQueue = bootstrap[workerScopeName]._queue._array;
 				if (cQueue.length === 1) {
-					// console.log('its fine for origOnerror it will just pop the only one there, which is the one to reject for sure as there are no other promises');
+
 					// DO NOTE THOUGH - .onerror message might come in from any error, it is innate to worker to send this message on error, so it will pop out the promise early, so maybe i might run this origOnerror before the actual promise rejects due to catch
 					origOnerror(onErrorEvent);
 				} else {
 					onErrorEvent.preventDefault(); // as they do this in origOnerror so i prevent here too
-					console.error('queue has more then one promises in there, i dont know which one to reject', 'onErrorEvent:', onErrorEvent, 'queue:', bootstrap[workerScopeName]._queue._array);
+
 				}
 			};
 			
 			bootstrap[workerScopeName]._worker.onmessage = function(aMsgEvent) {
 				////// start - my custom stuff
 				var aMsgEventData = aMsgEvent.data;
-				console.log('promiseworker receiving msg:', aMsgEventData);
+
 				if (Array.isArray(aMsgEventData)) {
 					// my custom stuff, PromiseWorker did self.postMessage to call a function from here
-					console.log('promsieworker is trying to execute function in mainthread');
+
 					
 					var callbackPendingId;
 					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIP_CB_PREFIX) == 0) {
@@ -5211,7 +5211,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 									function(aVal) {
 										if (aVal.length >= 2 && aVal[aVal.length-1] == SIP_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
 											// to transfer in callback, set last element in arr to SIP_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
-											console.error('doing transferrrrr');
+
 											aVal.pop();
 											bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, aVal], aVal.pop());
 										} else {
@@ -5219,12 +5219,12 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 										}
 									},
 									function(aReason) {
-										console.error('aReject:', aReason);
+
 										bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 									}
 								).catch(
 									function(aCatch) {
-										console.error('aCatch:', aCatch);
+
 										bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 									}
 								);
@@ -5233,7 +5233,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 								if (rez_mainthread_call.length > 2 && rez_mainthread_call[rez_mainthread_call.length-1] == SIP_TRANS_WORD && Array.isArray(rez_mainthread_call[rez_mainthread_call.length-2])) {
 									// to transfer in callback, set last element in arr to SIP_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
 									rez_mainthread_call.pop();
-									console.log('doiing traansfer');
+
 									bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, rez_mainthread_call], rez_mainthread_call.pop());
 								} else {
 									bootstrap[workerScopeName]._worker.postMessage([callbackPendingId, rez_mainthread_call]);
@@ -5241,7 +5241,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 							}
 						}
 					}
-					else { console.error('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 					////// end - my custom stuff
 				} else {
 					// find the entry in queue that matches this id, and move it to first position, otherwise i get the error `Internal error: expecting msg " + handler.id + ", " + " got " + data.id + ` --- this guy uses pop and otherwise might get the wrong id if i have multiple promises pending
@@ -5252,16 +5252,16 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 							cQueueItemFound = true;
 							if (i !== 0) {
 								// move it to first position
-								var wasQueue = cQueue.slice(); // console.log('remove on production');
+
 								cQueue.splice(0, 0, cQueue.splice(i, 1)[0]);
-								console.log('ok moved q item from position', i, 'to position 0, this should fix that internal error, aMsgEvent.data.id:', aMsgEvent.data.id, 'queue is now:', cQueue, 'queue was:', wasQueue);
+
 							}
-							else { console.log('no need to reorder queue, the element of data.id:', aMsgEvent.data.id, 'is already in first position:', bootstrap[workerScopeName]._queue._array); }
+
 							break;
 						}
 					}
 					if (!cQueueItemFound) {
-						console.error('errrrror: how on earth can it not find the item with this id in the queue? i dont throw here as the .pop will throw the internal error, aMsgEvent.data.id:', aMsgEvent.data.id, 'cQueue:', cQueue);
+
 					}
 					origOnmessage(aMsgEvent);
 				}
@@ -5306,7 +5306,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		var afterInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
-			console.log('mainthread receiving message:', aMsgEventData);
+
 			
 			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
 			var callbackPendingId;
@@ -5325,7 +5325,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 							function(aVal) {
 								if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
 									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
-									console.error('doing transferrrrr');
+
 									aVal.pop();
 									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal], aVal.pop());
 								} else {
@@ -5333,12 +5333,12 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 								}
 							},
 							function(aReason) {
-								console.error('aReject:', aReason);
+
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 							}
 						).catch(
 							function(aCatch) {
-								console.error('aCatch:', aCatch);
+
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 							}
 						);
@@ -5354,7 +5354,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 					}
 				}
 			}
-			else { console.warn('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 
 		};
 		
@@ -5378,11 +5378,11 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 			var thisCallbackId = SIC_CB_PREFIX + sic_last_cb_id; // + lastCallbackId; // link8888881
 			aFuncExecScope[thisCallbackId] = function() {
 				delete aFuncExecScope[thisCallbackId];
-				// console.log('in mainthread callback trigger wrap, will apply aCB with these arguments:', arguments, 'turned into array:', Array.prototype.slice.call(arguments));
+
 				aCB.apply(null, arguments[0]);
 			};
 			aPostMessageArr.push(thisCallbackId);
-			// console.log('aPostMessageArr:', aPostMessageArr);
+
 			bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
 		};
 		
@@ -5500,7 +5500,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 				var mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
 				ctype = mime.getTypeFromFile(v) || ctype;
 			} catch (ex) {
-				console.warn("failed to get type", ex);
+
 			}
 			item += "Content-Type: " + ctype + "\r\n\r\n";
 
@@ -5513,7 +5513,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 			item = "";
 
 		} else {
-			console.error('in else');
+
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
 			item += encode(v);
 			
@@ -5538,7 +5538,7 @@ function genericReject(aPromiseName, aPromiseToReject, aReason) {
 		name: aPromiseName,
 		aReason: aReason
 	};
-	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
+
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -5548,7 +5548,7 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		name: aPromiseName,
 		aCaught: aCaught
 	};
-	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
+
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -5588,7 +5588,7 @@ function FHR() {
 	// start - rev3 - https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
 	var fhrFsFuncs = { // can use whatever, but by default its setup to use this
 		FHRFrameScriptReady: function() {
-			console.log('mainthread', 'FHRFrameScriptReady');
+
 			fhrThis.inited = true;
 			if (fhrPostInitCb) {
 				fhrPostInitCb();
@@ -5599,7 +5599,7 @@ function FHR() {
 		funcScope: fhrFsFuncs,
 		receiveMessage: function(aMsgEvent) {
 			var aMsgEventData = aMsgEvent.data;
-			console.log('fhrFsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
+
 			// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
 			
 			var callbackPendingId;
@@ -5622,12 +5622,12 @@ function FHR() {
 								aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, aVal]);
 							},
 							function(aReason) {
-								console.error('aReject:', aReason);
+
 								aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, ['promise_rejected', aReason]]);
 							}
 						).catch(
 							function(aCatch) {
-								console.error('aCatch:', aCatch);
+
 								aMsgEvent.target.messageManager.sendAsyncMessage(fhrFsMsgListenerId, [callbackPendingId, ['promise_rejected', aCatch]]);
 							}
 						);
@@ -5637,7 +5637,7 @@ function FHR() {
 					}
 				}
 			}
-			else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 			
 		}
 	};
@@ -5687,7 +5687,7 @@ function FHR() {
 				}
 				
 				this.destroyed = true;
-				console.log('ok destroyed FHR instance with id:', this.id);
+
 			}.bind(this);
 		
 	}.bind(this);
@@ -5705,27 +5705,27 @@ function FHR() {
 		// sets src of frame OR clicks if aClickSetName is set. must either set aSrc OR aClickSetName never both
 		
 		// aCbInfoObj is a collection of callbacks, like for on fail load, on error etc etc
-		console.log('ok in loadPage for id:', this.id);
+
 		
 		var deferredMain_setSrc;
 		
 		if (aDeferredMain_setSrc) {
-			console.log('ok set to preset deferred');
+
 			deferredMain_setSrc = aDeferredMain_setSrc;
 		} else {
 			deferredMain_setSrc = new Deferred();
 			
 			if (!this.inited) {
-				console.log('not yet inited');
+
 				fhrPostInitCb = this.loadPage.bind(this, aSrc, aClickSetName, aCallbackSetName, aLoadPageData, deferredMain_setSrc);
 			
 				return deferredMain_setSrc.promise;
 			}
 		}
 		
-		console.log('sending msg to message manager fhrFsMsgListenerId:', fhrFsMsgListenerId);
+
 		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aClickSetName, aCallbackSetName, aLoadPageData], fhrFsMsgListener.funcScope, function(aFhrResponse) {
-			console.log('bootstrap', 'aFhrResponse:', aFhrResponse);
+
 			deferredMain_setSrc.resolve(aFhrResponse);
 		});
 		
@@ -5740,7 +5740,7 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 	// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
 	for (var aOptKey in aOptions) {
 		if (!(aOptKey in aOptionsDefaults)) {
-			console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
+
 			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
 		}
 	}
