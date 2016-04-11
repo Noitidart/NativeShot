@@ -13,7 +13,7 @@ worker.dispatch = function(method, args = []) {// start - noit hook to allow Pro
   // Dispatch a call to method `method` with args `args`
   // start - noit hook to allow PromiseWorker methods to return promises
   // return self[method](...args);
-
+  console.log('dispatch args:', args);
   var earlierResult = gEarlyDispatchResults[args[0]]; // i change args[0] to data.id
   delete gEarlyDispatchResults[args[0]];
   return earlierResult;
@@ -48,11 +48,11 @@ self.addEventListener('message', msg => {
 				worker.handleMessage(msg);
 			},
 			function(aReason) {
-
+				console.error('aReject:', aReason);
 			}
 		).catch(
 			function(aCatch) {
-
+				console.error('aCatch:', aCatch);
 			}
 		);
 	  } else {
@@ -79,7 +79,7 @@ function readByteArr(aImgBuf, aWidth, aHeight) {
 	gIndex++;
 	
 	// gT.detect(gIndex, cImgData, function(detectErr, detectResult) {
-
+		// console.log('detectErr:', detectErr, 'detectResult:', detectResult);
 		var detectResult = 'temp'; // temp solution till i implement detection or pref
 		gIndex++;
 		
@@ -94,11 +94,11 @@ function readByteArr(aImgBuf, aWidth, aHeight) {
 		if (!gBigWorker && ['chi_sim', 'chi_tra', 'jpn'].indexOf(aOptions.lang) != -1){
 			gT = tesseractinit(16777216*10); // worker.postMessage({init: {mem: 16777216*10}})
 			gBigWorker = true; // bigworker = true
-
+			// console.log('started big worker')
 		}
 		
 		gT.recognize(gIndex, cImgData, aOptions.lang, aOptions, function(recognizeErr, recognizeResult){
-
+			console.log('recognizeErr:', recognizeErr, 'recognizeResult:', recognizeResult);
 			if (recognizeResult) {
 				deferredMain_readByteArr.resolve(recognizeResult.text);
 			} else {
@@ -107,7 +107,7 @@ function readByteArr(aImgBuf, aWidth, aHeight) {
 		});
 	// });
 	
-
+	// console.info('OCRAD aImgBuf:', aImgBuf, 'aWidth:', aWidth, 'aHeight:', aHeight, '');
 	// return 'rawr'; // with my hook for "noit hook to allow PromiseWorker methods to return promises" i can return anything or a promises
 	return deferredMain_readByteArr.promise;
 }

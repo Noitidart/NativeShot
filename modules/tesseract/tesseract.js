@@ -9379,7 +9379,7 @@ else {
 	db = leveljs('./tessdata')
 }
 
-
+console.log('hallo')
 
 var filesizes = {"afr": 1079573, "ara": 1701536, "aze": 1420865, "bel": 1276820, "ben": 6772012, "bul": 1605615, "cat": 1652368, "ces": 1035441, "chi_sim": 17710414, "chi_tra": 24717749, "chr": 320649, "dan-frak": 677656, "dan": 1972936, "deu-frak": 822644, "deu": 991656, "ell": 859719, "eng": 9453554, "enm": 619254, "epo": 1241212, "equ": 821130, "est": 1905040, "eus": 1641190, "fin": 979418, "fra": 1376221, "frk": 5912963, "frm": 5147082, "glg": 1674938, "grc": 3012615, "heb": 1051501, "hin": 6590065, "hrv": 1926995, "hun": 3074473, "ind": 1874776, "isl": 1634041, "ita": 948593, "ita_old": 3436571, "jpn": 13507168, "kan": 4390317, "kor": 5353098, "lav": 1843944, "lit": 1779240, "mal": 5966263, "meme": 88453, "mkd": 1163087, "mlt": 1463001, "msa": 1665427, "nld": 1134708, "nor": 2191610, "osd": 4274649, "pol": 7024662, "por": 909359, "ron": 915680, "rus": 5969957, "slk-frak": 289885, "slk": 2217342, "slv": 1611338, "spa": 883170, "spa_old": 5647453, "sqi": 1667041, "srp": 1770244, "swa": 757916, "swe": 2451917, "tam": 3498763, "tel": 5795246, "tgl": 1496256, "tha": 3811136, "tur": 3563264, "ukr": 937566, "vie": 2195922}
 
@@ -9449,7 +9449,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 						while(response[0] == 0x1f && response[1] == 0x8b){
 							response = pako.ungzip(response)
 						}
-
+						console.log('asdf')
 
 						// postMessage({
 						// 	index: index,
@@ -9463,7 +9463,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 
 						if(shouldcache){
 							db.put(lang, response, function(err){
-
+								console.log('cached lang')
 							})
 						}
 
@@ -9778,7 +9778,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 		loadLanguage(lang, index, function(err, result){
 
 			if(err){
-
+				console.error("error loading", lang);
 				Module._free(ptr); 
 				cb(err, null)
 			}
@@ -9829,7 +9829,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 		image = desaturate(image)
 
 		var ptr = Module.allocate(image, 'i8', Module.ALLOC_NORMAL);
-
+		console.log('allocated image')
 		// base = new Module.TessBaseAPI()
 
 		loadLanguage('osd', index, function(err, result){
@@ -9841,7 +9841,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 				curindex = index
 				base.Init(null, 'osd')
 				base.SetPageSegMode(Module.PSM_OSD_ONLY)
-
+				console.log('loaded language')
 				
 				base.SetImage(Module.wrapPointer(ptr), width, height, 1, width)
 				base.SetRectangle(0, 0, width, height)
@@ -9855,15 +9855,15 @@ var tesseractinit = (function createTesseractInstance(memory){
 				}
 				else {
 					var charset = results.get_unicharset()
-
+					console.log(charset)
 					// results.print_scores()
 
 					var best = results.get_best_result()
 					var oid = best.get_orientation_id(),
 						sid = best.get_script_id();
-
-
-
+					// console.log('orientation id', oid, [0, 270, 180, 90][oid], best.get_oconfidence())
+					// console.log('script id', sid, charset.get_script_from_script_id(sid), best.get_sconfidence())
+					// console.log(best)
 
 					cb(null, {
 						tesseract_script_id: sid,
@@ -10344,13 +10344,13 @@ Buffer.prototype.indexOf = function indexOf (val, byteOffset) {
 
 // `get` will be removed in Node 0.13+
 Buffer.prototype.get = function get (offset) {
-
+  console.log('.get() is deprecated. Access using array indexes instead.')
   return this.readUInt8(offset)
 }
 
 // `set` will be removed in Node 0.13+
 Buffer.prototype.set = function set (v, offset) {
-
+  console.log('.set() is deprecated. Access using array indexes instead.')
   return this.writeUInt8(v, offset)
 }
 
@@ -11778,7 +11778,7 @@ exports.deprecate = function(fn, msg) {
       } else if (process.traceDeprecation) {
         console.trace(msg);
       } else {
-
+        console.error(msg);
       }
       warned = true;
     }
@@ -11800,7 +11800,7 @@ exports.debuglog = function(set) {
       var pid = process.pid;
       debugs[set] = function() {
         var msg = exports.format.apply(exports, arguments);
-
+        console.error('%s %d: %s', set, pid, msg);
       };
     } else {
       debugs[set] = function() {};
@@ -12244,9 +12244,9 @@ function timestamp() {
 }
 
 
-
+// log is just a thin wrapper to console.log that prepends a timestamp
 exports.log = function() {
-
+  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
 };
 
 

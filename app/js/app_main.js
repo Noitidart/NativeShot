@@ -177,7 +177,7 @@ function templatedDataCaption(aTypeInt, aTitle, aSubtitle, aGettime, aImgSrc, aS
 }
 
 function nsOnFocus() {
-
+	console.log('focused');
 	readHistoryLog(function() {
 		updateCountsToSkillBars();
 		matchIsotopeContentsToFileJson(true);
@@ -286,7 +286,7 @@ function nsInitPage(aPostNonSkelInit_CB) {
 				
 			}
 			
-
+			console.log('servicesInfosReact:', servicesInfosReact);
 			servicesInfosReact.sort(function(a, b) {
 				return compareAlphaNumeric(a.serviceTitle, b.serviceTitle); // sort asc
 			});
@@ -429,7 +429,7 @@ var ServicesFilterRow = React.createClass({
 		cFilterBtns.push(React.createElement(ServiceFilterBtn, {pServiceName:'all', pServiceTitle:core.addon.l10n.app_main.title_all, sActiveFilter:this.props.sActiveFilter}));
 		
 		var cServicesInfos = this.props.pServicesInfos;
-
+		console.log('cServicesInfos:', cServicesInfos);
 		for (var i=0; i<cServicesInfos.length; i++) {
 			var cServiceInfoEntry = cServicesInfos[i];
 			if (cServiceInfoEntry.hasAssociatedImgs) {
@@ -480,8 +480,8 @@ var ServicesSummaryCol = React.createClass({
 		//	sServicesLogEntryCnts
 		//	sActiveFilter
 		
-
-
+		// console.log('pServicesInfosGroup:', this.props.pServicesInfosGroup);
+		// console.log('sServicesLogEntryCnts:', this.props.sServicesLogEntryCnts);
 		
 		var cChildren = [];
 		
@@ -1032,7 +1032,7 @@ function doOnBeforeUnload() {
 }
 
 function doOnContentLoad() {
-
+	console.log('in doOnContentLoad');
 	initPage();
 }
 
@@ -1101,7 +1101,7 @@ var bootstrapMsgListener = {
 	funcScope: bootstrapCallbacks,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-
+		console.log('framescript getting aMsgEvent, unevaled:', uneval(aMsgEventData));
 		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
 		
 		var callbackPendingId;
@@ -1122,12 +1122,12 @@ var bootstrapMsgListener = {
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
-
+							console.error('aReject:', aReason);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
-
+							console.error('aCatch:', aCatch);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
@@ -1137,7 +1137,7 @@ var bootstrapMsgListener = {
 				}
 			}
 		}
-
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
 		
 	}
 };
@@ -1196,7 +1196,7 @@ function genericReject(aPromiseName, aPromiseToReject, aReason) {
 		name: aPromiseName,
 		aReason: aReason
 	};
-
+	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -1206,7 +1206,7 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		name: aPromiseName,
 		aCaught: aCaught
 	};
-
+	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -1217,7 +1217,7 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 	// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
 	for (var aOptKey in aOptions) {
 		if (!(aOptKey in aOptionsDefaults)) {
-
+			console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
 			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
 		}
 	}
