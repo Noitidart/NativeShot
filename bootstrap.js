@@ -2861,6 +2861,9 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// }
 	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
+	colMon[iMon].E.DOMWindow.postMessage({topic:'screenshotXfer', screnshotArrBuf:colMon[iMon].screenshotArrBuf}, '*', [colMon[iMon].screenshotArrBuf]);
+	
+	return;
 	var w = colMon[iMon].w;
 	var h = colMon[iMon].h;
 	
@@ -3029,13 +3032,17 @@ function shootAllMons(aDOMWindow) {
 		
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
+			// var sa = Cc['@mozilla.org/supports-array;1'].createInstance(Ci.nsISupportsArray);
+			// var sa_imon = Cc['@mozilla.org/supports-PRUint8;1'].createInstance(Ci.nsISupportsPRUint8);
+			// sa.AppendElement(sa_imon);
+			// sa_imon.data = i;
+			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), sa);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,
 				doc: aEditorDOMWindow.document,
 			};
-
 		}
 	};
 	
@@ -3052,7 +3059,10 @@ function shootAllMons(aDOMWindow) {
 			
 			// set gETopLeftMostX and gETopLeftMostY
 			for (var i=0; i<colMon.length; i++) {
-				colMon[i].screenshot = new aDOMWindow.ImageData(new aDOMWindow.Uint8ClampedArray(colMon[i].screenshot), colMon[i].w, colMon[i].h);
+				console.log('colMon', i, colMon[i]);
+				// colMon[i].screenshot = new aDOMWindow.ImageData(new aDOMWindow.Uint8ClampedArray(colMon[i].screenshot), colMon[i].w, colMon[i].h);
+				colMon[i].screenshotArrBuf = colMon[i].screenshot;
+				delete colMon[i].screenshot;
 				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
 				if (i == 0) {
 					gETopLeftMostX = colMon[i].x;
@@ -3068,7 +3078,7 @@ function shootAllMons(aDOMWindow) {
 			}
 			
 			// update monitor menu domJson
-			
+			/*
 			if (!gEMenuArrRefs.select_fullscreen || gEMenuArrRefs.select_fullscreen.length != 2 + colMon.length) {
 				gEMenuArrRefs.select_fullscreen = 
 					['xul:menupopup', {},
@@ -3082,6 +3092,7 @@ function shootAllMons(aDOMWindow) {
 					);
 				}
 			}
+			*/
 			
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot
@@ -5780,5 +5791,41 @@ function xpcomSetTimeout(aNsiTimer, aDelayTimerMS, aTimerCallback) {
 			aTimerCallback();
 		}
 	}, aDelayTimerMS, Ci.nsITimer.TYPE_ONE_SHOT);
+}
+
+function jsonAsQueryString(aJson) {
+	// only bool, int, string are sent, all others are skipped
+	var qs = [];
+	for (var p in aJson) {
+		if (['number', 'boolean', 'string'].indexOf(typeof(aJson[p])) > -1) {
+			qs.push(p + '=' + aJson[p]);
+		}
+	}
+	return qs.join('&');
+}
+
+function spliceObj(obj1, obj2) {
+	/**
+	 * By reference. Adds all of obj2 keys to obj1. Overwriting any old values in obj1.
+	 * Was previously called `usurpObjWithObj`
+	 * @param obj1
+	 * @param obj2
+	 * @returns obj1
+	 */
+	for (var attrname in obj2) { obj1[attrname] = obj2[attrname]; }
+	return obj1;
+}
+function overwriteObjWithObj(obj1, obj2){
+	/**
+	 * No by reference. Creates a new object. With all the keys/values from obj2. Adds in the keys/values that are in obj1 that were not in obj2.
+	 * @param obj1
+	 * @param obj2
+	 * @returns obj3 a new object based on obj1 and obj2
+	 */
+
+    var obj3 = {};
+    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+    return obj3;
 }
 // end - common helper functions

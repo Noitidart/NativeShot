@@ -1,0 +1,9 @@
+#canBase {
+	display: -moz-box;
+	background: #000 url(chrome://nativeshot/content/resources/images/canvas_bg.png) repeat fixed top left;
+}
+
+#canDim {
+	display: -moz-box;
+	cursor: crosshair;
+}
