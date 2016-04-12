@@ -177,6 +177,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				for(var i = l - 1; i >= 0; i--) {
 					if(shapes[i].contains(mx, my)) {
 						var mySel = shapes[i];
+						// noit: move this shape to the top in the z-index
+						shapes.push(shapes.splice(i, 1)[0]);
+						
 						// Keep track of where in the object we clicked
 						// so we can move it smoothly (see mousemove)
 						myState.dragoffx = mx - mySel.x;
@@ -277,21 +280,27 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				offsetY = 0,
 				mx, my;
 
-			// Compute the total offset
-			if(element.offsetParent !== undefined) {
-				do {
-					offsetX += element.offsetLeft;
-					offsetY += element.offsetTop;
-				} while ((element = element.offsetParent));
-			}
+			// noit: i dont need this
+			// // Compute the total offset
+			// if(element.offsetParent !== undefined) {
+			// 	do {
+			// 		offsetX += element.offsetLeft;
+			// 		offsetY += element.offsetTop;
+			// 	} while ((element = element.offsetParent));
+			// }
 
-			// Add padding and border style widths to offset
-			// Also add the <html> offsets in case there's a position:fixed bar
-			offsetX += this.stylePaddingLeft + this.styleBorderLeft + this.htmlLeft;
-			offsetY += this.stylePaddingTop + this.styleBorderTop + this.htmlTop;
+			// // Add padding and border style widths to offset
+			// // Also add the <html> offsets in case there's a position:fixed bar
+			// offsetX += this.stylePaddingLeft + this.styleBorderLeft + this.htmlLeft;
+			// offsetY += this.stylePaddingTop + this.styleBorderTop + this.htmlTop;
 
-			mx = e.pageX - offsetX;
-			my = e.pageY - offsetY;
+			// mx = e.pageX - offsetX;
+			// my = e.pageY - offsetY;
+			
+			mx = monToMultiMon.x(e.screenX);
+			my = monToMultiMon.y(e.screenY);
+			
+			console.log('e.screenX:', e.screenX, 'e.pageX:', e.pageX, 'mx:', mx);
 
 			// We return a simple javascript object (a hash) with x and y defined
 			return {
@@ -334,6 +343,21 @@ window.addEventListener('message', function(aWinMsgEvent) {
 		
 // end - canvas functions
 
+var monToMultiMon = {
+	// aX is the x on the current monitor (so 0,0 is the top left of the current monitor) - same for aY
+	x: function(aX) {
+		return gQS.win81ScaleX ? Math.floor(gQS.x + ((aX - gQS.x) * gQS.win81ScaleX)) : aX;
+	},
+	y: function(aY) {
+		return gQS.win81ScaleY ? Math.floor(gQS.y + ((aY - gQS.y) * gQS.win81ScaleY)) : aY
+	},
+	obj: function(aCoord) {
+		// aCoord has a x and a y
+		aCoord.x = gQS.win81ScaleX ? Math.floor(gQS.x + ((aX - gQS.x) * gQS.win81ScaleX)) : aX;
+		aCoord.y = gQS.win81ScaleY ? Math.floor(gQS.y + ((aY - gQS.y) * gQS.win81ScaleY)) : aY;
+	},
+	// ctxFunc: function(aFuncName, aFuncArgs, )
+}
 // common functions
 
 // rev3 - https://gist.github.com/Noitidart/725a9c181c97cfc19a99e2bf1991ebd3
