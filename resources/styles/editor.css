@@ -1,17 +1,20 @@
-#contOfCans {
-	
-}
-
 #canBase {
-	-moz-box-flex: 0;
 	position: fixed;
-	display: -moz-box;
+	top: 0;
+	left: 0;
 	background: #000 url(chrome://nativeshot/content/resources/images/canvas_bg.png) repeat fixed top left;
+	z-index: 1;
 }
 
 #canDim {
-	-moz-box-flex: 0;
 	position: fixed;
-	display: -moz-box;
+	top: 0;
+	left: 0;
+	z-index: 2;
 	cursor: crosshair;
+}
+
+#palette {
+	position: absolute;
+	z-index: 3;
 }

@@ -27,9 +27,6 @@ const gStyle = {
 	resizePtFill: '#000'
 };
 
-const NS_HTML = 'http://www.w3.org/1999/xhtml';
-const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
-
 var gUsedW;
 var gUsedH;
 
@@ -42,13 +39,6 @@ function init() {
 	gCtxDim = gCanDim.getContext('2d');
 	
 	// set dimensions of canvas
-	
-	// setAttributeNS doesnt work
-	// gCanBase.setAttributeNS(NS_HTML, 'width', gQS.w);
-	// gCanBase.setAttributeNS(NS_HTML, 'height', gQS.h);
-	// gCanDim.setAttributeNS(NS_HTML, 'width', gQS.w);
-	// gCanDim.setAttributeNS(NS_HTML, 'height', gQS.h);
-	
 	if (gQS.win81ScaleX || gQS.win81ScaleY) {
 		gUsedW = Math.ceil(gQS.w / gQS.win81ScaleX);
 		gUsedH = Math.ceil(gQS.h / gQS.win81ScaleY);
@@ -81,7 +71,7 @@ function screenshotXfer(aData) {
 	var screenshotImageData = new ImageData(new Uint8ClampedArray(aData.screenshotArrBuf), gQS.w, gQS.h);
 	
 	if (gQS.win81ScaleX || gQS.win81ScaleY) {
-		var canDum = document.createElementNS(NS_HTML, 'canvas');
+		var canDum = document.createElement('canvas');
 		canDum.setAttribute('width', gQS.w);
 		canDum.setAttribute('height', gQS.h);
 		
@@ -100,7 +90,7 @@ function screenshotXfer(aData) {
 window.addEventListener('load', init, false);
 
 window.addEventListener('message', function(aWinMsgEvent) {
-	console.error('incoming message to window iMon "' + gQS.iMon + '", aWinMsgEvent:', aWinMsgEvent);
+	console.error('incoming window message to HTML: iMon:', gQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
 	var aData = aWinMsgEvent.data;
 	if (aData.topic in window) {
 		window[aData.topic](aData);

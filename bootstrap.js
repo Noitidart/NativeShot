@@ -539,7 +539,7 @@ var EditorFuncs = {
 			genericReject.bind(null, 'promise_setWinAlwaysTop', 0)
 		).catch(genericCatch.bind(null, 'promise_setWinAlwaysTop', 0));
 		
-		colMon[aData.iMon].E.DOMWindow.postMessage({topic:'screenshotXfer', screenshotArrBuf:colMon[iMon].screenshotArrBuf}, '*', [colMon[iMon].screenshotArrBuf]);
+		colMon[aData.iMon].E.DOMWindow.postMessage({from:'bootstrap', topic:'screenshotXfer', screenshotArrBuf:colMon[iMon].screenshotArrBuf}, '*', [colMon[iMon].screenshotArrBuf]);
 	}
 };
 //end obs stuff
@@ -2894,7 +2894,7 @@ function shootAllMons(aDOMWindow) {
 			// sa.AppendElement(sa_imon);
 			// sa_imon.data = i;
 			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), sa);
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,
