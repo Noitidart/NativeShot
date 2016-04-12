@@ -60,12 +60,6 @@ function init() {
 	gCanDim.setAttribute('width', gUsedW);
 	gCanDim.setAttribute('height', gUsedH);
 	
-	// fill
-	gCtxDim.fillStyle = gStyle.dimFill;
-	console.log('gStyle.dimFill:', gStyle.dimFill);
-	gCtxDim.fillRect(0, 0, gQS.w, gQS.h);
-	console.log('filled:', 0, 0, gQS.w, gQS.h)
-	
 	Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
 		topic: 'init',
 		iMon: gQS.iMon
@@ -77,6 +71,8 @@ function init() {
 	// Lets make some partially transparent
 	s.addShape(new Shape(monToMultiMon.x(80), monToMultiMon.y(150), monToMultiMon.w(60), monToMultiMon.h(30), 'rgba(127, 255, 212, .5)'));
 	s.addShape(new Shape(monToMultiMon.x(125), monToMultiMon.y(80), monToMultiMon.w(30), monToMultiMon.h(80), 'rgba(245, 222, 179, .7)'));
+	
+	s.addCutout(new Cutout(monToMultiMon.x(200), monToMultiMon.y(400), monToMultiMon.w(300), monToMultiMon.h(300)));
 }
 
 function screenshotXfer(aData) {
@@ -147,7 +143,13 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// **** Keep track of state! ****
 
 			this.valid = false; // when set to false, the canvas will redraw everything
+			
+			// drawn objects
 			this.shapes = []; // the collection of things to be drawn
+			this.cutouts = []; // collection of rectangular areas - representing the selected areas to get drawn
+			this.dim = new Dim();
+			
+			// some global vars
 			this.dragging = false; // Keep track of when we are dragging
 			// the current selected object. In the future we could turn this into an array for multiple selection
 			this.selection = null;
@@ -233,10 +235,13 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			this.valid = false;
 		}
 
+		CanvasState.prototype.addCutout = function (cutout) {
+			this.cutouts.push(cutout);
+			this.valid = false;
+		}
+
 		CanvasState.prototype.clear = function () {
 			this.ctx.clearRect(0, 0, this.width, this.height);
-			this.ctx.fillStyle = gStyle.dimFill;
-			this.ctx.fillRect(0, 0, this.width, this.height);
 		}
 
 		// While draw is called as often as the INTERVAL variable demands,
@@ -246,18 +251,23 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			if(!this.valid) {
 				var ctx = this.ctx;
 				var shapes = this.shapes;
+				var cutouts = this.cutouts;
 				this.clear();
 
 				// ** Add stuff you want drawn in the background all the time here **
-
-				// clear rect for all the shapes (i dont clear rect in the shape draw, so shapes can overlap shapes)
-				var l = shapes.length;
-				for(var i = 0; i < l; i++) {
-					var shape = shapes[i];
+				
+				// draw the dim
+				this.dim.draw(ctx);
+				
+				// draw a uniion of the cutouts
+				var cutoutunion = [0, 0, 0, 0];
+				var l = cutouts.length;
+				for (i=0; i<l; i++) {
+					var cutout = cutouts[i];
 					// We can skip the drawing of elements that have moved off the screen:
-					if(shape.x > this.width || shape.y > this.height ||
-						shape.x + shape.w < 0 || shape.y + shape.h < 0) continue;
-					shapes[i].clearDim(ctx);
+					if(cutout.x > this.cutout || cutout.y > this.height ||
+						cutout.x + cutout.w < 0 || cutout.y + cutout.h < 0) continue;
+					cutout.draw(ctx);
 				}
 				
 				// draw all shapes
@@ -267,7 +277,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 					// We can skip the drawing of elements that have moved off the screen:
 					if(shape.x > this.width || shape.y > this.height ||
 						shape.x + shape.w < 0 || shape.y + shape.h < 0) continue;
-					shapes[i].draw(ctx);
+					shape.draw(ctx);
 				}
 
 				// draw selection
@@ -327,6 +337,29 @@ window.addEventListener('message', function(aWinMsgEvent) {
 	
 	// CODE FOR DRAWING THE OBJECTS AS THEY ARE MADE AND MOVE AROUND
 	
+		// Constructor for Dim object
+		function Dim() {
+			
+		}
+		
+		Dim.prototype.draw = function(ctx) {
+			ctx.fillStyle = gStyle.dimFill;
+			ctx.fillRect(0, 0, gQS.w, gQS.h);
+		}
+		
+		// Constructor for Cutout object
+		function Cutout(x, y, w, h) {
+			this.x = x;
+			this.y = y;
+			this.w = w;
+			this.h = h;
+		}
+		
+		// Draws this shape to a given context
+		Cutout.prototype.draw = function (ctx) {
+			ctx.clearRect(this.x, this.y, this.w, this.h);
+		}
+		
 		// Constructor for Shape objects to hold data for all drawn objects.
 		// For now they will just be defined as rectangles.
 		function Shape(x, y, w, h, fill) {
@@ -338,11 +371,6 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			this.w = w || 1;
 			this.h = h || 1;
 			this.fill = fill || '#AAAAAA';
-		}
-		
-		// Clears the dim layer of the space the shape will occupy when drawn
-		Shape.prototype.clearDim = function (ctx) {
-			ctx.clearRect(this.x, this.y, this.w, this.h);
 		}
 		
 		// Draws this shape to a given context
