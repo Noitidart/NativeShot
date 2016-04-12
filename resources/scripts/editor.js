@@ -85,6 +85,290 @@ function screenshotXfer(aData) {
 	} else {
 		gCtxBase.putImageData(screenshotImageData, 0, 0);
 	}
+	
+	// initPalette();
+}
+
+var gPaletteStore = {};
+function initPalette() {
+	var layout = [ // the tools and order they should show in
+		{
+			// Handle - from where user can drag palette around
+			label: undefined, // for non-special, this is the text cloud that shows on hover
+			sub: undefined, // for non-special, this is the submenu items shown on hover. an array of objects
+			icon: undefined, // for non-special, the icon that
+			special: 'Handle' // this key is for special things that have their own React class
+		},
+		{
+			// Accessibility - from where user increase/decrease size of palette
+			special: 'Accessibility'
+		},
+		{
+			special: 'Divider'
+		},
+		// selection tools
+		{
+			label: 'Select',
+			icon: 'S' // the fontello font code
+		},
+		{
+			label: 'Fullscreen',
+			icon: 'S',
+			hotkey: 'F', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
+			fixed: 'Current Monitor', // if not fixed, then the last clicked sub is used, if subs exist, and nothing is fixed, the default is the first one in the list
+			sub: [
+				{
+					label: 'Current Monitor',
+					fixedOnly: true // do not show as sub
+				},
+				{
+					special: 'Monitors'
+				}
+			]
+		},
+		{
+			label: 'Window Wand',
+			icon: 'S'
+		},
+		{
+			label: 'Last Selection',
+			icon: 'S',
+			sub: [
+				{
+					special: 'SelectionHistory'
+				}
+			]
+		},
+		{
+			label: 'Clear Selection',
+			icon: 'S'
+		},
+		{
+			special: 'Divider'
+		},
+		// draw tools
+		{
+			label: 'Freedraw',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Pencil',
+					icon: 'S'
+				},
+				{
+					label: 'Highlighter', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Shapes',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Rectangle',
+					icon: 'S'
+				},
+				{
+					label: 'Rounded Rectangle',
+					icon: 'S'
+				},
+				{
+					label: 'Circle',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Line',
+			icon: 'S',
+			options: ['Arrow']
+		},
+		{
+			label: 'Text',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Free',
+					icon: 'S'
+				},
+				{
+					label: 'Container',
+					icon: 'S',
+					options: ['Word Break / Ellipsis']
+				}
+			]
+		},
+		{
+			special: 'Divider'
+		},
+		// options
+		
+		// actions
+		{
+			label: 'Save',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Quick',
+					icon: 'S'
+				},
+				{
+					label: 'Browse',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Print',
+			icon: 'S'
+		},
+		{
+			label: 'Copy',
+			icon: 'S'
+		},
+		{
+			label: 'Upload to Cloud',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Dropbox',
+					icon: 'S'
+				},
+				{
+					label: 'Google Drive',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Upload to Image Host',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Imgur Anonymous',
+					icon: 'S'
+				},
+				{
+					label: 'Imgur',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Share to Social Media',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Twitter',
+					icon: 'S'
+				},
+				{
+					label: 'Facebook',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Similar Image Search',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Tineye',
+					icon: 'S'
+				},
+				{
+					label: 'Google',
+					icon: 'S'
+				},
+				{
+					label: 'Bing',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			label: 'Text Recognition',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Tesseract',
+					icon: 'S'
+				},
+				{
+					label: 'GOCR',
+					icon: 'S'
+				},
+				{
+					label: 'OCRAD',
+					icon: 'S'
+				}
+			]
+		},
+		{
+			special: 'Divider'
+		},
+		{
+			special: 'Close',
+			hotkey: 'Esc'
+		}
+	];
+	
+	var Accessibility = React.createClass({
+		// the zoom controls that affect the toolbar
+		displayName: 'Accessibility',
+		render: function() {
+			return React.createElement('div', {},
+				'ASD'
+			);
+		}
+	});
+	
+	var Handle = React.createClass({
+		// user can drag around the palette with this
+		displayName: 'Handle',
+		render: function() {
+			return React.createElement('div', {},
+				'LLL'
+			);
+		}
+	})
+	
+	var Divider = React.createClass({
+		displayName: 'Divider',
+		render: function() {
+			return React.createElement('div', {});
+		}
+	})
+	var Subwrap = React.createClass({
+		displayName: 'Subwrap',
+		getInitialState: function() {
+			return {
+				
+			};
+		},
+		componentDidMount: function() {
+			gPaletteStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work
+		},
+		render: function() {
+			// props
+			// 		pLayout
+			
+			var cChildren = [
+				React.createElement('Handle'),
+				React.createElement('Accessibility'),
+			];
+			
+			return React.createElement('div', {className:'container'},
+				cChildren
+			);
+		}
+	});
+	
+	ReactDOM.render(
+		React.createElement(Subwrap, {pLayout:layout}),
+		document.getElementById('palette')
+	);
 }
 
 window.addEventListener('DOMContentLoaded', init, false);
