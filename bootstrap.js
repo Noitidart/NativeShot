@@ -4,7 +4,6 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 const PromiseWorker = Cu.import('resource://gre/modules/PromiseWorker.jsm').BasePromiseWorker;
 Cu.import('resource:///modules/CustomizableUI.jsm');
-Cu.import('resource://gre/modules/ctypes.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
 Cu.import('resource://gre/modules/Geometry.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
@@ -3981,6 +3980,8 @@ var HotkeyWorkerMainThreadFuncs = {
 
 function initOstypes() {
 	if (typeof ostypes == 'undefined') {
+		Cu.import('resource://gre/modules/ctypes.jsm');
+		
 		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/cutils.jsm', BOOTSTRAP); // need to load cutils first as ostypes_mac uses it for HollowStructure
 		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ctypes_math.jsm', BOOTSTRAP);
 		switch (core.os.mname) {
@@ -4027,11 +4028,18 @@ function initHotkey() {
 			
 				initOstypes();
 				
+				OSStuff.hotkeyLastTriggered = 0;
+				
 				OSStuff.hotkeyCallback = ostypes.TYPE.EventHandlerUPP(function(nextHandler, theEvent, userDataPtr) {
 					// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
 					console.log('wooohoo ah!! called hotkey!');
-					HotkeyWorkerMainThreadFuncs.takeShot();
-					return 1; // must be of type ostypes.TYPE.OSStatus
+					var hotkeyNowTriggered = (new Date()).getTime();
+					if (hotkeyNowTriggered - OSStuff.hotkeyLastTriggered > 1000) {
+						OSStuff.hotkeyLastTriggered = hotkeyNowTriggered;
+						HotkeyWorkerMainThreadFuncs.takeShot();
+					}
+					else { console.warn('will not takeShot as 1sec has not yet elapsed since last triggering hotkey'); }
+					return 0; // must be of type ostypes.TYPE.OSStatus
 				});
 				
 				var eventType = ostypes.TYPE.EventTypeSpec();
@@ -4095,6 +4103,7 @@ function uninitHotkey() {
 					
 					delete OSStuff.hotkeyCallback;
 					delete OSStuff.gMyHotKeyRef;
+					delete OSStuff.hotkeyLastTriggered;
 				}
 			
 			break;

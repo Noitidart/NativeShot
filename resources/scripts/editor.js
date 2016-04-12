@@ -324,7 +324,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			mx = monToMultiMon.x(e.screenX);
 			my = monToMultiMon.y(e.screenY);
 			
-			console.log('e.screenX:', e.screenX, 'e.pageX:', e.pageX, 'mx:', mx);
+			// console.log('e.screenX:', e.screenX, 'e.pageX:', e.pageX, 'mx:', mx);
 
 			// We return a simple javascript object (a hash) with x and y defined
 			return {
