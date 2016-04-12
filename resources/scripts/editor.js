@@ -3,6 +3,7 @@ Components.utils.import('resource://gre/modules/Services.jsm');
 var gQS = queryStringAsJson(window.location.search.substr(1));
 console.log('gQS:', gQS, window.location.search.substr(1));
 
+var gStack;
 var gCanBase;
 var gCanDim;
 
@@ -23,8 +24,14 @@ const gStyle = {
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 
+var gUsedW;
+var gUsedH;
+
 function init() {
 	// set globals
+	// setTimeout(function() {
+	
+	gStack = document.getElementById('contOfCans');
 	gCanBase = document.getElementById('canBase');
 	gCanDim = document.getElementById('canDim');
 	
@@ -32,26 +39,56 @@ function init() {
 	gCtxDim = gCanDim.getContext('2d');
 	
 	// set dimensions of canvas
+	
+	// setAttributeNS doesnt work
 	// gCanBase.setAttributeNS(NS_HTML, 'width', gQS.w);
 	// gCanBase.setAttributeNS(NS_HTML, 'height', gQS.h);
-
 	// gCanDim.setAttributeNS(NS_HTML, 'width', gQS.w);
 	// gCanDim.setAttributeNS(NS_HTML, 'height', gQS.h);
 	
+	if (gQS.win81ScaleX || gQS.win81ScaleY) {
+		gUsedW = Math.ceil(gQS.w / gQS.win81ScaleX);
+		gUsedH = Math.ceil(gQS.h / gQS.win81ScaleY);
+	}
+
+	
+	gCanBase.setAttribute('width', gUsedW);
+	gCanBase.setAttribute('height', gUsedH);
+	gCanDim.setAttribute('width', gUsedW);
+	gCanDim.setAttribute('height', gUsedH);
+	
 	// fill
-	// gCtxDim.fillStyle = gStyle.dimFill;
+	gCtxDim.fillStyle = gStyle.dimFill;
 	console.log('gStyle.dimFill:', gStyle.dimFill);
 	gCtxDim.fillRect(0, 0, gQS.w, gQS.h);
 	console.log('filled:', 0, 0, gQS.w, gQS.h)
-	
+	// }, 1000);
 	Services.obs.notifyObservers(null, 'NativeShot@jetpack_nativeshot-editor-loaded', gQS.iMon);
 }
 
 function screenshotXfer(aData) {
 	console.log('in screenshotXfer, aData:', aData);
+	
+	var screenshotImageData = new ImageData(new Uint8ClampedArray(aData.screenshotArrBuf), gQS.w, gQS.h);
+	
+	if (gQS.win81ScaleX || gQS.win81ScaleY) {
+		var canDum = document.createElementNS(NS_HTML, 'canvas');
+		canDum.setAttribute('width', gQS.w);
+		canDum.setAttribute('height', gQS.h);
+		
+		var ctxDum = canDum.getContext('2d');
+		ctxDum.putImageData(screenshotImageData, 0, 0);
+		
+		gCtxBase.scale(1/gQS.win81ScaleX, 1/gQS.win81ScaleY);
+		gCtxDim.scale(1/gQS.win81ScaleX, 1/gQS.win81ScaleY);
+		
+		gCtxBase.drawImage(canDum, 0, 0);
+	} else {
+		gCtxBase.putImageData(screenshotImageData, 0, 0);
+	}
 }
 
-window.addEventListener('DOMContentLoaded', init, false);
+window.addEventListener('load', init, false);
 
 window.addEventListener('message', function(aWinMsgEvent) {
 	console.error('incoming message to window iMon "' + gQS.iMon + '", aWinMsgEvent:', aWinMsgEvent);

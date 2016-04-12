@@ -11,8 +11,8 @@
 	<script type="application/x-javascript" src="chrome://nativeshot/content/resources/scripts/react-dom.js"/>
 	
 	<stack id="contOfCans">
-		<html:canvas id="canBase" draggable="false" />
-		<html:canvas id="canDim" draggable="false" width="100" height="100"/>
+		<html:canvas id="canBase" draggable="false" mozOpaque="true" />
+		<html:canvas id="canDim" draggable="false" />
 		<box id="pal" />
 	</stack>
 </window>

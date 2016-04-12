@@ -2861,7 +2861,7 @@ function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
 	// }
 	
 	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
-	colMon[iMon].E.DOMWindow.postMessage({topic:'screenshotXfer', screnshotArrBuf:colMon[iMon].screenshotArrBuf}, '*', [colMon[iMon].screenshotArrBuf]);
+	colMon[iMon].E.DOMWindow.postMessage({topic:'screenshotXfer', screenshotArrBuf:colMon[iMon].screenshotArrBuf}, '*', [colMon[iMon].screenshotArrBuf]);
 	
 	return;
 	var w = colMon[iMon].w;
