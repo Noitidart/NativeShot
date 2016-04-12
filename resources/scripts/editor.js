@@ -87,7 +87,7 @@ function screenshotXfer(aData) {
 	}
 }
 
-window.addEventListener('load', init, false);
+window.addEventListener('DOMContentLoaded', init, false);
 
 window.addEventListener('message', function(aWinMsgEvent) {
 	console.error('incoming window message to HTML: iMon:', gQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
