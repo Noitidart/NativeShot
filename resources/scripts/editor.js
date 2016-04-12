@@ -72,11 +72,11 @@ function init() {
 	}));
 	
 	var s = new CanvasState(gCanDim);
-	s.addShape(new Shape(40, 40, 50, 50)); // The default is gray
-	s.addShape(new Shape(60, 140, 40, 60, 'lightskyblue'));
+	s.addShape(new Shape(monToMultiMon.x(40), monToMultiMon.y(40), monToMultiMon.w(50), monToMultiMon.h(50))); // The default is gray
+	s.addShape(new Shape(monToMultiMon.x(60), monToMultiMon.y(140), monToMultiMon.w(40), monToMultiMon.h(60), 'lightskyblue'));
 	// Lets make some partially transparent
-	s.addShape(new Shape(80, 150, 60, 30, 'rgba(127, 255, 212, .5)'));
-	s.addShape(new Shape(125, 80, 30, 80, 'rgba(245, 222, 179, .7)'));
+	s.addShape(new Shape(monToMultiMon.x(80), monToMultiMon.y(150), monToMultiMon.w(60), monToMultiMon.h(30), 'rgba(127, 255, 212, .5)'));
+	s.addShape(new Shape(monToMultiMon.x(125), monToMultiMon.y(80), monToMultiMon.w(30), monToMultiMon.h(80), 'rgba(245, 222, 179, .7)'));
 }
 
 function screenshotXfer(aData) {
@@ -232,7 +232,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 		}
 
 		CanvasState.prototype.clear = function () {
-			this.ctx.clearRect(0, 0, this.width, this.height);
+			this.ctx.clearRect(0, 0, monToMultiMon.w(this.width), monToMultiMon.h(this.height));
+			this.ctx.fillStyle = gStyle.dimFill;
+			this.ctx.fillRect(0, 0, monToMultiMon.w(this.width), monToMultiMon.h(this.height));
 		}
 
 		// While draw is called as often as the INTERVAL variable demands,
@@ -246,6 +248,16 @@ window.addEventListener('message', function(aWinMsgEvent) {
 
 				// ** Add stuff you want drawn in the background all the time here **
 
+				// clear rect for all the shapes (i dont clear rect in the shape draw, so shapes can overlap shapes)
+				var l = shapes.length;
+				for(var i = 0; i < l; i++) {
+					var shape = shapes[i];
+					// We can skip the drawing of elements that have moved off the screen:
+					if(shape.x > this.width || shape.y > this.height ||
+						shape.x + shape.w < 0 || shape.y + shape.h < 0) continue;
+					shapes[i].clearDim(ctx);
+				}
+				
 				// draw all shapes
 				var l = shapes.length;
 				for(var i = 0; i < l; i++) {
@@ -325,7 +337,12 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			this.h = h || 1;
 			this.fill = fill || '#AAAAAA';
 		}
-
+		
+		// Clears the dim layer of the space the shape will occupy when drawn
+		Shape.prototype.clearDim = function (ctx) {
+			ctx.clearRect(this.x, this.y, this.w, this.h);
+		}
+		
 		// Draws this shape to a given context
 		Shape.prototype.draw = function (ctx) {
 			ctx.fillStyle = this.fill;
@@ -346,15 +363,23 @@ window.addEventListener('message', function(aWinMsgEvent) {
 var monToMultiMon = {
 	// aX is the x on the current monitor (so 0,0 is the top left of the current monitor) - same for aY
 	x: function(aX) {
-		return gQS.win81ScaleX ? Math.floor(gQS.x + ((aX - gQS.x) * gQS.win81ScaleX)) : aX;
+		return gQS.win81ScaleX ? Math.ceil(gQS.x + ((aX - gQS.x) * gQS.win81ScaleX)) : aX;
 	},
 	y: function(aY) {
-		return gQS.win81ScaleY ? Math.floor(gQS.y + ((aY - gQS.y) * gQS.win81ScaleY)) : aY
+		return gQS.win81ScaleY ? Math.ceil(gQS.y + ((aY - gQS.y) * gQS.win81ScaleY)) : aY
+	},
+	w: function(aW) {
+		// width
+		return gQS.win81ScaleX ? Math.ceil(aW * gQS.win81ScaleX) : aW;
+	},
+	h: function(aH) {
+		// width
+		return gQS.win81ScaleY ? Math.ceil(aH * gQS.win81ScaleY) : aH;
 	},
 	obj: function(aCoord) {
 		// aCoord has a x and a y
-		aCoord.x = gQS.win81ScaleX ? Math.floor(gQS.x + ((aX - gQS.x) * gQS.win81ScaleX)) : aX;
-		aCoord.y = gQS.win81ScaleY ? Math.floor(gQS.y + ((aY - gQS.y) * gQS.win81ScaleY)) : aY;
+		aCoord.x = gQS.win81ScaleX ? Math.ceil(gQS.x + ((aX - gQS.x) * gQS.win81ScaleX)) : aX;
+		aCoord.y = gQS.win81ScaleY ? Math.ceil(gQS.y + ((aY - gQS.y) * gQS.win81ScaleY)) : aY;
 	},
 	// ctxFunc: function(aFuncName, aFuncArgs, )
 }
