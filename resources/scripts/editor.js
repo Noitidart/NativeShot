@@ -115,6 +115,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 
 // start - canvas functions
 // based on http://simonsarris.com/blog/510-making-html5-canvas-useful
+// all numbers passed to ctx functions, should be the monToMultiMon-scaled numbers
 
 	// CODE FOR KEEPING TRACK OF OBJECTS
 
@@ -124,8 +125,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// **** First some setup! ****
 
 			this.canvas = canvas;
-			this.width = canvas.width;
-			this.height = canvas.height;
+			this.width = gQS.w; // same as - monToMultiMon.w(canvas.width);
+			this.height = gQS.h; // same as - monToMultiMon.h(canvas.height);
+			
 			this.ctx = canvas.getContext('2d');
 			// This complicates things a little but but fixes mouse co-ordinate problems
 			// when there's a border or padding. See getMouse for more detail
@@ -232,9 +234,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 		}
 
 		CanvasState.prototype.clear = function () {
-			this.ctx.clearRect(0, 0, monToMultiMon.w(this.width), monToMultiMon.h(this.height));
+			this.ctx.clearRect(0, 0, this.width, this.height);
 			this.ctx.fillStyle = gStyle.dimFill;
-			this.ctx.fillRect(0, 0, monToMultiMon.w(this.width), monToMultiMon.h(this.height));
+			this.ctx.fillRect(0, 0, this.width, this.height);
 		}
 
 		// While draw is called as often as the INTERVAL variable demands,
