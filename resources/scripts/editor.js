@@ -146,6 +146,23 @@ function initPalette() {
 		{
 			special: 'Divider'
 		},
+		// misc tools
+		{
+			label: 'Toggle Cursor',
+			icon: 'S'
+		},
+		{
+			label: 'Zoom View',
+			icon: 'S',
+			sub: [
+				{
+					special: 'ZoomViewLevel'
+				}
+			]
+		},
+		{
+			special: 'Divider'
+		},
 		// draw tools
 		{
 			label: 'Freedraw',
@@ -200,10 +217,82 @@ function initPalette() {
 			]
 		},
 		{
+			label: 'Blur',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Gaussian',
+					icon: 'S'
+				},
+				{
+					label: 'Mosaic',
+					icon: 'S',
+					options: ['Word Break / Ellipsis']
+				}
+			]
+		},
+		{
 			special: 'Divider'
 		},
 		// options
-		
+		{
+			label: 'Color',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Dropper',
+					icon: 'S',
+					unfixable: true
+				},
+				{
+					special: 'ColorPicker' // all special subs are unfixable
+				},
+				{
+					special: 'ColorHistory'
+				},
+				{
+					special: 'TransparencyPicker'
+				}
+			]
+		},
+		{
+			label: 'Line Width',
+			icon: 'S',
+			sub: [
+				{
+					special: 'LineWidthPicker'
+				}
+			]
+		},
+		{
+			label: 'Fill Color',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Dropper',
+					icon: 'S',
+					unfixable: true
+				},
+				{
+					special: 'ColorPicker'
+				},
+				{
+					special: 'ColorHistory'
+				},
+				{
+					special: 'TransparencyPicker'
+				}
+			]
+		},
+		{
+			special: 'Width'
+		},
+		{
+			special: 'Height'
+		},
+		{
+			special: 'TextTools'
+		},
 		// actions
 		{
 			label: 'Save',
@@ -309,7 +398,37 @@ function initPalette() {
 			special: 'Divider'
 		},
 		{
+			label: 'Undo',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Undo All',
+					unfixable: true // never allow this to get fixed
+				},
+				{
+					special: 'UndoHistory'
+				}
+			]
+		},
+		{
+			label: 'Redo',
+			icon: 'S',
+			sub: [
+				{
+					label: 'Redo All',
+					unfixable: true // never allow this to get fixed
+				},
+				{
+					special: 'RedoHistory'
+				}
+			]
+		},
+		{
+			special: 'Divider'
+		},
+		{
 			special: 'Close',
+			icon: 'S',
 			hotkey: 'Esc'
 		}
 	];
