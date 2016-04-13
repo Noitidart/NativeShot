@@ -26,9 +26,6 @@ body {
 #palette {
 	position: absolute;
 	z-index: 3;
-	
-	top: 10%;
-	left: 5px;
 }
 /* end - palette */
 
@@ -108,6 +105,31 @@ body {
 	align-items: center;
 }
 /* end - paccessibility */
+
+/* start - phandle */
+/* state:innate */
+.phandle {
+	padding: 0 1px;
+	width: auto;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: move;
+}
+/* end - phandle */
+
+/* start - phandle-visual */
+/* state:innate */
+.phandle-visual {
+	height: 100%;
+	border: 1px solid #ccc;
+	box-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+	margin-left: 1px;
+}
+.phandle-visual:first-of-type {
+	margin-left: 0;
+}
+/* end - phandle-visual */
 
 /* start - psub */
 /* state:innate */

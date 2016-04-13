@@ -293,6 +293,9 @@ function initPalette() {
 		{
 			special: 'TextTools'
 		},
+		{
+			special: 'Divider'
+		},
 		// actions
 		{
 			label: 'Save',
@@ -429,7 +432,7 @@ function initPalette() {
 			special: 'Divider'
 		},
 		{
-			special: 'Close',
+			label: 'Close',
 			icon: '\ue82f',
 			hotkey: 'Esc'
 		}
@@ -445,7 +448,7 @@ function initPalette() {
 			var nPaletteSize = cPaletteSize;
 			var nHandleSize = cHandleSize;
 			
-			if (cPaletteSize + 8 < 64) {
+			if (cPaletteSize + 8 <= 56) {
 				nPaletteSize = cPaletteSize + 8;
 			}
 			if (cHandleSize + 3 < 40) {
@@ -493,14 +496,35 @@ function initPalette() {
 	var Handle = React.createClass({
 		// user can drag around the palette with this
 		displayName: 'Handle',
+		mousedown: function(e) {
+			this.x = e.screenX;
+			this.y = e.screenY;
+			this.pal = document.getElementById('palette');
+			this.left = parseInt(this.pal.style.left);
+			this.top = parseInt(this.pal.style.top);
+			
+			// document.body.classList.add('paldrag');
+			gCanDim.style.cursor = 'move';
+			this.pal.firstChild.style.cursor = 'move';
+			
+			window.addEventListener('mousemove', this.mousemove, false);
+			var tThis = this;
+			window.addEventListener('mouseup', function() {
+				window.removeEventListener('mouseup', arguments.callee, false);
+				window.removeEventListener('mousemove', tThis.mousemove, false);
+				gCanDim.style.cursor = '';
+				tThis.pal.firstChild.style.cursor = '';
+			}, false);
+		},
+		mousemove: function(e) {
+			this.pal.style.left = this.left + (e.screenX - this.x) + 'px';
+			this.pal.style.top = this.top + (e.screenY - this.y) + 'px';
+		},
 		render: function() {
-			return React.createElement('div', {className:'paccessibility'},
-				React.createElement('div', {className: 'pbutton'},
-					'\ue81a'
-				),
-				React.createElement('div', {className: 'pbutton'},
-					'\ue819'
-				)
+			return React.createElement('div', {className:'phandle pbutton', onMouseDown:this.mousedown},
+				React.createElement('div', {className:'phandle-visual'}),
+				// React.createElement('div', {className:'phandle-visual'}),
+				React.createElement('div', {className:'phandle-visual'})
 			);
 		}
 	});
@@ -552,7 +576,8 @@ function initPalette() {
 	
 	var Specials = {
 		Divider: Divider,
-		Accessibility: Accessibility
+		Accessibility: Accessibility,
+		Handle: Handle
 	};
 	var Subwrap = React.createClass({
 		displayName: 'Subwrap',
@@ -603,6 +628,13 @@ function initPalette() {
 				}
 			};
 			
+			if (!gPaletteStore.setState) {
+				// not yet mounted
+				var pal = document.getElementById('palette');
+				pal.style.left = '5px';
+				pal.style.top = '75px';
+			}
+			
 			return React.createElement('div', cProps,
 				cChildren
 			);
@@ -610,7 +642,7 @@ function initPalette() {
 	});
 	
 	ReactDOM.render(
-		React.createElement(Subwrap, {pLayout:layout, pPaletteSize:48, pHandleSize:7}),
+		React.createElement(Subwrap, {pLayout:layout, pPaletteSize:40, pHandleSize:7}),
 		document.getElementById('palette')
 	);
 }
