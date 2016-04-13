@@ -545,12 +545,38 @@ function initPalette() {
 						return;
 						
 					break;
+				case 'Select':
+					
+						if (gCanState.cutouts.length) {
+							if (!gCanState.selection || gCanState.selection != gCanState.cutouts[0]) {
+								// gCanState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
+								gCanState.selection = gCanState.cutouts[0];
+								gCanState.valid = false;
+							}
+						}
+					
+					break;
 				case 'Clear Selection':
 						
-						gCanState.cutouts.length = 0;
-						gCanState.valid = false;
+						var valid = true;
+						if (gCanState.cutouts.length) {
+							gCanState.cutouts.length = 0;
+							valid = false;
+						}
+						if (gCanState.selection) {
+							gCanState.selection = null;
+							valid = false;
+						}
+						gCanState.valid = valid;
+						
 						return;
 						
+					break;
+				case 'Shapes':
+						if (gCanState.selection) {
+							gCanState.selection = null;
+							gCanState.valid = false;
+						}
 					break;
 				default:
 					// do nothing
@@ -765,9 +791,16 @@ window.addEventListener('message', function(aWinMsgEvent) {
 					case 'Delete':
 					
 							if (!myState.dragging && !myState.resizing) {
-								if (myState.selection) {
-									myState.selection.delete();
-									myState.selection = null;
+								switch (gPaletteLive.state.sToolLabel) {
+									case 'Select':
+									case 'Shapes':
+											if (myState.selection) {
+												myState.selection.delete();
+												myState.selection = null;
+											}
+										break;
+									default:
+										// do nothing
 								}
 							}
 					
@@ -1112,6 +1145,8 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
 				
 				var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
+				// console.error('dimRects:');
+				// console.log(dimRects.toString());
 				
 				for (var i=0; i<dimRects.length; i++) {
 					ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
@@ -1147,7 +1182,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			} // else the width and height are 0, no need to invalidate
 		};
 		
-		Cutout.prototype.select = function() {
+		Cutout.prototype.select = function() {gCanState.valid = false;
 			gCanState.ctx.strokeStyle = '#000';
 			gCanState.ctx.setLineDash([0, monToMultiMon.w(3), 0]);
 			gCanState.ctx.lineWidth = 1;
@@ -1158,6 +1193,8 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			gCanState.ctx.strokeRect(this.x, this.y, this.w, this.h); // draw invisible rect for stroke
 			gCanState.ctx.stroke();
 			gCanState.ctx.translate(-0.5, -0.5);
+			
+			gCanState.valid = false;
 		};
 		
 		// Constructor for Shape objects to hold data for all drawn objects.
@@ -1199,6 +1236,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			gCanState.ctx.strokeStyle = gCanState.selectionColor;
 			gCanState.ctx.lineWidth = gCanState.selectionWidth;
 			gCanState.ctx.strokeRect(this.x, this.y, this.w, this.h);
+			gCanState.valid = false;
 		};
 		
 		function makeDimsPositive(aDrawnObject) {
