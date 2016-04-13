@@ -109,11 +109,11 @@ function initPalette() {
 		// selection tools
 		{
 			label: 'Select',
-			icon: 'S' // the fontello font code
+			icon: '\ue82c' // the fontello font code
 		},
 		{
 			label: 'Fullscreen',
-			icon: 'S',
+			icon: '\ue80e',
 			hotkey: 'F', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			fixed: 'Current Monitor', // if not fixed, then the last clicked sub is used, if subs exist, and nothing is fixed, the default is the first one in the list
 			sub: [
@@ -128,32 +128,32 @@ function initPalette() {
 		},
 		{
 			label: 'Window Wand',
-			icon: 'S'
+			icon: '\ue826'
 		},
 		{
 			label: 'Last Selection',
-			icon: 'S',
+			icon: '\ue82e',
 			sub: [
 				{
 					special: 'SelectionHistory'
 				}
 			]
 		},
-		{
+		/*{
 			label: 'Clear Selection',
 			icon: 'S'
-		},
+		},*/
 		{
 			special: 'Divider'
 		},
 		// misc tools
 		{
 			label: 'Toggle Cursor',
-			icon: 'S'
+			icon: '\ue822'
 		},
 		{
 			label: 'Zoom View',
-			icon: 'S',
+			icon: '\ue811',
 			sub: [
 				{
 					special: 'ZoomViewLevel'
@@ -166,11 +166,11 @@ function initPalette() {
 		// draw tools
 		{
 			label: 'Freedraw',
-			icon: 'S',
+			icon: '\ue830',
 			sub: [
 				{
 					label: 'Pencil',
-					icon: 'S'
+					icon: '\ue800'
 				},
 				{
 					label: 'Highlighter', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
@@ -180,25 +180,25 @@ function initPalette() {
 		},
 		{
 			label: 'Shapes',
-			icon: 'S',
+			icon: '\ue834',
 			sub: [
 				{
 					label: 'Rectangle',
-					icon: 'S'
+					icon: '\ue81d'
 				},
 				{
 					label: 'Rounded Rectangle',
-					icon: 'S'
+					icon: '\ue803'
 				},
 				{
 					label: 'Circle',
-					icon: 'S'
+					icon: '\ue81f'
 				}
 			]
 		},
 		{
 			label: 'Line',
-			icon: 'S',
+			icon: '\ue831',
 			options: ['Arrow']
 		},
 		{
@@ -218,15 +218,15 @@ function initPalette() {
 		},
 		{
 			label: 'Blur',
-			icon: 'S',
+			icon: '\ue808',
 			sub: [
 				{
 					label: 'Gaussian',
-					icon: 'S'
+					icon: '\ue816'
 				},
 				{
 					label: 'Mosaic',
-					icon: 'S',
+					icon: '\ue81b',
 					options: ['Word Break / Ellipsis']
 				}
 			]
@@ -241,7 +241,7 @@ function initPalette() {
 			sub: [
 				{
 					label: 'Dropper',
-					icon: 'S',
+					icon: '\ue82a',
 					unfixable: true
 				},
 				{
@@ -270,7 +270,7 @@ function initPalette() {
 			sub: [
 				{
 					label: 'Dropper',
-					icon: 'S',
+					icon: '\ue82a',
 					unfixable: true
 				},
 				{
@@ -296,37 +296,37 @@ function initPalette() {
 		// actions
 		{
 			label: 'Save',
-			icon: 'S',
+			icon: '\ue804',
 			sub: [
 				{
 					label: 'Quick',
-					icon: 'S'
+					icon: '\ue81e'
 				},
 				{
 					label: 'Browse',
-					icon: 'S'
+					icon: '\ue825'
 				}
 			]
 		},
 		{
 			label: 'Print',
-			icon: 'S'
+			icon: '\ue805'
 		},
 		{
 			label: 'Copy',
-			icon: 'S'
+			icon: '\ue80d'
 		},
 		{
 			label: 'Upload to Cloud',
-			icon: 'S',
+			icon: '\ue833',
 			sub: [
 				{
 					label: 'Dropbox',
-					icon: 'S'
+					icon: '\ue809'
 				},
 				{
 					label: 'Google Drive',
-					icon: 'S'
+					icon: '\ue827'
 				}
 			]
 		},
@@ -336,11 +336,11 @@ function initPalette() {
 			sub: [
 				{
 					label: 'Imgur Anonymous',
-					icon: 'S'
+					icon: '\ue829'
 				},
 				{
 					label: 'Imgur',
-					icon: 'S'
+					icon: '\ue828'
 				}
 			]
 		},
@@ -350,17 +350,17 @@ function initPalette() {
 			sub: [
 				{
 					label: 'Twitter',
-					icon: 'S'
+					icon: '\ue802'
 				},
 				{
 					label: 'Facebook',
-					icon: 'S'
+					icon: '\ue801'
 				}
 			]
 		},
 		{
 			label: 'Similar Image Search',
-			icon: 'S',
+			icon: '\ue821',
 			sub: [
 				{
 					label: 'Tineye',
@@ -368,7 +368,7 @@ function initPalette() {
 				},
 				{
 					label: 'Google',
-					icon: 'S'
+					icon: '\ue810'
 				},
 				{
 					label: 'Bing',
@@ -399,10 +399,11 @@ function initPalette() {
 		},
 		{
 			label: 'Undo',
-			icon: 'S',
+			icon: '\ue80b',
 			sub: [
 				{
 					label: 'Undo All',
+					icon: '\ue80c',
 					unfixable: true // never allow this to get fixed
 				},
 				{
@@ -412,10 +413,11 @@ function initPalette() {
 		},
 		{
 			label: 'Redo',
-			icon: 'S',
+			icon: '\ue80a',
 			sub: [
 				{
 					label: 'Redo All',
+					icon: 'S',
 					unfixable: true // never allow this to get fixed
 				},
 				{
@@ -428,7 +430,7 @@ function initPalette() {
 		},
 		{
 			special: 'Close',
-			icon: 'S',
+			icon: '\ue82f',
 			hotkey: 'Esc'
 		}
 	];

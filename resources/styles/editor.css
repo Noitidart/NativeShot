@@ -1,5 +1,6 @@
 body {
 	margin: 0; /* as there is a default margin on body for some reason in firefox */
+	font-family: arial;
 }
 
 #canBase {
@@ -50,10 +51,13 @@ body {
 /* start - pbutton */
 /* state:innate */
 .pbutton {
-	padding: 0.4em 1em 0.6em 1em;
+	padding: 0.3em 1em 0.7em 1em;
 	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
 	border: 1px solid #ccc;
 	position: relative;
+	font-family: verdana, fontello;
+	font-style: normal;
+	font-weight: normal;
 }
 /* state:hover_not_pressed */
 .pbutton:hover {
@@ -76,9 +80,8 @@ body {
 	position: absolute;
 	width: 100%;
 	left: 0;
-	font-size: .75em;
+	font-size: .7em;
 	bottom: 0;
-	
 }
 /* end - pbutton_after */
 
@@ -110,7 +113,7 @@ body {
 	transition: top 200ms, opacity 200ms;
 	text-shadow: none;
 	display: flex; /* this with justify-content is needed as text-align center doesnt let it exceed the boundaries */
-	justify-content: center; 
+	justify-content: center;
 }
 /* start:pbutton_hover */
 .pbutton:hover .plabel {
@@ -122,6 +125,7 @@ body {
 
 /*start - plabel > span - this is what extends beyond the boundaries of the plabel, as plabel width is 100% so i get center to line up with the icons below it */
 .plabel span {
+	font-family: arial;
 	background-color: #ddd;
 	border-radius: 5px;
 	padding: 7px;
@@ -135,3 +139,12 @@ body {
 	border-right: 0;
 }
 /* end - pdivider */
+
+/* start - other_stuff */
+@font-face {
+	font-family: 'fontello';
+	src: url('chrome://nativeshot/content/resources/styles/fonts/font/fontello.woff') format('woff');
+	font-weight: normal;
+	font-style: normal;
+}
+/* end - other_stuff */
