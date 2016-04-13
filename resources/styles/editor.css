@@ -170,6 +170,10 @@ body {
 	top: -2.3em; /*calc(-1.5em - 0.6em - 0.2em) ::: -.5em will put it at top as font-size is .5em &&&& "- 0.6em" because padding on the `.plabel span` is 0.3px AND -0.2em is just good measure*/
 	opacity: 1;
 }
+/* start:minfontsize */
+.minfontsize .plabel {
+	font-size: 12px;
+}
 /* end - plabel */
 
 /*start - plabel > span - this is what extends beyond the boundaries of the plabel, as plabel width is 100% so i get center to line up with the icons below it */

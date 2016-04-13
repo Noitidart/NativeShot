@@ -90,6 +90,7 @@ function screenshotXfer(aData) {
 }
 
 var gPaletteStore = {};
+var gPaletteLive = {state: {}}; // connection to the react element. i can check state like gPaletteLive.state.sHandleSize
 function initPalette() {
 	var layout = [ // the tools and order they should show in
 		{
@@ -324,26 +325,20 @@ function initPalette() {
 			icon: '\ue833',
 			sub: [
 				{
-					label: 'Dropbox',
-					icon: '\ue809'
-				},
-				{
-					label: 'Google Drive',
-					icon: '\ue827'
-				}
-			]
-		},
-		{
-			label: 'Upload to Image Host',
-			icon: 'S',
-			sub: [
-				{
 					label: 'Imgur Anonymous',
 					icon: '\ue829'
 				},
 				{
 					label: 'Imgur',
 					icon: '\ue828'
+				},
+				{
+					label: 'Dropbox',
+					icon: '\ue809'
+				},
+				{
+					label: 'Google Drive',
+					icon: '\ue827'
 				}
 			]
 		},
@@ -538,15 +533,42 @@ function initPalette() {
 	
 	var Button = React.createClass({
 		displayName: 'Button',
+		click: function() {
+			switch (this.props.pButton.label) {
+				case 'Close':
+						
+						window.close();
+						return;
+						
+					break;
+				case 'Clear Selection':
+						
+						gCanState.cutouts.length = 0;
+						gCanState.valid = false;
+						return;
+						
+					break;
+				default:
+					// do nothing
+			}
+			
+			gPaletteStore.setState({
+				sToolLabel: this.props.pButton.label
+			});
+		},
 		render: function() {
 			// props
-			// 		pButton
-			
+			//		pButton
+			//		sToolLabel
 			var cProps = {
-				className:'pbutton'
+				className:'pbutton',
+				onClick: this.click
 			};
 			if (this.props.pButton.sub && this.props.pButton.sub.length) {
 				cProps['data-subsel'] = this.props.pButton.sub[0].icon;
+			}
+			if (this.props.sToolLabel == this.props.pButton.label) {
+				cProps.className += ' pbutton-pressed';
 			}
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
@@ -584,7 +606,8 @@ function initPalette() {
 		getInitialState: function() {
 			return {
 				sPaletteSize: this.props.pPaletteSize, // Accessibility
-				sHandleSize: this.props.pHandleSize // Accessibility
+				sHandleSize: this.props.pHandleSize, // Accessibility
+				sToolLabel: 'Select' // the selected tool label
 			};
 		},
 		componentDidMount: function() {
@@ -617,7 +640,7 @@ function initPalette() {
 						cChildren.push(React.createElement(Specials[pLayout[i].special], cSpecialProps));
 					}
 				} else {
-					cChildren.push(React.createElement(Button, {pButton:pLayout[i]}));
+					cChildren.push(React.createElement(Button, {pButton:pLayout[i], sToolLabel:this.state.sToolLabel}));
 				}
 			}
 			
@@ -627,6 +650,10 @@ function initPalette() {
 					fontSize: this.state.sPaletteSize + 'px'
 				}
 			};
+			
+			if (this.state.sPaletteSize < 24) {
+				cProps.className += ' minfontsize';
+			}
 			
 			if (!gPaletteStore.setState) {
 				// not yet mounted
@@ -641,7 +668,7 @@ function initPalette() {
 		}
 	});
 	
-	ReactDOM.render(
+	gPaletteLive = ReactDOM.render(
 		React.createElement(Subwrap, {pLayout:layout, pPaletteSize:40, pHandleSize:7}),
 		document.getElementById('palette')
 	);
@@ -667,6 +694,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 
 	
 	// CODE FOR KEEPING TRACK OF CANVAS STATE
+		var gCanState;
 		function CanvasState(canvas) {
 			// **** First some setup! ****
 
@@ -714,11 +742,28 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// Since we still want to use this particular CanvasState in the events we have to save a reference to it.
 			// This is our reference!
 			var myState = this;
-
+			gCanState = myState;
+			
 			//fixes a problem where double clicking causes text to get selected on the canvas
 			canvas.addEventListener('selectstart', function (e) {
 				e.preventDefault();
 				return false;
+			}, false);
+			
+			// keyevent listener
+			window.addEventListener('keyup', function(e) {
+				console.log('keyup:', e);
+				switch (e.key) {
+					case 'Delete':
+					
+							if (myState.selection) {
+								myState.selection.delete();
+							}
+					
+						break;
+					default:
+						// do nothing
+				}
 			}, false);
 			
 			// Up, down, and move are for dragging
@@ -767,7 +812,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// double click for making new shapes
 			canvas.addEventListener('dblclick', function (e) {
 				var mouse = myState.getMouse(e);
-				myState.addShape(new Shape(mouse.x - 10, mouse.y - 10, 20, 20, 'rgba(0,255,0,.6)'));
+				myState.addShape(new Shape(mouse.x - monToMultiMon.w(10), mouse.y - monToMultiMon.h(10), monToMultiMon.w(20), monToMultiMon.h(20), 'rgba(0,255,0,.6)'));
 			}, true);
 
 			// **** Options! ****
@@ -936,6 +981,20 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			return(this.x <= mx) && (this.x + this.w >= mx) &&
 				(this.y <= my) && (this.y + this.h >= my);
 		}
+		
+		Shape.prototype.delete = function() {
+			var shapes = gCanState.shapes;
+			var l = shapes.length;
+			for (var i=0; i<l; i++) {
+				if (shapes[i] == this) {
+					shapes.splice(i, 1);
+					gCanState.valid = false;
+					gCanState.selection = null;
+					return;
+				}
+			}
+			console.error('could not find shape! this:', this);
+		};
 
 		
 // end - canvas functions
