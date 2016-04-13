@@ -51,7 +51,9 @@ body {
 /* start - pbutton */
 /* state:innate */
 .pbutton {
-	padding: 0.3em 1em 0.7em 1em;
+	height: 2em;
+	width: 2em;
+	margin: 0 auto;
 	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
 	border: 1px solid #ccc;
 	position: relative;
@@ -136,7 +138,6 @@ body {
 /* state:innate */
 .pdivider {
 	border: 1px solid #4c4b49;
-	border-right: 0;
 }
 /* end - pdivider */
 
