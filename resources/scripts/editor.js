@@ -1,4 +1,5 @@
 Components.utils.import('resource://gre/modules/Services.jsm');
+Components.utils.import('resource://gre/modules/Geometry.jsm');
 
 var core = {
 	addon: {
@@ -69,6 +70,9 @@ function screenshotXfer(aData) {
 	console.log('in screenshotXfer, aData:', aData);
 	
 	var screenshotImageData = new ImageData(new Uint8ClampedArray(aData.screenshotArrBuf), gQS.w, gQS.h);
+	
+	// delete gQS.win81ScaleX;
+	// delete gQS.win81ScaleY;
 	
 	if (gQS.win81ScaleX || gQS.win81ScaleY) {
 		var canDum = document.createElement('canvas');
@@ -814,10 +818,11 @@ window.addEventListener('message', function(aWinMsgEvent) {
 							if(myState.selection) {
 								myState.selection = null;
 								myState.valid = false; // Need to clear the old selection border
-								return; // dont start the draw, as we just want to do a deselect
+								// return; // dont start the draw, as we just want to do a deselect // link938383
 							}
 							
-							// did not select, OR deselect, so start draw
+							// // did not select, OR deselect, so start draw
+							// did not select (it is possible that they possibly deselected as i dont return on link938383)
 							// not yet supporting multiple Cutouts, otherwise i would check for e.shiftKey e.altKey if they want to add or remove
 							if (myState.cutouts.length) {
 								myState.cutouts.length = 0;
@@ -991,21 +996,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				this.clear();
 
 				// ** Add stuff you want drawn in the background all the time here **
-				
-				// draw the dim
-				this.dim.draw(ctx);
-				
-				// draw a uniion of the cutouts
-				var cutoutunion = [0, 0, 0, 0];
-				var l = cutouts.length;
-				for (i=0; i<l; i++) {
-					var cutout = cutouts[i];
-					// We can skip the drawing of elements that have moved off the screen:
-					if(cutout.x > this.cutout || cutout.y > this.height ||
-						cutout.x + cutout.w < 0 || cutout.y + cutout.h < 0) continue;
-					cutout.draw(ctx);
-				}
-				
+								
 				// draw all shapes
 				var l = shapes.length;
 				for(var i = 0; i < l; i++) {
@@ -1026,6 +1017,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 
 				// ** Add stuff you want drawn on top all the time here **
 
+				// draw the dim
+				this.dim.draw(ctx);
+				
 				this.valid = true;
 			}
 		}
@@ -1078,8 +1072,51 @@ window.addEventListener('message', function(aWinMsgEvent) {
 		}
 		
 		Dim.prototype.draw = function(ctx) {
+			// var dimRects = [new Rect(0, 0, gQS.w, gQS.h)];
+			// var cutoutRects = [];
+			// var cutouts = gCanState.cutouts;
+			// cutouts.forEach(function(cutout) {
+			// 	cutoutRects.push(new Rect(cutout.x, cutout.y, cutout.w, cutout.h));
+			// };
+
 			ctx.fillStyle = gStyle.dimFill;
-			ctx.fillRect(0, 0, gQS.w, gQS.h);
+			
+			var cutouts = gCanState.cutouts;
+			if (!cutouts.length) {
+				ctx.fillRect(0, 0, gQS.w, gQS.h);
+			} else {
+				
+				// build cutoutsUnionRect
+				var cutoutsUnionRect;
+				for (var i=0; i<cutouts.length; i++) {
+					var unionX = cutouts[i].x;
+					var unionY = cutouts[i].y;
+					var unionW = cutouts[i].w;
+					var unionH = cutouts[i].h;
+					if (unionW < 0) {
+						unionX += unionW;
+						unionW *= -1;
+					}
+					if (unionH < 0) {
+						unionY += unionH;
+						unionH *= -1;
+					}
+					var unionRect = new Rect(unionX, unionY, unionW, unionH)
+					if (!i) {
+						cutoutsUnionRect = unionRect
+					} else {
+						cutoutsUnionRect.union(unionRect);
+					}
+				}
+				
+				var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+				
+				var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
+				
+				for (var i=0; i<dimRects.length; i++) {
+					ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+				}
+			}
 		}
 		
 		// Constructor for Cutout object
