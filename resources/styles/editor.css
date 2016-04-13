@@ -1,6 +1,7 @@
 body {
 	margin: 0; /* as there is a default margin on body for some reason in firefox */
 	font-family: arial;
+	-moz-user-select: none;
 }
 
 #canBase {
