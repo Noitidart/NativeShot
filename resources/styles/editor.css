@@ -1,3 +1,7 @@
+body {
+	margin: 0; /* as there is a default margin on body for some reason in firefox */
+}
+
 #canBase {
 	position: fixed;
 	top: 0;
@@ -14,7 +18,120 @@
 	cursor: crosshair;
 }
 
+
+/* start - palette */
+/* state:innate */
 #palette {
 	position: absolute;
 	z-index: 3;
+	
+	top: 10%;
+	left: 5%;
 }
+/* end - palette */
+
+/* start - psubwrap */
+/* state:innate */
+.psubwrap {
+	font-size: 48px;
+	text-align: center;
+	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
+	border: 1px solid #aaaaaa;
+	display: flex;
+	flex-direction: row;
+	
+	color:rgba(78, 77, 75, 0.9);
+	text-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+	
+	cursor: default;
+}
+/* end - psubwrap */
+
+/* start - pbutton */
+/* state:innate */
+.pbutton {
+	padding: 0.4em 1em 0.6em 1em;
+	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
+	border: 1px solid #ccc;
+	position: relative;
+}
+/* state:hover_not_pressed */
+.pbutton:hover {
+	background: linear-gradient(to bottom, #f3f4f5 0%,#e7e8e9 100%);
+	border: 1px solid #ddd;
+}
+/* state:pressed */
+.pbutton:active,
+.pbutton.pbutton-pressed {
+	background: linear-gradient(to bottom, #e0e1e2 0%,#d4d5d6 100%);
+	border: 1px solid #bbb;
+}
+/* end - pbutton */
+
+/* start - pbutton_selected_sub */
+/* state:innate */
+.pbutton[data-subsel]::after {
+	content: attr(data-subsel);
+	display: block;
+	position: absolute;
+	width: 100%;
+	left: 0;
+	font-size: .75em;
+	bottom: 0;
+	
+}
+/* end - pbutton_after */
+
+/* start - psub */
+/* state:innate */
+.psub {
+	position: absolute;
+	pointer-events: none;
+	opacity: 0;
+}
+/* end - psub */
+
+/* start - plabel */
+/* state:innate */
+.plabel {
+	position: absolute;
+	pointer-events: none;
+	opacity: 0;
+	font-size: 0.5em;
+	top: 0;
+	white-space: nowrap;
+	z-index: -1;
+	width: 100%;
+	/* doing this in the .plabel > span now because the span is the one exceeding boundaries due to the dispaly flex so this background does not extend beyond boundaries
+	background-color: #aaa;
+	border-radius: 5px;
+	*/
+	left: 0;
+	transition: top 200ms, opacity 200ms;
+	text-shadow: none;
+	display: flex; /* this with justify-content is needed as text-align center doesnt let it exceed the boundaries */
+	justify-content: center; 
+}
+/* start:pbutton_hover */
+.pbutton:hover .plabel {
+	/* transform: translate(0, -2em); */
+	top: -2.3em;
+	opacity: 1;
+}
+/* end - plabel */
+
+/*start - plabel > span - this is what extends beyond the boundaries of the plabel, as plabel width is 100% so i get center to line up with the icons below it */
+.plabel span {
+	background-color: #ddd;
+	border-radius: 5px;
+	padding: 7px;
+}
+/*end - plabel > span */
+
+/* start - pdivider */
+/* state:innate */
+.pdivider {
+	border: 1px solid #4c4b49;
+	border-right: 0;
+}
+/* end - pdivider */

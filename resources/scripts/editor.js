@@ -86,7 +86,7 @@ function screenshotXfer(aData) {
 		gCtxBase.putImageData(screenshotImageData, 0, 0);
 	}
 	
-	// initPalette();
+	initPalette();
 }
 
 var gPaletteStore = {};
@@ -451,14 +451,56 @@ function initPalette() {
 				'LLL'
 			);
 		}
-	})
+	});
 	
 	var Divider = React.createClass({
 		displayName: 'Divider',
 		render: function() {
-			return React.createElement('div', {});
+			return React.createElement('div', {className:'pdivider'});
 		}
-	})
+	});
+	
+	var Button = React.createClass({
+		displayName: 'Button',
+		render: function() {
+			// props
+			// 		pButton
+			
+			var cProps = {
+				className:'pbutton'
+			};
+			if (this.props.pButton.sub && this.props.pButton.sub.length) {
+				cProps['data-subsel'] = this.props.pButton.sub[0].icon;
+			}
+			return React.createElement('div', cProps,
+				React.createElement('div', {className:'plabel'},
+					React.createElement('span', {},
+						this.props.pButton.label
+					)
+				),
+				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {pSub:this.props.pButton.sub},
+					this.props.pButton.label
+				),
+				this.props.pButton.icon
+			);
+		}
+	});
+	
+	var Submenu = React.createClass({
+		displayName: 'Submenu',
+		render: function() {
+			// props
+			// 		pSub
+			
+			return React.createElement('div', {className:'psub'},
+				'sub'
+			);
+		}
+	});
+	
+	var Specials = {
+		Divider: Divider
+	};
 	var Subwrap = React.createClass({
 		displayName: 'Subwrap',
 		getInitialState: function() {
@@ -473,12 +515,21 @@ function initPalette() {
 			// props
 			// 		pLayout
 			
-			var cChildren = [
-				React.createElement('Handle'),
-				React.createElement('Accessibility'),
-			];
+			var cChildren = [];
 			
-			return React.createElement('div', {className:'container'},
+			var pLayout = this.props.pLayout;
+			var iEnd = pLayout.length;
+			for (var i=0; i<iEnd; i++) {
+				if (pLayout[i].special) {
+					if (pLayout[i].special in Specials) { // temp as all specials not yet defined
+						cChildren.push(React.createElement(Specials[pLayout[i].special]));
+					}
+				} else {
+					cChildren.push(React.createElement(Button, {pButton:pLayout[i]}));
+				}
+			}
+			
+			return React.createElement('div', {className:'psubwrap'},
 				cChildren
 			);
 		}
