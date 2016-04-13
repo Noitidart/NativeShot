@@ -733,7 +733,11 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			this.selection = null;
 			this.dragoffx = 0; // See mousedown and mousemove events for explanation
 			this.dragoffy = 0;
-
+			
+			this.downx = 0; // when the user mouses down on canvas
+			this.downy = 0; // when the user mouses down on canvas
+			this.resizing = null; // when mouses down with a tool that can draw, then this is set to `new That`
+			
 			// **** Then events! ****
 
 			// This is an example of a closure!
@@ -756,9 +760,17 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				switch (e.key) {
 					case 'Delete':
 					
-							if (myState.selection) {
-								myState.selection.delete();
+							if (!myState.dragging && !myState.resizing) {
+								if (myState.selection) {
+									myState.selection.delete();
+									myState.selection = null;
+								}
 							}
+					
+						break;
+					case 'Escape':
+					
+							window.close();
 					
 						break;
 					default:
@@ -771,43 +783,168 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				var mouse = myState.getMouse(e);
 				var mx = mouse.x;
 				var my = mouse.y;
-				var shapes = myState.shapes;
-				var l = shapes.length;
-				for(var i = l - 1; i >= 0; i--) {
-					if(shapes[i].contains(mx, my)) {
-						var mySel = shapes[i];
-						// noit: move this shape to the top in the z-index
-						shapes.push(shapes.splice(i, 1)[0]);
-						
-						// Keep track of where in the object we clicked
-						// so we can move it smoothly (see mousemove)
-						myState.dragoffx = mx - mySel.x;
-						myState.dragoffy = my - mySel.y;
-						myState.dragging = true;
-						myState.selection = mySel;
-						myState.valid = false;
-						return;
-					}
-				}
-				// havent returned means we have failed to select anything.
-				// If there was an object selected, we deselect it
-				if(myState.selection) {
-					myState.selection = null;
-					myState.valid = false; // Need to clear the old selection border
+				
+				myState.downx = mx;
+				myState.downy = my;
+				
+				var tool = gPaletteLive.state.sToolLabel;
+				switch (tool) {
+					case 'Select':
+					
+							var cutouts = myState.cutouts;
+							var l = cutouts.length;
+							for(var i = l - 1; i >= 0; i--) {
+								if(cutouts[i].contains(mx, my)) {
+									var mySel = cutouts[i];
+									// noit: move this shape to the top in the z-index
+									cutouts.push(cutouts.splice(i, 1)[0]);
+									
+									// Keep track of where in the object we clicked
+									// so we can move it smoothly (see mousemove)
+									myState.dragoffx = mx - mySel.x;
+									myState.dragoffy = my - mySel.y;
+									myState.dragging = true;
+									myState.selection = mySel;
+									myState.valid = false;
+									return;
+								}
+							}
+							// havent returned means we have failed to select anything.
+							// If there was an object selected, we deselect it
+							if(myState.selection) {
+								myState.selection = null;
+								myState.valid = false; // Need to clear the old selection border
+								return; // dont start the draw, as we just want to do a deselect
+							}
+							
+							// did not select, OR deselect, so start draw
+							// not yet supporting multiple Cutouts, otherwise i would check for e.shiftKey e.altKey if they want to add or remove
+							if (myState.cutouts.length) {
+								myState.cutouts.length = 0;
+								myState.valid = false;
+							}
+							myState.selection = new Cutout(mx, my, 0, 0);
+							myState.addCutout(myState.selection);
+							myState.resizing = true;
+							
+						break;
+					case 'Shapes':
+					
+							var shapes = myState.shapes;
+							var l = shapes.length;
+							for(var i = l - 1; i >= 0; i--) {
+								if(shapes[i].contains(mx, my)) {
+									var mySel = shapes[i];
+									// noit: move this shape to the top in the z-index
+									shapes.push(shapes.splice(i, 1)[0]);
+									
+									// Keep track of where in the object we clicked
+									// so we can move it smoothly (see mousemove)
+									myState.dragoffx = mx - mySel.x;
+									myState.dragoffy = my - mySel.y;
+									myState.dragging = true;
+									myState.selection = mySel;
+									myState.valid = false;
+									return;
+								}
+							}
+							// havent returned means we have failed to select anything.
+							// If there was an object selected, we deselect it
+							if(myState.selection) {
+								myState.selection = null;
+								myState.valid = false; // Need to clear the old selection border
+								return; // dont start the draw, as we just want to do a deselect
+							}
+							
+							// did not select, OR deselect, so start draw
+							myState.selection = new Shape(mx, my, 0, 0);
+							myState.addShape(myState.selection);
+							myState.resizing = true;
+					
+						break;
+					default:
+						// do nothing
 				}
 			}, true);
 			canvas.addEventListener('mousemove', function (e) {
-				if(myState.dragging) {
-					var mouse = myState.getMouse(e);
-					// We don't want to drag the object by its top-left corner, we want to drag it
-					// from where we clicked. Thats why we saved the offset and use it here
-					myState.selection.x = mouse.x - myState.dragoffx;
-					myState.selection.y = mouse.y - myState.dragoffy;
-					myState.valid = false; // Something's dragging so we must redraw
+				var mouse = myState.getMouse(e);
+				var mx = mouse.x;
+				var my = mouse.y;
+				
+				var tool = gPaletteLive.state.sToolLabel;
+				switch (tool) {
+					case 'Select':
+							if (myState.dragging) {
+								myState.selection.x = mx - myState.dragoffx;
+								myState.selection.y = my - myState.dragoffy;
+								myState.valid = false; // Something's dragging so we must redraw
+							} else if (myState.resizing) {
+								myState.selection.w = mx - myState.downx;
+								myState.selection.h = my - myState.downy;
+								myState.valid = false;
+							}
+							
+						break;
+					case 'Shapes':
+					
+							if (myState.dragging) {
+								// We don't want to drag the object by its top-left corner, we want to drag it
+								// from where we clicked. Thats why we saved the offset and use it here
+								myState.selection.x = mx - myState.dragoffx;
+								myState.selection.y = my - myState.dragoffy;
+								myState.valid = false; // Something's dragging so we must redraw
+							} else if (myState.resizing) {
+								myState.selection.w = mx - myState.downx;
+								myState.selection.h = my - myState.downy;
+								myState.valid = false;
+							}
+					
+						break;
+					default:
+						// do nothing
 				}
+				
 			}, true);
 			canvas.addEventListener('mouseup', function (e) {
-				myState.dragging = false;
+				var tool = gPaletteLive.state.sToolLabel;
+				switch (tool) {
+					case 'Select':
+					
+							if (myState.dragging) {
+								myState.dragging = false;
+							} else if (myState.resizing) {
+								if (!myState.selection.w || !myState.selection.h) {
+									console.log('myState.selection has no width or height! so deleting it');
+									myState.selection.delete();
+									// .delete will set state to invalid, if there was a width/height but there obviously wasnt
+								} else {
+									// make the values positive
+									makeDimsPositive(myState.selection); // no need to set valid=false
+								}
+								myState.resizing = null;
+							}
+					
+						break;
+					case 'Shapes':
+					
+							if (myState.dragging) {
+								myState.dragging = false;
+							} else if (myState.resizing) {
+								if (!myState.selection.w || !myState.selection.h) {
+									console.log('myState.selection has no width or height! so deleting it');
+									myState.selection.delete();
+									// .delete will set state to invalid, if there was a width/height but there obviously wasnt
+								} else {
+									// make the values positive
+									makeDimsPositive(myState.selection); // no need to set valid=false
+								}
+								myState.resizing = null;
+							}
+					
+						break;
+					default:
+						// do nothing
+				}
 			}, true);
 			// double click for making new shapes
 			canvas.addEventListener('dblclick', function (e) {
@@ -822,17 +959,21 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			this.interval = 30;
 			setInterval(function () {
 				myState.draw();
-			}, myState.interval);
+			}, this.interval);
 		}
 
 		CanvasState.prototype.addShape = function (shape) {
 			this.shapes.push(shape);
-			this.valid = false;
+			if (shape.w && shape.h) {
+				this.valid = false;
+			}
 		}
 
 		CanvasState.prototype.addCutout = function (cutout) {
 			this.cutouts.push(cutout);
-			this.valid = false;
+			if (cutout.w && cutout.h) {
+				this.valid = false;
+			}
 		}
 
 		CanvasState.prototype.clear = function () {
@@ -878,10 +1019,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				// draw selection
 				// right now this is just a stroke along the edge of the selected Shape
 				if(this.selection != null) {
-					ctx.strokeStyle = this.selectionColor;
-					ctx.lineWidth = this.selectionWidth;
-					var mySel = this.selection;
-					ctx.strokeRect(mySel.x, mySel.y, mySel.w, mySel.h);
+					if (this.selection.w && this.selection.h) {
+						this.selection.select();
+					}
 				}
 
 				// ** Add stuff you want drawn on top all the time here **
@@ -955,6 +1095,34 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			ctx.clearRect(this.x, this.y, this.w, this.h);
 		}
 		
+		Cutout.prototype.contains = function (mx, my) {
+			// All we have to do is make sure the Mouse X,Y fall in the area between
+			// the shape's X and (X + Width) and its Y and (Y + Height)
+			return(this.x <= mx) && (this.x + this.w >= mx) &&
+				(this.y <= my) && (this.y + this.h >= my);
+		}
+		
+		Cutout.prototype.delete = function() {
+			var cutouts = gCanState.cutouts;
+			cutouts.splice(cutouts.indexOf(this), 1);
+			if (this.w && this.h) {
+				gCanState.valid = false;
+			} // else the width and height are 0, no need to invalidate
+		};
+		
+		Cutout.prototype.select = function() {
+			gCanState.ctx.strokeStyle = '#000';
+			gCanState.ctx.setLineDash([0, monToMultiMon.w(3), 0]);
+			gCanState.ctx.lineWidth = 1;
+			
+			// draw dashed border
+			gCanState.ctx.beginPath();
+			gCanState.ctx.translate(0.5, 0.5);
+			gCanState.ctx.strokeRect(this.x, this.y, this.w, this.h); // draw invisible rect for stroke
+			gCanState.ctx.stroke();
+			gCanState.ctx.translate(-0.5, -0.5);
+		};
+		
 		// Constructor for Shape objects to hold data for all drawn objects.
 		// For now they will just be defined as rectangles.
 		function Shape(x, y, w, h, fill) {
@@ -984,17 +1152,32 @@ window.addEventListener('message', function(aWinMsgEvent) {
 		
 		Shape.prototype.delete = function() {
 			var shapes = gCanState.shapes;
-			var l = shapes.length;
-			for (var i=0; i<l; i++) {
-				if (shapes[i] == this) {
-					shapes.splice(i, 1);
-					gCanState.valid = false;
-					gCanState.selection = null;
-					return;
-				}
-			}
-			console.error('could not find shape! this:', this);
+			shapes.splice(shapes.indexOf(this), 1);
+			if (this.w && this.h) {
+				gCanState.valid = false;
+			} // else the width and height are 0, no need to invalidate
 		};
+		
+		Shape.prototype.select = function() {
+			gCanState.ctx.strokeStyle = gCanState.selectionColor;
+			gCanState.ctx.lineWidth = gCanState.selectionWidth;
+			gCanState.ctx.strokeRect(this.x, this.y, this.w, this.h);
+		};
+		
+		function makeDimsPositive(aDrawnObject) {
+			// aDrawObject is Shape, Cutout, 
+				// it has x, y, w, h
+			// if the w or h are negative, then it makes the w and h positive and adjusts the x y respectively
+			if (aDrawnObject.w < 0) {
+				aDrawnObject.x += aDrawnObject.w;
+				aDrawnObject.w *= -1;
+			}
+
+			if (aDrawnObject.h < 0) {
+				aDrawnObject.y += aDrawnObject.h;
+				aDrawnObject.h *= -1;
+			}
+		}
 
 		
 // end - canvas functions
