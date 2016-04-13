@@ -139,10 +139,10 @@ function initPalette() {
 				}
 			]
 		},
-		/*{
+		{
 			label: 'Clear Selection',
-			icon: 'S'
-		},*/
+			icon: '\ue82f'
+		},
 		{
 			special: 'Divider'
 		},
@@ -438,9 +438,54 @@ function initPalette() {
 	var Accessibility = React.createClass({
 		// the zoom controls that affect the toolbar
 		displayName: 'Accessibility',
+		enlarge: function() {
+			var cPaletteSize = this.props.sPaletteSize;
+			var cHandleSize = this.props.sHandleSize;
+			
+			var nPaletteSize = cPaletteSize;
+			var nHandleSize = cHandleSize;
+			
+			if (cPaletteSize + 8 < 64) {
+				nPaletteSize = cPaletteSize + 8;
+			}
+			if (cHandleSize + 3 < 40) {
+				nHandleSize = cHandleSize + 3;
+			}
+			gPaletteStore.setState({
+				sPaletteSize: nPaletteSize,
+				sHandleSize: nHandleSize
+			});
+		},
+		reduce: function() {
+			var cPaletteSize = this.props.sPaletteSize;
+			var cHandleSize = this.props.sHandleSize;
+
+			var nPaletteSize = cPaletteSize;
+			var nHandleSize = cHandleSize;
+			
+			if (cPaletteSize - 8 > 0) {
+				nPaletteSize = cPaletteSize - 8;
+			}
+			if (cHandleSize - 3 > 0) {
+				nHandleSize = cHandleSize - 3;
+			}
+			gPaletteStore.setState({
+				sPaletteSize: nPaletteSize,
+				sHandleSize: nHandleSize
+			});
+		},
 		render: function() {
-			return React.createElement('div', {},
-				'ASD'
+			// props
+			// 		sPaletteSize
+			//		sHandleSize
+
+			return React.createElement('div', {className:'paccessibility'},
+				React.createElement('div', {className: 'pbutton', onClick:this.enlarge},
+					'\ue81a'
+				),
+				React.createElement('div', {className: 'pbutton', onClick:this.reduce},
+					'\ue819'
+				)
 			);
 		}
 	});
@@ -449,8 +494,13 @@ function initPalette() {
 		// user can drag around the palette with this
 		displayName: 'Handle',
 		render: function() {
-			return React.createElement('div', {},
-				'LLL'
+			return React.createElement('div', {className:'paccessibility'},
+				React.createElement('div', {className: 'pbutton'},
+					'\ue81a'
+				),
+				React.createElement('div', {className: 'pbutton'},
+					'\ue819'
+				)
 			);
 		}
 	});
@@ -501,13 +551,15 @@ function initPalette() {
 	});
 	
 	var Specials = {
-		Divider: Divider
+		Divider: Divider,
+		Accessibility: Accessibility
 	};
 	var Subwrap = React.createClass({
 		displayName: 'Subwrap',
 		getInitialState: function() {
 			return {
-				
+				sPaletteSize: this.props.pPaletteSize, // Accessibility
+				sHandleSize: this.props.pHandleSize // Accessibility
 			};
 		},
 		componentDidMount: function() {
@@ -516,6 +568,8 @@ function initPalette() {
 		render: function() {
 			// props
 			// 		pLayout
+			// 		pHandleSize
+			//		pPaletteSize
 			
 			var cChildren = [];
 			
@@ -524,21 +578,39 @@ function initPalette() {
 			for (var i=0; i<iEnd; i++) {
 				if (pLayout[i].special) {
 					if (pLayout[i].special in Specials) { // temp as all specials not yet defined
-						cChildren.push(React.createElement(Specials[pLayout[i].special]));
+						var cSpecialProps = {};
+						switch (pLayout[i].special) {
+							case 'Accessibility':
+								
+									cSpecialProps.sHandleSize = this.state.sHandleSize;
+									cSpecialProps.sPaletteSize = this.state.sPaletteSize;
+								
+								break;
+							default:
+								// nothing extra special
+						}
+						cChildren.push(React.createElement(Specials[pLayout[i].special], cSpecialProps));
 					}
 				} else {
 					cChildren.push(React.createElement(Button, {pButton:pLayout[i]}));
 				}
 			}
 			
-			return React.createElement('div', {className:'psubwrap'},
+			var cProps = {
+				className:'psubwrap',
+				style: {
+					fontSize: this.state.sPaletteSize + 'px'
+				}
+			};
+			
+			return React.createElement('div', cProps,
 				cChildren
 			);
 		}
 	});
 	
 	ReactDOM.render(
-		React.createElement(Subwrap, {pLayout:layout}),
+		React.createElement(Subwrap, {pLayout:layout, pPaletteSize:48, pHandleSize:7}),
 		document.getElementById('palette')
 	);
 }

@@ -28,14 +28,15 @@ body {
 	z-index: 3;
 	
 	top: 10%;
-	left: 5%;
+	left: 5px;
 }
 /* end - palette */
 
 /* start - psubwrap */
 /* state:innate */
 .psubwrap {
-	font-size: 48px;
+	/*font-size: 48px;*/ /*so on intial set by react, it doesnt transition*/
+	transition: font-size 200ms;
 	text-align: center;
 	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
 	border: 1px solid #aaaaaa;
@@ -88,6 +89,26 @@ body {
 }
 /* end - pbutton_after */
 
+/* start - paccessibility */
+/* state:innate */
+.paccessibility {
+	display: flex;
+	flex-direction: column;
+	font-size: .5em;
+}
+/* end - paccessibility */
+
+/* start - paccessibility_children */
+/* state:innate */
+.paccessibility .pbutton {
+	height: 2em;
+	width: 2em;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+/* end - paccessibility */
+
 /* start - psub */
 /* state:innate */
 .psub {
@@ -117,11 +138,14 @@ body {
 	text-shadow: none;
 	display: flex; /* this with justify-content is needed as text-align center doesnt let it exceed the boundaries */
 	justify-content: center;
+	
+	padding: 0px;
+	margin: 0;
 }
 /* start:pbutton_hover */
 .pbutton:hover .plabel {
 	/* transform: translate(0, -2em); */
-	top: -2.3em;
+	top: -2.3em; /*calc(-1.5em - 0.6em - 0.2em) ::: -.5em will put it at top as font-size is .5em &&&& "- 0.6em" because padding on the `.plabel span` is 0.3px AND -0.2em is just good measure*/
 	opacity: 1;
 }
 /* end - plabel */
@@ -131,7 +155,9 @@ body {
 	font-family: arial;
 	background-color: #ddd;
 	border-radius: 5px;
-	padding: 7px;
+	padding: 0.3em;
+	margin: 0;
+	font-weight: bold;
 }
 /*end - plabel > span */
 
