@@ -649,6 +649,33 @@ function init(aArrBufAndCore) {
 				drawables.push(drawables.splice(drawables.indexOf(this), 1)[0]);
 			};
 		},
+		deleteAll: function(aDrawableNamesArr) {
+			// does .delete() for all that are found with the name
+			var valid = true;
+			var drawables = this.cstate.drawables;
+			var l = drawables.length - 1;
+			for (var i=l; i>-1; i--) {
+				var drawable = drawables[i];
+				if (aDrawableNamesArr) {
+					if (aDrawableNamesArr.indexOf(drawable.name) > -1) {
+						if (!drawable.delete()) {
+							valid = false;
+						}
+						if (this.cstate.selection && this.cstate.selection == drawable) {
+							this.cstate.selection = null;
+						}
+					}
+				} else {
+					if (!drawable.delete()) {
+						valid = false;
+					}
+					if (this.cstate.selection && this.cstate.selection == drawable) {
+						this.cstate.selection = null;
+					}
+				}
+			}
+			return valid;
+		},
 		makeDimsPositive: function(aDrawable, notByRef) {
 			// aDrawObject is Shape, Cutout, 
 				// it has x, y, w, h
@@ -844,13 +871,7 @@ function init(aArrBufAndCore) {
 						
 								if (!e.shiftKey) {
 									// remove all previous cutouts
-									var drawables = gCState.drawables;
-									for (var i=drawables.length-1; i>-1; i--) {
-										var drawable = drawables[i];
-										if (drawable.name == 'cutout') {
-											drawable.delete();
-										}
-									}
+									gCState.rconn.deleteAll(['cutout']);
 								}
 								
 								this.cstate.selection = new this.Drawable(mx, my, 0, 0, 'cutout');
@@ -1021,7 +1042,8 @@ function init(aArrBufAndCore) {
 				style: {
 					left: this.state.sPalX + 'px',
 					top: this.state.sPalY + 'px'
-				}
+				},
+				ref: 'pal'
 			};
 			
 			// determine cursor
@@ -1172,6 +1194,7 @@ function init(aArrBufAndCore) {
 						// 	valid = false;
 						// }
 						// gCanState.valid = valid;
+						gCState.valid = gCState.rconn.deleteAll(['cutout']);
 						
 						return;
 						
