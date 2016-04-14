@@ -57,13 +57,13 @@ function init() {
 	}));
 	
 	var s = new CanvasState(gCanDim);
-	s.addShape(new Shape(monToMultiMon.x(40), monToMultiMon.y(40), monToMultiMon.w(50), monToMultiMon.h(50))); // The default is gray
-	s.addShape(new Shape(monToMultiMon.x(60), monToMultiMon.y(140), monToMultiMon.w(40), monToMultiMon.h(60), 'lightskyblue'));
+	s.addDrawable(new Drawable(monToMultiMon.x(40), monToMultiMon.y(40), monToMultiMon.w(50), monToMultiMon.h(50), 'rect')); // The default is gray
+	s.addDrawable(new Drawable(monToMultiMon.x(60), monToMultiMon.y(140), monToMultiMon.w(40), monToMultiMon.h(60), 'rect', {fillStyle:'lightskyblue'}));
 	// Lets make some partially transparent
-	s.addShape(new Shape(monToMultiMon.x(80), monToMultiMon.y(150), monToMultiMon.w(60), monToMultiMon.h(30), 'rgba(127, 255, 212, .5)'));
-	s.addShape(new Shape(monToMultiMon.x(125), monToMultiMon.y(80), monToMultiMon.w(30), monToMultiMon.h(80), 'rgba(245, 222, 179, .7)'));
+	s.addDrawable(new Drawable(monToMultiMon.x(80), monToMultiMon.y(150), monToMultiMon.w(60), monToMultiMon.h(30), 'rect', {fillStyle:'rgba(127, 255, 212, .5)'}));
+	s.addDrawable(new Drawable(monToMultiMon.x(125), monToMultiMon.y(80), monToMultiMon.w(30), monToMultiMon.h(80), 'rect', {fillStyle:'rgba(245, 222, 179, .7)'}));
 	
-	s.addCutout(new Cutout(monToMultiMon.x(200), monToMultiMon.y(400), monToMultiMon.w(300), monToMultiMon.h(300)));
+	s.addDrawable(new Drawable(monToMultiMon.x(200), monToMultiMon.y(400), monToMultiMon.w(300), monToMultiMon.h(300), 'cutout'));
 }
 
 function screenshotXfer(aData) {
@@ -753,9 +753,11 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			this.valid = false; // when set to false, the canvas will redraw everything
 			
 			// drawn objects
+			this.drawables = []; // the collection of things to be drawn
+			
 			this.shapes = []; // the collection of things to be drawn
 			this.cutouts = []; // collection of rectangular areas - representing the selected areas to get drawn
-			this.dim = new Dim();
+			this.dim = new Drawable(null, null, null, null, 'dim');
 			
 			// some global vars
 			this.dragging = false; // Keep track of when we are dragging
@@ -987,33 +989,80 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// double click for making new shapes
 			canvas.addEventListener('dblclick', function (e) {
 				var mouse = myState.getMouse(e);
-				myState.addShape(new Shape(mouse.x - monToMultiMon.w(10), mouse.y - monToMultiMon.h(10), monToMultiMon.w(20), monToMultiMon.h(20), 'rgba(0,255,0,.6)'));
+				myState.addDrawable(new Drawable(mouse.x - monToMultiMon.w(10), mouse.y - monToMultiMon.h(10), monToMultiMon.w(20), monToMultiMon.h(20), 'rect', {fillStyle:'rgba(0,255,0,.6)')});
 			}, true);
 
 			// **** Options! ****
-
-			this.selectionColor = '#CC0000';
-			this.selectionWidth = 2;
+			this.Style = {
+				Draw: {
+					line: {
+						lineWidth: monToMultiMon.w(2),
+						strokeStyle: 'rgba(0, 0, 255, 1)'
+					},
+					fill: {
+						fillStyle: 'rgba(100, 149, 237, 0.6)'
+					},
+					dim: {
+						fillStyle: 'rgba(0, 0, 0, 0.6)',
+					}
+				},
+				Select: {
+					dim: {
+						strokeStyle: 'rgba(0, 0, 255, 1)'
+						setLineDash: [0, monToMultiMon.w(3), 0],
+						lineWidth: monToMultiMon.w(1)
+					},
+					shape: {
+						lineWidth: monToMultiMon.w(3),
+						setLineDash: [0],
+						strokeStyle: 'red'
+					}
+				}
+			};
+			// this.selectionColor = '#CC0000';
+			// this.selectionWidth = 2;
+			
 			this.interval = 30;
 			setInterval(function () {
 				myState.draw();
 			}, this.interval);
 		}
-
-		CanvasState.prototype.addShape = function (shape) {
-			this.shapes.push(shape);
-			if (shape.w && shape.h) {
-				this.valid = false;
+		
+		// Add it to the context
+		CanvasState.prototype.addDrawable = function (drawable) {
+			var drawables = this.drawables;
+			switch (drawable.name) {
+				case 'dim':
+					
+						return; // not added to list
+					
+					break;
+				default:
+					drawables.push(drawable);
+					if (drawable.w && drawable.h) {
+						this.valid = false;
+					} // else the width and height are 0, no need to invalidate
 			}
 		}
 
-		CanvasState.prototype.addCutout = function (cutout) {
-			this.cutouts.push(cutout);
-			if (cutout.w && cutout.h) {
-				this.valid = false;
+		// Delete it from the context
+		CanvasState.prototype.removeDrawable = function(drawable) {			
+			var drawables = this.drawables;
+			switch (drawable.name) {
+				case 'dim':
+					
+						return; // not added to list
+					
+					break;
+				default:
+					drawables.splice(drawables.indexOf(drawable), 1);
+					if (drawable.w && drawable.h) {
+						this.valid = false;
+					} // else the width and height are 0, no need to invalidate
 			}
 		}
 
+		// Deletes everything on the canvas
 		CanvasState.prototype.clear = function () {
 			this.ctx.clearRect(0, 0, this.width, this.height);
 		}
@@ -1024,24 +1073,27 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// if our state is invalid, redraw and validate!
 			if(!this.valid) {
 				var ctx = this.ctx;
-				var shapes = this.shapes;
-				var cutouts = this.cutouts;
 				this.clear();
 
 				// ** Add stuff you want drawn in the background all the time here **
 								
-				// draw all shapes
-				var l = shapes.length;
+				// draw all drawables
+				var drawables = this.drawables;
+				var l = drawables.length;
 				for(var i = 0; i < l; i++) {
-					var shape = shapes[i];
+					var drawable = drawables[i];
+					if (drawable.name == 'cutout') {
+						// this is drawn as negative space with `this.dim.draw()`
+						continue;
+					}
+					
 					// We can skip the drawing of elements that have moved off the screen:
-					if(shape.x > this.width || shape.y > this.height ||
-						shape.x + shape.w < 0 || shape.y + shape.h < 0) continue;
-					shape.draw(ctx);
+					if(drawable.x > this.width || drawable.y > this.height ||
+						drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0) continue;
+					drawable.draw(ctx);
 				}
 
 				// draw selection
-				// right now this is just a stroke along the edge of the selected Shape
 				if(this.selection != null) {
 					if (this.selection.w && this.selection.h) {
 						this.selection.select();
@@ -1098,7 +1150,208 @@ window.addEventListener('message', function(aWinMsgEvent) {
 
 	
 	// CODE FOR DRAWING THE OBJECTS AS THEY ARE MADE AND MOVE AROUND
-	
+		// Constructor for the Drawable object
+		function Drawable(x, y, w, h, name, aOptions) {
+			/* valid name's
+				rect,
+				rectround
+				oval
+				dim
+				cutout
+			*/
+			
+			// set dimensions
+			switch (name) {
+				case 'dim':
+					
+						this.x = 0;
+						this.y = 0;
+						this.w = gQS.w;
+						this.h = gQS.h;
+					
+					break;
+				default:
+					this.x = x;
+					this.y = y;
+					this.w = w;
+					this.h = h;
+			}
+			this.name = name;
+			
+			// set other props
+			switch (name) {
+				case 'rect':
+				case 'rectround':
+				case 'oval':
+					
+						this.Style = {
+							Draw: {
+								me: {
+									fillStyle: aOptions.fillStyle || gCanState.Style.Draw.fill.fillStyle,
+									strokeStyle: aOptions.strokeStyle || gCanState.Style.Draw.line.strokeStyle,
+									setLineDash: aOptions.setLineDash || gCanState.Style.Draw.line.setLineDash
+								}
+							}
+						}
+					
+					break;
+				default:
+					this.x = x;
+					this.y = y;
+					this.w = w;
+					this.h = h;
+			}
+		}
+		
+		// Draws this shape to a given context
+		Drawable.prototype.draw = function(ctx) {
+			// set styles
+			var curStyle;
+			switch (this.name) {
+				case 'dim':
+					
+						curStyle = gCanState.Style.Draw.dim;
+					
+					break;
+				case 'rect':
+				case 'rectround':
+				case 'oval':
+				
+						curStyle = this.Style.Draw.me;
+				
+					break;
+				default:
+					// not drawable
+					return;
+			}
+			
+			// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
+			applyCtxStyle(curStyle);
+			
+			// draw it
+			switch (this.name) {
+				case 'dim':
+
+						var cutouts = gCanState.cutouts;
+						if (!cutouts.length) {
+							ctx.fillRect(0, 0, gQS.w, gQS.h);
+						} else {
+							
+							// build cutoutsUnionRect
+							var cutoutsUnionRect;
+							for (var i=0; i<cutouts.length; i++) {
+								var cutoutClone = makeDimsPositive(cutouts[i], true);
+								var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
+								if (!i) {
+									cutoutsUnionRect = unionRect
+								} else {
+									cutoutsUnionRect.union(unionRect);
+								}
+							}
+							
+							var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+							
+							var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
+							
+							for (var i=0; i<dimRects.length; i++) {
+								ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+							}
+						}
+				
+					break;
+				case 'rect':
+				
+						ctx.fillRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h -  this.Style.Draw.me.lineWidth);
+						ctx.strokeRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h -  this.Style.Draw.me.lineWidth);
+					
+					break;
+				default:
+					// should never get here, as would have returned earlier, as this one is not drawable
+			}
+			
+			gCanState.valid = false;
+		};
+		
+		// Determine if a point is inside the Drawable's bounds
+		Drawable.prototype.contains = function (mx, my) {
+			switch (this.name) {
+				default:
+					// All we have to do is make sure the Mouse X,Y fall in the area between
+					// the shape's X and (X + Width) and its Y and (Y + Height)
+					return(this.x <= mx) && (this.x + this.w >= mx) &&
+						(this.y <= my) && (this.y + this.h >= my);
+			}
+		}
+		
+		// User clicked it for either dragging, resizing, or [i dont know yet but definitely for other things during selection]
+		Drawable.prototype.select = function() {
+			// set styles
+			var curStyle;
+			switch (this.name) {
+				case 'dim':
+				case 'cutout':
+					
+						curStyle = gCanState.Style.Select.dim;
+					
+					break;
+				case 'rect':
+				case 'rectround':
+				case 'oval':
+				
+						curStyle = this.Style.Select.shape;
+				
+					break;
+				default:
+					// not selectable
+					return;
+			}
+			
+			// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
+			applyCtxStyle(curStyle);
+			
+			// draw the selection of it
+			switch (this.name) {
+				case 'dim':
+
+						var cutouts = gCanState.cutouts;
+						if (!cutouts.length) {
+							ctx.fillRect(0, 0, gQS.w, gQS.h);
+						} else {
+							
+							// build cutoutsUnionRect
+							var cutoutsUnionRect;
+							for (var i=0; i<cutouts.length; i++) {
+								var cutoutClone = makeDimsPositive(cutouts[i], true);
+								var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
+								if (!i) {
+									cutoutsUnionRect = unionRect
+								} else {
+									cutoutsUnionRect.union(unionRect);
+								}
+							}
+							
+							var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+							
+							var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
+							
+							for (var i=0; i<dimRects.length; i++) {
+								ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+							}
+						}
+				
+					break;
+				case 'rect':
+				
+						ctx.fillRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h -  this.Style.Draw.me.lineWidth);
+						ctx.strokeRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h -  this.Style.Draw.me.lineWidth);
+					
+					break;
+				default:
+					// should never get here, as would have returned earlier, as this one is not drawable
+			}
+			gCanState.valid = false;
+		};
+		
 		// Constructor for Dim object
 		function Dim() {
 			
@@ -1182,7 +1435,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			} // else the width and height are 0, no need to invalidate
 		};
 		
-		Cutout.prototype.select = function() {gCanState.valid = false;
+		Cutout.prototype.select = function() {
 			gCanState.ctx.strokeStyle = '#000';
 			gCanState.ctx.setLineDash([0, monToMultiMon.w(3), 0]);
 			gCanState.ctx.lineWidth = 1;
@@ -1239,10 +1492,19 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			gCanState.valid = false;
 		};
 		
-		function makeDimsPositive(aDrawnObject) {
+		function makeDimsPositive(aDrawnObject, notByRef) {
 			// aDrawObject is Shape, Cutout, 
 				// it has x, y, w, h
 			// if the w or h are negative, then it makes the w and h positive and adjusts the x y respectively
+			if (notByRef) {
+				aDrawnObject = {
+					x: aDrawnObject.x,
+					y: aDrawnObject.y,
+					w: aDrawnObject.w,
+					h: aDrawnObject.h,
+				}
+			}
+			
 			if (aDrawnObject.w < 0) {
 				aDrawnObject.x += aDrawnObject.w;
 				aDrawnObject.w *= -1;
@@ -1252,6 +1514,21 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				aDrawnObject.y += aDrawnObject.h;
 				aDrawnObject.h *= -1;
 			}
+			
+			return aDrawnObject;
+		}
+		
+		function applyCtxStyle(aCtx, aStyleObj) {
+			// aStyleObj is an object with keys that are properties/methods of aCtx
+			for (var p in aStyleObj) {
+				if (p.indexOf('set') === 0) {
+					// its a func
+					aCtx[p].apply(aCtx, aStyleObj[p]);
+				} else {
+					// else its an attribute
+					aCtx[p] = aStyleObj[p];
+				}
+			}			
 		}
 
 		
@@ -1291,4 +1568,44 @@ function queryStringAsJson(aQueryString) {
 	asJsonStringify = asJsonStringify.replace(/"(\d+(?:.\d+)?|true|false)"/g, function($0, $1) { return $1; });
 	
 	return JSON.parse(asJsonStringify);
+}
+
+function hexToRgb(aHexStr) {
+	if (aHexStr[0] == '#') {
+		aHexStr = aHexStr.substr(1);
+	}
+	aHexStr = cutHex(aHexStr);
+	return {
+		r: parseInt(aHexStr).substring(0,2),16),
+		g: parseInt(aHexStr).substring(2,4),16),
+		b: parseInt(aHexStr).substring(4,6),16)
+	}
+}
+function cutHex(aHexStr) {
+	return aHexStr.charAt(0) =="#" ? aHexStr.substring(1,7) : aHexStr;
+}
+
+// rev1 - https://gist.github.com/Noitidart/6c866a4fa964354d4ab8540a96ca4d0f
+function spliceObj(obj1, obj2) {
+	/**
+	 * By reference. Adds all of obj2 keys to obj1. Overwriting any old values in obj1.
+	 * Was previously called `usurpObjWithObj`
+	 * @param obj1
+	 * @param obj2
+	 * @returns undefined
+	 */
+	for (var attrname in obj2) { obj1[attrname] = obj2[attrname]; }
+}
+function overwriteObjWithObj(obj1, obj2){
+	/**
+	 * No by reference. Creates a new object. With all the keys/values from obj2. Adds in the keys/values that are in obj1 that were not in obj2.
+	 * @param obj1
+	 * @param obj2
+	 * @returns obj3 a new object based on obj1 and obj2
+	 */
+
+    var obj3 = {};
+    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+    return obj3;
 }
