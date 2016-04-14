@@ -826,6 +826,8 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				myState.downx = mx;
 				myState.downy = my;
 				
+				return; // :debug:
+				
 				var tool = gPaletteLive.state.sToolLabel;
 				switch (tool) {
 					case 'Select':
@@ -907,6 +909,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				}
 			}, true);
 			canvas.addEventListener('mousemove', function (e) {
+				return; // :debug:
 				var mouse = myState.getMouse(e);
 				var mx = mouse.x;
 				var my = mouse.y;
@@ -946,6 +949,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 				
 			}, true);
 			canvas.addEventListener('mouseup', function (e) {
+				return; // :debug:
 				var tool = gPaletteLive.state.sToolLabel;
 				switch (tool) {
 					case 'Select':
@@ -1007,7 +1011,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 					}
 				},
 				Select: {
-					dim: {
+					cutout: {
 						strokeStyle: 'rgba(0, 0, 255, 1)'
 						setLineDash: [0, monToMultiMon.w(3), 0],
 						lineWidth: monToMultiMon.w(1)
@@ -1019,8 +1023,6 @@ window.addEventListener('message', function(aWinMsgEvent) {
 					}
 				}
 			};
-			// this.selectionColor = '#CC0000';
-			// this.selectionWidth = 2;
 			
 			this.interval = 30;
 			setInterval(function () {
@@ -1288,10 +1290,9 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			// set styles
 			var curStyle;
 			switch (this.name) {
-				case 'dim':
 				case 'cutout':
 					
-						curStyle = gCanState.Style.Select.dim;
+						curStyle = gCanState.Style.Select.cutout;
 					
 					break;
 				case 'rect':
@@ -1315,7 +1316,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 
 						var cutouts = gCanState.cutouts;
 						if (!cutouts.length) {
-							ctx.fillRect(0, 0, gQS.w, gQS.h);
+							// no selection
 						} else {
 							
 							// build cutoutsUnionRect
@@ -1335,15 +1336,17 @@ window.addEventListener('message', function(aWinMsgEvent) {
 							var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
 							
 							for (var i=0; i<dimRects.length; i++) {
-								ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+								ctx.strokeRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
 							}
 						}
 				
 					break;
+				case 'cutout':
 				case 'rect':
+				case 'rectround':
+				case 'oval':
 				
-						ctx.fillRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h -  this.Style.Draw.me.lineWidth);
-						ctx.strokeRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h -  this.Style.Draw.me.lineWidth);
+						ctx.strokeRect(this.x, this.y, this.w, this.h);
 					
 					break;
 				default:
@@ -1351,147 +1354,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			}
 			gCanState.valid = false;
 		};
-		
-		// Constructor for Dim object
-		function Dim() {
-			
-		}
-		
-		Dim.prototype.draw = function(ctx) {
-			// var dimRects = [new Rect(0, 0, gQS.w, gQS.h)];
-			// var cutoutRects = [];
-			// var cutouts = gCanState.cutouts;
-			// cutouts.forEach(function(cutout) {
-			// 	cutoutRects.push(new Rect(cutout.x, cutout.y, cutout.w, cutout.h));
-			// };
 
-			ctx.fillStyle = gStyle.dimFill;
-			
-			var cutouts = gCanState.cutouts;
-			if (!cutouts.length) {
-				ctx.fillRect(0, 0, gQS.w, gQS.h);
-			} else {
-				
-				// build cutoutsUnionRect
-				var cutoutsUnionRect;
-				for (var i=0; i<cutouts.length; i++) {
-					var unionX = cutouts[i].x;
-					var unionY = cutouts[i].y;
-					var unionW = cutouts[i].w;
-					var unionH = cutouts[i].h;
-					if (unionW < 0) {
-						unionX += unionW;
-						unionW *= -1;
-					}
-					if (unionH < 0) {
-						unionY += unionH;
-						unionH *= -1;
-					}
-					var unionRect = new Rect(unionX, unionY, unionW, unionH)
-					if (!i) {
-						cutoutsUnionRect = unionRect
-					} else {
-						cutoutsUnionRect.union(unionRect);
-					}
-				}
-				
-				var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
-				
-				var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
-				// console.error('dimRects:');
-				// console.log(dimRects.toString());
-				
-				for (var i=0; i<dimRects.length; i++) {
-					ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
-				}
-			}
-		}
-		
-		// Constructor for Cutout object
-		function Cutout(x, y, w, h) {
-			this.x = x;
-			this.y = y;
-			this.w = w;
-			this.h = h;
-		}
-		
-		// Draws this shape to a given context
-		Cutout.prototype.draw = function (ctx) {
-			ctx.clearRect(this.x, this.y, this.w, this.h);
-		}
-		
-		Cutout.prototype.contains = function (mx, my) {
-			// All we have to do is make sure the Mouse X,Y fall in the area between
-			// the shape's X and (X + Width) and its Y and (Y + Height)
-			return(this.x <= mx) && (this.x + this.w >= mx) &&
-				(this.y <= my) && (this.y + this.h >= my);
-		}
-		
-		Cutout.prototype.delete = function() {
-			var cutouts = gCanState.cutouts;
-			cutouts.splice(cutouts.indexOf(this), 1);
-			if (this.w && this.h) {
-				gCanState.valid = false;
-			} // else the width and height are 0, no need to invalidate
-		};
-		
-		Cutout.prototype.select = function() {
-			gCanState.ctx.strokeStyle = '#000';
-			gCanState.ctx.setLineDash([0, monToMultiMon.w(3), 0]);
-			gCanState.ctx.lineWidth = 1;
-			
-			// draw dashed border
-			gCanState.ctx.beginPath();
-			gCanState.ctx.translate(0.5, 0.5);
-			gCanState.ctx.strokeRect(this.x, this.y, this.w, this.h); // draw invisible rect for stroke
-			gCanState.ctx.stroke();
-			gCanState.ctx.translate(-0.5, -0.5);
-			
-			gCanState.valid = false;
-		};
-		
-		// Constructor for Shape objects to hold data for all drawn objects.
-		// For now they will just be defined as rectangles.
-		function Shape(x, y, w, h, fill) {
-			// This is a very simple and unsafe constructor. All we're doing is checking if the values exist.
-			// "x || 0" just means "if there is a value for x, use that. Otherwise use 0."
-			// But we aren't checking anything else! We could put "Lalala" for the value of x 
-			this.x = x || 0;
-			this.y = y || 0;
-			this.w = w || 1;
-			this.h = h || 1;
-			this.fill = fill || '#AAAAAA';
-		}
-		
-		// Draws this shape to a given context
-		Shape.prototype.draw = function (ctx) {
-			ctx.fillStyle = this.fill;
-			ctx.fillRect(this.x, this.y, this.w, this.h);
-		}
-
-		// Determine if a point is inside the shape's bounds
-		Shape.prototype.contains = function (mx, my) {
-			// All we have to do is make sure the Mouse X,Y fall in the area between
-			// the shape's X and (X + Width) and its Y and (Y + Height)
-			return(this.x <= mx) && (this.x + this.w >= mx) &&
-				(this.y <= my) && (this.y + this.h >= my);
-		}
-		
-		Shape.prototype.delete = function() {
-			var shapes = gCanState.shapes;
-			shapes.splice(shapes.indexOf(this), 1);
-			if (this.w && this.h) {
-				gCanState.valid = false;
-			} // else the width and height are 0, no need to invalidate
-		};
-		
-		Shape.prototype.select = function() {
-			gCanState.ctx.strokeStyle = gCanState.selectionColor;
-			gCanState.ctx.lineWidth = gCanState.selectionWidth;
-			gCanState.ctx.strokeRect(this.x, this.y, this.w, this.h);
-			gCanState.valid = false;
-		};
-		
 		function makeDimsPositive(aDrawnObject, notByRef) {
 			// aDrawObject is Shape, Cutout, 
 				// it has x, y, w, h
@@ -1531,7 +1394,6 @@ window.addEventListener('message', function(aWinMsgEvent) {
 			}			
 		}
 
-		
 // end - canvas functions
 
 var monToMultiMon = {
