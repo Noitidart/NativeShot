@@ -770,6 +770,10 @@ function init(aArrBufAndCore) {
 					this.cstate.selection.x = mx - this.cstate.dragoffx;
 					this.cstate.selection.y = my - this.cstate.dragoffy;
 					this.cstate.valid = false; // Something's dragging so we must redraw
+				} else if (this.cstate.resizing) {
+					this.cstate.selection.w = mx - this.cstate.downx;
+					this.cstate.selection.h = my - this.cstate.downy;
+					this.cstate.valid = false;
 				}
 			}
 			
@@ -782,52 +786,91 @@ function init(aArrBufAndCore) {
 			this.cstate.downx = mx;
 			this.cstate.downy = my;
 			
-			var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
-			
-			// if selectable, set a selectFilterFunc
-			var selectFilterFunc;
-			switch (toolsub) {
-				case 'Select-':
+			if (e.target == this.refs.can) {
+				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
 				
-						selectFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
+				// if selectable, set a selectFilterFunc
+				var selectFilterFunc;
+				switch (toolsub) {
+					case 'Select-':
 					
-					break;
-				case 'Shapes-Rectangle':
-				case 'Shapes-Circle':
-					
-						selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Circle'].indexOf(aToFilter.name) > -1 };
-					
-					break;
-				default:
-					// do nothing
-			}
-			
-			// if selectFilterFunc then lets test if should select or deselect
-			if (selectFilterFunc) {
-				var drawables = gCState.drawables.filter(selectFilterFunc);
-				// console.log('iterating drawables:', drawables);
-				var l = drawables.length;
-				for(var i=l-1; i>=0; i--) {
-					if(drawables[i].contains(mx, my)) {
-						console.log('ok you clicked in this drawable:', drawables[i]);
-						var mySel = drawables[i];
+							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
 						
-						mySel.bringtofront();
+						break;
+					case 'Shapes-Rectangle':
+					case 'Shapes-Circle':
 						
-						// Keep track of where in the object we clicked
-						// so we can move it smoothly (see mousemove)
-						this.cstate.dragoffx = mx - mySel.x;
-						this.cstate.dragoffy = my - mySel.y;
-						this.cstate.dragging = true;
-						this.cstate.selection = mySel;
+							selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Circle'].indexOf(aToFilter.name) > -1 };
+						
+						break;
+					default:
+						// do nothing
+				}
+				
+				// if selectFilterFunc then lets test if should select or deselect
+				if (selectFilterFunc) {
+					var drawables = gCState.drawables.filter(selectFilterFunc);
+					// console.log('iterating drawables:', drawables);
+					var l = drawables.length;
+					for(var i=l-1; i>=0; i--) {
+						if(drawables[i].contains(mx, my)) {
+							console.log('ok you clicked in this drawable:', drawables[i]);
+							var mySel = drawables[i];
+							
+							mySel.bringtofront();
+							
+							// Keep track of where in the object we clicked
+							// so we can move it smoothly (see mousemove)
+							this.cstate.dragoffx = mx - mySel.x;
+							this.cstate.dragoffy = my - mySel.y;
+							this.cstate.dragging = true;
+							this.cstate.selection = mySel;
+							this.cstate.valid = false;
+							return;
+						}
+					}
+					
+					if (this.cstate.selection) {
+						this.cstate.selection = null;
+						console.log('ok removing from selection this:', this);
 						this.cstate.valid = false;
-						return;
 					}
 				}
 				
-				if (this.cstate.selection) {
-					this.cstate.selection = null;
-					this.cstate.valid = false;
+				// test if we should create a new Drawable and set it to resizing
+				if (!this.cstate.selection) {
+					switch (toolsub) {
+						case 'Select-':
+						
+								if (!e.shiftKey) {
+									// remove all previous cutouts
+									var drawables = gCState.drawables;
+									for (var i=drawables.length-1; i>-1; i--) {
+										var drawable = drawables[i];
+										if (drawable.name == 'cutout') {
+											drawable.delete();
+										}
+									}
+								}
+								
+								this.cstate.selection = new this.Drawable(mx, my, 0, 0, 'cutout');
+							
+							break;
+						case 'Shapes-Rectangle':
+						case 'Shapes-Circle':
+							
+								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSub);
+							
+							break;
+						default:
+							// do nothing
+					}
+					
+					if (this.cstate.selection) {
+						this.cstate.selection.add();
+						this.cstate.resizing = true;
+						return;
+					}
 				}
 			}
 		},
@@ -842,9 +885,20 @@ function init(aArrBufAndCore) {
 				});
 				return;
 			} else {
-				// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
-				if (this.cstate.dragging) {
-					this.cstate.dragging = false;
+				if (e.target == this.refs.can) {
+					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
+					if (this.cstate.dragging) {
+						this.cstate.dragging = false;
+					} else if (this.cstate.resizing) {
+						this.cstate.resizing = false;
+						if (!this.cstate.selection.w || !this.cstate.selection.h) {
+							// 0 size
+							this.cstate.selection.delete();
+							this.cstate.selection = null;
+						} else {
+							this.makeDimsPositive(this.cstate.selection); // no need to set valid=false
+						}
+					}
 				}
 			}
 			
@@ -928,8 +982,8 @@ function init(aArrBufAndCore) {
 						},
 						shape: {
 							lineWidth: mtmm.w(3),
-							setLineDash: [0],
-							strokeStyle: 'red'
+							setLineDash: [0, mtmm.w(3), 0],
+							strokeStyle: 'springgreen'
 						}
 					}
 				};
@@ -1134,7 +1188,7 @@ function init(aArrBufAndCore) {
 			
 			gEditorStore.setState({
 				sPalTool: this.props.pButton.label,
-				sPalToolSub: 'Rectangle'
+				sPalToolSub: this.props.pButton.sub ? this.props.pButton.sub[0].label : null
 			});
 		},
 		render: function() {
