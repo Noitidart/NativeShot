@@ -378,6 +378,7 @@ function init(aArrBufAndCore) {
 				// palette related
 				sPalSize: this.props.pPalSize,
 				sPalTool: 'Select', // the label of the currently active tool
+				sPalToolSub: null, // the active sub label of sPalTool
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
 				sPalDragStart: null // is null when not dragging. when dragging it is {screenX:, screenY:}
@@ -390,44 +391,9 @@ function init(aArrBufAndCore) {
 			});
 		},
 		mPalHandleMousedown: function(e) {
-				// document.body.classList.add('paldrag');
-				// gCanDim.style.cursor = 'move';
-				// this.pal.firstChild.style.cursor = 'move';
-				
-				gEditorStore.setState({
-					sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.state.sPalX, sPalY:this.state.sPalY}
-				});
-				// window.addEventListener('mousemove', this.mPalHandleMousemove, false);
-				// window.addEventListener('mouseup', this.mPalHandleMouseup, false);
-		},
-		mPalHandleMousemove: function(e) {
-			// this.pal.style.left = this.left + (e.screenX - this.x) + 'px';
-			// this.pal.style.top = this.top + (e.screenY - this.y) + 'px';
-			if (this.state.sPalDragStart) {
-				gEditorStore.setState({
-					sPalX: this.state.sPalDragStart.sPalX + (e.screenX - this.state.sPalDragStart.screenX),
-					sPalY: this.state.sPalDragStart.sPalY + (e.screenY - this.state.sPalDragStart.screenY)
-				});
-			}
-		},
-		mPalHandleMouseup: function() {
 			gEditorStore.setState({
-				sPalDragStart: null
+				sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.state.sPalX, sPalY:this.state.sPalY}
 			});
-			// gCanDim.style.cursor = '';
-			// tThis.pal.firstChild.style.cursor = '';
-		},
-		componentDidUpdate: function(prevProps, prevState) {
-			// // attach window listeners for pal dragging
-			// if (prevState.sPalDragStart && !this.state.sPalDragStart) {
-			// 	window.removeEventListener('mouseup', this.mPalHandleMouseup, false);
-			// 	window.removeEventListener('mousemove', this.mPalHandleMousemove, false);
-			// 	// console.error('REMOVED mpal');
-			// } else if (!prevState.sPalDragStart && this.state.sPalDragStart) {
-			// 	window.addEventListener('mouseup', this.mPalHandleMouseup, false);
-			// 	window.addEventListener('mousemove', this.mPalHandleMousemove, false);
-			// 	// console.error('ADDDED mpal');
-			// }
 		},
 		////// start - canvas functions
 		Drawable: function(x, y, w, h, name, aOptions={}) {
@@ -476,6 +442,12 @@ function init(aArrBufAndCore) {
 			}
 			
 			this.draw = function(ctx) {
+				// returns the valid value
+				
+				if (this.name != 'dim' && !this.w && !this.h) {
+					return true;
+				}
+				
 				// set styles
 				var curStyle;
 				switch (this.name) {
@@ -492,7 +464,7 @@ function init(aArrBufAndCore) {
 						break;
 					default:
 						// not drawable
-						return;
+						return true; // so valid is no need to update to false
 				}
 				
 				// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
@@ -502,22 +474,22 @@ function init(aArrBufAndCore) {
 				switch (this.name) {
 					case 'dim':
 
-							var cutouts = gCState.drawables.filter(function(drawable) {
-								return drawable.name == 'cutout';
-							});
+							var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 							if (!cutouts.length) {
+								console.log('filling rect full');
 								ctx.fillRect(0, 0, gQS.w, gQS.h);
 							} else {
 								
+								console.log('taking union!');
 								// build cutoutsUnionRect
 								var cutoutsUnionRect;
 								for (var i=0; i<cutouts.length; i++) {
-									var cutoutClone = this.makeDimsPositive(cutouts[i], true);
+									var cutoutClone = gCState.rconn.makeDimsPositive(cutouts[i], true);
 									var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
 									if (!i) {
-										cutoutsUnionRect = unionRect
+										cutoutsUnionRect = unionRect;
 									} else {
-										cutoutsUnionRect.union(unionRect);
+										cutoutsUnionRect = cutoutsUnionRect.union(unionRect);
 									}
 								}
 								
@@ -541,6 +513,135 @@ function init(aArrBufAndCore) {
 						break;
 					default:
 						// should never get here, as would have returned earlier, as this one is not drawable
+				}
+				
+				return false;
+			};
+			
+			this.select = function(ctx) {
+				// returns the valid value
+				
+				if (this.name != 'dim' && !this.w && !this.h) {
+					return true;
+				}
+				
+				// set styles
+				var curStyle;
+				switch (this.name) {
+					case 'cutout':
+						
+							curStyle = gCanState.Style.Select.cutout;
+						
+						break;
+					case 'Rectangle':
+					case 'Circle':
+					
+							curStyle = gCState.Style.Select.shape;
+					
+						break;
+					default:
+						// not selectable
+						return true; // so no need to invalidate
+				}
+				
+				// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
+				gCState.rconn.applyCtxStyle(curStyle);
+				
+				// draw the selection of it
+				switch (this.name) {
+					case 'dim':
+
+							var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
+							if (!cutouts.length) {
+								// no selection
+							} else {
+								
+								// build cutoutsUnionRect
+								var cutoutsUnionRect;
+								for (var i=0; i<cutouts.length; i++) {
+									var cutoutClone = gCState.rconn.makeDimsPositive(cutouts[i], true);
+									var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
+									if (!i) {
+										cutoutsUnionRect = unionRect
+									} else {
+										cutoutsUnionRect.union(unionRect);
+									}
+								}
+								
+								var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+								
+								var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
+								
+								for (var i=0; i<dimRects.length; i++) {
+									ctx.strokeRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+								}
+							}
+					
+						break;
+					case 'cutout':
+					case 'Rectangle':
+					case 'Circle':
+					
+							ctx.strokeRect(this.x, this.y, this.w, this.h);
+						
+						break;
+					default:
+						// should never get here, as would have returned earlier, as this one is not drawable
+				}
+				
+				return false;
+			};
+			
+			this.contains = function(mx, my) {
+				switch (this.name) {
+					case 'dim':
+						
+							return false; // i think i dont need this
+						
+						break;
+					default:
+						// All we have to do is make sure the Mouse X,Y fall in the area between
+						// the shape's X and (X + Width) and its Y and (Y + Height)
+						return(this.x <= mx) && (this.x + this.w >= mx) &&
+							(this.y <= my) && (this.y + this.h >= my);
+				}
+			};
+			
+			// adds it to the drawables array, meaning it should get painted
+			this.add = function() {
+				// returns new valid value
+				gCState.drawables.push(this);
+				
+				if (this.w && this.h) {
+					// this.valid = false;
+					return false;
+				} else {
+					// else the width and height are 0, no need to invalidate
+					return true;
+				}
+			};
+			
+			// removes from the drawables array
+			this.delete = function() {
+				// returns new valid value
+				
+				var drawables = gCState.drawables;
+				switch (this.name) {
+					case 'dim':
+						
+							// not added to list
+						
+						break;
+					default:
+						drawables.splice(drawables.indexOf(this), 1);
+				}
+				
+				if (this.w && this.h) {
+					// this.valid = false;
+					return false;
+				} else {
+					// else the width and height are 0, no need to invalidate
+					return true;
 				}
 			};
 		},
@@ -574,7 +675,6 @@ function init(aArrBufAndCore) {
 			for (var p in aStyleObj) {
 				if (p.indexOf('set') === 0) {
 					// its a func
-					console.error('p:', p, 'arg1:', aStyleObj[p]);
 					this.ctx[p].call(this.ctx, aStyleObj[p]);
 				} else {
 					// else its an attribute
@@ -608,7 +708,7 @@ function init(aArrBufAndCore) {
 			};
 		},
 		clear: function() {
-			this.ctx.clearRect(0, 0, this.width, this.height);
+			this.ctx.clearRect(0, 0, this.cstate.width, this.cstate.height);
 		},
 		draw: function() {
 			if(!this.cstate.valid) {
@@ -668,7 +768,12 @@ function init(aArrBufAndCore) {
 			this.cstate.downx = mx;
 			this.cstate.downy = my;
 			
-			
+			var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
+			switch (toolsub) {
+				
+				default:
+					// do nothing
+			}
 		},
 		mouseup: function(e) {
 			var mouse = this.getMouse(e);
@@ -741,7 +846,7 @@ function init(aArrBufAndCore) {
 				this.cstate.Style = {
 					Draw: {
 						line: {
-							lineWidth: mtmm.w(5),
+							lineWidth: mtmm.w(0),
 							strokeStyle: 'rgba(255, 0, 0, 1)',
 							setLineDash: []
 						},
@@ -767,7 +872,9 @@ function init(aArrBufAndCore) {
 				};
 				
 				// now that Style is setup, i can add Drawable's
-				this.cstate.drawables.push(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle'));
+				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
+				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+				(new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
 				this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
 				
 				window.addEventListener('mousemove', this.mousemove, false);
@@ -963,7 +1070,8 @@ function init(aArrBufAndCore) {
 			}
 			
 			gEditorStore.setState({
-				sPalTool: this.props.pButton.label
+				sPalTool: this.props.pButton.label,
+				sPalToolSub: 'Rectangle'
 			});
 		},
 		render: function() {
