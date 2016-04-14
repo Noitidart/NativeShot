@@ -26,11 +26,13 @@ function init(aArrBufAndCore) {
 			label: undefined, // for non-special, this is the text cloud that shows on hover
 			sub: undefined, // for non-special, this is the submenu items shown on hover. an array of objects
 			icon: undefined, // for non-special, the icon that
-			special: 'Handle' // this key is for special things that have their own React class
+			special: 'Handle', // this key is for special things that have their own React class
+			props: ['mPalHandleMousedown'] // props needed from the react component
 		},
 		{
 			// Accessibility - from where user increase/decrease size of palette
-			special: 'Accessibility'
+			special: 'Accessibility',
+			props: ['sCanHandleSize', 'sPalSize']
 		},
 		{
 			special: 'Divider'
@@ -370,11 +372,14 @@ function init(aArrBufAndCore) {
 				sMounted: false,
 				
 				// canvas realted
-				sCanValid: false,
 				sCanHandleSize: this.props.pCanHandleSize,
 				
 				// palette related
-				sPalSize: this.props.pPalSize
+				sPalSize: this.props.pPalSize,
+				sPalTool: 'Select', // the label of the currently active tool
+				sPalX: 5, // :todo: get this from prefs
+				sPalY: 75, // :todo: get this from prefs
+				sPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
 			};
 		},
 		componentDidMount: function() {
@@ -382,6 +387,36 @@ function init(aArrBufAndCore) {
 			this.setState({
 				sMounted: true
 			});
+		},
+		mPalHandleMousedown: function(e) {
+				// document.body.classList.add('paldrag');
+				// gCanDim.style.cursor = 'move';
+				// this.pal.firstChild.style.cursor = 'move';
+				
+				gEditorStore.setState({
+					sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.state.sPalX, sPalY:this.state.sPalY}
+				});
+				window.addEventListener('mousemove', this.mPalHandleMousemove, false);
+				window.addEventListener('mouseup', this.mPalHandleMouseup, false);
+		},
+		mPalHandleMousemove: function(e) {
+			// this.pal.style.left = this.left + (e.screenX - this.x) + 'px';
+			// this.pal.style.top = this.top + (e.screenY - this.y) + 'px';
+			if (this.state.sPalDragStart) {
+				gEditorStore.setState({
+					sPalX: this.state.sPalDragStart.sPalX + (e.screenX - this.state.sPalDragStart.screenX),
+					sPalY: this.state.sPalDragStart.sPalY + (e.screenY - this.state.sPalDragStart.screenY)
+				});
+			}
+		},
+		mPalHandleMouseup: function() {
+			window.removeEventListener('mouseup', this.mPalHandleMouseup, false);
+			window.removeEventListener('mousemove', this.mPalHandleMousemove, false);
+			gEditorStore.setState({
+				sPalDragStart: null
+			});
+			// gCanDim.style.cursor = '';
+			// tThis.pal.firstChild.style.cursor = '';
 		},
 		render: function() {
 			// props
@@ -413,17 +448,255 @@ function init(aArrBufAndCore) {
 					this.ctx0.putImageData(screenshotImageData, 0, 0);
 				}
 				
+				this.cstate = {};
+				
+				// this.cstate.interval = setInterval(this.draw, this.pCanInterval);
 			} else {
 				// this.state.sMounted is false
 			}
 			
+			var cPalProps = overwriteObjWithObj(this.state, this.props);
+			cPalProps.mPalHandleMousedown = this.mPalHandleMousedown;
+			
+			var cCanProps = {
+				id: 'canDim',
+				draggable: 'false',
+				width: this.props.pPhys.w,
+				height: this.props.pPhys.h,
+				ref: 'can'
+			};
+			
+			
+			
 			return React.createElement('div', {className:'editor'},
-				React.createElement('div', {id:'palette'}),
+				React.createElement('div', {id:'palette', style:{left:this.state.sPalX+'px', top:this.state.sPalY+'px', ref:'pal'}},
+					React.createElement(Subwrap, cPalProps)
+				),
 				React.createElement('canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
-				React.createElement('canvas', {id:'canDim', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can'})
+				React.createElement('canvas', cCanProps)
 			);
 		}
 	});
+	
+	////////// start - palette components
+	var Accessibility = React.createClass({
+		// the zoom controls that affect the toolbar
+		displayName: 'Accessibility',
+		enlarge: function() {
+			var cPaletteSize = this.props.sPalSize;
+			var cHandleSize = this.props.sCanHandleSize;
+			
+			var nPaletteSize = cPaletteSize;
+			var nHandleSize = cHandleSize;
+			
+			if (cPaletteSize + 8 <= 56) {
+				nPaletteSize = cPaletteSize + 8;
+			}
+			if (cHandleSize + 3 < 40) {
+				nHandleSize = cHandleSize + 3;
+			}
+			gEditorStore.setState({
+				sPalSize: nPaletteSize,
+				sCanHandleSize: nHandleSize
+			});
+		},
+		reduce: function() {
+			var cPaletteSize = this.props.sPalSize;
+			var cHandleSize = this.props.sCanHandleSize;
+
+			var nPaletteSize = cPaletteSize;
+			var nHandleSize = cHandleSize;
+			
+			if (cPaletteSize - 8 > 0) {
+				nPaletteSize = cPaletteSize - 8;
+			}
+			if (cHandleSize - 3 > 0) {
+				nHandleSize = cHandleSize - 3;
+			}
+			gEditorStore.setState({
+				sPalSize: nPaletteSize,
+				sCanHandleSize: nHandleSize
+			});
+		},
+		render: function() {
+			// props
+			// 		sPalSize
+			//		sCanHandleSize
+
+			return React.createElement('div', {className:'paccessibility'},
+				React.createElement('div', {className: 'pbutton', onClick:this.enlarge},
+					'\ue81a'
+				),
+				React.createElement('div', {className: 'pbutton', onClick:this.reduce},
+					'\ue819'
+				)
+			);
+		}
+	});
+	
+	var Handle = React.createClass({
+		// user can drag around the palette with this
+		displayName: 'Handle',
+		render: function() {
+			// props
+			//		mPalHandleMousedown
+
+			return React.createElement('div', {className:'phandle pbutton', onMouseDown:this.props.mPalHandleMousedown},
+				React.createElement('div', {className:'phandle-visual'}),
+				// React.createElement('div', {className:'phandle-visual'}),
+				React.createElement('div', {className:'phandle-visual'})
+			);
+		}
+	});
+	
+	var Divider = React.createClass({
+		displayName: 'Divider',
+		render: function() {
+			return React.createElement('div', {className:'pdivider'});
+		}
+	});
+	
+	var Button = React.createClass({
+		displayName: 'Button',
+		click: function() {
+			switch (this.props.pButton.label) {
+				case 'Close':
+						
+						window.close();
+						return;
+						
+					break;
+				case 'Select':
+					
+						if (gCanState.cutouts.length) {
+							if (!gCanState.selection || gCanState.selection != gCanState.cutouts[0]) {
+								// gCanState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
+								gCanState.selection = gCanState.cutouts[0];
+								gCanState.valid = false;
+							}
+						}
+					
+					break;
+				case 'Clear Selection':
+						
+						var valid = true;
+						if (gCanState.cutouts.length) {
+							gCanState.cutouts.length = 0;
+							valid = false;
+						}
+						if (gCanState.selection) {
+							gCanState.selection = null;
+							valid = false;
+						}
+						gCanState.valid = valid;
+						
+						return;
+						
+					break;
+				case 'Shapes':
+						if (gCanState.selection) {
+							gCanState.selection = null;
+							gCanState.valid = false;
+						}
+					break;
+				default:
+					// do nothing
+			}
+			
+			gEditorStore.setState({
+				sPalTool: this.props.pButton.label
+			});
+		},
+		render: function() {
+			// props
+			//		pButton
+			//		sPalTool
+			var cProps = {
+				className:'pbutton',
+				onClick: this.click
+			};
+			if (this.props.pButton.sub && this.props.pButton.sub.length) {
+				cProps['data-subsel'] = this.props.pButton.sub[0].icon;
+			}
+			if (this.props.sPalTool == this.props.pButton.label) {
+				cProps.className += ' pbutton-pressed';
+			}
+			return React.createElement('div', cProps,
+				React.createElement('div', {className:'plabel'},
+					React.createElement('span', {},
+						this.props.pButton.label
+					)
+				),
+				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {pSub:this.props.pButton.sub},
+					this.props.pButton.label
+				),
+				this.props.pButton.icon
+			);
+		}
+	});
+	
+	var Submenu = React.createClass({
+		displayName: 'Submenu',
+		render: function() {
+			// props
+			// 		pSub
+			
+			return React.createElement('div', {className:'psub'},
+				'sub'
+			);
+		}
+	});
+	
+	var Specials = {
+		Divider: Divider,
+		Accessibility: Accessibility,
+		Handle: Handle
+	};
+	var Subwrap = React.createClass({
+		displayName: 'Subwrap',
+		render: function() {
+			// props
+			// 		merged this.state and this.props of `Editor` component
+			
+			var cChildren = [];
+			
+			var pPalLayout = this.props.pPalLayout;
+			var iEnd = pPalLayout.length;
+			for (var i=0; i<iEnd; i++) {
+				if (pPalLayout[i].special) {
+					if (pPalLayout[i].special in Specials) { // temp as all specials not yet defined
+						var cSpecialProps = {};
+						var cRequestingProps = pPalLayout[i].props;
+						if (cRequestingProps) {
+							for (var j=0; j<cRequestingProps.length; j++) {
+								var cSpecialPropName = cRequestingProps[j];
+								cSpecialProps[cSpecialPropName] = this.props[cSpecialPropName]
+							}
+						}
+						cChildren.push(React.createElement(Specials[pPalLayout[i].special], cSpecialProps));
+					}
+				} else {
+					cChildren.push(React.createElement(Button, {pButton:pPalLayout[i], sPalTool:this.props.sPalTool}));
+				}
+			}
+			
+			var cProps = {
+				className:'psubwrap',
+				style: {
+					fontSize: this.props.sPalSize + 'px'
+				}
+			};
+			
+			if (this.props.sPalSize < 24) {
+				cProps.className += ' minfontsize';
+			}
+			
+			return React.createElement('div', cProps,
+				cChildren
+			);
+		}
+	});
+	////////// end - palette components
 	
 	var pQS = tQS; //queryStringAsJson(window.location.search.substr(1));
 	
@@ -447,6 +720,7 @@ function init(aArrBufAndCore) {
 				pPalLayout: palLayout,
 				pPalSize: 40, // :todo: get from prefs
 				pCanHandleSize: 7, // :todo: get from prefs
+				pCanInterval: 30, // ms
 				
 				pScreenshotArrBuf: aArrBufAndCore.screenshotArrBuf, // i hold it, as i plan to transfer it back to ChromeWorker in future
 				
