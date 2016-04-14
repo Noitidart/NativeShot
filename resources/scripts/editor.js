@@ -480,6 +480,7 @@ function init(aArrBufAndCore) {
 								ctx.fillRect(0, 0, gQS.w, gQS.h);
 							} else {
 								
+								/*
 								// build cutoutsUnionRect
 								var cutoutsUnionRect;
 								for (var i=0; i<cutouts.length; i++) {
@@ -496,6 +497,18 @@ function init(aArrBufAndCore) {
 								
 								var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
 								
+								for (var i=0; i<dimRects.length; i++) {
+									ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+								}
+								*/
+								
+								var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+								var cutoutsAsRects = [];
+								cutouts.forEach(function(cutout) {
+									var cutoutClone = gCState.rconn.makeDimsPositive(cutout, true);
+									cutoutsAsRects.push(new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h));
+								});
+								var dimRects = subtractMulti(fullscreenRect, cutoutsAsRects);
 								for (var i=0; i<dimRects.length; i++) {
 									ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
 								}
@@ -1483,4 +1496,38 @@ function overwriteObjWithObj(obj1, obj2){
     for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
     for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
     return obj3;
+}
+
+function subtractMulti(aTargetRect, aSubtractRectsArr) {
+	// http://stackoverflow.com/a/36608872/1828637
+	
+    // for use with Geometry.jsm
+    // returns an array of rects after subtracting each rect in aSubtractRectsArr from aTargetRect
+
+    var subtractSumRect = aSubtractRectsArr[0];  
+    for (var i = 1; i < aSubtractRectsArr.length; i++) {
+        subtractSumRect = subtractSumRect.union(aSubtractRectsArr[i]);
+    }
+
+    //Get missing parts
+    function getWantedRect(currentRect, i) {
+        if (i >= aSubtractRectsArr.length) return currentRect.intersect(aTargetRect);
+
+        var subtract = currentRect.subtract(aSubtractRectsArr[i]);
+        var wanted = [];
+        if (subtract) {
+            for(var j = 0; j < subtract.length; j++) {
+                if (subtract[j].isEmpty()) continue;
+
+                wanted = wanted.concat(getWantedRect(subtract[j], i + 1));
+            }
+        }
+
+        return wanted;
+    }
+    var wantedRect = getWantedRect(subtractSumRect, 0);
+
+    var finalRect = aTargetRect.subtract(subtractSumRect);
+
+    return finalRect.concat(wantedRect);
 }
