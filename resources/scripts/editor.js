@@ -374,6 +374,7 @@ function init(aArrBufAndCore) {
 				
 				// canvas realted
 				sCanHandleSize: this.props.pCanHandleSize,
+				sCanMouseMoveCursor: null,
 				
 				// palette related
 				sPalSize: this.props.pPalSize,
@@ -792,7 +793,7 @@ function init(aArrBufAndCore) {
 				});
 				return;
 			} else {
-				// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
+				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
 				if (this.cstate.dragging) {
 					this.cstate.selection.x = mx - this.cstate.dragoffx;
 					this.cstate.selection.y = my - this.cstate.dragoffy;
@@ -801,6 +802,50 @@ function init(aArrBufAndCore) {
 					this.cstate.selection.w = mx - this.cstate.downx;
 					this.cstate.selection.h = my - this.cstate.downy;
 					this.cstate.valid = false;
+				} else {
+					// just moving, see if mouse is over a resize point, or a drag point
+					var dragFilterFunc;
+					switch (toolsub) {
+						case 'Select-':
+						
+								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
+							
+							break;
+						case 'Shapes-Rectangle':
+						case 'Shapes-Circle':
+							
+								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Circle'].indexOf(aToFilter.name) > -1 };
+							
+							break;
+						default:
+							// do nothing
+					}
+					
+					if (dragFilterFunc) {
+						var draggableFound = false;
+						var drawables = this.cstate.drawables.filter(dragFilterFunc);
+						var l = drawables.length - 1;
+						for (var i=l; i>-1; i--) {
+							var drawable = drawables[i];
+							if (drawable.contains(mx, my)) {
+								draggableFound = true;
+								break;
+							}
+						}
+						if (draggableFound) {
+							if (this.state.sCanMouseMoveCursor != 'move') {
+								this.setState({
+									sCanMouseMoveCursor: 'move'
+								});
+							}
+						} else {
+							if (this.state.sCanMouseMoveCursor) {
+								this.setState({
+									sCanMouseMoveCursor: null
+								});
+							}
+						}
+					}
 				}
 			}
 			
@@ -906,7 +951,7 @@ function init(aArrBufAndCore) {
 				});
 				return;
 			} else {
-				if (e.target == this.refs.can) {
+				// if (e.target == this.refs.can) { // its canceling, so even if its not can go ahead and let it go through
 					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
 					if (this.cstate.dragging) {
 						this.cstate.dragging = false;
@@ -920,7 +965,7 @@ function init(aArrBufAndCore) {
 							this.makeDimsPositive(this.cstate.selection); // no need to set valid=false
 						}
 					}
-				}
+				// }
 			}
 			
 			
@@ -1052,7 +1097,7 @@ function init(aArrBufAndCore) {
 				cPalPalProps.style.cursor = 'move';
 			} else {
 				if (this.state.sCanMouseMoveCursor) {
-					
+					cCanProps.style.cursor = this.state.sCanMouseMoveCursor;
 				} else {
 					switch (this.state.sPalTool) {
 						case 'Select':
