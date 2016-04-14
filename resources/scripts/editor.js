@@ -14,6 +14,7 @@ var core = {
 };
 
 var gEditorStore = {};
+var gCState = {};
 
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
@@ -117,10 +118,10 @@ function init(aArrBufAndCore) {
 					label: 'Rectangle',
 					icon: '\ue81d'
 				},
-				{
-					label: 'Rounded Rectangle',
-					icon: '\ue803'
-				},
+				// { // discontinued this, as i plan to offer a border radius option for when Rectangle is selected
+				// 	label: 'Rounded Rectangle',
+				// 	icon: '\ue803'
+				// },
 				{
 					label: 'Circle',
 					icon: '\ue81f'
@@ -379,7 +380,7 @@ function init(aArrBufAndCore) {
 				sPalTool: 'Select', // the label of the currently active tool
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
-				sPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
+				sPalDragStart: null // is null when not dragging. when dragging it is {screenX:, screenY:}
 			};
 		},
 		componentDidMount: function() {
@@ -417,17 +418,271 @@ function init(aArrBufAndCore) {
 			// tThis.pal.firstChild.style.cursor = '';
 		},
 		componentDidUpdate: function(prevProps, prevState) {
-			// attach window listeners for pal dragging
-			if (prevState.sPalDragStart && !this.state.sPalDragStart) {
-				window.removeEventListener('mouseup', this.mPalHandleMouseup, false);
-				window.removeEventListener('mousemove', this.mPalHandleMousemove, false);
-				// console.error('REMOVED mpal');
-			} else if (!prevState.sPalDragStart && this.state.sPalDragStart) {
-				window.addEventListener('mouseup', this.mPalHandleMouseup, false);
-				window.addEventListener('mousemove', this.mPalHandleMousemove, false);
-				// console.error('ADDDED mpal');
+			// // attach window listeners for pal dragging
+			// if (prevState.sPalDragStart && !this.state.sPalDragStart) {
+			// 	window.removeEventListener('mouseup', this.mPalHandleMouseup, false);
+			// 	window.removeEventListener('mousemove', this.mPalHandleMousemove, false);
+			// 	// console.error('REMOVED mpal');
+			// } else if (!prevState.sPalDragStart && this.state.sPalDragStart) {
+			// 	window.addEventListener('mouseup', this.mPalHandleMouseup, false);
+			// 	window.addEventListener('mousemove', this.mPalHandleMousemove, false);
+			// 	// console.error('ADDDED mpal');
+			// }
+		},
+		////// start - canvas functions
+		Drawable: function(x, y, w, h, name, aOptions={}) {
+
+			switch (name) {
+				case 'dim':
+					
+						this.x = 0;
+						this.y = 0;
+						this.w = gQS.w;
+						this.h = gQS.h;
+					
+					break;
+				default:
+					this.x = x;
+					this.y = y;
+					this.w = w;
+					this.h = h;
+			}
+			this.name = name;
+			
+			// set other props
+			
+			switch (name) {
+				case 'Rectangle':
+				case 'Circle':
+					
+						console.error('gCState:', gCState);
+						this.Style = {
+							Draw: {
+								me: {
+									fillStyle: aOptions.fillStyle || gCState.Style.Draw.fill.fillStyle,
+									strokeStyle: aOptions.strokeStyle || gCState.Style.Draw.line.strokeStyle,
+									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
+									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
+								}
+							}
+						}
+					
+					break;
+				default:
+					this.x = x;
+					this.y = y;
+					this.w = w;
+					this.h = h;
+			}
+			
+			this.draw = function(ctx) {
+				// set styles
+				var curStyle;
+				switch (this.name) {
+					case 'dim':
+						
+							curStyle = gCState.Style.Draw.dim;
+						
+						break;
+					case 'Rectangle':
+					case 'Circle':
+					
+							curStyle = this.Style.Draw.me;
+					
+						break;
+					default:
+						// not drawable
+						return;
+				}
+				
+				// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
+				gCState.rconn.applyCtxStyle(curStyle);				
+				
+				// draw it
+				switch (this.name) {
+					case 'dim':
+
+							var cutouts = gCState.drawables.filter(function(drawable) {
+								return drawable.name == 'cutout';
+							});
+							if (!cutouts.length) {
+								ctx.fillRect(0, 0, gQS.w, gQS.h);
+							} else {
+								
+								// build cutoutsUnionRect
+								var cutoutsUnionRect;
+								for (var i=0; i<cutouts.length; i++) {
+									var cutoutClone = this.makeDimsPositive(cutouts[i], true);
+									var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
+									if (!i) {
+										cutoutsUnionRect = unionRect
+									} else {
+										cutoutsUnionRect.union(unionRect);
+									}
+								}
+								
+								var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+								
+								var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
+								
+								for (var i=0; i<dimRects.length; i++) {
+									ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+								}
+							}
+					
+						break;
+					case 'Rectangle':
+					
+							// console.error('fill args:', this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h - this.Style.Draw.me.lineWidth);
+							ctx.fillRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h - this.Style.Draw.me.lineWidth);
+							ctx.strokeRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h - this.Style.Draw.me.lineWidth);
+							// ctx.fillRect(gCState.rconn.mtmm.x(500), gCState.rconn.mtmm.y(500), gCState.rconn.mtmm.w(100), gCState.rconn.mtmm.h(100));
+						
+						break;
+					default:
+						// should never get here, as would have returned earlier, as this one is not drawable
+				}
+			};
+		},
+		makeDimsPositive: function(aDrawable, notByRef) {
+			// aDrawObject is Shape, Cutout, 
+				// it has x, y, w, h
+			// if the w or h are negative, then it makes the w and h positive and adjusts the x y respectively
+			if (notByRef) {
+				aDrawable = {
+					x: aDrawable.x,
+					y: aDrawable.y,
+					w: aDrawable.w,
+					h: aDrawable.h,
+				}
+			}
+			
+			if (aDrawable.w < 0) {
+				aDrawable.x += aDrawable.w;
+				aDrawable.w *= -1;
+			}
+
+			if (aDrawable.h < 0) {
+				aDrawable.y += aDrawable.h;
+				aDrawable.h *= -1;
+			}
+			
+			return aDrawable;
+		},
+		applyCtxStyle: function(aStyleObj) {
+			// aStyleObj is an object with keys that are properties/methods of aCtx
+			for (var p in aStyleObj) {
+				if (p.indexOf('set') === 0) {
+					// its a func
+					console.error('p:', p, 'arg1:', aStyleObj[p]);
+					this.ctx[p].call(this.ctx, aStyleObj[p]);
+				} else {
+					// else its an attribute
+					this.ctx[p] = aStyleObj[p];
+				}
+			}			
+		},
+		mtmm: { // short for monToMultiMon
+			x: function(aX) {
+				return tQS.win81ScaleX ? Math.ceil(tQS.x + ((aX - tQS.x) * tQS.win81ScaleX)) : aX;
+			},
+			y: function(aY) {
+				return tQS.win81ScaleY ? Math.ceil(tQS.y + ((aY - tQS.y) * tQS.win81ScaleY)) : aY
+			},
+			w: function(aW) {
+				// width
+				return tQS.win81ScaleX ? Math.ceil(aW * tQS.win81ScaleX) : aW;
+			},
+			h: function(aH) {
+				// width
+				return tQS.win81ScaleY ? Math.ceil(aH * tQS.win81ScaleY) : aH;
 			}
 		},
+		getMouse: function(e) {
+			var mx = this.mtmm.x(e.screenX);
+			var my = this.mtmm.y(e.screenY);
+			
+			return {
+				x: mx,
+				y: my
+			};
+		},
+		clear: function() {
+			this.ctx.clearRect(0, 0, this.width, this.height);
+		},
+		draw: function() {
+			if(!this.cstate.valid) {
+				var ctx = this.ctx;
+				this.clear();
+				
+				// draw all drawables
+				var drawables = this.cstate.drawables;
+				var l = drawables.length;
+				for(var i = 0; i < l; i++) {
+					var drawable = drawables[i];
+					if (drawable.name == 'cutout') {
+						// this is drawn as negative space with `this.dim.draw()`
+						continue;
+					}
+					
+					// We can skip the drawing of elements that have moved off the screen:
+					if(drawable.x > this.cstate.width || drawable.y > this.cstate.height ||
+						drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0) continue;
+					drawable.draw(ctx);
+				}
+
+				// draw selection
+				if(this.cstate.selection != null) {
+					if (this.cstate.selection.w && this.cstate.selection.h) {
+						this.cstate.selection.select();
+					}
+				}
+
+				// ** Add stuff you want drawn on top all the time here **
+
+				// draw the dim
+				this.cstate.dim.draw(ctx);
+				
+				this.cstate.valid = true;
+			}
+		},
+		mousemove: function(e) {
+			var mouse = this.getMouse(e);
+			var mx = mouse.x;
+			var my = mouse.y;
+			
+			if (this.state.sPalDragStart) {
+				gEditorStore.setState({
+					sPalX: this.state.sPalDragStart.sPalX + (e.screenX - this.state.sPalDragStart.screenX),
+					sPalY: this.state.sPalDragStart.sPalY + (e.screenY - this.state.sPalDragStart.screenY)
+				});
+				return;
+			}
+			
+		},
+		mousedown: function(e) {
+			var mouse = this.getMouse(e);
+			var mx = mouse.x;
+			var my = mouse.y;
+			
+			this.cstate.downx = mx;
+			this.cstate.downy = my;
+			
+			
+		},
+		mouseup: function(e) {
+			var mouse = this.getMouse(e);
+			var mx = mouse.x;
+			var my = mouse.y;
+
+			if (this.state.sPalDragStart) {
+				gEditorStore.setState({
+					sPalDragStart: null
+				});
+				return;
+			}
+		},
+		////// end - canvas functions
 		render: function() {
 			// props
 			//		see link1818181
@@ -458,9 +713,69 @@ function init(aArrBufAndCore) {
 					this.ctx0.putImageData(screenshotImageData, 0, 0);
 				}
 				
-				this.cstate = {};
+				this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
+				gCState = this.cstate;
 				
-				// this.cstate.interval = setInterval(this.draw, this.pCanInterval);
+				this.cstate.rconn = this; // connectio to the react component
+				
+				// start - simon canvas stuff
+				this.cstate.valid = false;
+				
+				this.cstate.width = this.props.pQS.w; // same as - monToMultiMon.w(this.refs.can.width);
+				this.cstate.height = this.props.pQS.h; // same as - monToMultiMon.h(this.refs.can.height);
+				
+				this.cstate.drawables = []; // the collection of things to be drawn
+				
+				this.cstate.dragging = false; // Keep track of when we are dragging
+				this.cstate.resizing = false; // when mouses down with a tool that can draw
+				this.cstate.selection = null;
+				
+				this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
+				this.cstate.dragoffy = 0;
+				
+				this.cstate.downx = 0; // when the user mouses down on canvas
+				this.cstate.downy = 0; // when the user mouses down on canvas
+				
+				// **** Options! ****
+				var mtmm = this.mtmm;
+				this.cstate.Style = {
+					Draw: {
+						line: {
+							lineWidth: mtmm.w(5),
+							strokeStyle: 'rgba(255, 0, 0, 1)',
+							setLineDash: []
+						},
+						fill: {
+							fillStyle: 'rgba(100, 149, 237, 1)'
+						},
+						dim: {
+							fillStyle: 'rgba(0, 0, 0, 0.6)',
+						}
+					},
+					Select: {
+						cutout: {
+							strokeStyle: 'rgba(0, 0, 255, 1)',
+							setLineDash: [0, mtmm.w(3), 0],
+							lineWidth: mtmm.w(1)
+						},
+						shape: {
+							lineWidth: mtmm.w(3),
+							setLineDash: [0],
+							strokeStyle: 'red'
+						}
+					}
+				};
+				
+				// now that Style is setup, i can add Drawable's
+				this.cstate.drawables.push(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle'));
+				this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
+				
+				window.addEventListener('mousemove', this.mousemove, false);
+				window.addEventListener('mousedown', this.mousedown, false);
+				window.addEventListener('mouseup', this.mouseup, false);
+				
+				this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
+				// start - simon canvas stuff
 			} else {
 				// this.state.sMounted is false
 			}
@@ -790,6 +1105,7 @@ function init(aArrBufAndCore) {
 // start - pre-init
 
 var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i dont deal with gQS anymore.
+var gQS = tQS;
 window.addEventListener('message', function(aWinMsgEvent) {
 	console.error('incoming window message to HTML: iMon:', tQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
 	var aData = aWinMsgEvent.data;
