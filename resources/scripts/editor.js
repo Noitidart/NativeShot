@@ -396,8 +396,8 @@ function init(aArrBufAndCore) {
 				gEditorStore.setState({
 					sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.state.sPalX, sPalY:this.state.sPalY}
 				});
-				window.addEventListener('mousemove', this.mPalHandleMousemove, false);
-				window.addEventListener('mouseup', this.mPalHandleMouseup, false);
+				// window.addEventListener('mousemove', this.mPalHandleMousemove, false);
+				// window.addEventListener('mouseup', this.mPalHandleMouseup, false);
 		},
 		mPalHandleMousemove: function(e) {
 			// this.pal.style.left = this.left + (e.screenX - this.x) + 'px';
@@ -410,13 +410,23 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mPalHandleMouseup: function() {
-			window.removeEventListener('mouseup', this.mPalHandleMouseup, false);
-			window.removeEventListener('mousemove', this.mPalHandleMousemove, false);
 			gEditorStore.setState({
 				sPalDragStart: null
 			});
 			// gCanDim.style.cursor = '';
 			// tThis.pal.firstChild.style.cursor = '';
+		},
+		componentDidUpdate: function(prevProps, prevState) {
+			// attach window listeners for pal dragging
+			if (prevState.sPalDragStart && !this.state.sPalDragStart) {
+				window.removeEventListener('mouseup', this.mPalHandleMouseup, false);
+				window.removeEventListener('mousemove', this.mPalHandleMousemove, false);
+				// console.error('REMOVED mpal');
+			} else if (!prevState.sPalDragStart && this.state.sPalDragStart) {
+				window.addEventListener('mouseup', this.mPalHandleMouseup, false);
+				window.addEventListener('mousemove', this.mPalHandleMousemove, false);
+				// console.error('ADDDED mpal');
+			}
 		},
 		render: function() {
 			// props
@@ -463,13 +473,47 @@ function init(aArrBufAndCore) {
 				draggable: 'false',
 				width: this.props.pPhys.w,
 				height: this.props.pPhys.h,
-				ref: 'can'
+				ref: 'can',
+				style: {}
 			};
 			
+			var cPalPalProps = {
+				id:'palette',
+				style: {
+					left: this.state.sPalX + 'px',
+					top: this.state.sPalY + 'px'
+				}
+			};
 			
+			// determine cursor
+			if (this.state.sPalDragStart) {
+				cCanProps.style.cursor = 'move';
+				cPalPalProps.style.cursor = 'move';
+			} else {
+				if (this.state.sCanMouseMoveCursor) {
+					
+				} else {
+					switch (this.state.sPalTool) {
+						case 'Select':
+						case 'Shapes':
+						case 'Line':
+						
+								cCanProps.style.cursor = 'crosshair';
+						
+							break;
+						case 'Window Wand':
+						
+								cCanProps.style.cursor = 'pointer';
+						
+							break;
+						default:
+							// nothing
+					}
+				}
+			}
 			
 			return React.createElement('div', {className:'editor'},
-				React.createElement('div', {id:'palette', style:{left:this.state.sPalX+'px', top:this.state.sPalY+'px', ref:'pal'}},
+				React.createElement('div', cPalPalProps,
 					React.createElement(Subwrap, cPalProps)
 				),
 				React.createElement('canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
@@ -568,27 +612,27 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Select':
 					
-						if (gCanState.cutouts.length) {
-							if (!gCanState.selection || gCanState.selection != gCanState.cutouts[0]) {
-								// gCanState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
-								gCanState.selection = gCanState.cutouts[0];
-								gCanState.valid = false;
-							}
-						}
+						// if (gCanState.cutouts.length) {
+						// 	if (!gCanState.selection || gCanState.selection != gCanState.cutouts[0]) {
+						// 		// gCanState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
+						// 		gCanState.selection = gCanState.cutouts[0];
+						// 		gCanState.valid = false;
+						// 	}
+						// }
 					
 					break;
 				case 'Clear Selection':
 						
-						var valid = true;
-						if (gCanState.cutouts.length) {
-							gCanState.cutouts.length = 0;
-							valid = false;
-						}
-						if (gCanState.selection) {
-							gCanState.selection = null;
-							valid = false;
-						}
-						gCanState.valid = valid;
+						// var valid = true;
+						// if (gCanState.cutouts.length) {
+						// 	gCanState.cutouts.length = 0;
+						// 	valid = false;
+						// }
+						// if (gCanState.selection) {
+						// 	gCanState.selection = null;
+						// 	valid = false;
+						// }
+						// gCanState.valid = valid;
 						
 						return;
 						
@@ -686,6 +730,10 @@ function init(aArrBufAndCore) {
 					fontSize: this.props.sPalSize + 'px'
 				}
 			};
+			
+			if (this.props.sPalDragStart) {
+				cProps.style.cursor = 'move';
+			}
 			
 			if (this.props.sPalSize < 24) {
 				cProps.className += ' minfontsize';
