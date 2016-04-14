@@ -539,7 +539,12 @@ var EditorFuncs = {
 			genericReject.bind(null, 'promise_setWinAlwaysTop', 0)
 		).catch(genericCatch.bind(null, 'promise_setWinAlwaysTop', 0));
 		
-		colMon[aData.iMon].E.DOMWindow.postMessage({from:'bootstrap', topic:'screenshotXfer', screenshotArrBuf:colMon[iMon].screenshotArrBuf}, '*', [colMon[iMon].screenshotArrBuf]);
+		colMon[aData.iMon].E.DOMWindow.postMessage({
+			from: 'bootstrap',
+			topic: 'init',
+			screenshotArrBuf: colMon[iMon].screenshotArrBuf,
+			core: core
+		}, '*', [colMon[iMon].screenshotArrBuf]);
 	}
 };
 //end obs stuff
