@@ -997,6 +997,34 @@ function init(aArrBufAndCore) {
 			
 			
 		},
+		keyup: function(e) {
+			switch (e.key) {
+				case 'Delete':
+				
+						if (!this.cstate.dragging && !this.cstate.resizing) {
+							switch (this.state.sPalTool) {
+								case 'Select':
+								case 'Shapes':
+										if (this.cstate.selection) {
+											this.cstate.valid = this.cstate.selection.delete();
+											this.cstate.selection = null;
+										}
+									break;
+								default:
+									// do nothing
+							}
+						}
+				
+					break;
+				case 'Escape':
+				
+						window.close();
+				
+					break;
+				default:
+					// do nothing
+			}
+		},
 		////// end - canvas functions
 		render: function() {
 			// props
@@ -1090,6 +1118,7 @@ function init(aArrBufAndCore) {
 				window.addEventListener('mousemove', this.mousemove, false);
 				window.addEventListener('mousedown', this.mousedown, false);
 				window.addEventListener('mouseup', this.mouseup, false);
+				window.addEventListener('keyup', this.keyup, false);
 				
 				this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
 				// start - simon canvas stuff
