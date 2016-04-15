@@ -89,11 +89,12 @@ function init(aArrBufAndCore) {
 			label: 'Zoom View',
 			icon: '\ue811',
 			multiDepress: true,
-			sub: [
+			/* sub: [ // i decided i will put this ZoomViewLevel into the widget itself
 				{
 					special: 'ZoomViewLevel'
 				}
 			]
+			*/
 		},
 		{
 			special: 'Divider'
@@ -1422,6 +1423,19 @@ function init(aArrBufAndCore) {
 				onClick: this.click
 			};
 			
+			if (this.props.pSubButton.special) {
+				if (this.props.pSubButton.special in Specials) { // temp as all specials not yet defined
+					var cSpecialProps = {};
+					var cRequestingProps = this.props.pSubButton.props;
+					if (cRequestingProps) {
+						for (var j=0; j<cRequestingProps.length; j++) {
+							var cSpecialPropName = cRequestingProps[j];
+							cSpecialProps[cSpecialPropName] = this.props[cSpecialPropName];
+						}
+					}
+					return React.createElement(Specials[this.props.pSubButton.special], cSpecialProps);
+				}
+			}
 
 			if (!this.props.pSubButton.special && this.props.sPalToolSubs[this.props.pButton.label] == this.props.pSubButton.label) {
 				cProps.className += ' pbutton-pressed';
