@@ -308,12 +308,14 @@ body {
 .colorpicker-slider-rainbow {
 	background: linear-gradient(to right, #ff0000 0%, #ff9900 10%, #cdff00 20%, #35ff00 30%, #00ff66 40%, #00fffd 50%, #0066ff 60%, #3200ff 70%, #cd00ff 80%, #ff0099 90%, #ff0000 100%);
 	position: relative;
+	cursor: pointer;
 }
 .colorpicker-slider-alpha {
 	background-image: linear-gradient(to right, rgba(70, 136, 143, 0), rgb(70, 136, 143)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
 	background-repeat: no-repeat, repeat;
 	background-position: right, top left;
 	position: relative;
+	cursor: pointer;
 }
 .colorpicker-slider-rainbow::before,
 .colorpicker-slider-alpha::before {
@@ -384,6 +386,7 @@ body {
 	width: 16px;
 	height: 16px;
 	margin-right: 4px;
+	cursor: pointer;
 }
 
 .colorpicker-choices-wrap.colorpicker-choices-dropper {
@@ -394,6 +397,7 @@ body {
 	font-size: 18px;
 	align-items: center;
 	width: 40px;
+	cursor: pointer;
 }
 /* GROUP:colorpicker */
 
