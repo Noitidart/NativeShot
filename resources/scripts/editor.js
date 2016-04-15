@@ -44,17 +44,13 @@ function init(aArrBufAndCore) {
 			icon: '\ue82c' // the fontello font code
 		},
 		{
-			label: 'Fullscreen',
+			label: 'Fullscreen', // by default it selects the current monitor
 			icon: '\ue80e',
 			hotkey: 'F', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
-			fixed: 'Current Monitor', // if not fixed, then the last clicked sub is used, if subs exist, and nothing is fixed, the default is the first one in the list
+			// alt+F for all monitors
 			sub: [
 				{
-					label: 'Current Monitor',
-					fixedOnly: true // do not show as sub
-				},
-				{
-					special: 'Monitors'
+					special: 'Monitors' // allow single monitor selecting or multiple
 				}
 			]
 		},
@@ -172,6 +168,11 @@ function init(aArrBufAndCore) {
 			icon: 'S',
 			sub: [
 				{
+					special: 'ColorPicker'
+					// should have ColorHistory, Transparency, Dropper, some recommended base colors
+				}
+				/*
+				{
 					label: 'Dropper',
 					icon: '\ue82a',
 					unfixable: true
@@ -185,6 +186,7 @@ function init(aArrBufAndCore) {
 				{
 					special: 'TransparencyPicker'
 				}
+				*/
 			]
 		},
 		{
@@ -201,12 +203,17 @@ function init(aArrBufAndCore) {
 			icon: 'S',
 			sub: [
 				{
+					special: 'ColorPicker'
+					// should have ColorHistory, Transparency, Dropper, some recommended base colors
+				}
+				/*
+				{
 					label: 'Dropper',
 					icon: '\ue82a',
 					unfixable: true
 				},
 				{
-					special: 'ColorPicker'
+					special: 'ColorPicker' // all special subs are unfixable
 				},
 				{
 					special: 'ColorHistory'
@@ -214,6 +221,7 @@ function init(aArrBufAndCore) {
 				{
 					special: 'TransparencyPicker'
 				}
+				*/
 			]
 		},
 		{
@@ -379,7 +387,7 @@ function init(aArrBufAndCore) {
 				// palette related
 				sPalSize: this.props.pPalSize,
 				sPalTool: 'Select', // the label of the currently active tool
-				sPalToolSub: null, // the active sub label of sPalTool
+				sPalToolSubs: this.props.pPalToolSubs, // object holding the active sub for each tool label. so key is tool label. value is label of selected sab
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
 				sPalDragStart: null // is null when not dragging. when dragging it is {screenX:, screenY:}
@@ -517,10 +525,16 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Rectangle':
 					
-							// console.error('fill args:', this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h - this.Style.Draw.me.lineWidth);
-							ctx.fillRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h - this.Style.Draw.me.lineWidth);
-							ctx.strokeRect(this.x + this.Style.Draw.me.lineWidth, this.y + this.Style.Draw.me.lineWidth, this.w - this.Style.Draw.me.lineWidth, this.h - this.Style.Draw.me.lineWidth);
-							// ctx.fillRect(gCState.rconn.mtmm.x(500), gCState.rconn.mtmm.y(500), gCState.rconn.mtmm.w(100), gCState.rconn.mtmm.h(100));
+							
+							var lw = this.Style.Draw.me.lineWidth;
+							var lw2 = lw * 2;
+							// ctx.rect(this.x, this.y, this.w, this.h);
+							// ctx.rect(this.x+lw, this.y+lw, this.w-lw2, this.h-lw2);  // offset position and size
+							// ctx.fill('evenodd');                      // !important
+							// ctx.strokeRect(this.x, this.y, this.w, this.h);
+							
+							ctx.fillRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
+							ctx.strokeRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
 						
 						break;
 					default:
@@ -806,7 +820,7 @@ function init(aArrBufAndCore) {
 				});
 				return;
 			} else {
-				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
+				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 				if (this.cstate.dragging) {
 					this.cstate.selection.x = mx - this.cstate.dragoffx;
 					this.cstate.selection.y = my - this.cstate.dragoffy;
@@ -872,7 +886,7 @@ function init(aArrBufAndCore) {
 			this.cstate.downy = my;
 			
 			if (e.target == this.refs.can) {
-				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
+				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 				
 				// if selectable, set a selectFilterFunc
 				var selectFilterFunc;
@@ -938,7 +952,7 @@ function init(aArrBufAndCore) {
 						case 'Shapes-Rectangle':
 						case 'Shapes-Circle':
 							
-								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSub);
+								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSubs[this.state.sPalTool]);
 							
 							break;
 						default:
@@ -965,7 +979,7 @@ function init(aArrBufAndCore) {
 				return;
 			} else {
 				// if (e.target == this.refs.can) { // its canceling, so even if its not can go ahead and let it go through
-					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSub || '');
+					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 					if (this.cstate.dragging) {
 						this.cstate.dragging = false;
 					} else if (this.cstate.resizing) {
@@ -1069,8 +1083,8 @@ function init(aArrBufAndCore) {
 				
 				// now that Style is setup, i can add Drawable's
 				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
-				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
-				(new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+				// (new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
 				this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
 				
 				window.addEventListener('mousemove', this.mousemove, false);
@@ -1268,20 +1282,25 @@ function init(aArrBufAndCore) {
 			}
 			
 			gEditorStore.setState({
-				sPalTool: this.props.pButton.label,
-				sPalToolSub: this.props.pButton.sub ? this.props.pButton.sub[0].label : null
+				sPalTool: this.props.pButton.label
 			});
 		},
 		render: function() {
 			// props
 			//		pButton
 			//		sPalTool
+			//		sPalToolSubs
+			
 			var cProps = {
 				className:'pbutton',
 				onClick: this.click
 			};
-			if (this.props.pButton.sub && this.props.pButton.sub.length) {
-				cProps['data-subsel'] = this.props.pButton.sub[0].icon;
+			if (this.props.sPalToolSubs[this.props.pButton.label]) {
+				for (var i=0; i<this.props.pButton.sub.length; i++) {
+					if (this.props.pButton.sub[i].label == this.props.sPalToolSubs[this.props.pButton.label]) {
+						cProps['data-subsel'] = this.props.pButton.sub[i].icon;
+					}
+				}
 			}
 			if (this.props.sPalTool == this.props.pButton.label) {
 				cProps.className += ' pbutton-pressed';
@@ -1292,7 +1311,7 @@ function init(aArrBufAndCore) {
 						this.props.pButton.label
 					)
 				),
-				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {pSub:this.props.pButton.sub},
+				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub},
 					this.props.pButton.label
 				),
 				this.props.pButton.icon
@@ -1300,14 +1319,49 @@ function init(aArrBufAndCore) {
 		}
 	});
 	
+	var SubButton = React.createClass({
+		click: function(e) {
+			e.stopPropagation(); // so it doesnt trigger the setState due to click on the pbutton
+			
+			var sPalToolSubs = cloneObject(this.props.sPalToolSubs);
+			sPalToolSubs[this.props.pButton.label] = this.props.pSubButton.label;
+			
+			gEditorStore.setState({
+				sPalTool: this.props.pButton.label,
+				sPalToolSubs: sPalToolSubs
+			});
+		},
+		render: function() {
+			// props
+			//		pSubButton
+			//		pButton
+			//		sPalToolSubs
+
+			var cProps = {
+				className:'pbutton',
+				onClick: this.click
+			};
+			return React.createElement('div', cProps,
+				this.props.pSubButton.icon
+			);
+		}
+	})
+	
 	var Submenu = React.createClass({
 		displayName: 'Submenu',
 		render: function() {
 			// props
 			// 		pSub
+			//		pButton
+			//		sPalToolSubs
+			
+			var cChildren = [];
+			for (var i=0; i<this.props.pSub.length; i++) {
+				cChildren.push(React.createElement(SubButton, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i]}));
+			}
 			
 			return React.createElement('div', {className:'psub'},
-				'sub'
+				cChildren
 			);
 		}
 	});
@@ -1341,7 +1395,7 @@ function init(aArrBufAndCore) {
 						cChildren.push(React.createElement(Specials[pPalLayout[i].special], cSpecialProps));
 					}
 				} else {
-					cChildren.push(React.createElement(Button, {pButton:pPalLayout[i], sPalTool:this.props.sPalTool}));
+					cChildren.push(React.createElement(Button, {sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool}));
 				}
 			}
 			
@@ -1370,8 +1424,8 @@ function init(aArrBufAndCore) {
 	var pQS = tQS; //queryStringAsJson(window.location.search.substr(1));
 	
 	// to test no scaling
-	// delete pQS.win81ScaleX;
-	// delete pQS.win81ScaleY;
+	delete pQS.win81ScaleX;
+	delete pQS.win81ScaleY;
 	
 	var pPhys = {}; // stands for pPhysical - meaning the actually used canvas width and height
 	if (pQS.win81ScaleX || pQS.win81ScaleY) {
@@ -1382,12 +1436,30 @@ function init(aArrBufAndCore) {
 		pPhys.h = pQS.h;
 	}
 	
+	var palToolSubs = {};
+	for (var i=0; i<palLayout.length; i++) {
+		if (palLayout[i].sub) {
+			var hasFixableSubs = false;
+			for (var j=0; j<palLayout[i].sub.length; j++) {
+				if (!('special' in palLayout[i].sub[j]) && !('unfixable' in palLayout[i].sub[j])) {
+					hasFixableSubs = palLayout[i].sub[j].label;
+					break;
+				}
+			}
+			if (hasFixableSubs) {
+				palToolSubs[palLayout[i].label] = hasFixableSubs;
+			}
+		}
+	}
+	
 	var initReact = function() {
 		ReactDOM.render(
 			React.createElement(Editor, {
 				// link1818181
 				pPalLayout: palLayout,
 				pPalSize: 40, // :todo: get from prefs
+				pPalToolSubs: palToolSubs, // :todo: get from prefs
+				
 				pCanHandleSize: 7, // :todo: get from prefs
 				pCanInterval: 30, // ms
 				
@@ -1530,4 +1602,8 @@ function subtractMulti(aTargetRect, aSubtractRectsArr) {
     var finalRect = aTargetRect.subtract(subtractSumRect);
 
     return finalRect.concat(wantedRect);
+}
+
+function cloneObject(aObj) {
+	return JSON.parse(JSON.stringify(aObj));
 }

@@ -130,15 +130,6 @@ body {
 }
 /* end - phandle-visual */
 
-/* start - psub */
-/* state:innate */
-.psub {
-	position: absolute;
-	pointer-events: none;
-	opacity: 0;
-}
-/* end - psub */
-
 /* start - plabel */
 /* state:innate */
 .plabel {
@@ -150,7 +141,7 @@ body {
 	white-space: nowrap;
 	z-index: -1;
 	width: 100%;
-	/* doing this in the .plabel > span now because the span is the one exceeding boundaries due to the dispaly flex so this background does not extend beyond boundaries
+	/* doing this in the .plabel > span now because the span is the one exceeding boundaries due to the diplay flex so this background does not extend beyond boundaries
 	background-color: #aaa;
 	border-radius: 5px;
 	*/
@@ -185,6 +176,38 @@ body {
 	font-weight: bold;
 }
 /*end - plabel > span */
+
+/* start - psub */
+/* state:innate */
+.psub {
+	position: absolute;
+	opacity: 0;
+	transition: top 200ms, opacity 200ms;
+	top: 90%;
+	
+	background-color: rgba(240, 241, 242, 0.6);
+	border: 1px solid rgba(170, 170, 170, 0.3);
+	border-radius: 3px;
+	box-shadow: 0 0 10px 1px rgba(0, 0, 0, 0.45);
+	padding: 0.1em;
+	
+}
+/* start:pbutton_hover */
+.pbutton:hover .psub {
+	top: 103%;
+	opacity: 1;
+}
+/* end - psub */
+
+/*start - psub_pbutton*/
+.psub .pbutton {
+	font-size: .8em;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: row;
+}
+/*end - psub_pbutton*/
 
 /* start - pdivider */
 /* state:innate */
