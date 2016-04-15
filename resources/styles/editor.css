@@ -232,7 +232,7 @@ body {
 
 /* GROUP:colorpicker */
 .colorpicker {
-	background-color: #fff;
+	background: linear-gradient(to bottom, #f0f1f2 0%,#f4f5f6 100%);
 	width: 200px;
 	border-radius: 1px;
 	position: relative;
