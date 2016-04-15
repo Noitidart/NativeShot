@@ -15,6 +15,7 @@ var core = {
 
 var gEditorStore = {};
 var gCState = {};
+var gColorPickerSetState = {NativeShotEditor:null};
 
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
@@ -177,25 +178,9 @@ function init(aArrBufAndCore) {
 			justClick: true,
 			sub: [
 				{
-					special: 'ColorPicker'
-					// should have ColorHistory, Transparency, Dropper, some recommended base colors
+					special: 'ColorPicker',
+					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor'}
 				}
-				/*
-				{
-					label: 'Dropper',
-					icon: '\ue82a',
-					unfixable: true
-				},
-				{
-					special: 'ColorPicker' // all special subs are unfixable
-				},
-				{
-					special: 'ColorHistory'
-				},
-				{
-					special: 'TransparencyPicker'
-				}
-				*/
 			]
 		},
 		{
@@ -214,25 +199,9 @@ function init(aArrBufAndCore) {
 			justClick: true,
 			sub: [
 				{
-					special: 'ColorPicker'
-					// should have ColorHistory, Transparency, Dropper, some recommended base colors
+					special: 'ColorPicker',
+					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor'}
 				}
-				/*
-				{
-					label: 'Dropper',
-					icon: '\ue82a',
-					unfixable: true
-				},
-				{
-					special: 'ColorPicker' // all special subs are unfixable
-				},
-				{
-					special: 'ColorHistory'
-				},
-				{
-					special: 'TransparencyPicker'
-				}
-				*/
 			]
 		},
 		{
@@ -415,11 +384,17 @@ function init(aArrBufAndCore) {
 				sPalMultiDepresses: this.props.pPalMultiDepresses,
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
-				sPalDragStart: null // is null when not dragging. when dragging it is {screenX:, screenY:}
+				sPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
+				
+				sPalLineColor: this.props.pPalLineColor,
+				sPalLineAlpha: this.props.pPalLineAlpha,
+				sPalFillColor: this.props.pPalFillColor,
+				sPalFillAlpha: this.props.pPalFillAlpha
 			};
 		},
 		componentDidMount: function() {
 			gEditorStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work - last tested in React 0.14.x
+			gColorPickerSetState.NativeShotEditor = this.setState.bind(this);
 			this.setState({
 				sMounted: true
 			});
@@ -1360,6 +1335,10 @@ function init(aArrBufAndCore) {
 			//		sPalTool
 			//		sPalToolSubs
 			//		sPalMultiDepresses
+			//		sPalLineAlpha
+			//		sPalLineColor
+			//		sPalFillAlpha
+			//		sPalFillColor
 			
 			var cProps = {
 				className:'pbutton',
@@ -1386,7 +1365,14 @@ function init(aArrBufAndCore) {
 			
 			var cButtonIcon;
 			if (this.props.pButton.label == 'Color' || this.props.pButton.label == 'Fill Color') {
-				cButtonIcon = React.createElement('div', {className:'pbutton-icon-color'});
+				var rgbaStr;
+				if (this.props.pButton.label == 'Color') {
+					rgbaStr = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
+				} else {
+					rgbaStr = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+				}
+				var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+				cButtonIcon = React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'pbutton-icon-color'});
 			} else {
 				cButtonIcon = this.props.pButton.icon;
 			}
@@ -1397,7 +1383,7 @@ function init(aArrBufAndCore) {
 						this.props.pButton.label
 					)
 				),
-				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub},
+				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor},
 					this.props.pButton.label
 				),
 				cButtonIcon
@@ -1421,6 +1407,10 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props
+			//		sPalLineAlpha
+			//		sPalLineColor
+			//		sPalFillAlpha
+			//		sPalFillColor
 			//		pSubButton
 			//		pButton
 			//		sPalToolSubs
@@ -1435,9 +1425,26 @@ function init(aArrBufAndCore) {
 					var cSpecialProps = {};
 					var cRequestingProps = this.props.pSubButton.props;
 					if (cRequestingProps) {
-						for (var j=0; j<cRequestingProps.length; j++) {
-							var cSpecialPropName = cRequestingProps[j];
-							cSpecialProps[cSpecialPropName] = this.props[cSpecialPropName];
+						if (Array.isArray(cRequestingProps)) {
+							// its an array, so the asName (meaning what it should be sent to the component we are creating as. AND the isName meaning what it is in this this.props is the same) link388391111
+							for (var j=0; j<cRequestingProps.length; j++) {
+								var cSpecialPropName = cRequestingProps[j];
+								cSpecialProps[cSpecialPropName] = this.props[cSpecialPropName];
+							}
+						} else {
+							// its an object, so the key is what to send it as, and the value is what it is in the this.props // link388391111
+							// if value in object starts with $string$ then that actual string is passed
+							for (var p in cRequestingProps) {
+								var cSpecialProp_asName = p;
+								var cSpecialProp_isName = cRequestingProps[p];
+								var cSpecialProp_val;
+								if (cSpecialProp_isName.indexOf('$string') === 0) {
+									cSpecialProp_val = cSpecialProp_isName.substr('$string$'.length);
+								} else {
+									cSpecialProp_val = this.props[cSpecialProp_isName];
+								}
+								cSpecialProps[cSpecialProp_asName] = cSpecialProp_val;
+							}
 						}
 					}
 					return React.createElement(Specials[this.props.pSubButton.special], cSpecialProps);
@@ -1455,14 +1462,40 @@ function init(aArrBufAndCore) {
 	});
 	
 	var ColorPicker = React.createClass({
+		// to use this, must create a global object called `gColorPickerSetState`. key must be same as what you pass to pSetStateName, this is only place it is used.
 		displayName: 'ColorPicker',
 		render: function() {
+			// props
+			//		sColor // must a be a string of either a hex (#fff, fff, #ffffff, ffffff) OR a string that is understood by the function rgbToHex
+			//		sAlpha // must be a percentage so 0 - 100
+			//		pStateColorKey
+			//		pStateAlphaKey
+			//		pSetStateName - a string, it must be the store to use for the pStateColorKey and pStateAlphaKey
+			
+			// only supports rgb mode
+			
+			// convert sColor into object of rgb
+			var sColor = this.props.sColor + '';
+			var rgb;
+			if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
+				rgb = hexToRgb(sColor);
+				console.log('rgb:', rgb);
+			} else {
+				var hexFirst = rgbToHex(false, sColor);
+				console.log('hexFirst:', hexFirst);
+				rgb = hexToRgb(hexFirst);
+				console.log('rgb2:', rgb);
+			}
+			
+			var pRgba = rgb;
+			pRgba.a = parseInt(this.props.sAlpha);
+			
 			return React.createElement('div', {className:'colorpicker'},
 				React.createElement('div', {className:'colorpicker-inner'},
-					React.createElement(ColorPickerChoices),
-					React.createElement(ColorPickerBoard),
-					React.createElement(ColorPickerSliders),
-					React.createElement(ColorPickerCodes)
+					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName}),
+					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
+					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
+					React.createElement(ColorPickerCodes, {pRgba:pRgba})
 				)
 			);
 		}
@@ -1481,43 +1514,56 @@ function init(aArrBufAndCore) {
 	var ColorPickerSliders = React.createClass({
 		displayName: 'ColorPickerSliders',
 		render: function() {
+			// props
+			//		pRgba
+			
+			var rgba = this.props.pRgba;
+			var rgbaStr = 'rgba(' + rgba.r + ', ' + rgba.g + ', ' + rgba.b + ', ' + (rgba.a/100) + ')';
+			var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+			
 			return React.createElement('div', {className:'colorpicker-sliders'},
 				React.createElement('div', {className:'colorpicker-sliders-wrap'},
 					React.createElement('div', {className:'colorpicker-slider-rainbow'}),
 					React.createElement('div', {className:'colorpicker-slider-alpha'})
 				),
-				React.createElement('div', {className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
+				React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
 			);
 		}
 	});
 	var ColorPickerCodes = React.createClass({
 		displayName: 'ColorPickerCodes',
 		render: function() {
+			// props
+			//		pRgba
+			
+			var rgba = this.props.pRgba;
+			var hexColor = rgbToHex(false, rgba.r, rgba.g, rgba.b); // hex color without hash
+			
 			return React.createElement('div', {className:'colorpicker-codes'},
 				React.createElement('div', {className:'colorpicker-codes-hex'},
-					React.createElement('input', {type:'text', maxLength:6}),
+					React.createElement('input', {type:'text', maxLength:6, defaultValue:hexColor, key:hexColor}),
 					'Hex'
 				),
 				React.createElement('div', {className:'colorpicker-codes-r'},
-					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.r, key:rgba.r}),
 					React.createElement('span', {},
 						'R'
 					)
 				),
 				React.createElement('div', {className:'colorpicker-codes-g'},
-					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.g, key:rgba.g}),
 					React.createElement('span', {},
 						'G'
 					)
 				),
 				React.createElement('div', {className:'colorpicker-codes-b'},
-					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.b, key:rgba.b}),
 					React.createElement('span', {},
 						'B'
 					)
 				),
 				React.createElement('div', {className:'colorpicker-codes-a'},
-					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.a, key:rgba.a}),
 					React.createElement('span', {},
 						'A'
 					)
@@ -1527,7 +1573,16 @@ function init(aArrBufAndCore) {
 	});
 	var ColorPickerChoices = React.createClass({
 		displayName: 'ColorPickerChoices',
+		click: function(aColor) {
+			var setStateObj = {};
+			setStateObj[this.props.pStateColorKey] = aColor;
+			
+			gColorPickerSetState[this.props.pSetStateName](setStateObj);
+		},
 		render: function() {
+			//		pSetStateName
+			//		pStateColorKey
+			
 			var historyColors = ['#D0021B', '#F5A623', '#F8E71C'];
 			var defaultColors = ['#B8E986', '#9B9B9B', '#9013FE', '#4A90E2'];
 			
@@ -1535,12 +1590,12 @@ function init(aArrBufAndCore) {
 			var defaultElements = [];
 			
 			historyColors.forEach(function(color) {
-				historyElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}}));
-			});
+				historyElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}, onClick:this.click.bind(this, color)}));
+			}.bind(this));
 
 			defaultColors.forEach(function(color) {
-				defaultElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}}));
-			});
+				defaultElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}, onClick:this.click.bind(this, color)}));
+			}.bind(this));
 			
 			return React.createElement('div', {className:'colorpicker-choices'},
 				React.createElement('div', {className:'colorpicker-choices-wrap'},
@@ -1565,10 +1620,14 @@ function init(aArrBufAndCore) {
 			// 		pSub
 			//		pButton
 			//		sPalToolSubs
+			//		sPalLineAlpha
+			//		sPalLineColor
+			//		sPalFillAlpha
+			//		sPalFillColor
 			
 			var cChildren = [];
 			for (var i=0; i<this.props.pSub.length; i++) {
-				cChildren.push(React.createElement(SubButton, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i]}));
+				cChildren.push(React.createElement(SubButton, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha: this.props.sPalLineAlpha, sPalLineColor: this.props.sPalLineColor, sPalFillAlpha: this.props.sPalFillAlpha, sPalFillColor: this.props.sPalFillColor}));
 			}
 			
 			return React.createElement('div', {className:'psub'},
@@ -1601,7 +1660,7 @@ function init(aArrBufAndCore) {
 						cChildren.push(React.createElement(Specials[pPalLayout[i].special], cSpecialProps));
 					}
 				} else {
-					cChildren.push(React.createElement(Button, {sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool}));
+					cChildren.push(React.createElement(Button, {sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor}));
 				}
 			}
 			
@@ -1659,6 +1718,11 @@ function init(aArrBufAndCore) {
 	}
 	
 	var palMultiDepresses = {}; // if its depressed, then the tool label is the key and the value is true
+
+	var palLineColor = 'rgb(74, 144, 226)'; // :todo: get from prefs
+	var palLineAlpha = 100; // :todo: get from prefs
+	var palFillColor = 'rgb(208, 2, 27)'; // :todo: get from prefs
+	var palFillAlpha = 100; // :todo: get from prefs
 	
 	var Specials = {
 		Divider: Divider,
@@ -1675,6 +1739,11 @@ function init(aArrBufAndCore) {
 				pPalSize: 40, // :todo: get from prefs
 				pPalToolSubs: palToolSubs, // :todo: get from prefs
 				pPalMultiDepresses: palMultiDepresses, // :todo: get from prefs
+				
+				pPalLineColor: palLineColor, 
+				pPalLineAlpha: palLineAlpha,
+				pPalFillColor: palFillColor,
+				pPalFillAlpha: palFillAlpha,
 				
 				pCanHandleSize: 7, // :todo: get from prefs
 				pCanInterval: 30, // ms
@@ -1746,19 +1815,73 @@ function queryStringAsJson(aQueryString) {
 	return JSON.parse(asJsonStringify);
 }
 
-function hexToRgb(aHexStr) {
-	if (aHexStr[0] == '#') {
-		aHexStr = aHexStr.substr(1);
-	}
-	aHexStr = cutHex(aHexStr);
-	return {
-		r: parseInt(aHexStr.substring(0,2),16),
-		g: parseInt(aHexStr.substring(2,4),16),
-		b: parseInt(aHexStr.substring(4,6),16)
-	};
+function hexToRgb(hex) {
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
+
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }
-function cutHex(aHexStr) {
-	return aHexStr.charAt(0) =="#" ? aHexStr.substring(1,7) : aHexStr;
+
+function rgbToHex(withHash, rOrStr, g, b) {
+	var r;
+	if (g === undefined) { // meaning only provided one arg
+		var rgb = /(\d+)\D+(\d+)\D+(\d+)/.exec(rOrStr);
+		if (!rgb) {
+			throw new Error('rgbToHex failed, invalid string of "' + rOrStr + '"');
+		} else {
+			console.log('rgb:', rgb);
+			r = parseInt(rgb[1]);
+			g = parseInt(rgb[2]);
+			b = parseInt(rgb[3]);
+		}
+	} else {
+		r = rOrStr;
+	}
+	
+	var withoutHash = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+	if (withHash) {
+		return '#' + withoutHash;
+	} else {
+		return withoutHash;
+	}
+}
+
+function colorStrToRGBA(aColorStr, aAlpha) {
+	// returns 'rgba(#, #, #, #)'
+	// aAlpha can be 0 to 1 or 0 to 100
+	
+	var sColor = aColorStr;
+	
+	var rgb;
+	if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
+		rgb = hexToRgb(sColor);
+		console.log('rgb:', rgb);
+	} else {
+		var hexFirst = rgbToHex(false, sColor);
+		console.log('hexFirst:', hexFirst);
+		rgb = hexToRgb(hexFirst);
+		console.log('rgb2:', rgb);
+	}
+	
+	var sAlpha;
+	if (aAlpha <= 1) {
+		sAlpha = aAlpha;
+	} else {
+		sAlpha = aAlpha / 100;
+	}
+	
+	var pRgba = rgb;
+	pRgba.a = sAlpha;
+	
+	return 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + pRgba.a + ')';
 }
 
 // rev1 - https://gist.github.com/Noitidart/6c866a4fa964354d4ab8540a96ca4d0f
