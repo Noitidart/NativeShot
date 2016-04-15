@@ -28,7 +28,9 @@ function init(aArrBufAndCore) {
 			sub: undefined, // for non-special, this is the submenu items shown on hover. an array of objects
 			icon: undefined, // for non-special, the icon that
 			special: 'Handle', // this key is for special things that have their own React class
-			props: ['mPalHandleMousedown'] // props needed from the react component
+			props: ['mPalHandleMousedown'], // props needed from the react component
+			multiDepress: false, // meaning if this is clicked, then no other tool should be held. if true, then this can be depressed while others are depressed
+			justClick: false, // if true, then this is just clicked. not depressable
 		},
 		{
 			// Accessibility - from where user increase/decrease size of palette
@@ -48,6 +50,7 @@ function init(aArrBufAndCore) {
 			icon: '\ue80e',
 			hotkey: 'F', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			// alt+F for all monitors
+			justClick: true,
 			sub: [
 				{
 					special: 'Monitors' // allow single monitor selecting or multiple
@@ -61,6 +64,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Last Selection',
 			icon: '\ue82e',
+			justClick: true,
 			sub: [
 				{
 					special: 'SelectionHistory'
@@ -69,6 +73,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Clear Selection',
+			justClick: true,
 			icon: '\ue82f'
 		},
 		{
@@ -77,11 +82,13 @@ function init(aArrBufAndCore) {
 		// misc tools
 		{
 			label: 'Toggle Cursor',
-			icon: '\ue822'
+			icon: '\ue822',
+			multiDepress: true
 		},
 		{
 			label: 'Zoom View',
 			icon: '\ue811',
+			multiDepress: true,
 			sub: [
 				{
 					special: 'ZoomViewLevel'
@@ -166,6 +173,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Color',
 			icon: 'S',
+			justClick: true,
 			sub: [
 				{
 					special: 'ColorPicker'
@@ -192,6 +200,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Line Width',
 			icon: 'S',
+			justClick: true,
 			sub: [
 				{
 					special: 'LineWidthPicker'
@@ -201,6 +210,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Fill Color',
 			icon: 'S',
+			justClick: true,
 			sub: [
 				{
 					special: 'ColorPicker'
@@ -225,13 +235,16 @@ function init(aArrBufAndCore) {
 			]
 		},
 		{
-			special: 'Width'
+			special: 'Width',
+			justClick: true
 		},
 		{
-			special: 'Height'
+			special: 'Height',
+			justClick: true
 		},
 		{
-			special: 'TextTools'
+			special: 'TextTools',
+			justClick: true
 		},
 		{
 			special: 'Divider'
@@ -240,6 +253,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Save',
 			icon: '\ue804',
+			justClick: true,
 			sub: [
 				{
 					label: 'Quick',
@@ -253,14 +267,17 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Print',
+			justClick: true,
 			icon: '\ue805'
 		},
 		{
 			label: 'Copy',
+			justClick: true,
 			icon: '\ue80d'
 		},
 		{
 			label: 'Upload to Cloud',
+			justClick: true,
 			icon: '\ue833',
 			sub: [
 				{
@@ -283,6 +300,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Share to Social Media',
+			justClick: true,
 			icon: 'S',
 			sub: [
 				{
@@ -297,6 +315,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Similar Image Search',
+			justClick: true,
 			icon: '\ue821',
 			sub: [
 				{
@@ -315,6 +334,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Text Recognition',
+			justClick: true,
 			icon: 'S',
 			sub: [
 				{
@@ -336,6 +356,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Undo',
+			justClick: true,
 			icon: '\ue80b',
 			sub: [
 				{
@@ -350,6 +371,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Redo',
+			justClick: true,
 			icon: '\ue80a',
 			sub: [
 				{
@@ -367,6 +389,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Close',
+			justClick: true,
 			icon: '\ue82f',
 			hotkey: 'Esc'
 		}
@@ -388,6 +411,7 @@ function init(aArrBufAndCore) {
 				sPalSize: this.props.pPalSize,
 				sPalTool: 'Select', // the label of the currently active tool
 				sPalToolSubs: this.props.pPalToolSubs, // object holding the active sub for each tool label. so key is tool label. value is label of selected sab
+				sPalMultiDepresses: this.props.pPalMultiDepresses,
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
 				sPalDragStart: null // is null when not dragging. when dragging it is {screenX:, screenY:}
@@ -1006,8 +1030,9 @@ function init(aArrBufAndCore) {
 								case 'Select':
 								case 'Shapes':
 										if (this.cstate.selection) {
-											this.cstate.valid = this.cstate.selection.delete();
+											var rez_valid = this.cstate.selection.delete();
 											this.cstate.selection = null;
+											this.cstate.valid = rez_valid;
 										}
 									break;
 								default:
@@ -1269,7 +1294,6 @@ function init(aArrBufAndCore) {
 				case 'Close':
 						
 						window.close();
-						return;
 						
 					break;
 				case 'Select':
@@ -1297,28 +1321,44 @@ function init(aArrBufAndCore) {
 						// gCanState.valid = valid;
 						gCState.valid = gCState.rconn.deleteAll(['cutout']);
 						
-						return;
-						
 					break;
 				case 'Shapes':
+				
 						if (gCState.selection) {
 							gCState.selection = null;
 							gCState.valid = false;
 						}
+					
 					break;
 				default:
 					// do nothing
 			}
 			
-			gEditorStore.setState({
-				sPalTool: this.props.pButton.label
-			});
+			if (this.props.pButton.multiDepress) {
+				var sPalMultiDepresses = cloneObject(this.props.sPalMultiDepresses);
+				if (sPalMultiDepresses[this.props.pButton.label]) {
+					delete sPalMultiDepresses[this.props.pButton.label];
+				} else {
+					sPalMultiDepresses[this.props.pButton.label] = true;
+				}
+				gEditorStore.setState({
+					sPalMultiDepresses: sPalMultiDepresses
+				});
+			} else if (this.props.pButton.justClick) {
+				
+			} else {
+				// depress it and undepress other non-multiDepress
+				gEditorStore.setState({
+					sPalTool: this.props.pButton.label
+				});
+			}
 		},
 		render: function() {
 			// props
 			//		pButton
 			//		sPalTool
 			//		sPalToolSubs
+			//		sPalMultiDepresses
 			
 			var cProps = {
 				className:'pbutton',
@@ -1331,9 +1371,18 @@ function init(aArrBufAndCore) {
 					}
 				}
 			}
-			if (this.props.sPalTool == this.props.pButton.label) {
-				cProps.className += ' pbutton-pressed';
+			if (this.props.pButton.multiDepress) {
+				if (this.props.sPalMultiDepresses[this.props.pButton.label]) {
+					cProps.className += ' pbutton-pressed';
+				}
+			} else if (this.props.pButton.justClick) {
+				
+			} else {
+				if (this.props.sPalTool == this.props.pButton.label) {
+					cProps.className += ' pbutton-pressed';
+				}
 			}
+			
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
 					React.createElement('span', {},
@@ -1373,6 +1422,7 @@ function init(aArrBufAndCore) {
 				onClick: this.click
 			};
 			
+
 			if (!this.props.pSubButton.special && this.props.sPalToolSubs[this.props.pButton.label] == this.props.pSubButton.label) {
 				cProps.className += ' pbutton-pressed';
 			}
@@ -1381,7 +1431,16 @@ function init(aArrBufAndCore) {
 				this.props.pSubButton.icon
 			);
 		}
-	})
+	});
+	
+	var ColorPicker = React.createClass({
+		displayName: 'ColorPicker',
+		render: function() {
+			return React.createElement('div', {className:'colorpicker'},
+				'color'
+			);
+		}
+	});
 	
 	var Submenu = React.createClass({
 		displayName: 'Submenu',
@@ -1402,11 +1461,6 @@ function init(aArrBufAndCore) {
 		}
 	});
 	
-	var Specials = {
-		Divider: Divider,
-		Accessibility: Accessibility,
-		Handle: Handle
-	};
 	var Subwrap = React.createClass({
 		displayName: 'Subwrap',
 		render: function() {
@@ -1431,7 +1485,7 @@ function init(aArrBufAndCore) {
 						cChildren.push(React.createElement(Specials[pPalLayout[i].special], cSpecialProps));
 					}
 				} else {
-					cChildren.push(React.createElement(Button, {sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool}));
+					cChildren.push(React.createElement(Button, {sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool}));
 				}
 			}
 			
@@ -1488,6 +1542,15 @@ function init(aArrBufAndCore) {
 		}
 	}
 	
+	var palMultiDepresses = {}; // if its depressed, then the tool label is the key and the value is true
+	
+	var Specials = {
+		Divider: Divider,
+		Accessibility: Accessibility,
+		Handle: Handle,
+		ColorPicker: ColorPicker
+	};
+	
 	var initReact = function() {
 		ReactDOM.render(
 			React.createElement(Editor, {
@@ -1495,6 +1558,7 @@ function init(aArrBufAndCore) {
 				pPalLayout: palLayout,
 				pPalSize: 40, // :todo: get from prefs
 				pPalToolSubs: palToolSubs, // :todo: get from prefs
+				pPalMultiDepresses: palMultiDepresses, // :todo: get from prefs
 				
 				pCanHandleSize: 7, // :todo: get from prefs
 				pCanInterval: 30, // ms
