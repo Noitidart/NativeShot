@@ -398,6 +398,16 @@ body {
 /* GROUP:colorpicker */
 
 /* start - other_stuff */
+.pbutton-icon-color {
+	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-repeat: no-repeat, repeat;
+	background-position: right, top left;
+	width: 1em;
+	height: 1em;
+	box-shadow: 2px 2px 3px rgba(0,0,0,0.2), 0 0 2px #808080 inset;
+	border: 0.07em solid rgba(78, 77, 75, 0.9);
+	border-radius: 2px;
+}
 @font-face {
 	font-family: 'fontello';
 	src: url('chrome://nativeshot/content/resources/styles/fonts/font/fontello.woff') format('woff');

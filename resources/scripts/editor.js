@@ -1384,6 +1384,13 @@ function init(aArrBufAndCore) {
 				}
 			}
 			
+			var cButtonIcon;
+			if (this.props.pButton.label == 'Color' || this.props.pButton.label == 'Fill Color') {
+				cButtonIcon = React.createElement('div', {className:'pbutton-icon-color'});
+			} else {
+				cButtonIcon = this.props.pButton.icon;
+			}
+			
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
 					React.createElement('span', {},
@@ -1393,7 +1400,7 @@ function init(aArrBufAndCore) {
 				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub},
 					this.props.pButton.label
 				),
-				this.props.pButton.icon
+				cButtonIcon
 			);
 		}
 	});
