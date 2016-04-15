@@ -1451,7 +1451,102 @@ function init(aArrBufAndCore) {
 		displayName: 'ColorPicker',
 		render: function() {
 			return React.createElement('div', {className:'colorpicker'},
-				'color'
+				React.createElement('div', {className:'colorpicker-inner'},
+					React.createElement(ColorPickerBoard),
+					React.createElement(ColorPickerSliders),
+					React.createElement(ColorPickerCodes),
+					React.createElement(ColorPickerChoices)
+				)
+			);
+		}
+	});
+	
+	var ColorPickerBoard = React.createClass({
+		displayName: 'ColorPickerBoard',
+		render: function() {
+			return React.createElement('div', {className:'colorpicker-board'},
+				React.createElement('div', {className:'colorpicker-board-color'}),
+				React.createElement('div', {className:'colorpicker-board-white'}),
+				React.createElement('div', {className:'colorpicker-board-black'})
+			);
+		}
+	});
+	var ColorPickerSliders = React.createClass({
+		displayName: 'ColorPickerSliders',
+		render: function() {
+			return React.createElement('div', {className:'colorpicker-sliders'},
+				React.createElement('div', {className:'colorpicker-sliders-wrap'},
+					React.createElement('div', {className:'colorpicker-slider-rainbow'}),
+					React.createElement('div', {className:'colorpicker-slider-alpha'})
+				),
+				React.createElement('div', {className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
+			);
+		}
+	});
+	var ColorPickerCodes = React.createClass({
+		displayName: 'ColorPickerCodes',
+		render: function() {
+			return React.createElement('div', {className:'colorpicker-codes'},
+				React.createElement('div', {className:'colorpicker-codes-hex'},
+					React.createElement('input', {type:'text', maxLength:6}),
+					'Hex'
+				),
+				React.createElement('div', {className:'colorpicker-codes-r'},
+					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('span', {},
+						'R'
+					)
+				),
+				React.createElement('div', {className:'colorpicker-codes-g'},
+					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('span', {},
+						'G'
+					)
+				),
+				React.createElement('div', {className:'colorpicker-codes-b'},
+					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('span', {},
+						'B'
+					)
+				),
+				React.createElement('div', {className:'colorpicker-codes-a'},
+					React.createElement('input', {type:'text', maxLength:3}),
+					React.createElement('span', {},
+						'A'
+					)
+				)
+			);
+		}
+	});
+	var ColorPickerChoices = React.createClass({
+		displayName: 'ColorPickerChoices',
+		render: function() {
+			var historyColors = ['#D0021B', '#F5A623', '#F8E71C'];
+			var defaultColors = ['#B8E986', '#9B9B9B', '#9013FE', '#4A90E2'];
+			
+			var historyElements = [];
+			var defaultElements = [];
+			
+			historyColors.forEach(function(color) {
+				historyElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}}));
+			});
+
+			defaultColors.forEach(function(color) {
+				defaultElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}}));
+			});
+			
+			return React.createElement('div', {className:'colorpicker-choices'},
+				React.createElement('div', {className:'colorpicker-choices-wrap'},
+					React.createElement('div', {className:'colorpicker-choices-history'},
+						historyElements
+					),
+					React.createElement('div', {className:'colorpicker-choices-default'},
+						defaultElements
+					)
+				),
+				React.createElement('div', {className:'colorpicker-choices-wrap colorpicker-choices-dropper'},
+					'\ue82a'
+				)
 			);
 		}
 	});
