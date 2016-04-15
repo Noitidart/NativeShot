@@ -199,18 +199,17 @@ body {
 }
 /* start:pbutton_hover */
 .pbutton:hover .psub {
-	top: calc(100% + 0.1em);
+	top: calc(100% + 5px);
 	opacity: 1;
 }
-.pbutton::before {
-	content: ' ';
+.pbutton::before { /* purpose of this is so when users mouses over the gap between the pbutton and the psub, it doesnt cause hover off, causing close */
+	content: '';
 	display: block;
-	height: 0.1em;
+	height: 5px;
 	background-color: transparent;
-	z-index: 0;
 	position: absolute;
 	width: 100%;
-	bottom: -0.1em;
+	bottom: -5px;
 }
 /* end - psub */
 
