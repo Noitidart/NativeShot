@@ -1452,10 +1452,10 @@ function init(aArrBufAndCore) {
 		render: function() {
 			return React.createElement('div', {className:'colorpicker'},
 				React.createElement('div', {className:'colorpicker-inner'},
+					React.createElement(ColorPickerChoices),
 					React.createElement(ColorPickerBoard),
 					React.createElement(ColorPickerSliders),
-					React.createElement(ColorPickerCodes),
-					React.createElement(ColorPickerChoices)
+					React.createElement(ColorPickerCodes)
 				)
 			);
 		}
