@@ -1323,13 +1323,15 @@ function init(aArrBufAndCore) {
 		click: function(e) {
 			e.stopPropagation(); // so it doesnt trigger the setState due to click on the pbutton
 			
-			var sPalToolSubs = cloneObject(this.props.sPalToolSubs);
-			sPalToolSubs[this.props.pButton.label] = this.props.pSubButton.label;
+			if (!this.props.pSubButton.unfixable) {
+				var sPalToolSubs = cloneObject(this.props.sPalToolSubs);
+				sPalToolSubs[this.props.pButton.label] = this.props.pSubButton.label;
 			
-			gEditorStore.setState({
-				sPalTool: this.props.pButton.label,
-				sPalToolSubs: sPalToolSubs
-			});
+				gEditorStore.setState({
+					sPalTool: this.props.pButton.label,
+					sPalToolSubs: sPalToolSubs
+				});
+			}
 		},
 		render: function() {
 			// props
@@ -1342,7 +1344,7 @@ function init(aArrBufAndCore) {
 				onClick: this.click
 			};
 			
-			if (this.props.sPalToolSubs[this.props.pButton.label] == this.props.pSubButton.label) {
+			if (!this.props.pSubButton.special && this.props.sPalToolSubs[this.props.pButton.label] == this.props.pSubButton.label) {
 				cProps.className += ' pbutton-pressed';
 			}
 			
