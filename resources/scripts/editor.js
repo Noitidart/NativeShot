@@ -1341,6 +1341,11 @@ function init(aArrBufAndCore) {
 				className:'pbutton',
 				onClick: this.click
 			};
+			
+			if (this.props.sPalToolSubs[this.props.pButton.label] == this.props.pSubButton.label) {
+				cProps.className += ' pbutton-pressed';
+			}
+			
 			return React.createElement('div', cProps,
 				this.props.pSubButton.icon
 			);
