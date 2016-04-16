@@ -407,6 +407,7 @@ function init(aArrBufAndCore) {
 		////// start - canvas functions
 		Drawable: function(x, y, w, h, name, aOptions={}) {
 
+			// set dimensions
 			switch (name) {
 				case 'dim':
 					
@@ -415,6 +416,14 @@ function init(aArrBufAndCore) {
 						this.w = gQS.w;
 						this.h = gQS.h;
 					
+					break;
+				case 'Line':
+				
+						this.x = x;
+						this.y = y;
+						this.x2 = 'x2' in aOptions ? aOptions.x2 : x;
+						this.y2 = 'y2' in aOptions ? aOptions.y2 : y;
+				
 					break;
 				default:
 					this.x = x;
@@ -430,30 +439,42 @@ function init(aArrBufAndCore) {
 				case 'Rectangle':
 				case 'Oval':
 					
-						console.error('gCState:', gCState);
+						// console.error('gCState:', gCState);
 						this.Style = {
 							Draw: {
 								me: {
 									fillStyle: aOptions.fillStyle || colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha), //gCState.Style.Draw.fill.fillStyle,
 									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha), // gCState.Style.Draw.line.strokeStyle,
 									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
-									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
+									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth
 								}
 							}
 						}
 					
 					break;
+				case 'Line':
+				
+						this.Style = {
+							Draw: {
+								me: {
+									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha),
+									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
+									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
+									lineJoin: aOptions.lineJoin || gCState.Style.Draw.line.lineJoin
+								}
+							}
+						}
+						
+					break;
 				default:
-					this.x = x;
-					this.y = y;
-					this.w = w;
-					this.h = h;
+					// nothing special
 			}
 			
 			this.draw = function(ctx) {
 				// returns the valid value
 				
-				if (this.name != 'dim' && !this.w && !this.h) {
+				if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
+					console.error('no width or height so not drawing');
 					return true;
 				}
 				
@@ -467,6 +488,7 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Rectangle':
 					case 'Oval':
+					case 'Line':
 					
 							curStyle = this.Style.Draw.me;
 					
@@ -480,6 +502,7 @@ function init(aArrBufAndCore) {
 				gCState.rconn.applyCtxStyle(curStyle);				
 				
 				// draw it
+				console.error('in draw part for this.name:', this.name);
 				switch (this.name) {
 					case 'dim':
 
@@ -573,6 +596,15 @@ function init(aArrBufAndCore) {
 							ctx.stroke();
 						
 						break;
+					case 'Line':
+						
+							console.error('doing draw line');
+							ctx.beginPath();
+							ctx.moveTo(this.x, this.y);
+							ctx.lineTo(this.x2, this.y2);
+							ctx.stroke();
+						
+						break;
 					default:
 						// should never get here, as would have returned earlier, as this one is not drawable
 				}
@@ -583,7 +615,8 @@ function init(aArrBufAndCore) {
 			this.select = function(ctx) {
 				// returns the valid value
 				
-				if (this.name != 'dim' && !this.w && !this.h) {
+				if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
+					console.error('not selecitng as no width or height');
 					return true;
 				}
 				
@@ -599,6 +632,11 @@ function init(aArrBufAndCore) {
 					case 'Oval':
 					
 							curStyle = gCState.Style.Select.shape;
+					
+						break;
+					case 'Line':
+					
+							curStyle = gCState.Style.Select.line;
 					
 						break;
 					default:
@@ -624,7 +662,7 @@ function init(aArrBufAndCore) {
 									var cutoutClone = gCState.rconn.makeDimsPositive(cutouts[i], true);
 									var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
 									if (!i) {
-										cutoutsUnionRect = unionRect
+										cutoutsUnionRect = unionRect;
 									} else {
 										cutoutsUnionRect.union(unionRect);
 									}
@@ -647,6 +685,20 @@ function init(aArrBufAndCore) {
 							ctx.strokeRect(this.x, this.y, this.w, this.h);
 						
 						break;
+					case 'Line':
+						
+							var centerx = this.x + (gCState.rconn.state.sCanHandleSize / 2);
+							var centery = this.y + (gCState.rconn.state.sCanHandleSize / 2);
+							var centerx2 = this.x2 + (gCState.rconn.state.sCanHandleSize / 2);
+							var centery2 = this.y2 + (gCState.rconn.state.sCanHandleSize / 2);
+						
+							ctx.arc(centerx, centery, gCState.rconn.state.sCanHandleSize, 0, 360);
+							ctx.arc(centerx2, centery2, gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							ctx.fill();
+							ctx.stroke();
+						
+						break;
 					default:
 						// should never get here, as would have returned earlier, as this one is not drawable
 				}
@@ -660,6 +712,22 @@ function init(aArrBufAndCore) {
 						
 							return false; // i think i dont need this
 						
+						break;
+					case 'Line':
+					
+							var ctx = gCState.rconn.ctx;
+							var lines = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'Line' });
+							var l = lines.length;
+							for (var i=0; i<l; i++) {
+								ctx.beginPath();
+								ctx.lineWidth = this.Style.Draw.me.lineWidth;
+								ctx.moveTo(this.x, this.y);
+								ctx.lineTo(this.x2, this.y2);
+								if (ctx.isPointInStroke(mx, my)) {
+									return true;
+								}
+							}
+					
 						break;
 					default:
 						// All we have to do is make sure the Mouse X,Y fall in the area between
@@ -815,14 +883,30 @@ function init(aArrBufAndCore) {
 				var l = drawables.length;
 				for(var i = 0; i < l; i++) {
 					var drawable = drawables[i];
+					// console.error('drawable', i, drawable);
 					if (drawable.name == 'cutout') {
 						// this is drawn as negative space with `this.dim.draw()`
 						continue;
 					}
 					
 					// We can skip the drawing of elements that have moved off the screen:
-					if(drawable.x > this.cstate.width || drawable.y > this.cstate.height ||
-						drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0) continue;
+					/*
+					switch (drawable.name) {
+						case 'Rectangle':
+						case 'Oval':
+								if (
+									drawable.x > this.cstate.width || drawable.y > this.cstate.height || // test top left coord // this is why we need positive coords
+									drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0
+								   ) {
+									console.error('not drawing this drawable:', drawable);
+									continue;
+								}
+							break;
+						default:
+							// do nothing
+					}
+					*/
+					
 					drawable.draw(ctx);
 				}
 				console.log('done drawing drawable');
@@ -868,6 +952,10 @@ function init(aArrBufAndCore) {
 					} else {
 						this.cstate.selection.h = my - this.cstate.downy;
 					}
+					this.cstate.valid = false;
+				} else if (this.cstate.lining) {
+					this.cstate.selection.x2 = mx;
+					this.cstate.selection.y2 = my;
 					this.cstate.valid = false;
 				} else {
 					// just moving, see if mouse is over a resize point, or a drag point
@@ -942,6 +1030,11 @@ function init(aArrBufAndCore) {
 							selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
 						
 						break;
+					case 'Line-':
+						
+							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
+						
+						break;
 					default:
 						// do nothing
 				}
@@ -995,13 +1088,33 @@ function init(aArrBufAndCore) {
 								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSubs[this.state.sPalTool]);
 							
 							break;
+						case 'Line-':
+						
+								this.cstate.selection = new this.Drawable(mx, my, null, null, 'Line');
+						
+							break;
 						default:
 							// do nothing
 					}
 					
 					if (this.cstate.selection) {
 						this.cstate.selection.add();
-						this.cstate.resizing = true;
+						switch (this.cstate.selection.name) {
+							case 'cutout':
+							case 'Rectangle':
+							case 'Oval':
+								
+									this.cstate.resizing = true;
+								
+								break;
+							case 'Line':
+								
+									this.cstate.lining = true;
+								
+								break;
+							default:
+								console.error('should never get here, well unless maybe i dont know think about it, this.cstate.selection.name:', this.cstate.selection.name);
+						}
 						return;
 					}
 				}
@@ -1031,6 +1144,8 @@ function init(aArrBufAndCore) {
 						} else {
 							this.makeDimsPositive(this.cstate.selection); // no need to set valid=false
 						}
+					} else if (this.cstate.lining) {
+						this.cstate.lining = false;
 					}
 				// }
 			}
@@ -1112,6 +1227,7 @@ function init(aArrBufAndCore) {
 				
 				this.cstate.dragging = false; // Keep track of when we are dragging
 				this.cstate.resizing = false; // when mouses down with a tool that can draw
+				this.cstate.lining = false; // when picking new end points for a line
 				this.cstate.selection = null;
 				
 				this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
@@ -1125,9 +1241,10 @@ function init(aArrBufAndCore) {
 				this.cstate.Style = {
 					Draw: {
 						line: {
-							lineWidth: mtmm.w(0),
+							lineWidth: mtmm.w(5),
 							setLineDash: [],
 							strokeStyle: 'rgba(255, 0, 0, 1)',
+							lineJoin: 'round'
 						},
 						fill: {
 							fillStyle: 'rgba(100, 149, 237, 1)'
@@ -1138,14 +1255,20 @@ function init(aArrBufAndCore) {
 					},
 					Select: {
 						cutout: {
-							lineWidth: mtmm.w(1),
+							lineWidth: mtmm.w(3),
 							setLineDash: [0, mtmm.w(3), 0],
-							strokeStyle: 'rgba(0, 0, 255, 1)'
+							strokeStyle: 'black'
 						},
 						shape: {
 							lineWidth: mtmm.w(3),
 							setLineDash: [0, mtmm.w(3), 0],
 							strokeStyle: 'springgreen'
+						},
+						line: {
+							strokeStyle: 'red',
+							setLineDash: [0, mtmm.w(3), 0],
+							lineWidth: mtmm.w(3),
+							fillStyle: 'rgba(100, 100, 100, 0.8)'
 						}
 					}
 				};
@@ -1154,6 +1277,9 @@ function init(aArrBufAndCore) {
 				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
 				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
 				// (new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+				
+				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(500), null, null, 'Line', {x2:100, y2:100})).add();
+				
 				this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
 				
 				window.addEventListener('mousemove', this.mousemove, false);
@@ -1519,12 +1645,12 @@ function init(aArrBufAndCore) {
 			var rgb;
 			if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
 				rgb = hexToRgb(sColor);
-				console.log('rgb:', rgb);
+				// console.log('rgb:', rgb);
 			} else {
 				var hexFirst = rgbToHex(false, sColor);
-				console.log('hexFirst:', hexFirst);
+				// console.log('hexFirst:', hexFirst);
 				rgb = hexToRgb(hexFirst);
-				console.log('rgb2:', rgb);
+				// console.log('rgb2:', rgb);
 			}
 			
 			var pRgba = rgb;
@@ -1877,7 +2003,7 @@ function rgbToHex(withHash, rOrStr, g, b) {
 		if (!rgb) {
 			throw new Error('rgbToHex failed, invalid string of "' + rOrStr + '"');
 		} else {
-			console.log('rgb:', rgb);
+			// console.log('rgb:', rgb);
 			r = parseInt(rgb[1]);
 			g = parseInt(rgb[2]);
 			b = parseInt(rgb[3]);
@@ -1903,12 +2029,12 @@ function colorStrToRGBA(aColorStr, aAlpha) {
 	var rgb;
 	if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
 		rgb = hexToRgb(sColor);
-		console.log('rgb:', rgb);
+		// console.log('rgb:', rgb);
 	} else {
 		var hexFirst = rgbToHex(false, sColor);
-		console.log('hexFirst:', hexFirst);
+		// console.log('hexFirst:', hexFirst);
 		rgb = hexToRgb(hexFirst);
-		console.log('rgb2:', rgb);
+		// console.log('rgb2:', rgb);
 	}
 	
 	var sAlpha;
