@@ -399,6 +399,71 @@ function init(aArrBufAndCore) {
 				sMounted: true
 			});
 		},
+		componentDidUpdate: function(prevProps, prevState) {
+			if (this.cstate && this.cstate.valid) {
+				var canValid = true;
+				
+				if (this.cstate.selection) {
+					// if changed stuff affects canvas
+					// color is now set by the color widgets. arrow by arrow widget etc.
+					var affectsStateVars = {
+						handle: ['sCanHandleSize'],
+						// fillcolor: ['sPalFillColor', 'sPalFillAlpha'],
+						// linecolor: ['sPalLineColor', 'sPalLineAlpha'],
+						// linewidth: [],
+						// linestyle: [],
+						// arrows: []
+					};
+					var affects = {
+						handle: true,
+						// fillcolor: false,
+						// linecolor: false,
+						// linewidth: false,
+						// linestyle: false,
+						// arrows: false
+					};
+					// switch (this.cstate.selection.name) {
+					// 	case 'Rectangle':
+					// 	case 'Oval':
+					// 			
+					// 			affects.fillcolor = true;
+					// 			affects.linecolor = true;
+					// 			affects.linewidth = true;
+					// 			affects.linestyle = true;
+					// 			
+					// 		break;
+					// 	case 'Line':
+					// 			
+					// 			affects.fillcolor = true;
+					// 			affects.linecolor = true;
+					// 			affects.linewidth = true;
+					// 			affects.linestyle = true;
+					// 			affects.arrows = true;
+					// 			
+					// 		break;
+					// 	default:
+					// 		// none
+					// }
+					
+					affectsFor:
+					for (var p in affects) {
+						if (affects[p]) {
+							var cStateVars = affectsStateVars[p];
+							var l = cStateVars.length;
+							for (var i=0; i<l; i++) {
+								var cVarName = cStateVars[i];
+								if (prevState[cVarName] != this.state[cVarName]) {
+									canValid = false;
+									break affectsFor;
+								}
+							}
+						}
+					}
+				}
+				
+				this.cstate.valid = canValid;
+			}
+		},
 		mPalHandleMousedown: function(e) {
 			gEditorStore.setState({
 				sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.state.sPalX, sPalY:this.state.sPalY}
@@ -1428,7 +1493,7 @@ function init(aArrBufAndCore) {
 			if (cPaletteSize + 8 <= 56) {
 				nPaletteSize = cPaletteSize + 8;
 			}
-			if (cHandleSize + 3 < 40) {
+			if (cHandleSize + 3 <= 25) {
 				nHandleSize = cHandleSize + 3;
 			}
 			gEditorStore.setState({
@@ -1446,7 +1511,7 @@ function init(aArrBufAndCore) {
 			if (cPaletteSize - 8 > 0) {
 				nPaletteSize = cPaletteSize - 8;
 			}
-			if (cHandleSize - 3 > 0) {
+			if (cHandleSize - 3 > 7) {
 				nHandleSize = cHandleSize - 3;
 			}
 			gEditorStore.setState({
@@ -1496,6 +1561,41 @@ function init(aArrBufAndCore) {
 		displayName: 'Button',
 		click: function() {
 			switch (this.props.pButton.label) {
+				case 'Color':
+					
+						if (gCState && gCState.selection) {
+							switch (gCState.selection.name) {
+								case 'Rectangle':
+								case 'Oval':
+								case 'Line':
+									
+										gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
+										gCState.valid = false;
+									
+									break;
+								default:
+									// this selection is not affected
+							}
+						}
+					
+					break;
+				case 'Fill Color':
+					
+						if (gCState && gCState.selection) {
+							switch (gCState.selection.name) {
+								case 'Rectangle':
+								case 'Oval':
+									
+										gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+										gCState.valid = false;
+									
+									break;
+								default:
+									// this selection is not affected
+							}
+						}
+					
+					break;
 				case 'Close':
 						
 						window.close();
@@ -1694,6 +1794,42 @@ function init(aArrBufAndCore) {
 	var ColorPicker = React.createClass({
 		// to use this, must create a global object called `gColorPickerSetState`. key must be same as what you pass to pSetStateName, this is only place it is used.
 		displayName: 'ColorPicker',
+		componentDidUpdate: function(prevProps, prevState) {
+			// start - very specific to nativeshot
+			if (gCState && gCState.selection) {
+				if (prevProps.sColor != this.props.sColor || prevProps.sAlpha != this.props.sAlpha) {
+					if (this.props.pStateColorKey == 'sPalFillColor') {
+						// if currently selection object obeys fillcolor, then apply this new fillcolor
+						switch (gCState.selection.name) {
+							case 'Rectangle':
+							case 'Oval':
+								
+									gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.valid = false;
+								
+								break;
+							default:
+								// this selection is not affected
+						}
+					} else if (this.props.pStateColorKey == 'sPalLineColor') {
+						// if currently selection object obeys linecolor, then apply this new linecolor
+						switch (gCState.selection.name) {
+							case 'Rectangle':
+							case 'Oval':
+							case 'Line':
+								
+									gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.valid = false;
+								
+								break;
+							default:
+								// this selection is not affected
+						}
+					}
+				}
+			}
+			// end - very specific to nativeshot
+		},
 		render: function() {
 			// props
 			//		sColor // must a be a string of either a hex (#fff, fff, #ffffff, ffffff) OR a string that is understood by the function rgbToHex
@@ -1975,7 +2111,7 @@ function init(aArrBufAndCore) {
 				pPalFillColor: palFillColor,
 				pPalFillAlpha: palFillAlpha,
 				
-				pCanHandleSize: 7, // :todo: get from prefs
+				pCanHandleSize: 19, // :todo: get from prefs
 				pCanInterval: 30, // ms
 				
 				pScreenshotArrBuf: aArrBufAndCore.screenshotArrBuf, // i hold it, as i plan to transfer it back to ChromeWorker in future
