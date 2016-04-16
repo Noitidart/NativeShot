@@ -687,8 +687,12 @@ function init(aArrBufAndCore) {
 					case 'Line':
 
 							ctx.beginPath();
-							console.error('gCState.rconn.state.sCanHandleSize:', gCState.rconn.state.sCanHandleSize);
 							ctx.arc(this.x, this.y, gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							ctx.fill();
+							ctx.stroke();
+							
+							ctx.beginPath();
 							ctx.arc(this.x2, this.y2, gCState.rconn.state.sCanHandleSize, 0, 360);
 							
 							ctx.fill();
@@ -716,6 +720,7 @@ function init(aArrBufAndCore) {
 							var l = lines.length;
 							for (var i=0; i<l; i++) {
 								ctx.beginPath();
+								ctx.setLineDash([]);
 								ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
 								ctx.moveTo(this.x, this.y);
 								ctx.lineTo(this.x2, this.y2);
@@ -1323,10 +1328,10 @@ function init(aArrBufAndCore) {
 							strokeStyle: 'springgreen'
 						},
 						line: {
-							strokeStyle: 'red',
-							setLineDash: [0, mtmm.w(3), 0],
-							lineWidth: mtmm.w(3),
-							fillStyle: 'rgba(100, 100, 100, 0.8)'
+							strokeStyle: 'white',
+							setLineDash: [],
+							lineWidth: mtmm.w(1),
+							fillStyle: 'rgba(100, 100, 100, 1)'
 						}
 					}
 				};
