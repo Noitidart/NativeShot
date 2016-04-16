@@ -719,7 +719,7 @@ function init(aArrBufAndCore) {
 								ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
 								ctx.moveTo(this.x, this.y);
 								ctx.lineTo(this.x2, this.y2);
-								return (ctx.isPointInStroke(mx, my) || ctx.isPointInPath(mx, my));
+								return ctx.isPointInStroke(mx, my);
 							}
 					
 						break;
