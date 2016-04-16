@@ -44,7 +44,14 @@ function init(aArrBufAndCore) {
 		// selection tools
 		{
 			label: 'Select',
-			icon: '\ue82c' // the fontello font code
+			icon: '\ue82c', // the fontello font code
+			sub: [
+				{
+					label: 'Last Selection',
+					icon: '\ue82e',
+					unfixable: true
+				}
+			]
 		},
 		{
 			label: 'Fullscreen', // by default it selects the current monitor
@@ -62,16 +69,16 @@ function init(aArrBufAndCore) {
 			label: 'Window Wand',
 			icon: '\ue826'
 		},
-		{
-			label: 'Last Selection',
-			icon: '\ue82e',
-			justClick: true,
-			sub: [
-				{
-					special: 'SelectionHistory'
-				}
-			]
-		},
+		// {
+			// label: 'Last Selection',
+			// icon: '\ue82e',
+			// justClick: true,
+			// sub: [
+				// {
+					// special: 'SelectionHistory'
+				// }
+			// ]
+		// },
 		{
 			label: 'Clear Selection',
 			justClick: true,
@@ -136,22 +143,11 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Line',
 			icon: '\ue831',
-			options: ['Arrow']
+			options: ['ArrowTools']
 		},
 		{
-			label: 'Text',
-			icon: 'S',
-			sub: [
-				{
-					label: 'Free',
-					icon: 'S'
-				},
-				{
-					label: 'Container',
-					icon: 'S',
-					options: ['Word Break / Ellipsis']
-				}
-			]
+			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
+			icon: 'S'
 		},
 		{
 			label: 'Blur',
@@ -194,6 +190,11 @@ function init(aArrBufAndCore) {
 			]
 		},
 		{
+			special: 'ArrowTools',
+			icon: 'S',
+			justClick: true
+		},
+		{
 			label: 'Fill Color',
 			icon: 'S',
 			justClick: true,
@@ -205,11 +206,7 @@ function init(aArrBufAndCore) {
 			]
 		},
 		{
-			special: 'Width',
-			justClick: true
-		},
-		{
-			special: 'Height',
+			special: 'DimensionTools',
 			justClick: true
 		},
 		{
@@ -1791,6 +1788,121 @@ function init(aArrBufAndCore) {
 		}
 	});
 	
+	var DimensionTools = React.createClass({
+		displayName: 'DimensionTools',
+		render: function() {
+			// props
+			//		sPalWidth
+			//		sPalHeight
+			
+			return React.createElement('div', {className:'pdimensions'},
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'drawable_width'},
+						'Width'
+					),
+					React.createElement('input', {id:'drawable_width', type:'text'})
+				),
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'drawable_height'},
+						'Height'
+					),
+					React.createElement('input', {id:'drawable_height', type:'text'})
+				)
+			)
+		}
+	});
+	
+	var TextTools = React.createClass({
+		displayName: 'TextTools',
+		render: function() {
+			// props
+			//		sPalFontFamily
+			//		sPalFontSize
+			//		sPalFontBold
+			//		sPalFontItalic
+			//		sPalFontUnderline
+			//		sPalFontWrap - word warp. null if wrap on word. or string for the ellipsis to use.
+			
+			var cFontFamilies = ['Arial', 'Tahoma', 'Verdana'].map(function(aFamily) {
+				return React.createElement('option', {style:{fontFamily:aFamily}, value:aFamily},
+					aFamily
+				);
+			});
+			// :todo: list all the fonts on the system
+			
+			return React.createElement('div', {className:'ptexttools'},
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'font_family'},
+						'Font'
+					),
+					React.createElement('select', {id:'font_family'},
+						cFontFamilies
+					)
+				),
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'font_size'},
+						'Size'
+					),
+					React.createElement('input', {id:'font_size', type:'text'})
+				),
+				React.createElement('div', {className:'', style:{fontWeight:'bold'} },
+					'B'
+				),
+				React.createElement('div', {className:'', style:{fontStyle:'italic'} },
+					'I'
+				),
+				React.createElement('div', {className:'', style:{textDecoration:'underline'} },
+					'U'
+				)
+			)
+		}
+	});
+	
+	var ArrowTools = React.createClass({
+		displayName: 'ArrowTools',
+		render: function() {
+			// props
+			//		sPalArrowStart
+			//		sPalArrowEnd
+			//		sPalArrowWidth
+			//		sPalArrowLength
+			//		sPalArrowAngle - the concavity feature of photoshop
+			
+			return React.createElement('div', {className:'parrowtools'},
+				React.createElement('div', {},
+					React.createElement('input', {id:'arrow_start', type:'checkbox'}),
+					React.createElement('label', {htmlFor:'arrow_start'},
+						'Start'
+					)
+				),
+				React.createElement('div', {},
+					React.createElement('input', {id:'arrow_end', type:'checkbox'}),
+					React.createElement('label', {htmlFor:'arrow_end'},
+						'End'
+					)
+				),
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'arrow_width'},
+						'Width'
+					),
+					React.createElement('input', {id:'arrow_width', type:'text'})
+				),
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'arrow_length'},
+						'Length'
+					),
+					React.createElement('input', {id:'arrow_length', type:'text'})
+				),
+				React.createElement('div', {},
+					React.createElement('label', {htmlFor:'arrow_angle'},
+						'Angle'
+					),
+					React.createElement('input', {id:'arrow_angle', type:'text'})
+				)
+			)
+		}
+	});
+	
 	var ColorPicker = React.createClass({
 		// to use this, must create a global object called `gColorPickerSetState`. key must be same as what you pass to pSetStateName, this is only place it is used.
 		displayName: 'ColorPicker',
@@ -2094,7 +2206,10 @@ function init(aArrBufAndCore) {
 		Divider: Divider,
 		Accessibility: Accessibility,
 		Handle: Handle,
-		ColorPicker: ColorPicker
+		ColorPicker: ColorPicker,
+		TextTools: TextTools,
+		ArrowTools: ArrowTools,
+		DimensionTools: DimensionTools
 	};
 	
 	var initReact = function() {
