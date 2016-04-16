@@ -863,7 +863,11 @@ function init(aArrBufAndCore) {
 					this.cstate.valid = false; // Something's dragging so we must redraw
 				} else if (this.cstate.resizing) {
 					this.cstate.selection.w = mx - this.cstate.downx;
-					this.cstate.selection.h = my - this.cstate.downy;
+					if (e.shiftKey) {
+						this.cstate.selection.h = this.cstate.selection.w;
+					} else {
+						this.cstate.selection.h = my - this.cstate.downy;
+					}
 					this.cstate.valid = false;
 				} else {
 					// just moving, see if mouse is over a resize point, or a drag point
@@ -1032,13 +1036,6 @@ function init(aArrBufAndCore) {
 			}
 			
 			
-		},
-		keydown: function(e) {
-			switch(e.key) {
-				
-				default:
-					// do nothing
-			}
 		},
 		keyup: function(e) {
 			switch (e.key) {
