@@ -128,7 +128,7 @@ function init(aArrBufAndCore) {
 				// 	icon: '\ue803'
 				// },
 				{
-					label: 'Circle',
+					label: 'Oval',
 					icon: '\ue81f'
 				}
 			]
@@ -428,14 +428,14 @@ function init(aArrBufAndCore) {
 			
 			switch (name) {
 				case 'Rectangle':
-				case 'Circle':
+				case 'Oval':
 					
 						console.error('gCState:', gCState);
 						this.Style = {
 							Draw: {
 								me: {
-									fillStyle: aOptions.fillStyle || gCState.Style.Draw.fill.fillStyle,
-									strokeStyle: aOptions.strokeStyle || gCState.Style.Draw.line.strokeStyle,
+									fillStyle: aOptions.fillStyle || colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha), //gCState.Style.Draw.fill.fillStyle,
+									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha), // gCState.Style.Draw.line.strokeStyle,
 									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
 									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
 								}
@@ -466,7 +466,7 @@ function init(aArrBufAndCore) {
 						
 						break;
 					case 'Rectangle':
-					case 'Circle':
+					case 'Oval':
 					
 							curStyle = this.Style.Draw.me;
 					
@@ -526,15 +526,51 @@ function init(aArrBufAndCore) {
 					case 'Rectangle':
 					
 							
-							var lw = this.Style.Draw.me.lineWidth;
-							var lw2 = lw * 2;
-							// ctx.rect(this.x, this.y, this.w, this.h);
-							// ctx.rect(this.x+lw, this.y+lw, this.w-lw2, this.h-lw2);  // offset position and size
-							// ctx.fill('evenodd');                      // !important
-							// ctx.strokeRect(this.x, this.y, this.w, this.h);
+							// var lw = this.Style.Draw.me.lineWidth;
+							// var lw2 = lw * 2;
+							// // ctx.rect(this.x, this.y, this.w, this.h);
+							// // ctx.rect(this.x+lw, this.y+lw, this.w-lw2, this.h-lw2);  // offset position and size
+							// // ctx.fill('evenodd');                      // !important
+							// // ctx.strokeRect(this.x, this.y, this.w, this.h);
+							// 
+							// ctx.fillRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
+							// ctx.strokeRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
+							ctx.fillRect(this.x, this.y, this.w, this.h);
+							ctx.strokeRect(this.x, this.y, this.w, this.h);
+						
+						break;
+					case 'Oval':
+						
+							// per jsbin from here - http://stackoverflow.com/a/2173084/1828637
 							
-							ctx.fillRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
-							ctx.strokeRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
+							var w = this.w;
+							var h = this.h;
+							var x = this.x;
+							var y = this.y;
+							
+							var kappa = .5522848,
+								ox = (w / 2) * kappa, // control point offset horizontal
+								oy = (h / 2) * kappa, // control point offset vertical
+								xe = x + w,           // x-end
+								ye = y + h,           // y-end
+								xm = x + w / 2,       // x-middle
+								ym = y + h / 2;       // y-middle
+
+							// ctx.save();
+							ctx.beginPath();
+							ctx.moveTo(x, ym);
+							ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+							ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+							ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+							ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+							
+							// ctx.quadraticCurveTo(x,y,xm,y);
+							// ctx.quadraticCurveTo(xe,y,xe,ym);
+							// ctx.quadraticCurveTo(xe,ye,xm,ye);
+							// ctx.quadraticCurveTo(x,ye,x,ym);
+
+							ctx.fill();
+							ctx.stroke();
 						
 						break;
 					default:
@@ -560,7 +596,7 @@ function init(aArrBufAndCore) {
 						
 						break;
 					case 'Rectangle':
-					case 'Circle':
+					case 'Oval':
 					
 							curStyle = gCState.Style.Select.shape;
 					
@@ -606,7 +642,7 @@ function init(aArrBufAndCore) {
 						break;
 					case 'cutout':
 					case 'Rectangle':
-					case 'Circle':
+					case 'Oval':
 					
 							ctx.strokeRect(this.x, this.y, this.w, this.h);
 						
@@ -839,9 +875,9 @@ function init(aArrBufAndCore) {
 							
 							break;
 						case 'Shapes-Rectangle':
-						case 'Shapes-Circle':
+						case 'Shapes-Oval':
 							
-								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Circle'].indexOf(aToFilter.name) > -1 };
+								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
 							
 							break;
 						default:
@@ -897,9 +933,9 @@ function init(aArrBufAndCore) {
 						
 						break;
 					case 'Shapes-Rectangle':
-					case 'Shapes-Circle':
+					case 'Shapes-Oval':
 						
-							selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Circle'].indexOf(aToFilter.name) > -1 };
+							selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
 						
 						break;
 					default:
@@ -950,7 +986,7 @@ function init(aArrBufAndCore) {
 							
 							break;
 						case 'Shapes-Rectangle':
-						case 'Shapes-Circle':
+						case 'Shapes-Oval':
 							
 								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSubs[this.state.sPalTool]);
 							
@@ -996,6 +1032,13 @@ function init(aArrBufAndCore) {
 			}
 			
 			
+		},
+		keydown: function(e) {
+			switch(e.key) {
+				
+				default:
+					// do nothing
+			}
 		},
 		keyup: function(e) {
 			switch (e.key) {
@@ -1910,37 +1953,18 @@ function overwriteObjWithObj(obj1, obj2){
 }
 
 function subtractMulti(aTargetRect, aSubtractRectsArr) {
-	// http://stackoverflow.com/a/36608872/1828637
+	// http://stackoverflow.com/a/36641104/1828637
 	
-    // for use with Geometry.jsm
-    // returns an array of rects after subtracting each rect in aSubtractRectsArr from aTargetRect
-
-    var subtractSumRect = aSubtractRectsArr[0];  
-    for (var i = 1; i < aSubtractRectsArr.length; i++) {
-        subtractSumRect = subtractSumRect.union(aSubtractRectsArr[i]);
-    }
-
-    //Get missing parts
-    function getWantedRect(currentRect, i) {
-        if (i >= aSubtractRectsArr.length) return currentRect.intersect(aTargetRect);
-
-        var subtract = currentRect.subtract(aSubtractRectsArr[i]);
-        var wanted = [];
-        if (subtract) {
-            for(var j = 0; j < subtract.length; j++) {
-                if (subtract[j].isEmpty()) continue;
-
-                wanted = wanted.concat(getWantedRect(subtract[j], i + 1));
-            }
+    var keptParts = [aTargetRect];
+    for (var i = 0; i < aSubtractRectsArr.length; i++) {
+        var keptPartsPartial = [];
+        for(var j = 0; j < keptParts.length; j++) {
+            keptPartsPartial = keptPartsPartial.concat(keptParts[j].subtract(aSubtractRectsArr[i]));
         }
-
-        return wanted;
+        keptParts = keptPartsPartial;
     }
-    var wantedRect = getWantedRect(subtractSumRect, 0);
 
-    var finalRect = aTargetRect.subtract(subtractSumRect);
-
-    return finalRect.concat(wantedRect);
+    return keptParts;
 }
 
 function cloneObject(aObj) {
