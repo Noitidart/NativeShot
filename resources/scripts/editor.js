@@ -502,7 +502,6 @@ function init(aArrBufAndCore) {
 				gCState.rconn.applyCtxStyle(curStyle);				
 				
 				// draw it
-				console.error('in draw part for this.name:', this.name);
 				switch (this.name) {
 					case 'dim':
 
@@ -598,7 +597,6 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Line':
 						
-							console.error('doing draw line');
 							ctx.beginPath();
 							ctx.moveTo(this.x, this.y);
 							ctx.lineTo(this.x2, this.y2);
@@ -620,6 +618,7 @@ function init(aArrBufAndCore) {
 					return true;
 				}
 				
+				console.error('doing select for drawable:', this);
 				// set styles
 				var curStyle;
 				switch (this.name) {
@@ -686,14 +685,11 @@ function init(aArrBufAndCore) {
 						
 						break;
 					case 'Line':
-						
-							var centerx = this.x + (gCState.rconn.state.sCanHandleSize / 2);
-							var centery = this.y + (gCState.rconn.state.sCanHandleSize / 2);
-							var centerx2 = this.x2 + (gCState.rconn.state.sCanHandleSize / 2);
-							var centery2 = this.y2 + (gCState.rconn.state.sCanHandleSize / 2);
-						
-							ctx.arc(centerx, centery, gCState.rconn.state.sCanHandleSize, 0, 360);
-							ctx.arc(centerx2, centery2, gCState.rconn.state.sCanHandleSize, 0, 360);
+
+							ctx.beginPath();
+							console.error('gCState.rconn.state.sCanHandleSize:', gCState.rconn.state.sCanHandleSize);
+							ctx.arc(this.x, this.y, gCState.rconn.state.sCanHandleSize, 0, 360);
+							ctx.arc(this.x2, this.y2, gCState.rconn.state.sCanHandleSize, 0, 360);
 							
 							ctx.fill();
 							ctx.stroke();
@@ -710,7 +706,7 @@ function init(aArrBufAndCore) {
 				switch (this.name) {
 					case 'dim':
 						
-							return false; // i think i dont need this
+							return false; // i think i dont need this as dim is unselectable
 						
 						break;
 					case 'Line':
@@ -720,12 +716,10 @@ function init(aArrBufAndCore) {
 							var l = lines.length;
 							for (var i=0; i<l; i++) {
 								ctx.beginPath();
-								ctx.lineWidth = this.Style.Draw.me.lineWidth;
+								ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
 								ctx.moveTo(this.x, this.y);
 								ctx.lineTo(this.x2, this.y2);
-								if (ctx.isPointInStroke(mx, my)) {
-									return true;
-								}
+								return (ctx.isPointInStroke(mx, my) || ctx.isPointInPath(mx, my));
 							}
 					
 						break;
@@ -766,12 +760,24 @@ function init(aArrBufAndCore) {
 						drawables.splice(drawables.indexOf(this), 1);
 				}
 				
-				if (this.w && this.h) {
-					// this.valid = false;
-					return false;
-				} else {
-					// else the width and height are 0, no need to invalidate
-					return true;
+				switch (this.name) {
+					case 'Line':
+					
+							if (this.x == this.x2 && this.y == this.y2) {
+								return true;
+							} else {
+								return false;
+							}
+					
+						break;
+					default:
+						if (this.w && this.h) {
+							// this.valid = false;
+							return false;
+						} else {
+							// else the width and height are 0, no need to invalidate
+							return true;
+						}
 				}
 			};
 			
@@ -914,10 +920,11 @@ function init(aArrBufAndCore) {
 				// draw selection
 				if(this.cstate.selection != null) {
 					console.log('ok this.cstate.selection:', this.cstate.selection);
-					if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
-						console.log('ok selecting');
-						this.cstate.selection.select(this.ctx);
-					}
+					this.cstate.selection.select(this.ctx);
+					// if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
+						// console.log('ok selecting');
+						// this.cstate.selection.select(this.ctx);
+					// }
 				}
 
 				// ** Add stuff you want drawn on top all the time here **
@@ -942,8 +949,29 @@ function init(aArrBufAndCore) {
 			} else {
 				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 				if (this.cstate.dragging) {
-					this.cstate.selection.x = mx - this.cstate.dragoffx;
-					this.cstate.selection.y = my - this.cstate.dragoffy;
+					switch (this.cstate.selection.name) {
+						case 'Rectangle':
+						case 'Oval':
+						case 'cutout':
+							
+								this.cstate.selection.x = mx - this.cstate.dragoffx;
+								this.cstate.selection.y = my - this.cstate.dragoffy;
+							
+							break;
+						case 'Line':
+						
+								var delx = mx - this.cstate.dragdown.mx;
+								var dely = my - this.cstate.dragdown.my;
+								
+								this.cstate.selection.x = this.cstate.dragdown.x + delx;
+								this.cstate.selection.y = this.cstate.dragdown.y + dely;
+								this.cstate.selection.x2 = this.cstate.dragdown.x2 + delx;
+								this.cstate.selection.y2 = this.cstate.dragdown.y2 + dely;
+						
+							break;
+						default:
+							console.error('deverror: no drag mechnaism defined');
+					}
 					this.cstate.valid = false; // Something's dragging so we must redraw
 				} else if (this.cstate.resizing) {
 					this.cstate.selection.w = mx - this.cstate.downx;
@@ -972,6 +1000,11 @@ function init(aArrBufAndCore) {
 								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
 							
 							break;
+						case 'Line-':
+							
+								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
+							
+							break;
 						default:
 							// do nothing
 					}
@@ -983,6 +1016,7 @@ function init(aArrBufAndCore) {
 						for (var i=l; i>-1; i--) {
 							var drawable = drawables[i];
 							if (drawable.contains(mx, my)) {
+								// console.error('yes drawable contains:', drawable);
 								draggableFound = true;
 								break;
 							}
@@ -1055,6 +1089,21 @@ function init(aArrBufAndCore) {
 							// so we can move it smoothly (see mousemove)
 							this.cstate.dragoffx = mx - mySel.x;
 							this.cstate.dragoffy = my - mySel.y;
+							
+							// introduced for line dragging
+							this.cstate.dragdown = {
+								// the initial x and y the user mouse downed on
+								mx: mx,
+								my: my,
+								// the initial x and y of the drawable
+								x: mySel.x,
+								y: mySel.y,
+								// for line we have x2 and y2
+								x2: mySel.x2,
+								y2: mySel.y2
+							};
+							// end introduced
+							
 							this.cstate.dragging = true;
 							this.cstate.selection = mySel;
 							this.cstate.valid = false;
@@ -1110,6 +1159,7 @@ function init(aArrBufAndCore) {
 							case 'Line':
 								
 									this.cstate.lining = true;
+									this.cstate.valid = false; // as i have to draw the selection point
 								
 								break;
 							default:
@@ -1146,6 +1196,13 @@ function init(aArrBufAndCore) {
 						}
 					} else if (this.cstate.lining) {
 						this.cstate.lining = false;
+						if (this.cstate.selection.x == this.cstate.selection.x2 && this.cstate.selection.y == this.cstate.selection.y2) {
+							// 0 size
+							this.cstate.selection.delete();
+							this.cstate.selection = null;
+							// need to set valid=false because otherwise the big handle thing is left over
+							this.cstate.valid = false;
+						}
 					}
 				// }
 			}
@@ -1160,6 +1217,7 @@ function init(aArrBufAndCore) {
 							switch (this.state.sPalTool) {
 								case 'Select':
 								case 'Shapes':
+								case 'Line':
 										if (this.cstate.selection) {
 											var rez_valid = this.cstate.selection.delete();
 											this.cstate.selection = null;
@@ -1491,7 +1549,8 @@ function init(aArrBufAndCore) {
 			} else {
 				// depress it and undepress other non-multiDepress
 				gEditorStore.setState({
-					sPalTool: this.props.pButton.label
+					sPalTool: this.props.pButton.label,
+					sCanMouseMoveCursor: null
 				});
 			}
 		},
