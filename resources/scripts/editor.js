@@ -597,6 +597,12 @@ function init(aArrBufAndCore) {
 							curStyle = this.Style.Draw.me;
 					
 						break;
+					case 'Gaussian':
+					case 'Mosaic':
+						
+							// no styles needed
+						
+						break;
 					default:
 						// not drawable
 						return true; // so valid is no need to update to false
@@ -718,6 +724,13 @@ function init(aArrBufAndCore) {
 							ctx.stroke();
 						
 						break;
+					case 'Gaussian':
+					case 'Mosaic':
+						
+							ctx.fillStyle = 'steelblue';
+							ctx.fillRect(this.x, this.y, this.w, this.h); // temporary place holder
+						
+						break;
 					default:
 						// should never get here, as would have returned earlier, as this one is not drawable
 				}
@@ -750,6 +763,8 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Rectangle':
 					case 'Oval':
+					case 'Gaussian':
+					case 'Mosaic':
 					
 							curStyle = gCState.Style.Select.shape;
 					
@@ -803,6 +818,8 @@ function init(aArrBufAndCore) {
 					case 'cutout':
 					case 'Rectangle':
 					case 'Oval':
+					case 'Gaussian':
+					case 'Mosaic':
 					
 							ctx.strokeRect(this.x, this.y, this.w, this.h);
 						
@@ -846,12 +863,14 @@ function init(aArrBufAndCore) {
 			};
 			
 			this.contains = function(mx, my) {
+				
+				if (this.name == 'dim') {
+					// i have never a need to test if mouse is within dim
+					// i think i dont need this as dim is unselectable
+					return false;
+				}
+				
 				switch (this.name) {
-					case 'dim':
-						
-							return false; // i think i dont need this as dim is unselectable
-						
-						break;
 					case 'Line':
 					
 							var ctx = gCState.rconn.ctx;
@@ -882,6 +901,8 @@ function init(aArrBufAndCore) {
 						
 						break;
 					default:
+						// cutout, Rectangle, Oval, Gaussian, Mosaic
+					
 						// All we have to do is make sure the Mouse X,Y fall in the area between
 						// the shape's X and (X + Width) and its Y and (Y + Height)
 						return(this.x <= mx) && (this.x + this.w >= mx) &&
@@ -939,6 +960,7 @@ function init(aArrBufAndCore) {
 					
 						break;
 					default:
+						// cutout, Rectangle, Oval, Gaussian, Mosaic
 						if (this.w && this.h) {
 							// this.valid = false;
 							return false;
@@ -1124,6 +1146,8 @@ function init(aArrBufAndCore) {
 						case 'Rectangle':
 						case 'Oval':
 						case 'cutout':
+						case 'Gaussian':
+						case 'Mosaic':
 							
 								this.cstate.selection.x = mx - this.cstate.dragoffx;
 								this.cstate.selection.y = my - this.cstate.dragoffy;
@@ -1197,6 +1221,12 @@ function init(aArrBufAndCore) {
 								dragFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
 							
 							break;
+						case 'Blur-Gaussian':
+						case 'Blur-Mosaic':
+							
+								dragFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
+							
+							break;
 						default:
 							// do nothing
 					}
@@ -1267,6 +1297,12 @@ function init(aArrBufAndCore) {
 							selectFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
 						
 						break;
+					case 'Blur-Gaussian':
+					case 'Blur-Mosaic':
+						
+							selectFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
+						
+						break;
 					default:
 						// do nothing
 				}
@@ -1309,6 +1345,8 @@ function init(aArrBufAndCore) {
 							}
 							// end introduced
 							 else {
+								// cutout, Rectangle, Oval, Gaussian, Mosaic
+								
 								// Keep track of where in the object we clicked
 								// so we can move it smoothly (see mousemove)
 								this.cstate.dragoffx = mx - mySel.x;
@@ -1344,6 +1382,8 @@ function init(aArrBufAndCore) {
 							break;
 						case 'Shapes-Rectangle':
 						case 'Shapes-Oval':
+						case 'Blur-Gaussian':
+						case 'Blur-Mosaic':
 							
 								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSubs[this.state.sPalTool]);
 							
@@ -1369,6 +1409,8 @@ function init(aArrBufAndCore) {
 							case 'cutout':
 							case 'Rectangle':
 							case 'Oval':
+							case 'Gaussian':
+							case 'Mosaic':
 								
 									this.cstate.resizing = true;
 								
@@ -1449,22 +1491,23 @@ function init(aArrBufAndCore) {
 			switch (e.key) {
 				case 'Delete':
 				
-						if (!this.cstate.dragging && !this.cstate.resizing) {
-							switch (this.state.sPalTool) {
-								case 'Select':
-								case 'Shapes':
-								case 'Line':
-								case 'Freedraw':
+						// if (!this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing) {
+						//	switch (this.state.sPalTool) {
+						//		case 'Select':
+						//		case 'Shapes':
+						//		case 'Line':
+						//		case 'Freedraw':
+						//		case 'Blur':
 										if (this.cstate.selection) {
 											var rez_valid = this.cstate.selection.delete();
 											this.cstate.selection = null;
 											this.cstate.valid = rez_valid;
 										}
-									break;
-								default:
-									// do nothing
-							}
-						}
+						//			break;
+						//		default:
+						//			// do nothing
+						//	}
+						// }
 				
 					break;
 				case 'Escape':
@@ -1570,11 +1613,11 @@ function init(aArrBufAndCore) {
 				};
 				
 				// now that Style is setup, i can add Drawable's
-				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
-				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
+				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
 				// (new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
 				
-				(new this.Drawable(this.mtmm.x(500), this.mtmm.y(500), null, null, 'Line', {x2:100, y2:100})).add();
+				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(500), null, null, 'Line', {x2:100, y2:100})).add();
 				
 				this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
 				
@@ -2359,7 +2402,7 @@ function init(aArrBufAndCore) {
 			var iEnd = pPalLayout.length;
 			
 			// start - get active tool options
-			console.error('this.props.sPalTool:', this.props.sPalTool);
+			// console.log('this.props.sPalTool:', this.props.sPalTool);
 			var activeToolOptions;
 			
 			
