@@ -52,7 +52,8 @@ function init(aArrBufAndCore) {
 					icon: '\ue82e',
 					unfixable: true
 				}
-			]
+			],
+			options: ['DimensionTools']
 		},
 		{
 			label: 'Fullscreen', // by default it selects the current monitor
@@ -70,16 +71,6 @@ function init(aArrBufAndCore) {
 			label: 'Window Wand',
 			icon: '\ue826'
 		},
-		// {
-			// label: 'Last Selection',
-			// icon: '\ue82e',
-			// justClick: true,
-			// sub: [
-				// {
-					// special: 'SelectionHistory'
-				// }
-			// ]
-		// },
 		{
 			label: 'Clear Selection',
 			justClick: true,
@@ -115,13 +106,16 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					label: 'Pencil',
-					icon: '\ue800'
+					icon: '\ue800',
+					options: ['Color']
 				},
 				{
 					label: 'Marker', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
-					icon: 'S'
+					icon: 'S',
+					options: ['Marker Color']
 				}
-			]
+			],
+			options: ['LineTools']
 		},
 		{
 			label: 'Shapes',
@@ -139,12 +133,13 @@ function init(aArrBufAndCore) {
 					label: 'Oval',
 					icon: '\ue81f'
 				}
-			]
+			],
+			options: ['Color', 'Fill Color', 'LineTools', 'DimensionTools']
 		},
 		{
 			label: 'Line',
 			icon: '\ue831',
-			options: ['ArrowTools']
+			options: ['Color', 'ArrowTools']
 		},
 		{
 			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
@@ -163,7 +158,8 @@ function init(aArrBufAndCore) {
 					icon: '\ue81b',
 					options: ['Word Break / Ellipsis']
 				}
-			]
+			],
+			options: ['BlurTools']
 		},
 		{
 			special: 'Divider'
@@ -178,7 +174,8 @@ function init(aArrBufAndCore) {
 					special: 'ColorPicker',
 					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor'}
 				}
-			]
+			],
+			isOption: true
 		},
 		{
 			label: 'Marker Color',
@@ -189,16 +186,19 @@ function init(aArrBufAndCore) {
 					special: 'ColorPicker',
 					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor'}
 				}
-			]
+			],
+			isOption: true
 		},
 		{
 			special: 'LineTools',
-			justClick: true
+			justClick: true,
+			isOption: true
 		},
 		{
 			special: 'ArrowTools',
 			icon: 'S',
-			justClick: true
+			justClick: true,
+			isOption: true
 		},
 		{
 			label: 'Fill Color',
@@ -209,15 +209,23 @@ function init(aArrBufAndCore) {
 					special: 'ColorPicker',
 					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor'}
 				}
-			]
+			],
+			isOption: true
 		},
 		{
 			special: 'DimensionTools',
-			justClick: true
+			justClick: true,
+			isOption: true
 		},
 		{
 			special: 'TextTools',
-			justClick: true
+			justClick: true,
+			isOption: true
+		},
+		{
+			special: 'BlurTools',
+			justClick: true,
+			isOption: true
 		},
 		{
 			special: 'Divider'
@@ -1985,6 +1993,17 @@ function init(aArrBufAndCore) {
 		}
 	});
 	
+	var BlurTools = React.createClass({
+		displayName: 'BlurTools',
+		render: function() {
+			// props
+			//		sPalBlurLevel
+			return React.createElement('div', {className:'pblurlevel'},
+				'blur level'
+			);
+		}
+	});
+	
 	var DimensionTools = React.createClass({
 		displayName: 'DimensionTools',
 		render: function() {
@@ -2334,24 +2353,88 @@ function init(aArrBufAndCore) {
 			// 		merged this.state and this.props of `Editor` component
 			
 			var cChildren = [];
-			
+
 			var pPalLayout = this.props.pPalLayout;
 			var iEnd = pPalLayout.length;
+			
+			// start - get active tool options
+			console.error('this.props.sPalTool:', this.props.sPalTool);
+			var activeToolOptions;
+			
+			
+			var activeToolEntry;
 			for (var i=0; i<iEnd; i++) {
-				if (pPalLayout[i].special) {
-					if (pPalLayout[i].special in Specials) { // temp as all specials not yet defined
+				var cLayoutEntry = pPalLayout[i];
+				if (cLayoutEntry.label == this.props.sPalTool || cLayoutEntry.special == this.props.sPalTool) {
+					activeToolEntry = cLayoutEntry;
+					break;
+				}
+			}
+			activeToolOptions = activeToolEntry.options || [];
+
+			// test if activeToolEntry has an active sub, and if it that sub as options
+			var activeToolActiveSubLabel = this.props.sPalToolSubs[activeToolEntry.label];
+			if (activeToolActiveSubLabel) {
+				// yes it has a sub
+				
+				// get activeToolActiveSubEntry
+				var activeToolActiveSubEntry;
+				var activeToolEntrySubs = activeToolEntry.sub;
+				var l = activeToolEntrySubs.length;
+				for (var j=0; j<l; j++) {
+					var activeToolEntrySubEntry = activeToolEntrySubs[j];
+					if (activeToolEntrySubEntry.label == activeToolActiveSubLabel || activeToolEntrySubEntry.special == activeToolActiveSubLabel) {
+						activeToolActiveSubEntry = activeToolEntrySubEntry;
+						break;
+					}
+				}
+				
+				// test if activeToolActiveSubEntry has options
+				if (activeToolActiveSubEntry.options) {
+					activeToolOptions = activeToolOptions.concat(activeToolActiveSubEntry.options);
+				}
+			}
+			// end - get active tool options
+			
+			for (var i=0; i<iEnd; i++) {
+				var cLayoutEntry = pPalLayout[i];
+				
+				if (cLayoutEntry.isOption) {
+					if (activeToolOptions.indexOf(cLayoutEntry.label || cLayoutEntry.special) == -1) {
+						continue; // dont show this option
+					}
+				}
+				
+				if (cLayoutEntry.special) {
+					if (cLayoutEntry.special in Specials) { // temp as all specials not yet defined
 						var cSpecialProps = {};
-						var cRequestingProps = pPalLayout[i].props;
+						var cRequestingProps = cLayoutEntry.props;
 						if (cRequestingProps) {
 							for (var j=0; j<cRequestingProps.length; j++) {
 								var cSpecialPropName = cRequestingProps[j];
 								cSpecialProps[cSpecialPropName] = this.props[cSpecialPropName]
 							}
 						}
-						cChildren.push(React.createElement(Specials[pPalLayout[i].special], cSpecialProps));
+						cChildren.push(React.createElement(Specials[cLayoutEntry.special], cSpecialProps));
 					}
 				} else {
-					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:pPalLayout[i]}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
+					/*
+					if (cLayoutEntry.label == 'Clear Selection' && this.cstate) {
+						var cutoutFound = false;
+						var drawables = this.cstate.drawables;
+						var l = drawables.length;
+						for (var i=0; i<l; i++) {
+							if (drawables[i].name == 'cutout') {
+								cutoutFound = true;
+								break;
+							}
+						}
+						if (!cutoutFound) {
+							continue; // meaning dont show this button
+						}
+					}
+					*/
+					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:cLayoutEntry}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:cLayoutEntry, sPalTool:this.props.sPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 				}
 			}
 			
@@ -2425,7 +2508,8 @@ function init(aArrBufAndCore) {
 		TextTools: TextTools,
 		ArrowTools: ArrowTools,
 		DimensionTools: DimensionTools,
-		LineTools: LineTools
+		LineTools: LineTools,
+		BlurTools: BlurTools
 	};
 	
 	var initReact = function() {
