@@ -424,6 +424,13 @@ body {
 }
 /* end - option_tools */
 
+/* start - inputnumber-label */
+/* state:innate */
+.inputnumber-label {
+	cursor: ew-resize;
+}
+/* end - inputnumber-label */
+
 /* start - other_stuff */
 .pbutton-icon-color {
 	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');

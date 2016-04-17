@@ -2269,60 +2269,6 @@ function init(aArrBufAndCore) {
 	
 	var BlurTools = React.createClass({
 		displayName: 'BlurTools',
-		onchange: function(e) {
-			if (!e || !e.target) {
-				return;
-			}
-			var newValueStr = e.target.value;
-			if (!e.target.value || isNaN(e.target.value)) {
-				return;
-			}
-			var newValue = parseInt(newValueStr);
-			if (newValue <= 0) {
-				return;
-			}
-			console.error('ok setting with newValue:', newValue);
-			var newStateObj = {};
-			newStateObj[this.subtoolStateVar] = newValue;
-			gEditorStore.setState(newStateObj);
-			
-			if (gCState && gCState.selection && ['Gaussian', 'Mosaic'].indexOf(gCState.selection.name) > -1) {
-				gCState.valid = false; // so new blur level gets applied
-			}
-		},
-		keydown: function(e) {
-
-			var newStateObj = {};
-			
-			switch (e.key) {
-				case 'ArrowUp':
-				
-						newStateObj[this.subtoolStateVar] = this.props[this.subtoolStateVar] + 1;
-				
-					break;
-				case 'ArrowDown':
-					
-						newStateObj[this.subtoolStateVar] = this.props[this.subtoolStateVar] - 1;
-						if (newStateObj[this.subtoolStateVar] <= 0) {
-							newStateObj = null;
-						}
-					
-					break;
-				default:
-					// do nothing
-					console.log('e.key:', e.key);
-					newStateObj = null;
-			}
-			
-			if (newStateObj) {
-				e.target.value = newStateObj[this.subtoolStateVar];
-				gEditorStore.setState(newStateObj);
-			}
-			
-			if (gCState && gCState.selection && ['Gaussian', 'Mosaic'].indexOf(gCState.selection.name) > -1) {
-				gCState.valid = false; // so new blur level gets applied
-			}
-		},
 		render: function() {
 			// props
 			//		sPalBlurRadius
@@ -2330,21 +2276,27 @@ function init(aArrBufAndCore) {
 			//		sPalTool
 			//		sPalToolSubs
 			
-			var cInputLabel;
-			this.subtool = this.props.sPalToolSubs[this.props.sPalTool];
-			if (this.props.sPalToolSubs[this.props.sPalTool] == 'Mosaic') {
+			var subtool = this.props.sPalToolSubs[this.props.sPalTool]
+			
+			var cInputNumberProps = {
+				pMin: 1,
+				key: subtool
+			};
+			
+			if (subtool == 'Mosaic') {
 				// Mosaic
-				this.subtoolStateVar = 'sPalBlurBlock';
-				cInputLabel = 'Block Size (px)';
+				cInputNumberProps.sPalBlurBlock = this.props.sPalBlurBlock;
+				cInputNumberProps.pStateVarName = 'sPalBlurBlock';
+				cInputNumberProps.pLabel = 'Block Size (px)';
 			} else {
 				// Gaussian
-				this.subtoolStateVar = 'sPalBlurRadius';
-				cInputLabel = 'Radius (px)';
+				cInputNumberProps.sPalBlurRadius = this.props.sPalBlurBlock;
+				cInputNumberProps.pStateVarName = 'sPalBlurRadius';
+				cInputNumberProps.pLabel = 'Radius (px)';
 			}
 			
 			return React.createElement('div', {className:'pblurlevel'},
-				cInputLabel,
-				React.createElement('input', {key:this.subtool, type:'text', defaultValue:this.props[this.subtoolStateVar], onChange:this.onchange, onKeyDown:this.keydown })
+				React.createElement(InputNumber, cInputNumberProps)
 			);
 		}
 	});
@@ -2805,6 +2757,124 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
+	
+	var InputNumber = React.createClass({
+		displayName: 'InputNumber',
+		wheel: function(e) {
+			var newVal;
+			console.log('e:', e.deltaMode, e.deltaY);
+			if (e.deltaY < 0) {
+				newVal = this.props[this.props.pStateVarName] + this.crement;
+			} else {
+				newVal = this.props[this.props.pStateVarName] - this.crement;
+			}
+			
+			this.limitTestThenSet(newVal, e.target);
+			
+		},
+		keydown: function(e) {
+			var newVal;
+			
+			var crement = this.props.pCrement || 1;
+			switch (e.key) {
+				case 'ArrowUp':
+				
+						newVal = this.props[this.props.pStateVarName] + this.crement;
+				
+					break;
+				case 'ArrowDown':
+					
+						newVal = this.props[this.props.pStateVarName] - this.crement;
+					
+					break;
+				default:
+					// do nothing
+					return;
+			}
+			
+			this.limitTestThenSet(newVal, e.target);
+
+		},
+		limitTestThenSet: function(aNewVal, aInputDomEl) {
+			if (this.props.pMin !== undefined && aNewVal < this.props.pMin) {
+				return; // below min limit, dont set it
+			} else if (this.props.pMax !== undefined && aNewVal > this.props.pMax) {
+				return; // above min limit, dont set it
+			} else {
+				
+				console.error('ok will set');
+				if (aInputDomEl) {
+					aInputDomEl.value = aNewVal;
+				}
+				
+				var newStateObj = {};
+				newStateObj[this.props.pStateVarName] = aNewVal;
+				
+				gEditorStore.setState(newStateObj);
+				
+				console.error('ok set, newStateObj:', newStateObj);
+				// if (gCState && gCState.selection && ['Gaussian', 'Mosaic'].indexOf(gCState.selection.name) > -1) {
+					// gCState.valid = false; // so new blur level gets applied
+				// }
+			}
+		},
+		mousedown: function(e) {
+			this.downx = e.screenX;
+			window.addEventListener('mouseup', this.mouseup, false);
+		},
+		mousemove: function(e) {
+			
+			var delX = e.screenX - this.downx;
+			
+			var delSensitivity = Math.round(delX / this.mousesens);
+			
+			var newVal = this.props[this.props.pStateVarName] + delSensitivity;
+			if (this.props[this.props.pStateVarName] != newVal) {
+				this.limitTestThenSet(newVal, e.target);
+			}
+			
+		},
+		mouseup: function() {
+			window.reniveEventListener('mouseup', this.mouseup, false);
+		},
+		change: function(e) {
+			console.warn('triggering onchange!');
+			// // if (!e || !e.target) {
+			// 	// return;
+			// // }
+			// var newValueStr = e.target.value;
+			// if (!newValueStr || isNaN(newValueStr)) {
+			// 	return;
+			// }
+			// var newValue = parseInt(newValueStr);
+			// 
+			// this.limitTestThenSet(newValue);
+			
+		},
+		render: function() {
+			// props
+			//		pStateVarName
+			//		pLabel
+			//		pMin
+			//		pMax
+			//		pMouseSens 0 default:10px
+			//		pCrement - number to increment/decrement by - default:1
+			// //		pCanvasStateObj
+			//		[pStateVarName]
+			
+			console.error('this.props:', this.props);
+			
+			this.crement = this.props.pCrement || 1;
+			this.mousesens = this.props.pMouseSens || 10;
+			
+			return React.createElement('div', {className:'inputnumber'},
+				React.createElement('label', {htmlFor:'inputnumber_' + this.props.pStateVarName, className:'inputnumber-label', onMouseDown:this.mousedown},
+					this.props.pLabel
+				),
+				React.createElement('input', {id:'inputnumber_' + this.props.pStateVarName, type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName] })
+			);
+		}
+	})
 	////////// end - palette components
 	
 	var pQS = tQS; //queryStringAsJson(window.location.search.substr(1));
