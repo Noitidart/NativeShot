@@ -727,8 +727,16 @@ function init(aArrBufAndCore) {
 					case 'Gaussian':
 					case 'Mosaic':
 						
-							ctx.fillStyle = 'steelblue';
-							ctx.fillRect(this.x, this.y, this.w, this.h); // temporary place holder
+							var sx = this.x; // 0;
+							var sy = this.y; // 0;
+							var sWidth = this.w;
+							var sHeight = this.h;
+							var dx = this.x;
+							var dy = this.y;
+							var dWidth = this.w;
+							var dHeight = this.h;
+							
+							ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 						
 						break;
 					default:
