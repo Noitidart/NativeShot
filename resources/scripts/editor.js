@@ -2738,8 +2738,8 @@ var imagedata = {
 		ctxv.drawImage(selement, sx, sy, sw, sh, 0, 0, sw, sh);
 		
 		// scale virtual down with smooth
-		ctxv.mozImageSmoothingEnabled = true;
-		ctxv.imageSmoothingEnabled = true;
+		ctxv.mozImageSmoothingEnabled = false;
+		ctxv.imageSmoothingEnabled = false;
 		ctxv.drawImage(canv, 0, 0, scaledWidth, scaledHeight);
 		
 		// scale it up to orig width/height with no smooth
