@@ -726,49 +726,25 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Gaussian':
 						
-							var sx = this.x; // 0;
-							var sy = this.y; // 0;
-							var sWidth = this.w;
-							var sHeight = this.h;
-							var dx = this.x;
-							var dy = this.y;
-							var dWidth = this.w;
-							var dHeight = this.h;
-							
-							// get section of screenshot
-							// var srcImgData = gCState.rconn.ctx0.getImageData(sx, sy, sWidth, sHeight);
-							
-							// apply filter
-							// imagedata.invert(srcImgData);
-							// imagedata.pixelate(srcImgData, gCState.rconn.ctx0, ctx, sWidth, sHeight, gCState.rconn.refs.can0, dx, dy, {
-							// imagedata.closePixelate(srcImgData, gCState.rconn.ctx0, sx, sy, sWidth, sHeight, ctx, dx, dy, {
-							imagedata.pixelate(gCState.rconn.refs.can0, this.x, this.y, this.w, this.h, ctx, this.x, this.y, {});
 
-							
-							// draw it
-							// ctx.putImageData(srcImgData, dx, dy);
 						
 						break;
 					case 'Mosaic':
 						
-							var sx = this.x; // 0;
-							var sy = this.y; // 0;
-							var sWidth = this.w;
-							var sHeight = this.h;
-							var dx = this.x;
-							var dy = this.y;
-							var dWidth = this.w;
-							var dHeight = this.h;
+							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
-							ctx.imageSmoothingEnabled = false;
-							ctx.mozImageSmoothingEnabled = false;
-							ctx.webkitImageSmoothingEnabled = false;
-							ctx.msImageSmoothingEnabled = false;
+							var level = 25;
 							
-							ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+							// get section of screenshot
+							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
 							
-							ctx.mozImageSmoothingEnabled = true;
-							ctx.imageSmoothingEnabled = true;
+							// apply filter
+							imagedata.pixelate(srcImgData, positived.w, positived.h, {
+								blockSize: level
+							});
+							
+							// draw it
+							ctx.putImageData(srcImgData, positived.x, positived.y);
 						
 						break;
 					default:
@@ -2690,172 +2666,50 @@ var imagedata = {
 			data[i + 2] = 255 - data[i + 2]; // blue
 		}
 	},
-	// pixelate: function(aImageData, sctx, dctx, w, h, element, sdx, sdy, aOptions={}) {
-	pixelate: function(selement, sx, sy, sw, sh, dctx, dx, dy, aOptions={}) {
+	pixelate: function(aImageData, w, h, aOptions={}) {
+		// http://stackoverflow.com/a/36678815/1828637
 		
-		// var optionsDefaults = {
-		// 	blockSize: 10
-		// };
 		var optionsDefaults = {
-			value: 0.2
-			// value: 0.05
+			blockSize: 10
 		};
 		validateOptionsObj(aOptions, optionsDefaults);
 		
-		/*
 		var data = aImageData.data;
-		for (var i = 0; i < data.length; i += 4) {
-			data[i]     = 255 - data[i];     // red
-			data[i + 1] = 255 - data[i + 1]; // green
-			data[i + 2] = 255 - data[i + 2]; // blue
+		
+		var wmax = ((w / aOptions.blockSize) | 0) * aOptions.blockSize;
+		var wrest = w - wmax;
+
+		var hmax = ((h / aOptions.blockSize) | 0) * aOptions.blockSize;
+		var hrest = h - hmax;
+
+		var hh = aOptions.blockSize;
+
+		for (var y = 0; y < h; y += aOptions.blockSize) {
+			var ww = aOptions.blockSize;
+			if (y == hmax) hh = hrest;
+
+			for (var x = 0; x < w; x += aOptions.blockSize) {
+				var n = 4 * (w * y + x);
+				var r = data[n];
+				var g = data[n + 1];
+				var b = data[n + 2];
+				var a = data[n + 3];
+
+				if (x == wmax) ww = wrest;
+
+				for (var j = 0; j < hh; j++) {
+					var m = n + 4 * (w * j);
+
+					for (var i = 0; i < ww; i++) {
+						data[m++] = r;
+						data[m++] = g;
+						data[m++] = b;
+						data[m++] = a;
+					}
+				}
+			}
 		}
-		*/
-		
-		// //apply pixalate algorithm
-		// for(var x = 1; x < w; x += aOptions.blockSize)
-		// {
-		// 	for(var y = 1; y < h; y += aOptions.blockSize)
-		// 	{
-		// 		var pixel = sctx.getImageData(x, y, 1, 1);
-		// 		dctx.fillStyle = "rgb("+pixel.data[0]+","+pixel.data[1]+","+pixel.data[2]+")";
-		// 		dctx.fillRect(x, y, x + aOptions.blockSize - 1, y + aOptions.blockSize - 1);
-		// 	}
-		// }
-		
-		var options = aOptions;
-		
-		var scaledWidth = sw * options.value;
-		var scaledHeight = sh * options.value;
-
-		var canv = document.createElement('canvas');
-		var ctxv = canv.getContext('2d');
-
-		
-		canv.width = sw;
-		canv.height = sh;
-
-		// copy orig to virtual
-		ctxv.drawImage(selement, sx, sy, sw, sh, 0, 0, sw, sh);
-		
-		// scale virtual down with smooth
-		ctxv.mozImageSmoothingEnabled = false;
-		ctxv.imageSmoothingEnabled = false;
-		ctxv.drawImage(canv, 0, 0, scaledWidth, scaledHeight);
-		
-		// scale it up to orig width/height with no smooth
-		ctxv.mozImageSmoothingEnabled = false;
-		ctxv.imageSmoothingEnabled = false;
-		ctxv.drawImage(canv, 0, 0, scaledWidth, scaledHeight, 0, 0, sw, sh);
-		
-		canv.style.position = 'absolute';
-		canv.style.zIndex = 1000;
-		canv.style.left = 0;
-		canv.style.top = 0;
-		canv.style.border = '1px solid red';
-		
-		// document.body.insertBefore(canv, document.body.firstChild);
-		// document.body.appendChild(canv);
-		dctx.drawImage(canv, dx, dy);
 	},
-	closePixelate: function(aImageData, sctx, sx, sy, w, h, ctx, dx, dy, aOptions={}) {
-		
-		var optionsDefaults = {
-			blockSize: 3
-		};
-		validateOptionsObj(aOptions, optionsDefaults);
-		
-		//apply pixalate algorithm
-		for(var x = 1; x < w; x += aOptions.blockSize)
-		{
-			for(var y = 1; y < h; y += aOptions.blockSize)
-			{
-				var pixel = sctx.getImageData(sx + x, sy + y, 1, 1);
-				ctx.fillStyle = "rgb("+pixel.data[0]+","+pixel.data[1]+","+pixel.data[2]+")";
-				ctx.fillRect(dx + x, y, dx + x + aOptions.blockSize - 1, dy + y + aOptions.blockSize - 1);
-			}
-		}
-		
-		return;
-		  var imgData = aImageData
-
-		  var opts = {};
-		  
-			// util vars
-			var TWO_PI = Math.PI * 2
-			var QUARTER_PI = Math.PI * 0.25
-		  
-			// utility functions
-			function isArray( obj ) {
-			  return Object.prototype.toString.call( obj ) === "[object Array]"
-			}
-
-			function isObject( obj ) {
-			  return Object.prototype.toString.call( obj ) === "[object Object]"
-			}
-		  
-		  // option defaults
-		  var res = opts.resolution || 16
-		  var size = opts.size || res
-		  var alpha = opts.alpha || 1
-		  var offset = opts.offset || 0
-		  var offsetX = 0
-		  var offsetY = 0
-		  var cols = w / res + 1
-		  var rows = h / res + 1
-		  var halfSize = size / 2
-		  var diamondSize = size / Math.SQRT2
-		  var halfDiamondSize = diamondSize / 2
-
-		  if ( isObject( offset ) ){ 
-			offsetX = offset.x || 0
-			offsetY = offset.y || 0
-		  } else if ( isArray( offset) ){
-			offsetX = offset[0] || 0
-			offsetY = offset[1] || 0
-		  } else {
-			offsetX = offsetY = offset
-		  }
-
-		  var row, col, x, y, pixelY, pixelX, pixelIndex, red, green, blue, pixelAlpha
-
-		  for ( row = 0; row < rows; row++ ) {
-			y = ( row - 0.5 ) * res + offsetY
-			// normalize y so shapes around edges get color
-			pixelY = Math.max( Math.min( y, h-1), 0)
-
-			for ( col = 0; col < cols; col++ ) {
-			  x = ( col - 0.5 ) * res + offsetX
-			  // normalize y so shapes around edges get color
-			  pixelX = Math.max( Math.min( x, w-1), 0)
-			  pixelIndex = ( pixelX + pixelY * w ) * 4
-			  red   = imgData[ pixelIndex + 0 ]
-			  green = imgData[ pixelIndex + 1 ]
-			  blue  = imgData[ pixelIndex + 2 ]
-			  pixelAlpha = alpha * ( imgData[ pixelIndex + 3 ] / 255)
-
-			  ctx.fillStyle = 'rgba(' + red +','+ green +','+ blue +','+ pixelAlpha + ')'
-
-			  switch ( opts.shape ) {
-				case 'circle' :
-				  ctx.beginPath()
-					ctx.arc ( x, y, halfSize, 0, TWO_PI, true )
-					ctx.fill()
-				  ctx.closePath()
-				  break
-				case 'diamond' :
-				  ctx.save()
-					ctx.translate( x, y )
-					ctx.rotate( QUARTER_PI )
-					ctx.fillRect( -halfDiamondSize, -halfDiamondSize, diamondSize, diamondSize )
-				  ctx.restore()
-				  break
-				default :
-				  // square
-				  ctx.fillRect( x - halfSize, y - halfSize, size, size )
-			  } // switch
-			} // col
-		  } // row
-	}
 };
 
 // common functions
