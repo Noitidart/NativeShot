@@ -505,7 +505,7 @@ function init(aArrBufAndCore) {
 				case 'Marker':
 				
 						// has to be drawn, i dont allow constructing this with predefiend path. as in i dont offer aOptions.path
-						this.path = [this.x, this.y];
+						this.path = [x, y];
 				
 					break;
 				default:
@@ -736,7 +736,7 @@ function init(aArrBufAndCore) {
 					return true;
 				}
 				
-				console.error('doing select for drawable:', this);
+				// console.error('doing select for drawable:', this);
 				// set styles
 				var curStyle;
 				switch (this.name) {
@@ -752,6 +752,8 @@ function init(aArrBufAndCore) {
 					
 						break;
 					case 'Line':
+					case 'Pencil':
+					case 'Marker':
 					
 							curStyle = gCState.Style.Select.line;
 					
@@ -817,6 +819,23 @@ function init(aArrBufAndCore) {
 							ctx.stroke();
 						
 						break;
+					case 'Pencil':
+					case 'Marker':
+					
+							ctx.beginPath();
+							console.error('xy:', this.path[0], this.path[1], 'this.path:', this.path);
+							ctx.arc(this.path[0], this.path[1], gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							ctx.fill();
+							ctx.stroke();
+							
+							ctx.beginPath();
+							ctx.arc(this.path[this.path.length - 2], this.path[this.path.length - 1], gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							ctx.fill();
+							ctx.stroke();
+					
+						break;
 					default:
 						// should never get here, as would have returned earlier, as this one is not drawable
 				}
@@ -834,17 +853,31 @@ function init(aArrBufAndCore) {
 					case 'Line':
 					
 							var ctx = gCState.rconn.ctx;
-							var lines = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'Line' });
-							var l = lines.length;
-							for (var i=0; i<l; i++) {
+							// var lines = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'Line' });
+							// var l = lines.length;
+							// for (var i=0; i<l; i++) {
 								ctx.beginPath();
 								ctx.setLineDash([]);
 								ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
 								ctx.moveTo(this.x, this.y);
 								ctx.lineTo(this.x2, this.y2);
 								return ctx.isPointInStroke(mx, my);
-							}
+							// }
 					
+						break;
+					case 'Pencil':
+					case 'Marker':
+						
+							var ctx = gCState.rconn.ctx;
+							ctx.setLineDash([]);
+							ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
+							ctx.beginPath();
+							ctx.moveTo(this.path[0], this.path[1]);
+							for (var i=2; i<this.path.length; i+=2) {
+								ctx.lineTo(this.path[i], this.path[i+1]);
+							}
+							return ctx.isPointInStroke(mx, my);
+						
 						break;
 					default:
 						// All we have to do is make sure the Mouse X,Y fall in the area between
@@ -887,6 +920,16 @@ function init(aArrBufAndCore) {
 					case 'Line':
 					
 							if (this.x == this.x2 && this.y == this.y2) {
+								return true;
+							} else {
+								return false;
+							}
+					
+						break;
+					case 'Pencil':
+					case 'Marker':
+					
+							if (this.path.length == 2) {
 								return true;
 							} else {
 								return false;
@@ -1041,11 +1084,11 @@ function init(aArrBufAndCore) {
 					
 					drawable.draw(ctx);
 				}
-				console.log('done drawing drawable');
+				// console.log('done drawing drawable');
 
 				// draw selection
 				if(this.cstate.selection != null) {
-					console.log('ok this.cstate.selection:', this.cstate.selection);
+					// console.log('ok this.cstate.selection:', this.cstate.selection);
 					this.cstate.selection.select(this.ctx);
 					// if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
 						// console.log('ok selecting');
@@ -1093,6 +1136,17 @@ function init(aArrBufAndCore) {
 								this.cstate.selection.y = this.cstate.dragdown.y + dely;
 								this.cstate.selection.x2 = this.cstate.dragdown.x2 + delx;
 								this.cstate.selection.y2 = this.cstate.dragdown.y2 + dely;
+						
+							break;
+						case 'Pencil':
+						case 'Marker':
+						
+								var delx = mx - this.cstate.dragdown.mx;
+								var dely = my - this.cstate.dragdown.my;
+								
+								this.cstate.selection.path = this.cstate.dragdown.path.map(function(aHalfCoord, aI) {
+									return (aI % 2 ? aHalfCoord + dely : aHalfCoord + delx);
+								});
 						
 							break;
 						default:
@@ -1233,7 +1287,7 @@ function init(aArrBufAndCore) {
 							this.cstate.dragoffy = my - mySel.y;
 							
 							// introduced for line dragging
-							if (['Line'].indexOf(mySel.name)) {
+							if (mySel.name == 'Line') {
 								this.cstate.dragdown = {
 									// the initial x and y the user mouse downed on
 									mx: mx,
@@ -1247,7 +1301,7 @@ function init(aArrBufAndCore) {
 								};
 							}
 							// introduced for pencil/marker dragging
-							if (['Pencil', 'Marker'].indexOf(mySel.name)) {
+							if (['Pencil', 'Marker'].indexOf(mySel.name) > -1) {
 								this.cstate.dragdown = {
 									// the initial x and y the user mouse downed on
 									mx: mx,
@@ -1394,6 +1448,7 @@ function init(aArrBufAndCore) {
 								case 'Select':
 								case 'Shapes':
 								case 'Line':
+								case 'Freedraw':
 										if (this.cstate.selection) {
 											var rez_valid = this.cstate.selection.delete();
 											this.cstate.selection = null;
@@ -2099,7 +2154,7 @@ function init(aArrBufAndCore) {
 			
 			// convert sColor into object of rgb
 			var sColor = this.props.sColor + '';
-			console.error('this.props:', this.props);
+			// console.error('this.props:', this.props);
 			var rgb;
 			if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
 				rgb = hexToRgb(sColor);
