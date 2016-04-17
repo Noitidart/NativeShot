@@ -386,6 +386,7 @@ function init(aArrBufAndCore) {
 			return {
 				// general
 				sMounted: false,
+				sInputNumberMousing: null, // when mousing, this is set to string of what the cursor should be
 				
 				// canvas realted
 				sCanHandleSize: this.props.pCanHandleSize,
@@ -1740,7 +1741,12 @@ function init(aArrBufAndCore) {
 			};
 			
 			// determine cursor
-			if (this.state.sPalDragStart) {
+			if (this.state.sInputNumberMousing) {
+				cCanProps.style.cursor = this.state.sInputNumberMousing;
+				cPalPalProps.style.cursor = this.state.sInputNumberMousing;				
+				cPalProps.pZoomViewCursor = this.state.sInputNumberMousing;
+				cPalProps.pPalSubwrapCursor = this.state.sInputNumberMousing;
+			} else if (this.state.sPalDragStart) {
 				cCanProps.style.cursor = 'move';
 				cPalPalProps.style.cursor = 'move';
 			} else {
@@ -1879,7 +1885,7 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props - cPalProps - its all of them
-			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px'}, onMouseDown:this.mousedown});
+			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px', cursor:this.props.pZoomViewCursor }, onMouseDown:this.mousedown});
 		}
 	});
 	
@@ -2280,6 +2286,7 @@ function init(aArrBufAndCore) {
 			
 			var cInputNumberProps = {
 				pMin: 1,
+				pCStateSel: ['Gaussian', 'Mosaic'],
 				key: subtool
 			};
 			
@@ -2290,7 +2297,7 @@ function init(aArrBufAndCore) {
 				cInputNumberProps.pLabel = 'Block Size (px)';
 			} else {
 				// Gaussian
-				cInputNumberProps.sPalBlurRadius = this.props.sPalBlurBlock;
+				cInputNumberProps.sPalBlurRadius = this.props.sPalBlurRadius;
 				cInputNumberProps.pStateVarName = 'sPalBlurRadius';
 				cInputNumberProps.pLabel = 'Radius (px)';
 			}
@@ -2740,7 +2747,8 @@ function init(aArrBufAndCore) {
 			var cProps = {
 				className:'psubwrap',
 				style: {
-					fontSize: this.props.sPalSize + 'px'
+					fontSize: this.props.sPalSize + 'px',
+					cursor: this.props.pPalSubwrapCursor
 				}
 			};
 			
@@ -2771,6 +2779,7 @@ function init(aArrBufAndCore) {
 			
 			this.limitTestThenSet(newVal, e.target);
 			
+			e.stopPropagation(); // so it doesnt trigger the wheel event on window. otherwise if ZoomView is showing, then it will change that zoom level
 		},
 		keydown: function(e) {
 			var newVal;
@@ -2802,7 +2811,6 @@ function init(aArrBufAndCore) {
 				return; // above min limit, dont set it
 			} else {
 				
-				console.error('ok will set');
 				if (aInputDomEl) {
 					aInputDomEl.value = aNewVal;
 				}
@@ -2812,15 +2820,20 @@ function init(aArrBufAndCore) {
 				
 				gEditorStore.setState(newStateObj);
 				
-				console.error('ok set, newStateObj:', newStateObj);
-				// if (gCState && gCState.selection && ['Gaussian', 'Mosaic'].indexOf(gCState.selection.name) > -1) {
-					// gCState.valid = false; // so new blur level gets applied
-				// }
+				if (gCState && gCState.selection && this.props.pCStateSel.indexOf(gCState.selection.name) > -1) {
+					gCState.valid = false; // so new blur level gets applied
+				}
 			}
 		},
 		mousedown: function(e) {
 			this.downx = e.screenX;
+			this.downval = this.props[this.props.pStateVarName];
 			window.addEventListener('mouseup', this.mouseup, false);
+			window.addEventListener('mousemove', this.mousemove, false);
+			
+			gEditorStore.setState({
+				sInputNumberMousing: this.cursor
+			});
 		},
 		mousemove: function(e) {
 			
@@ -2828,27 +2841,43 @@ function init(aArrBufAndCore) {
 			
 			var delSensitivity = Math.round(delX / this.mousesens);
 			
-			var newVal = this.props[this.props.pStateVarName] + delSensitivity;
+			var newVal = this.downval + delSensitivity;
+			
+			// console.log('downx:', this.downx, 'screenx:', e.screenX, 'delX:', delX, 'delSensitivity:', delSensitivity);
+			
+			
+			// i do this extra limit test here, as mouse move can move greatly so i might miss the minimum/maximum
+			if (this.props.pMin !== undefined && newVal < this.props.pMin) {
+				newVal = this.props.pMin;
+			} else if (this.props.pMax !== undefined && newVal < this.props.pMax) {
+				newVal = this.props.pMax;
+			}
+			
 			if (this.props[this.props.pStateVarName] != newVal) {
-				this.limitTestThenSet(newVal, e.target);
+				this.limitTestThenSet(newVal, this.refs.input);
 			}
 			
 		},
 		mouseup: function() {
-			window.reniveEventListener('mouseup', this.mouseup, false);
+			window.removeEventListener('mouseup', this.mouseup, false);
+			window.removeEventListener('mousemove', this.mousemove, false);
+			gEditorStore.setState({
+				sInputNumberMousing: null
+			});
 		},
 		change: function(e) {
+			// cool this doesnt trigger unless user manually changes the field
 			console.warn('triggering onchange!');
-			// // if (!e || !e.target) {
-			// 	// return;
-			// // }
-			// var newValueStr = e.target.value;
-			// if (!newValueStr || isNaN(newValueStr)) {
-			// 	return;
+			// if (!e || !e.target) {
+				// return;
 			// }
-			// var newValue = parseInt(newValueStr);
-			// 
-			// this.limitTestThenSet(newValue);
+			var newValueStr = e.target.value;
+			if (!newValueStr || isNaN(newValueStr)) {
+				return;
+			}
+			var newValue = parseInt(newValueStr);
+			
+			this.limitTestThenSet(newValue);
 			
 		},
 		render: function() {
@@ -2861,17 +2890,17 @@ function init(aArrBufAndCore) {
 			//		pCrement - number to increment/decrement by - default:1
 			// //		pCanvasStateObj
 			//		[pStateVarName]
-			
-			console.error('this.props:', this.props);
+			//		pCursor - css cursor when mouse moving. default is ew-resize
 			
 			this.crement = this.props.pCrement || 1;
 			this.mousesens = this.props.pMouseSens || 10;
+			this.cursor = this.props.pCursor || 'ew-resize';
 			
 			return React.createElement('div', {className:'inputnumber'},
 				React.createElement('label', {htmlFor:'inputnumber_' + this.props.pStateVarName, className:'inputnumber-label', onMouseDown:this.mousedown},
 					this.props.pLabel
 				),
-				React.createElement('input', {id:'inputnumber_' + this.props.pStateVarName, type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName] })
+				React.createElement('input', {id:'inputnumber_' + this.props.pStateVarName, ref:'input', type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName] })
 			);
 		}
 	})
