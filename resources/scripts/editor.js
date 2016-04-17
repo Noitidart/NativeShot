@@ -410,7 +410,8 @@ function init(aArrBufAndCore) {
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
 				
-				sPalZoomViewCoords: this.props.pPalZoomViewCoords
+				sPalZoomViewCoords: this.props.pPalZoomViewCoords,
+				sPalZoomViewLevel: this.props.pPalZoomViewLevel
 			};
 		},
 		componentDidMount: function() {
@@ -419,6 +420,9 @@ function init(aArrBufAndCore) {
 			this.setState({
 				sMounted: true
 			});
+			
+			// add listeners
+			window.addEventListener('wheel', this.wheel, false);
 		},
 		componentDidUpdate: function(prevProps, prevState) {
 			if (this.cstate && this.cstate.valid) {
@@ -484,6 +488,15 @@ function init(aArrBufAndCore) {
 				
 				this.cstate.valid = canValid;
 			}
+			//if (this.state.sPalMultiDepresses['Zoom View'] != prevState.sPalMultiDepresses['Zoom View']) {
+			//	if (this.state.sPalMultiDepresses['Zoom View']) {
+			//		alert('adding wheel');
+			//		window.addEventListener('wheel', this.wheel, false);
+			//	} else {
+			//		alert('removing wheel');
+			//		window.removeEventListener('wheel', this.wheel, false);
+			//	}
+			//}
 		},
 		mPalHandleMousedown: function(e) {
 			gEditorStore.setState({
@@ -1164,6 +1177,26 @@ function init(aArrBufAndCore) {
 				this.cstate.valid = true;
 			}
 		},
+		wheel: function(e) {
+			// console.log('wheel:', e.deltaMode, e.deltaX, e.deltaY);
+			
+			if (this.state.sPalMultiDepresses['Zoom View']) {
+				var cLevel = this.state.sPalZoomViewLevel;
+				var nLevel;
+				if (e.deltaY < 0) {
+					nLevel = cLevel + 1;
+				} else {
+					nLevel = cLevel - 1;
+				}
+				
+				if (nLevel >= 1 && nLevel <= 40) {
+					gEditorStore.setState({
+						sPalZoomViewLevel: nLevel
+					});
+					gZState.valid = false;
+				}
+			}
+		},
 		mousemove: function(e) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
@@ -1762,7 +1795,7 @@ function init(aArrBufAndCore) {
 		},
 		componentWillUnmount: function() {
 			clearInterval(this.zstate.interval);
-			gZState = null;
+			gZState = null; // so even if bgpat image loads, it will error as it cant set it here as it will be null
 		},
 		draw: function() {
 			if (gCState && gCState.rconn.ctx && !this.zstate.valid) {
@@ -1776,7 +1809,7 @@ function init(aArrBufAndCore) {
 				var fontHeight = 24;
 				var fontHeightPlusPad = fontHeight + 3 + 3; // as i have offset of fillText on height by 3, and then i want 3 on top
 				
-				var zoomLevel = 8;
+				var zoomLevel = this.props.sPalZoomViewLevel;
 				
 				var dWidth = width;
 				var dHeight = height - fontHeightPlusPad;
@@ -1828,7 +1861,7 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props - cPalProps - its all of them
-			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px'} });
+			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px'}});
 		}
 	});
 	
@@ -2787,7 +2820,7 @@ function init(aArrBufAndCore) {
 		}
 	}
 	
-	var palMultiDepresses = {}; // if its depressed, then the tool label is the key and the value is true
+	var palMultiDepresses = {'Zoom View':true}; // if its depressed, then the tool label is the key and the value is true
 
 	var palLineColor = 'rgb(74, 144, 226)'; // :todo: get from prefs
 	var palLineAlpha = 100; // :todo: get from prefs
@@ -2799,7 +2832,8 @@ function init(aArrBufAndCore) {
 	var palBlurBlock = 5;
 	var palBlurRadius = 10;
 
-	palZoomViewCoords = {x:300, y:300};
+	var palZoomViewCoords = {x:300, y:300};
+	var palZoomViewLevel = 8;
 	
 	var Specials = {
 		Divider: Divider,
@@ -2833,6 +2867,7 @@ function init(aArrBufAndCore) {
 				pPalBlurRadius: palBlurRadius,
 				
 				pPalZoomViewCoords: palZoomViewCoords,
+				pPalZoomViewLevel: palZoomViewLevel,
 				
 				pCanHandleSize: 19, // :todo: get from prefs
 				pCanInterval: 30, // ms

@@ -408,7 +408,6 @@ body {
 	border-radius: 1px;
 	position: absolute;
 	z-index: 3;
-	pointer-events: none;
 }
 /* end - zoom_view */
 
