@@ -118,7 +118,7 @@ function init(aArrBufAndCore) {
 					icon: '\ue800'
 				},
 				{
-					label: 'Highlighter', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
+					label: 'Marker', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
 					icon: 'S'
 				}
 			]
@@ -213,6 +213,17 @@ function init(aArrBufAndCore) {
 		{
 			special: 'TextTools',
 			justClick: true
+		},
+		{
+			label: 'Marker Color',
+			icon: 'S',
+			justClick: true,
+			sub: [
+				{
+					special: 'ColorPicker',
+					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor'}
+				}
+			]
 		},
 		{
 			special: 'Divider'
@@ -387,7 +398,9 @@ function init(aArrBufAndCore) {
 				sPalLineColor: this.props.pPalLineColor,
 				sPalLineAlpha: this.props.pPalLineAlpha,
 				sPalFillColor: this.props.pPalFillColor,
-				sPalFillAlpha: this.props.pPalFillAlpha
+				sPalFillAlpha: this.props.pPalFillAlpha,
+				sPalMarkerColor: this.props.pPalMarkerColor,
+				sPalMarkerAlpha: this.props.pPalMarkerAlpha
 			};
 		},
 		componentDidMount: function() {
@@ -488,6 +501,13 @@ function init(aArrBufAndCore) {
 						this.y2 = 'y2' in aOptions ? aOptions.y2 : y;
 				
 					break;
+				case 'Pencil':
+				case 'Marker':
+				
+						// has to be drawn, i dont allow constructing this with predefiend path. as in i dont offer aOptions.path
+						this.path = [this.x, this.y];
+				
+					break;
 				default:
 					this.x = x;
 					this.y = y;
@@ -516,6 +536,7 @@ function init(aArrBufAndCore) {
 					
 					break;
 				case 'Line':
+				case 'Pencil':
 				
 						this.Style = {
 							Draw: {
@@ -526,8 +547,22 @@ function init(aArrBufAndCore) {
 									lineJoin: aOptions.lineJoin || gCState.Style.Draw.line.lineJoin
 								}
 							}
-						}
+						};
 						
+					break;
+				case 'Marker':
+					
+						this.Style = {
+							Draw: {
+								me: {
+									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha),
+									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
+									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
+									lineJoin: aOptions.lineJoin || gCState.Style.Draw.line.lineJoin
+								}
+							}
+						};
+					
 					break;
 				default:
 					// nothing special
@@ -536,8 +571,9 @@ function init(aArrBufAndCore) {
 			this.draw = function(ctx) {
 				// returns the valid value
 				
-				if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
-					console.error('no width or height so not drawing');
+				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
+				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
+					console.error('width or height is 0 so not drawing');
 					return true;
 				}
 				
@@ -552,6 +588,8 @@ function init(aArrBufAndCore) {
 					case 'Rectangle':
 					case 'Oval':
 					case 'Line':
+					case 'Pencil':
+					case 'Marker':
 					
 							curStyle = this.Style.Draw.me;
 					
@@ -666,6 +704,17 @@ function init(aArrBufAndCore) {
 							ctx.stroke();
 						
 						break;
+					case 'Pencil':
+					case 'Marker':
+						
+							ctx.beginPath();
+							ctx.moveTo(this.path[0], this.path[1]);
+							for (var i=2; i<this.path.length; i+=2) {
+								ctx.lineTo(this.path[i], this.path[i+1]);
+							}
+							ctx.stroke();
+						
+						break;
 					default:
 						// should never get here, as would have returned earlier, as this one is not drawable
 				}
@@ -676,8 +725,14 @@ function init(aArrBufAndCore) {
 			this.select = function(ctx) {
 				// returns the valid value
 				
-				if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
-					console.error('not selecitng as no width or height');
+				if (this.name == 'dim') {
+					// not selectable
+					return;
+				}
+				
+				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
+				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
+					console.error('width or height is 0 so not drawing');
 					return true;
 				}
 				
@@ -948,6 +1003,9 @@ function init(aArrBufAndCore) {
 			this.ctx.clearRect(0, 0, this.cstate.width, this.cstate.height);
 		},
 		draw: function() {
+			if (this.cstate.pathing && this.cstate.pathing.length) {
+				this.cstate.selection.path = this.cstate.selection.path.concat(this.cstate.pathing.splice(0, 2));
+			}
 			if(!this.cstate.valid) {
 				var ctx = this.ctx;
 				this.clear();
@@ -1053,6 +1111,10 @@ function init(aArrBufAndCore) {
 					this.cstate.selection.x2 = mx;
 					this.cstate.selection.y2 = my;
 					this.cstate.valid = false;
+				} else if (this.cstate.pathing) {
+					this.cstate.pathing[0] = mx;
+					this.cstate.pathing[1] = my;
+					this.cstate.valid = false;
 				} else {
 					// just moving, see if mouse is over a resize point, or a drag point
 					var dragFilterFunc;
@@ -1071,6 +1133,12 @@ function init(aArrBufAndCore) {
 						case 'Line-':
 							
 								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
+							
+							break;
+						case 'Freedraw-Pencil':
+						case 'Freedraw-Marker':
+							
+								dragFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
 							
 							break;
 						default:
@@ -1137,6 +1205,12 @@ function init(aArrBufAndCore) {
 							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
 						
 						break;
+					case 'Freedraw-Pencil':
+					case 'Freedraw-Marker':
+						
+							selectFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
+						
+						break;
 					default:
 						// do nothing
 				}
@@ -1159,17 +1233,29 @@ function init(aArrBufAndCore) {
 							this.cstate.dragoffy = my - mySel.y;
 							
 							// introduced for line dragging
-							this.cstate.dragdown = {
-								// the initial x and y the user mouse downed on
-								mx: mx,
-								my: my,
-								// the initial x and y of the drawable
-								x: mySel.x,
-								y: mySel.y,
-								// for line we have x2 and y2
-								x2: mySel.x2,
-								y2: mySel.y2
-							};
+							if (['Line'].indexOf(mySel.name)) {
+								this.cstate.dragdown = {
+									// the initial x and y the user mouse downed on
+									mx: mx,
+									my: my,
+									// the initial x and y of the drawable
+									x: mySel.x,
+									y: mySel.y,
+									// for line we have x2 and y2
+									x2: mySel.x2,
+									y2: mySel.y2
+								};
+							}
+							// introduced for pencil/marker dragging
+							if (['Pencil', 'Marker'].indexOf(mySel.name)) {
+								this.cstate.dragdown = {
+									// the initial x and y the user mouse downed on
+									mx: mx,
+									my: my,
+									// the initial path
+									path: mySel.path.slice()
+								}
+							}
 							// end introduced
 							
 							this.cstate.dragging = true;
@@ -1210,6 +1296,12 @@ function init(aArrBufAndCore) {
 								this.cstate.selection = new this.Drawable(mx, my, null, null, 'Line');
 						
 							break;
+						case 'Freedraw-Pencil':
+						case 'Freedraw-Marker':
+						
+								this.cstate.selection = new this.Drawable(mx, my, null, null, this.state.sPalToolSubs[this.state.sPalTool]);
+						
+							break;
 						default:
 							// do nothing
 					}
@@ -1228,6 +1320,13 @@ function init(aArrBufAndCore) {
 								
 									this.cstate.lining = true;
 									this.cstate.valid = false; // as i have to draw the selection point
+								
+								break;
+							case 'Pencil':
+							case 'Marker':
+								
+									this.cstate.pathing = [];
+									this.cstate.valid = false; // :todo: consider: as i have to draw the selection point
 								
 								break;
 							default:
@@ -1269,6 +1368,15 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.delete();
 							this.cstate.selection = null;
 							// need to set valid=false because otherwise the big handle thing is left over
+							this.cstate.valid = false;
+						}
+					} else if (this.cstate.pathing) {
+						this.cstate.pathing = null;
+						if (this.cstate.selection.path.length == 2) {
+							// only two points, meaning just where they moused down
+							this.cstate.selection.delete();
+							this.cstate.selection = null;
+							// :todo: consider: need to set valid=false because otherwise the big handle thing is left over
 							this.cstate.valid = false;
 						}
 					}
@@ -1354,6 +1462,7 @@ function init(aArrBufAndCore) {
 				this.cstate.dragging = false; // Keep track of when we are dragging
 				this.cstate.resizing = false; // when mouses down with a tool that can draw
 				this.cstate.lining = false; // when picking new end points for a line
+				this.cstate.pathing = null; // when drawing with pencil or marker // it is set to a an array of 2 points when not null
 				this.cstate.selection = null;
 				
 				this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
@@ -1594,6 +1703,22 @@ function init(aArrBufAndCore) {
 						}
 					
 					break;
+				case 'Marker Color':
+					
+						if (gCState && gCState.selection) {
+							switch (gCState.selection.name) {
+								case 'Marker':
+									
+										gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+										gCState.valid = false;
+									
+									break;
+								default:
+									// this selection is not affected
+							}
+						}
+					
+					break;
 				case 'Close':
 						
 						window.close();
@@ -1667,6 +1792,8 @@ function init(aArrBufAndCore) {
 			//		sPalLineColor
 			//		sPalFillAlpha
 			//		sPalFillColor
+			//		sPalMarkerAlpha
+			//		sPalMarkerColor
 			
 			var cProps = {
 				className:'pbutton',
@@ -1692,12 +1819,15 @@ function init(aArrBufAndCore) {
 			}
 			
 			var cButtonIcon;
-			if (this.props.pButton.label == 'Color' || this.props.pButton.label == 'Fill Color') {
+			if (['Color', 'Fill Color', 'Marker Color'].indexOf(this.props.pButton.label) > -1) {
 				var rgbaStr;
 				if (this.props.pButton.label == 'Color') {
 					rgbaStr = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
-				} else {
+				} else if (this.props.pButton.label == 'Fill Color') {
 					rgbaStr = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+				} else {
+					// its Marker Color
+					rgbaStr = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 				}
 				var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
 				cButtonIcon = React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'pbutton-icon-color'});
@@ -1711,7 +1841,7 @@ function init(aArrBufAndCore) {
 						this.props.pButton.label
 					)
 				),
-				!this.props.pButton.sub ? undefined : React.createElement(Submenu, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor},
+				!this.props.pButton.sub ? undefined : React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
 					this.props.pButton.label
 				),
 				cButtonIcon
@@ -1739,6 +1869,8 @@ function init(aArrBufAndCore) {
 			//		sPalLineColor
 			//		sPalFillAlpha
 			//		sPalFillColor
+			//		sPalMarkerAlpha
+			//		sPalMarkerColor
 			//		pSubButton
 			//		pButton
 			//		sPalToolSubs
@@ -1796,7 +1928,7 @@ function init(aArrBufAndCore) {
 			//		sPalWidth
 			//		sPalHeight
 			
-			return React.createElement('div', {className:'pdimensions'},
+			return React.createElement('div', {className:'pdimtools'},
 				React.createElement('div', {},
 					React.createElement('label', {htmlFor:'drawable_width'},
 						'Width'
@@ -1938,6 +2070,18 @@ function init(aArrBufAndCore) {
 							default:
 								// this selection is not affected
 						}
+					} else if (this.props.pStateColorKey == 'sPalMarkerColor') {
+						// if currently selection object obeys markercolor, then apply this new linecolor
+						switch (gCState.selection.name) {
+							case 'Marker':
+								
+									gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.valid = false;
+								
+								break;
+							default:
+								// this selection is not affected
+						}
 					}
 				}
 			}
@@ -1955,6 +2099,7 @@ function init(aArrBufAndCore) {
 			
 			// convert sColor into object of rgb
 			var sColor = this.props.sColor + '';
+			console.error('this.props:', this.props);
 			var rgb;
 			if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
 				rgb = hexToRgb(sColor);
@@ -2103,10 +2248,12 @@ function init(aArrBufAndCore) {
 			//		sPalLineColor
 			//		sPalFillAlpha
 			//		sPalFillColor
+			//		sPalMarkerAlpha
+			//		sPalMarkerColor
 			
 			var cChildren = [];
 			for (var i=0; i<this.props.pSub.length; i++) {
-				cChildren.push(React.createElement(SubButton, {sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha: this.props.sPalLineAlpha, sPalLineColor: this.props.sPalLineColor, sPalFillAlpha: this.props.sPalFillAlpha, sPalFillColor: this.props.sPalFillColor}));
+				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 			}
 			
 			return React.createElement('div', {className:'psub'},
@@ -2139,7 +2286,7 @@ function init(aArrBufAndCore) {
 						cChildren.push(React.createElement(Specials[pPalLayout[i].special], cSpecialProps));
 					}
 				} else {
-					cChildren.push(React.createElement(Button, {sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor}));
+					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:pPalLayout[i]}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:pPalLayout[i], sPalTool:this.props.sPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 				}
 			}
 			
@@ -2202,6 +2349,8 @@ function init(aArrBufAndCore) {
 	var palLineAlpha = 100; // :todo: get from prefs
 	var palFillColor = 'rgb(208, 2, 27)'; // :todo: get from prefs
 	var palFillAlpha = 100; // :todo: get from prefs
+	var palMarkerColor = '#ffef15';
+	var palMarkerAlpha = '50';
 	
 	var Specials = {
 		Divider: Divider,
@@ -2226,6 +2375,8 @@ function init(aArrBufAndCore) {
 				pPalLineAlpha: palLineAlpha,
 				pPalFillColor: palFillColor,
 				pPalFillAlpha: palFillAlpha,
+				pPalMarkerColor: palMarkerColor,
+				pPalMarkerAlpha: palMarkerAlpha,
 				
 				pCanHandleSize: 19, // :todo: get from prefs
 				pCanInterval: 30, // ms

@@ -401,6 +401,15 @@ body {
 }
 /* GROUP:colorpicker */
 
+/* start - tools */
+/* state:innate */
+.pdimtools,
+.ptexttools,
+.parrowtools {
+	font-size: 12px;
+}
+/* end - tools */
+
 /* start - other_stuff */
 .pbutton-icon-color {
 	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
