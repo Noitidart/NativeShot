@@ -16,12 +16,13 @@ var core = {
 var gEditorStore = {};
 var gCState = {};
 var gColorPickerSetState = {NativeShotEditor:null};
+var gFonts;
 
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
 	
 	core = aArrBufAndCore.core;
-	
+	gFonts = aArrBufAndCore.fonts;
 	var palLayout = [ // the tools and order they should show in
 		{
 			// Handle - from where user can drag palette around
@@ -1823,7 +1824,7 @@ function init(aArrBufAndCore) {
 			//		sPalFontUnderline
 			//		sPalFontWrap - word warp. null if wrap on word. or string for the ellipsis to use.
 			
-			var cFontFamilies = ['Arial', 'Tahoma', 'Verdana'].map(function(aFamily) {
+			var cFontFamilies = gFonts.map(function(aFamily) {
 				return React.createElement('option', {style:{fontFamily:aFamily}, value:aFamily},
 					aFamily
 				);

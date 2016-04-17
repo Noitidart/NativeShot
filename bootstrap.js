@@ -61,6 +61,8 @@ const TWITTER_IMG_SUFFIX = ':large';
 
 var OSStuff = {};
 
+var gFonts;
+
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
@@ -539,11 +541,17 @@ var EditorFuncs = {
 			genericReject.bind(null, 'promise_setWinAlwaysTop', 0)
 		).catch(genericCatch.bind(null, 'promise_setWinAlwaysTop', 0));
 		
+		if (!gFonts) {
+				var fontsEnumerator = Cc['@mozilla.org/gfx/fontenumerator;1'].getService(Ci.nsIFontEnumerator);
+				gFonts = fontsEnumerator.EnumerateAllFonts({});
+		}
+		
 		colMon[aData.iMon].E.DOMWindow.postMessage({
 			from: 'bootstrap',
 			topic: 'init',
 			screenshotArrBuf: colMon[iMon].screenshotArrBuf,
-			core: core
+			core: core,
+			fonts: gFonts
 		}, '*', [colMon[iMon].screenshotArrBuf]);
 	}
 };
