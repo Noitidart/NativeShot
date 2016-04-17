@@ -14,7 +14,8 @@ var core = {
 };
 
 var gEditorStore = {};
-var gCState = {};
+var gCState;
+var gZState;
 var gColorPickerSetState = {NativeShotEditor:null};
 var gFonts;
 
@@ -407,7 +408,9 @@ function init(aArrBufAndCore) {
 				sPalMarkerAlpha: this.props.pPalMarkerAlpha,
 				
 				sPalBlurBlock: this.props.pPalBlurBlock,
-				sPalBlurRadius: this.props.pPalBlurRadius
+				sPalBlurRadius: this.props.pPalBlurRadius,
+				
+				sPalZoomViewCoords: this.props.pPalZoomViewCoords
 			};
 		},
 		componentDidMount: function() {
@@ -733,7 +736,6 @@ function init(aArrBufAndCore) {
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
 							var level = gCState.rconn.state.sPalBlurRadius;
-							console.error('level:', level);
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -752,7 +754,6 @@ function init(aArrBufAndCore) {
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
 							var level = gCState.rconn.state.sPalBlurBlock;
-							console.error('level:', level);
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -1167,6 +1168,11 @@ function init(aArrBufAndCore) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
+			
+			if (this.state.sPalMultiDepresses['Zoom View']) {
+				gZState.mouse = {x:mx, y:my};
+				gZState.valid = false;
+			}
 			
 			if (this.state.sPalDragStart) {
 				gEditorStore.setState({
@@ -1715,13 +1721,100 @@ function init(aArrBufAndCore) {
 				}
 			}
 			
+			var zoomViewREl;
+			if (this.state.sPalMultiDepresses['Zoom View']) {
+				zoomViewREl = React.createElement(ZoomView, cPalProps);
+			}
+			
 			return React.createElement('div', {className:'editor'},
 				React.createElement('div', cPalPalProps,
 					React.createElement(Subwrap, cPalProps)
 				),
 				React.createElement('canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
-				React.createElement('canvas', cCanProps)
+				React.createElement('canvas', cCanProps),
+				zoomViewREl
 			);
+		},
+	});
+	
+	var ZoomView = React.createClass({
+		displayName: 'ZoomView',
+		componentDidMount: function() {
+			
+			this.zstate = {}
+			gZState = this.zstate;
+			
+			this.zstate.rconn = this;
+			
+			this.ctx = ReactDOM.findDOMNode(this).getContext('2d');
+			this.zstate.valid = false;
+			this.zstate.mouse = {x:0, y:0};
+			this.ctx.mozImageSmoothingEnabled = false;
+			this.ctx.ImageSmoothingEnabled = false;
+			
+			this.zstate.interval = setInterval(this.draw, 30);
+		},
+		componentWillUnmount: function() {
+			clearInterval(this.zstate.interval);
+			gZState = null;
+		},
+		draw: function() {
+			if (gCState && gCState.rconn.ctx && !this.zstate.valid) {
+				var ctx = this.ctx;
+				var width = 300; // of zoomview canvas
+				var height = 300;  // of zoomview canvas
+				
+				// background
+				ctx.fillStyle = '#eee';
+				ctx.fillRect(0, 0, width, height);
+				
+				var fontHeight = 24;
+				var fontHeightPlusPad = fontHeight + 3 + 3; // as i have offset of fillText on height by 3, and then i want 3 on top
+				
+				var zoomLevel = 1;
+				
+				var dWidth = width;
+				var dHeight = height - fontHeightPlusPad;
+				
+				var sx = this.zstate.mouse.x - (width / 2);
+				var sy = this.zstate.mouse.y - (height / 2);
+				var sWidth = width;
+				var sHeight = dHeight;
+				
+				ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
+				
+				// draw grid
+				ctx.strokeStyle = '#4A90E2';
+				
+				ctx.beginPath();
+				ctx.lineWidth = 2;
+				ctx.moveTo(width/2, 0);
+				ctx.lineTo(width/2, height);
+				ctx.stroke();
+
+				ctx.beginPath();
+				ctx.lineWidth = 2;
+				ctx.moveTo(0, height/2);
+				ctx.lineTo(width, height/2);
+				ctx.stroke();
+				
+				// write text
+				ctx.font = '24px serif';
+				ctx.textAlign = 'left';
+				ctx.fillStyle = '#000';
+				ctx.fillText(this.zstate.mouse.x + ', ' + this.zstate.mouse.y, 5, height - 5);
+				
+				var zoomPercent = Math.round(zoomLevel * 100) + '%';
+				ctx.textAlign = 'right';
+				ctx.fillText(zoomPercent, width - 5, height - 5);
+				
+				// mark valid
+				this.zstate.valid = true;
+			}
+		},
+		render: function() {
+			// props - cPalProps - its all of them
+			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px'} });
 		}
 	});
 	
@@ -2133,7 +2226,7 @@ function init(aArrBufAndCore) {
 			}
 		},
 		keydown: function(e) {
-			console.log('keydown:', e);
+
 			var newStateObj = {};
 			
 			switch (e.key) {
@@ -2691,6 +2784,8 @@ function init(aArrBufAndCore) {
 	
 	var palBlurBlock = 5;
 	var palBlurRadius = 10;
+
+	palZoomViewCoords = {x:300, y:300};
 	
 	var Specials = {
 		Divider: Divider,
@@ -2722,6 +2817,8 @@ function init(aArrBufAndCore) {
 				
 				pPalBlurBlock: palBlurBlock,
 				pPalBlurRadius: palBlurRadius,
+				
+				pPalZoomViewCoords: palZoomViewCoords,
 				
 				pCanHandleSize: 19, // :todo: get from prefs
 				pCanInterval: 30, // ms

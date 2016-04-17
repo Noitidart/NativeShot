@@ -24,7 +24,7 @@ body {
 /* state:innate */
 #palette {
 	position: absolute;
-	z-index: 3;
+	z-index: 4;
 }
 /* end - palette */
 
@@ -401,7 +401,18 @@ body {
 }
 /* GROUP:colorpicker */
 
-/* start - tools */
+/* start - zoom_view */
+/* state:innate */
+.pzoomview {
+	border: 5px solid #ccc;
+	border-radius: 1px;
+	position: absolute;
+	z-index: 3;
+	pointer-events: none;
+}
+/* end - zoom_view */
+
+/* start - option_tools */
 /* state:innate */
 .pblurlevel,
 .plinetools,
@@ -410,7 +421,7 @@ body {
 .parrowtools {
 	font-size: 12px;
 }
-/* end - tools */
+/* end - option_tools */
 
 /* start - other_stuff */
 .pbutton-icon-color {
