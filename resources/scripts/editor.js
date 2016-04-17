@@ -727,8 +727,8 @@ function init(aArrBufAndCore) {
 					case 'Gaussian':
 					case 'Mosaic':
 						
-							var sx = this.x; // 0;
-							var sy = this.y; // 0;
+							var sx = 0;
+							var sy = 0;
 							var sWidth = this.w;
 							var sHeight = this.h;
 							var dx = this.x;
@@ -736,7 +736,9 @@ function init(aArrBufAndCore) {
 							var dWidth = this.w;
 							var dHeight = this.h;
 							
-							ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+							// ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+							var srcImgData = gCState.rconn.ctx0.getImageData(sx, sy, sWidth, sHeight);
+							ctx.putImageData(srcImgData, dx, dy);
 						
 						break;
 					default:
