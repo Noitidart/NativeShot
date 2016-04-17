@@ -2698,6 +2698,7 @@ var imagedata = {
 		// };
 		var optionsDefaults = {
 			value: 0.2
+			// value: 0.05
 		};
 		validateOptionsObj(aOptions, optionsDefaults);
 		
@@ -2728,14 +2729,23 @@ var imagedata = {
 
 		var canv = document.createElement('canvas');
 		var ctxv = canv.getContext('2d');
-		ctxv.mozImageSmoothingEnabled = false;
-		ctxv.imageSmoothingEnabled = false;
+
 		
 		canv.width = sw;
 		canv.height = sh;
-		
+
+		// copy orig to virtual
 		ctxv.drawImage(selement, sx, sy, sw, sh, 0, 0, sw, sh);
-		// ctxv.drawImage(canv, 0, 0, width, height, 0, 0, canv.width, canv.height);
+		
+		// scale virtual down with smooth
+		ctxv.mozImageSmoothingEnabled = true;
+		ctxv.imageSmoothingEnabled = true;
+		ctxv.drawImage(canv, 0, 0, scaledWidth, scaledHeight);
+		
+		// scale it up to orig width/height with no smooth
+		ctxv.mozImageSmoothingEnabled = false;
+		ctxv.imageSmoothingEnabled = false;
+		ctxv.drawImage(canv, 0, 0, scaledWidth, scaledHeight, 0, 0, sw, sh);
 		
 		canv.style.position = 'absolute';
 		canv.style.zIndex = 1000;
@@ -2744,7 +2754,8 @@ var imagedata = {
 		canv.style.border = '1px solid red';
 		
 		// document.body.insertBefore(canv, document.body.firstChild);
-		document.body.appendChild(canv);
+		// document.body.appendChild(canv);
+		dctx.drawImage(canv, dx, dy);
 	},
 	closePixelate: function(aImageData, sctx, sx, sy, w, h, ctx, dx, dy, aOptions={}) {
 		
