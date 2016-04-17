@@ -139,11 +139,12 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Line',
 			icon: '\ue831',
-			options: ['Color', 'ArrowTools']
+			options: ['Color', 'LineTools', 'ArrowTools']
 		},
 		{
 			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
-			icon: 'S'
+			icon: 'S',
+			options: ['TextTools']
 		},
 		{
 			label: 'Blur',
@@ -2419,12 +2420,14 @@ function init(aArrBufAndCore) {
 					}
 				} else {
 					/*
-					if (cLayoutEntry.label == 'Clear Selection' && this.cstate) {
+					if (cLayoutEntry.label == 'Clear Selection' && gCState && gCState.drawables) {
+						// console.log('gCState:', gCState);
 						var cutoutFound = false;
-						var drawables = this.cstate.drawables;
+						var drawables = gCState.drawables;
+						console.log('doing checks! drawables:', drawables);
 						var l = drawables.length;
-						for (var i=0; i<l; i++) {
-							if (drawables[i].name == 'cutout') {
+						for (var j=0; j<l; j++) {
+							if (drawables[j].name == 'cutout') {
 								cutoutFound = true;
 								break;
 							}
