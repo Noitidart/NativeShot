@@ -1837,7 +1837,7 @@ function init(aArrBufAndCore) {
 				
 				// bring in view
 				var sx = this.zstate.mouse.x - ((width / 2) * (1 / zoomLevel));
-				var sy = this.zstate.mouse.y - ((height / 2) * (1 / zoomLevel));
+				var sy = this.zstate.mouse.y - ((dHeight / 2) * (1 / zoomLevel));
 				var sWidth = width * (1 / zoomLevel);
 				var sHeight = dHeight * (1 / zoomLevel);
 				
@@ -1849,13 +1849,13 @@ function init(aArrBufAndCore) {
 				ctx.beginPath();
 				ctx.lineWidth = 2;
 				ctx.moveTo(width/2, 0);
-				ctx.lineTo(width/2, height);
+				ctx.lineTo(width/2, dHeight);
 				ctx.stroke();
 
 				ctx.beginPath();
 				ctx.lineWidth = 2;
-				ctx.moveTo(0, height/2);
-				ctx.lineTo(width, height/2);
+				ctx.moveTo(0, dHeight/2);
+				ctx.lineTo(width, dHeight/2);
 				ctx.stroke();
 				
 				// write text
