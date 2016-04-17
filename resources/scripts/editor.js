@@ -181,14 +181,19 @@ function init(aArrBufAndCore) {
 			]
 		},
 		{
-			label: 'Line Width',
+			label: 'Marker Color',
 			icon: 'S',
 			justClick: true,
 			sub: [
 				{
-					special: 'LineWidthPicker'
+					special: 'ColorPicker',
+					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor'}
 				}
 			]
+		},
+		{
+			special: 'LineTools',
+			justClick: true
 		},
 		{
 			special: 'ArrowTools',
@@ -213,17 +218,6 @@ function init(aArrBufAndCore) {
 		{
 			special: 'TextTools',
 			justClick: true
-		},
-		{
-			label: 'Marker Color',
-			icon: 'S',
-			justClick: true,
-			sub: [
-				{
-					special: 'ColorPicker',
-					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor'}
-				}
-			]
 		},
 		{
 			special: 'Divider'
@@ -1980,6 +1974,17 @@ function init(aArrBufAndCore) {
 		}
 	});
 	
+	var LineTools = React.createClass({
+		displayName: 'LineTools',
+		render: function() {
+			// props
+			//		sPalLineWidth
+			return React.createElement('div', {className:'plinetools'},
+				'line width'
+			);
+		}
+	});
+	
 	var DimensionTools = React.createClass({
 		displayName: 'DimensionTools',
 		render: function() {
@@ -2419,7 +2424,8 @@ function init(aArrBufAndCore) {
 		ColorPicker: ColorPicker,
 		TextTools: TextTools,
 		ArrowTools: ArrowTools,
-		DimensionTools: DimensionTools
+		DimensionTools: DimensionTools,
+		LineTools: LineTools
 	};
 	
 	var initReact = function() {
