@@ -733,6 +733,7 @@ function init(aArrBufAndCore) {
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
 							var level = gCState.rconn.state.sPalBlurRadius;
+							console.error('level:', level);
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -751,6 +752,7 @@ function init(aArrBufAndCore) {
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
 							var level = gCState.rconn.state.sPalBlurBlock;
+							console.error('level:', level);
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -1805,6 +1807,25 @@ function init(aArrBufAndCore) {
 		displayName: 'Button',
 		click: function() {
 			switch (this.props.pButton.label) {
+				case 'Blur':
+					
+						if (gCState && gCState.selection) {
+							switch (gCState.selection.name) {
+								case 'Gaussian':
+								case 'Mosaic':
+									
+										if (gCState.selection.name != this.props.sPalToolSubs[this.props.sPalTool]) {
+											gCState.selection.name = this.props.sPalToolSubs[this.props.sPalTool]
+											gCState.valid = false;
+										}
+									
+									break;
+								default:
+									// this selection is not affected
+							}
+						}
+					
+					break;
 				case 'Color':
 					
 						if (gCState && gCState.selection) {
@@ -2000,6 +2021,24 @@ function init(aArrBufAndCore) {
 					sPalToolSubs: sPalToolSubs
 				});
 			}
+			
+			if (this.props.sPalTool == 'Blur') {
+				if (gCState && gCState.selection) {
+					switch (gCState.selection.name) {
+						case 'Gaussian':
+						case 'Mosaic':
+							
+								if (gCState.selection.name != sPalToolSubs[this.props.sPalTool]) {
+									gCState.selection.name = sPalToolSubs[this.props.sPalTool];
+									gCState.valid = false;
+								}
+							
+							break;
+						default:
+							// this selection is not affected
+					}
+				}
+			}
 		},
 		render: function() {
 			// props
@@ -2073,13 +2112,25 @@ function init(aArrBufAndCore) {
 	var BlurTools = React.createClass({
 		displayName: 'BlurTools',
 		onchange: function(e) {
+			if (!e || !e.target) {
+				return;
+			}
+			var newValueStr = e.target.value;
+			if (!e.target.value || isNaN(e.target.value)) {
+				return;
+			}
+			var newValue = parseInt(newValueStr);
+			if (newValue <= 0) {
+				return;
+			}
+			console.error('ok setting with newValue:', newValue);
 			if (this.props.sPalToolSubs[this.props.sPalTool] == 'Mosaic') {
 				gEditorStore.setState({
-					sPalBlurBlock: e.target.value
+					sPalBlurBlock: newValue
 				});
 			} else {
 				gEditorStore.setState({
-					sPalBlurRadius: e.target.value
+					sPalBlurRadius: newValue
 				});
 			}
 			
@@ -2099,13 +2150,13 @@ function init(aArrBufAndCore) {
 				// Mosaic
 				cChildren = [
 					'Block Size (px)',
-					React.createElement('input', {type:'text', defaultValue:this.props.sPalBlurBlock, onChange:this.onchange })
+					React.createElement('input', {key:'Mosaic', type:'text', defaultValue:this.props.sPalBlurBlock, onChange:this.onchange })
 				];
 			} else {
 				// Gaussian
 				cChildren = [
 					'Radius (px)',
-					React.createElement('input', {type:'text', defaultValue:this.props.sPalBlurRadius, onChange:this.onchange })
+					React.createElement('input', {key:'Gaussian', type:'text', defaultValue:this.props.sPalBlurRadius, onChange:this.onchange })
 				];
 			}
 			
