@@ -391,6 +391,10 @@ function init(aArrBufAndCore) {
 				sCanHandleSize: this.props.pCanHandleSize,
 				sCanMouseMoveCursor: null,
 				
+				// drag related
+				sPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
+				sPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {screenX, screenY, initX, initY}
+				
 				// palette related
 				sPalSize: this.props.pPalSize,
 				sPalTool: 'Select', // the label of the currently active tool
@@ -398,8 +402,7 @@ function init(aArrBufAndCore) {
 				sPalMultiDepresses: this.props.pPalMultiDepresses,
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
-				sPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
-				
+
 				sPalLineColor: this.props.pPalLineColor,
 				sPalLineAlpha: this.props.pPalLineAlpha,
 				sPalFillColor: this.props.pPalFillColor,
@@ -1212,7 +1215,13 @@ function init(aArrBufAndCore) {
 					sPalX: this.state.sPalDragStart.sPalX + (e.screenX - this.state.sPalDragStart.screenX),
 					sPalY: this.state.sPalDragStart.sPalY + (e.screenY - this.state.sPalDragStart.screenY)
 				});
-				return;
+			} else if (this.state.sPalZoomViewDragStart) {
+				gEditorStore.setState({
+					sPalZoomViewCoords: {
+						x: this.state.sPalZoomViewDragStart.initX + (e.screenX - this.state.sPalZoomViewDragStart.screenX),
+						y: this.state.sPalZoomViewDragStart.initY + (e.screenY - this.state.sPalZoomViewDragStart.screenY)
+					}
+				});
 			} else {
 				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 				if (this.cstate.dragging) {
@@ -1519,7 +1528,10 @@ function init(aArrBufAndCore) {
 				gEditorStore.setState({
 					sPalDragStart: null
 				});
-				return;
+			} else if (this.state.sPalZoomViewDragStart) {
+				gEditorStore.setState({
+					sPalZoomViewDragStart: null
+				});
 			} else {
 				// if (e.target == this.refs.can) { // its canceling, so even if its not can go ahead and let it go through
 					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
@@ -1756,6 +1768,7 @@ function init(aArrBufAndCore) {
 			
 			var zoomViewREl;
 			if (this.state.sPalMultiDepresses['Zoom View']) {
+				cPalPalProps.mPalZoomViewHandleMousedown = this.mPalZoomViewHandleMousedown;
 				zoomViewREl = React.createElement(ZoomView, cPalProps);
 			}
 			
@@ -1859,9 +1872,14 @@ function init(aArrBufAndCore) {
 				this.zstate.valid = true;
 			}
 		},
+		mousedown: function(e) {
+			gEditorStore.setState({
+				sPalZoomViewDragStart: {screenX:e.screenX, screenY:e.screenY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
+			});
+		},
 		render: function() {
 			// props - cPalProps - its all of them
-			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px'}});
+			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px'}, onMouseDown:this.mousedown});
 		}
 	});
 	
