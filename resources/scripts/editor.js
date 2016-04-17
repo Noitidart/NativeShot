@@ -2838,7 +2838,7 @@ function init(aArrBufAndCore) {
 		}
 	}
 	
-	var palMultiDepresses = {'Zoom View':true}; // if its depressed, then the tool label is the key and the value is true
+	var palMultiDepresses = {}; // if its depressed, then the tool label is the key and the value is true
 
 	var palLineColor = 'rgb(74, 144, 226)'; // :todo: get from prefs
 	var palLineAlpha = 100; // :todo: get from prefs
@@ -2850,7 +2850,7 @@ function init(aArrBufAndCore) {
 	var palBlurBlock = 5;
 	var palBlurRadius = 10;
 
-	var palZoomViewCoords = {x:300, y:300};
+	var palZoomViewCoords = {x:20, y:300};
 	var palZoomViewLevel = 8;
 	
 	var Specials = {
