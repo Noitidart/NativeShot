@@ -2124,18 +2124,45 @@ function init(aArrBufAndCore) {
 				return;
 			}
 			console.error('ok setting with newValue:', newValue);
-			if (this.props.sPalToolSubs[this.props.sPalTool] == 'Mosaic') {
-				gEditorStore.setState({
-					sPalBlurBlock: newValue
-				});
-			} else {
-				gEditorStore.setState({
-					sPalBlurRadius: newValue
-				});
+			var newStateObj = {};
+			newStateObj[this.subtoolStateVar] = newValue;
+			gEditorStore.setState(newStateObj);
+			
+			if (gCState && gCState.selection && ['Gaussian', 'Mosaic'].indexOf(gCState.selection.name) > -1) {
+				gCState.valid = false; // so new blur level gets applied
+			}
+		},
+		keydown: function(e) {
+			console.log('keydown:', e);
+			var newStateObj = {};
+			
+			switch (e.key) {
+				case 'ArrowUp':
+				
+						newStateObj[this.subtoolStateVar] = this.props[this.subtoolStateVar] + 1;
+				
+					break;
+				case 'ArrowDown':
+					
+						newStateObj[this.subtoolStateVar] = this.props[this.subtoolStateVar] - 1;
+						if (newStateObj[this.subtoolStateVar] <= 0) {
+							newStateObj = null;
+						}
+					
+					break;
+				default:
+					// do nothing
+					console.log('e.key:', e.key);
+					newStateObj = null;
+			}
+			
+			if (newStateObj) {
+				e.target.value = newStateObj[this.subtoolStateVar];
+				gEditorStore.setState(newStateObj);
 			}
 			
 			if (gCState && gCState.selection && ['Gaussian', 'Mosaic'].indexOf(gCState.selection.name) > -1) {
-				gCState.valid = false;
+				gCState.valid = false; // so new blur level gets applied
 			}
 		},
 		render: function() {
@@ -2144,24 +2171,22 @@ function init(aArrBufAndCore) {
 			//		sPalBlurBlock
 			//		sPalTool
 			//		sPalToolSubs
-			var cChildren;
 			
+			var cInputLabel;
+			this.subtool = this.props.sPalToolSubs[this.props.sPalTool];
 			if (this.props.sPalToolSubs[this.props.sPalTool] == 'Mosaic') {
 				// Mosaic
-				cChildren = [
-					'Block Size (px)',
-					React.createElement('input', {key:'Mosaic', type:'text', defaultValue:this.props.sPalBlurBlock, onChange:this.onchange })
-				];
+				this.subtoolStateVar = 'sPalBlurBlock';
+				cInputLabel = 'Block Size (px)';
 			} else {
 				// Gaussian
-				cChildren = [
-					'Radius (px)',
-					React.createElement('input', {key:'Gaussian', type:'text', defaultValue:this.props.sPalBlurRadius, onChange:this.onchange })
-				];
+				this.subtoolStateVar = 'sPalBlurRadius';
+				cInputLabel = 'Radius (px)';
 			}
 			
 			return React.createElement('div', {className:'pblurlevel'},
-				cChildren
+				cInputLabel,
+				React.createElement('input', {key:this.subtool, type:'text', defaultValue:this.props[this.subtoolStateVar], onChange:this.onchange, onKeyDown:this.keydown })
 			);
 		}
 	});
