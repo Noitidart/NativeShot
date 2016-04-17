@@ -1753,6 +1753,12 @@ function init(aArrBufAndCore) {
 			this.ctx.ImageSmoothingEnabled = false;
 			
 			this.zstate.interval = setInterval(this.draw, 30);
+			
+			var bgimg = new Image();
+			bgimg.onload = function() {
+				this.bgpatt = this.ctx.createPattern(bgimg, 'repeat');
+			}.bind(this);
+			bgimg.src = 'chrome://nativeshot/content/resources/images/canvas_bg.png';
 		},
 		componentWillUnmount: function() {
 			clearInterval(this.zstate.interval);
@@ -1765,21 +1771,29 @@ function init(aArrBufAndCore) {
 				var height = 300;  // of zoomview canvas
 				
 				// background
-				ctx.fillStyle = '#eee';
-				ctx.fillRect(0, 0, width, height);
+
 				
 				var fontHeight = 24;
 				var fontHeightPlusPad = fontHeight + 3 + 3; // as i have offset of fillText on height by 3, and then i want 3 on top
 				
-				var zoomLevel = 1;
+				var zoomLevel = 8;
 				
 				var dWidth = width;
 				var dHeight = height - fontHeightPlusPad;
 				
-				var sx = this.zstate.mouse.x - (width / 2);
-				var sy = this.zstate.mouse.y - (height / 2);
-				var sWidth = width;
-				var sHeight = dHeight;
+				// fill bg of view part
+				ctx.fillStyle = this.bgpatt || '#eee';
+				ctx.fillRect(0, 0, width, dHeight);
+				
+				// fill bg of text part
+				ctx.fillStyle = '#eee';
+				ctx.fillRect(0, dHeight, width, height - dHeight);
+				
+				// bring in view
+				var sx = this.zstate.mouse.x - ((width / 2) * (1 / zoomLevel));
+				var sy = this.zstate.mouse.y - ((height / 2) * (1 / zoomLevel));
+				var sWidth = width * (1 / zoomLevel);
+				var sHeight = dHeight * (1 / zoomLevel);
 				
 				ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
 				
