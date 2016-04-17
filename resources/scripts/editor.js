@@ -823,7 +823,6 @@ function init(aArrBufAndCore) {
 					case 'Marker':
 					
 							ctx.beginPath();
-							console.error('xy:', this.path[0], this.path[1], 'this.path:', this.path);
 							ctx.arc(this.path[0], this.path[1], gCState.rconn.state.sCanHandleSize, 0, 360);
 							
 							ctx.fill();
@@ -1280,12 +1279,7 @@ function init(aArrBufAndCore) {
 							var mySel = drawables[i];
 							
 							mySel.bringtofront();
-							
-							// Keep track of where in the object we clicked
-							// so we can move it smoothly (see mousemove)
-							this.cstate.dragoffx = mx - mySel.x;
-							this.cstate.dragoffy = my - mySel.y;
-							
+														
 							// introduced for line dragging
 							if (mySel.name == 'Line') {
 								this.cstate.dragdown = {
@@ -1299,7 +1293,7 @@ function init(aArrBufAndCore) {
 									x2: mySel.x2,
 									y2: mySel.y2
 								};
-							}
+							} else 
 							// introduced for pencil/marker dragging
 							if (['Pencil', 'Marker'].indexOf(mySel.name) > -1) {
 								this.cstate.dragdown = {
@@ -1311,6 +1305,12 @@ function init(aArrBufAndCore) {
 								}
 							}
 							// end introduced
+							 else {
+								// Keep track of where in the object we clicked
+								// so we can move it smoothly (see mousemove)
+								this.cstate.dragoffx = mx - mySel.x;
+								this.cstate.dragoffy = my - mySel.y;
+							}
 							
 							this.cstate.dragging = true;
 							this.cstate.selection = mySel;
@@ -1406,6 +1406,9 @@ function init(aArrBufAndCore) {
 					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 					if (this.cstate.dragging) {
 						this.cstate.dragging = false;
+						this.cstate.dragoffx = null;
+						this.cstate.dragoffy = null;
+						this.cstate.dragdown = null;
 					} else if (this.cstate.resizing) {
 						this.cstate.resizing = false;
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
@@ -1730,6 +1733,7 @@ function init(aArrBufAndCore) {
 								case 'Rectangle':
 								case 'Oval':
 								case 'Line':
+								case 'Pencil':
 									
 										gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
 										gCState.valid = false;
@@ -1764,7 +1768,7 @@ function init(aArrBufAndCore) {
 							switch (gCState.selection.name) {
 								case 'Marker':
 									
-										gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+										gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 										gCState.valid = false;
 									
 									break;
@@ -2117,6 +2121,7 @@ function init(aArrBufAndCore) {
 							case 'Rectangle':
 							case 'Oval':
 							case 'Line':
+							case 'Pencil':
 								
 									gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
@@ -2126,7 +2131,7 @@ function init(aArrBufAndCore) {
 								// this selection is not affected
 						}
 					} else if (this.props.pStateColorKey == 'sPalMarkerColor') {
-						// if currently selection object obeys markercolor, then apply this new linecolor
+						// if currently selection object obeys markercolor, then apply this new markercolor
 						switch (gCState.selection.name) {
 							case 'Marker':
 								
