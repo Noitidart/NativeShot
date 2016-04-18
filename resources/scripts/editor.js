@@ -1379,6 +1379,17 @@ function init(aArrBufAndCore) {
 			this.cstate.downy = my;
 			
 			if (e.target == this.refs.can) {
+				
+				var dropping = this.state.sColorPickerDropping;
+				if (dropping) {
+					var acceptDroppingObj = {};
+					acceptDroppingObj.sColorPickerDropping = null;
+					gEditorStore.setState(acceptDroppingObj);							
+					gDroppingMixCtx = null;
+					
+					return; // so we dont do the stuff below
+				}
+				
 				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 				
 				// if selectable, set a selectFilterFunc
