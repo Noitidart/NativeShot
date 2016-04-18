@@ -2850,6 +2850,16 @@ function init(aArrBufAndCore) {
 					break;
 				default:
 					// do nothing
+					
+					// if its not a number then block it
+					if (e.key.length == 1) {
+						if (isNaN(e.key) || e.key == ' ') {
+							e.preventDefault();
+						} else {
+							console.log('e.key:', '"' + e.key + '"');
+						}
+					}
+					
 					return;
 			}
 			
