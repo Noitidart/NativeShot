@@ -31,7 +31,7 @@ function init(aArrBufAndCore) {
 			sub: undefined, // for non-special, this is the submenu items shown on hover. an array of objects
 			icon: undefined, // for non-special, the icon that
 			special: 'Handle', // this key is for special things that have their own React class
-			props: ['mPalHandleMousedown'], // props needed from the react component
+			props: ['sPalX', 'sPalY'], // props needed from the react component
 			multiDepress: false, // meaning if this is clicked, then no other tool should be held. if true, then this can be depressed while others are depressed
 			justClick: false, // if true, then this is just clicked. not depressable
 		},
@@ -501,11 +501,6 @@ function init(aArrBufAndCore) {
 			//		window.removeEventListener('wheel', this.wheel, false);
 			//	}
 			//}
-		},
-		mPalHandleMousedown: function(e) {
-			gEditorStore.setState({
-				sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.state.sPalX, sPalY:this.state.sPalY}
-			});
 		},
 		////// start - canvas functions
 		Drawable: function(x, y, w, h, name, aOptions={}) {
@@ -1726,7 +1721,6 @@ function init(aArrBufAndCore) {
 			};
 			
 			var cPalProps = overwriteObjWithObj(this.state, this.props);
-			cPalProps.mPalHandleMousedown = this.mPalHandleMousedown;
 			
 			var cCanProps = {
 				id: 'canDim',
@@ -1959,11 +1953,15 @@ function init(aArrBufAndCore) {
 	var Handle = React.createClass({
 		// user can drag around the palette with this
 		displayName: 'Handle',
+		mousedown: function(e) {
+			gEditorStore.setState({
+				sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
+			});
+		},
 		render: function() {
 			// props
-			//		mPalHandleMousedown
 
-			return React.createElement('div', {className:'phandle pbutton', onMouseDown:this.props.mPalHandleMousedown},
+			return React.createElement('div', {className:'phandle pbutton', onMouseDown:this.mousedown},
 				React.createElement('div', {className:'phandle-visual'}),
 				// React.createElement('div', {className:'phandle-visual'}),
 				React.createElement('div', {className:'phandle-visual'})
@@ -2567,12 +2565,15 @@ function init(aArrBufAndCore) {
 					React.createElement('input', {type:'text', maxLength:6, defaultValue:hexColor, key:hexColor}),
 					'Hex'
 				),
+				// React.createElement(InputNumber, {className:'colorpicker-codes-r', pMin:0, pCrement:5, },
+				// /*
 				React.createElement('div', {className:'colorpicker-codes-r'},
 					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.r, key:rgba.r}),
 					React.createElement('span', {},
 						'R'
 					)
 				),
+				// */
 				React.createElement('div', {className:'colorpicker-codes-g'},
 					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.g, key:rgba.g}),
 					React.createElement('span', {},
