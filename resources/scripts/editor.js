@@ -20,6 +20,7 @@ var gColorPickerSetState = {NativeShotEditor:null};
 var gFonts;
 var gInputNumberId = 0;
 var gDroppingCoords = [0,0];
+var gDroppingMixCtx;
 
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
@@ -176,7 +177,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', pStateDroppingKey:'$string$sPalLineColorDropping'}
+					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sColorPickerDropping:'sColorPickerDropping'}
 				}
 			],
 			isOption: true
@@ -188,7 +189,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', pStateDroppingKey:'$string$sPalMarkerColorDropping'}
+					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sColorPickerDropping:'sColorPickerDropping'}
 				}
 			],
 			isOption: true
@@ -211,7 +212,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', pStateDroppingKey:'$string$sPalFillColorDropping'}
+					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sColorPickerDropping:'sColorPickerDropping'}
 				}
 			],
 			isOption: true
@@ -413,9 +414,7 @@ function init(aArrBufAndCore) {
 				sPalMarkerColor: this.props.pPalMarkerColor,
 				sPalMarkerAlpha: this.props.pPalMarkerAlpha,
 				
-				sPalLineColorDropping: null,
-				sPalFillColorDropping: null,
-				sPalMarkerColorDropping: null,
+				sColorPickerDropping: null, // when in drop, it is set to an object {pStateColorKey:'sPalLineColor',initColor:}
 				
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
@@ -1127,48 +1126,24 @@ function init(aArrBufAndCore) {
 			if (this.cstate.pathing && this.cstate.pathing.length) {
 				this.cstate.selection.path = this.cstate.selection.path.concat(this.cstate.pathing.splice(0, 2));
 			}
-			var droppingArr = ['Line', 'Marker', 'Fill'];
-			for (var i=0; i<droppingArr.length; i++) {
-				if (this.state['sPal' + droppingArr[i] + 'ColorDropping']) {
-					var cDropperColor = this.ctx.getImageData(gDroppingCoords[0], gDroppingCoords[1], 1, 1);
-					var cDropperColor0 = this.ctx0.getImageData(gDroppingCoords[0], gDroppingCoords[1], 1, 1);
-					
-					var cDropperRGBA = {
-						r: cDropperColor.data[0],
-						g: cDropperColor.data[1],
-						b: cDropperColor.data[2],
-						a: cDropperColor.data[3]
-					};
+			
+			var dropping = this.state.sColorPickerDropping;
+			if (dropping && gDroppingCoords.length) {
+				var dy = gDroppingCoords.pop();
+				var dx = gDroppingCoords.pop();
+				gDroppingMixCtx.drawImage(this.refs.can0, dx, dy, 1, 1, 0, 0, 1, 1);
+				gDroppingMixCtx.drawImage(this.refs.can, dx, dy, 1, 1, 0, 0, 1, 1);
+				var mixedRGBA = gDroppingMixCtx.getImageData(0, 0, 1, 1).data;
+				var newDropperObj = {};
+				newDropperObj[dropping.pStateColorKey] = 'rgb(' + mixedRGBA[0] + ', ' + mixedRGBA[1] + ', ' + mixedRGBA[2] + ')';
+				gEditorStore.setState(newDropperObj);
+				
 
-					var cDropperRGBA0 = {
-						r: cDropperColor0.data[0],
-						g: cDropperColor0.data[1],
-						b: cDropperColor0.data[2],
-						a: cDropperColor0.data[3]
-					};
-					
-					if (cDropperRGBA.a > 0) {
-						var cDropperRGBAAvg = {
-							r: Math.round((cDropperRGBA.r + cDropperRGBA0.r) / 2),
-							g: Math.round((cDropperRGBA.g + cDropperRGBA0.g) / 2),
-							b: Math.round((cDropperRGBA.b + cDropperRGBA0.b) / 2),
-							a: Math.round((cDropperRGBA.a + cDropperRGBA0.a) / 2)
-						};
-					} else {
-						var cDropperRGBAAvg = cDropperRGBA0;
-					}
-					
-					var newDropperRGBStr = 'rgb(' + cDropperRGBA.r + ', ' + cDropperRGBA.g + ', ' + cDropperRGBA.b + ')';
-					var newDropperRGBStr0 = 'rgb(' + cDropperRGBA0.r + ', ' + cDropperRGBA0.g + ', ' + cDropperRGBA0.b + ')';
-					var newDropperRGBStrAvg = 'rgb(' + cDropperRGBAAvg.r + ', ' + cDropperRGBAAvg.g + ', ' + cDropperRGBAAvg.b + ')';
-					
-					var newDropperObj = {};
-					newDropperObj['sPal' + droppingArr[i] + 'Color'] = newDropperRGBStrAvg;
-					
-					gEditorStore.setState(newDropperObj);
-					
-					break; // as only one can be in dropping mode
-				}
+				// var cDropperColor = this.ctx.getImageData(dx, dy, 1, 1).data;
+				// var cDropperColor0 = this.ctx0.getImageData(dx, dy, 1, 1).data;
+				// var avgRGBA = arraysAvg(cDropperColor, cDropperColor0);
+				// console.log('ok mixed. setting.', 'avgRGBA:', uneval(avgRGBA), 'dim:', uneval(cDropperColor), 'base:', uneval(cDropperColor0), 'mixedRGBA:', uneval(mixedRGBA));
+				
 			}
 			
 			if(!this.cstate.valid) {
@@ -1258,18 +1233,10 @@ function init(aArrBufAndCore) {
 				gZState.valid = false;
 			}
 			
-			var droppingArr = ['Line', 'Marker', 'Fill'];
-			for (var i=0; i<droppingArr.length; i++) {
-				if (this.state['sPal' + droppingArr[i] + 'ColorDropping']) {
-					// var cDropperColor = this.ctx.getImageData(mx, my, 1, 1);
-					// var cDropperColor0 = this.ctx0.getImageData(mx, my, 1, 1);
-					gDroppingCoords[0] = mx;
-					gDroppingCoords[1] = my;
-					break; // as only one can be in dropping mode
-				}
-			}
-			
-			if (this.state.sPalDragStart) {
+			if (this.state.sColorPickerDropping) {
+				gDroppingCoords[0] = mx;
+				gDroppingCoords[1] = my;
+			} else if (this.state.sPalDragStart) {
 				gEditorStore.setState({
 					sPalX: this.state.sPalDragStart.sPalX + (e.screenX - this.state.sPalDragStart.screenX),
 					sPalY: this.state.sPalDragStart.sPalY + (e.screenY - this.state.sPalDragStart.screenY)
@@ -1656,17 +1623,16 @@ function init(aArrBufAndCore) {
 				
 					break;
 				case 'Escape':
-				
-						var droppingArr = ['Line', 'Marker', 'Fill'];
-						for (var i=0; i<droppingArr.length; i++) {
-							if (this.state['sPal' + droppingArr[i] + 'ColorDropping']) {
-								
-								var cancelDroppingObj = {};
-								cancelDroppingObj['sPal' + droppingArr[i] + 'Color'] = this.state['sPal' + droppingArr[i] + 'ColorDropping'];
-								cancelDroppingObj['sPal' + droppingArr[i] + 'ColorDropping'] = null;
-								gEditorStore.setState(cancelDroppingObj);
-								return; // so we dont close the window
-							}
+						
+						var dropping = this.state.sColorPickerDropping;
+						if (dropping) {
+							var cancelDroppingObj = {};
+							cancelDroppingObj[dropping.pStateColorKey] = dropping.initColor;
+							cancelDroppingObj.sColorPickerDropping = null;
+							gEditorStore.setState(cancelDroppingObj);							
+							gDroppingMixCtx = null;
+							
+							return; // so we dont close the window
 						}
 						
 						window.close();
@@ -2201,9 +2167,7 @@ function init(aArrBufAndCore) {
 			//		sPalFillColor
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
-			//		sPalLineColorDropping
-			//		sPalFillColorDropping
-			//		sPalMarkerColorDropping
+			//		sColorPickerDropping
 			
 			var cProps = {
 				className:'pbutton',
@@ -2231,22 +2195,23 @@ function init(aArrBufAndCore) {
 			var cButtonIcon;
 			if (['Color', 'Fill Color', 'Marker Color'].indexOf(this.props.pButton.label) > -1) {
 				var rgbaStr;
+				var dropping = this.props.sColorPickerDropping;
 				if (this.props.pButton.label == 'Color') {
 					rgbaStr = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
-					if (this.props.sPalLineColorDropping) {
+					if (dropping && dropping.pStateColorKey == 'sPalLineColor') {
 						cProps.className += ' eyedropper';
 					}
 				} else if (this.props.pButton.label == 'Fill Color') {
 					rgbaStr = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
-					if (this.props.sPalFillColorDropping) {
+					if (dropping && dropping.pStateColorKey == 'sPalFillColor') {
 						cProps.className += ' eyedropper';
 					}
 				} else {
 					// its Marker Color
-					if (this.props.sPalMarkerColorDropping) {
+					rgbaStr = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+					if (dropping && dropping.pStateColorKey == 'sPalMarkerColor') {
 						cProps.className += ' eyedropper';
 					}
-					rgbaStr = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 				}
 				var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
 				cButtonIcon = React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'pbutton-icon-color'});
@@ -2308,9 +2273,7 @@ function init(aArrBufAndCore) {
 			//		sPalFillColor
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
-			//		sPalLineColorDropping
-			//		sPalFillColorDropping
-			//		sPalMarkerColorDropping
+			//		sColorPickerDropping
 			//		pSubButton
 			//		pButton
 			//		sPalToolSubs
@@ -2581,7 +2544,7 @@ function init(aArrBufAndCore) {
 			//		pStateColorKey
 			//		pStateAlphaKey
 			//		pSetStateName - a string, it must be the store to use for the pStateColorKey and pStateAlphaKey
-			//		pStateDroppingKey
+			//		sColorPickerDropping
 			
 			// only supports rgb mode
 			
@@ -2609,7 +2572,7 @@ function init(aArrBufAndCore) {
 			
 			return React.createElement('div', {className:'colorpicker'},
 				React.createElement('div', {className:'colorpicker-inner'},
-					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, pStateDroppingKey:this.props.pStateDroppingKey, sColor:this.props.sColor}),
+					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, sColorPickerDropping:this.props.sColorPickerDropping, sColor:this.props.sColor}),
 					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
 					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
 					React.createElement(ColorPickerCodes, {pHex:hex, pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, pSetStateName:this.props.pSetStateName})
@@ -2733,9 +2696,17 @@ function init(aArrBufAndCore) {
 			gColorPickerSetState[this.props.pSetStateName](setStateObj);
 		},
 		dropperClick: function() {
-			var setStateObj = {};
-			setStateObj[this.props.pStateDroppingKey] = this.props.sColor; // the original color before picking. so if user hits Esc i cancel the dropping and restore this color
-			gColorPickerSetState[this.props.pSetStateName](setStateObj);
+			var mixcan = document.createElement('canvas');
+			mixcan.width = 1;
+			mixcan.height = 1;
+			gDroppingMixCtx = mixcan.getContext('2d');
+			
+			gColorPickerSetState[this.props.pSetStateName]({
+				sColorPickerDropping: {
+					initColor: this.props.sColor, // the original color before picking. so if user hits Esc i cancel the dropping and restore this color
+					pStateColorKey: this.props.pStateColorKey
+				}
+			});
 		},
 		render: function() {
 			//		pSetStateName
@@ -2783,9 +2754,7 @@ function init(aArrBufAndCore) {
 			//		sPalLineColor
 			//		sPalFillAlpha
 			//		sPalFillColor
-			//		sPalLineColorDropping
-			//		sPalFillColorDropping
-			//		sPalMarkerColorDropping
+			//		sColorPickerDropping
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
 			
@@ -3718,6 +3687,41 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 	}
 }
 
+function arraysAvg(...intarr) {
+	// intarr should all be same lenght
+	// returns an array that is the avg of each element
+	var sumarr = intarr[0];
+	var l = sumarr.length;
+	for (var i=1; i<intarr.length; i++) {
+		var cIntarr = intarr[i];
+		for (var j=0; j<l; j++) {
+			sumarr[j] += cIntarr[j];
+		}
+	}
+	
+	var ial = intarr.length;
+	for (var i=0; i<l; i++) {
+		sumarr[i] /= ial;
+	}
+	
+	return sumarr;
+}
+
+function arraysSum(...intarr) {
+	// intarr should all be same lenght
+	// returns an array that is the sum of each element
+	
+	var sumarr = intarr[0];
+	var l = sumarr.length;
+	for (var i=1; i<intarr.length; i++) {
+		var cIntarr = intarr[i];
+		for (var j=0; j<l; j++) {
+			sumarr[j] += cIntarr[j];
+		}
+	}
+	console.log('sumarr:', sumarr);
+	return sumarr;
+}
 
 /////////// stackblur
 
