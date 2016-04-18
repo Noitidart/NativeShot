@@ -202,6 +202,7 @@ body {
 }
 /* start:pbutton_hover */
 .pbutton:active .psub, /* so ColorPicker stays open during sInputNumberMousing */
+.pbutton.eyedropper .psub, /* so when using eyedropper ColorPicker stays open */
 .pbutton:hover .psub {
 	top: calc(100% + 5px);
 	opacity: 1;
