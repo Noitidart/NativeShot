@@ -535,6 +535,17 @@ function init(aArrBufAndCore) {
 						this.path = [x, y];
 				
 					break;
+				case 'Text':
+				
+						this.x = x;
+						this.y = y;
+						this.chars = '';
+						this.index = 0; // the position of the ibeam
+						this.size = aOptions.size || 40;
+						this.face = aOptions.face || 'serif';
+						this.align = aOptions.align || 'left';
+				
+					break;
 				default:
 					this.x = x;
 					this.y = y;
@@ -591,6 +602,19 @@ function init(aArrBufAndCore) {
 						};
 					
 					break;
+				case 'Text':
+				
+						this.Style = {
+							Draw: {
+								me: {
+									font: (this.size || 40) + 'px ' + (this.face || 'serif'),
+									textAlign: this.align || 'left',
+									fillStyle: aOptions.fillStyle || '#000'
+								}
+							}
+						};
+				
+					break;
 				default:
 					// nothing special
 			}
@@ -617,6 +641,7 @@ function init(aArrBufAndCore) {
 					case 'Line':
 					case 'Pencil':
 					case 'Marker':
+					case 'Text':
 					
 							curStyle = this.Style.Draw.me;
 					
@@ -748,6 +773,13 @@ function init(aArrBufAndCore) {
 							ctx.stroke();
 						
 						break;
+					case 'Text':
+					
+							var pad = 10;
+							var lineSpacing = 0; // for first line its 0
+							ctx.fillText(this.chars, this.x + pad, this.y + this.size + lineSpacing + pad);
+					
+						break;
 					case 'Gaussian':
 						
 							var positived = gCState.rconn.makeDimsPositive(this, true);
@@ -829,6 +861,11 @@ function init(aArrBufAndCore) {
 							curStyle = gCState.Style.Select.line;
 					
 						break;
+					case 'Text':
+						
+							curStyle = gCState.Style.Select.text;
+						
+						break;
 					default:
 						// not selectable
 						return true; // so no need to invalidate
@@ -875,6 +912,29 @@ function init(aArrBufAndCore) {
 					case 'Mosaic':
 					
 							ctx.strokeRect(this.x, this.y, this.w, this.h);
+						
+						break;
+					case 'Text':
+						
+							console.log('ok drawing select on text');
+							var pad = 10;
+							var w = ctx.measureText(this.chars).width + (2 * pad);
+							console.log('w:', w);
+							var ibh = this.size + 10; // ibeam height
+							var h = ibh + (2 * pad);
+							console.log('h:', h);
+							ctx.strokeRect(this.x, this.y, w, h);
+							
+							// draw ibeam
+							var letterSpacing = 3;
+							var ibx = ctx.measureText(this.chars.substr(0, this.index)).width + pad;
+							if (this.chars.length) {
+								ibx += letterSpacing;
+							}
+							// console.log('ibx:', ibx);
+							// console.log('ibh:', ibh);
+							var ibw = 3;
+							ctx.fillRect(this.x + ibx, this.y + pad, ibw, ibh);
 						
 						break;
 					case 'Line':
@@ -953,6 +1013,21 @@ function init(aArrBufAndCore) {
 							return ctx.isPointInStroke(mx, my);
 						
 						break;
+					case 'Text':
+					
+							var ctx = gCState.rconn.ctx;
+							ctx.font = this.size + 'px ' + this.face;
+							
+							var pad = 10;
+							var w = ctx.measureText(this.chars).width + (2 * pad);
+							console.log('w:', w);
+							var ibh = this.size + 10; // ibeam height
+							var h = ibh + (2 * pad);
+							
+							return(this.x <= mx) && (this.x + w >= mx) &&
+								(this.y <= my) && (this.y + h >= my);
+					
+						break;
 					default:
 						// cutout, Rectangle, Oval, Gaussian, Mosaic
 					
@@ -1011,6 +1086,11 @@ function init(aArrBufAndCore) {
 								return false;
 							}
 					
+						break;
+					case 'Text':
+						
+							return this.chars.length ? false : true;
+						
 						break;
 					default:
 						// cutout, Rectangle, Oval, Gaussian, Mosaic
@@ -1257,6 +1337,7 @@ function init(aArrBufAndCore) {
 						case 'cutout':
 						case 'Gaussian':
 						case 'Mosaic':
+						case 'Text':
 							
 								this.cstate.selection.x = mx - this.cstate.dragoffx;
 								this.cstate.selection.y = my - this.cstate.dragoffy;
@@ -1304,6 +1385,8 @@ function init(aArrBufAndCore) {
 					this.cstate.pathing[0] = mx;
 					this.cstate.pathing[1] = my;
 					this.cstate.valid = false;
+				} else if (this.cstate.typing) {
+					// do nothing
 				} else {
 					// just moving, see if mouse is over a resize point, or a drag point
 					var dragFilterFunc;
@@ -1390,6 +1473,14 @@ function init(aArrBufAndCore) {
 					return; // so we dont do the stuff below
 				}
 				
+				if (this.cstate.typing) {
+					console.log('exiting typing, this was selection:', this.cstate.selection);
+					this.cstate.selection = null;
+					this.cstate.typing = false;
+					this.cstate.valid = false;
+					return;
+				}
+				
 				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
 				
 				// if selectable, set a selectFilterFunc
@@ -1421,6 +1512,12 @@ function init(aArrBufAndCore) {
 					case 'Blur-Mosaic':
 						
 							selectFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
+						
+						break;
+					case 'Text-':
+						
+							console.log('ok filtering Text');
+							selectFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
 						
 						break;
 					default:
@@ -1465,7 +1562,7 @@ function init(aArrBufAndCore) {
 							}
 							// end introduced
 							 else {
-								// cutout, Rectangle, Oval, Gaussian, Mosaic
+								// cutout, Rectangle, Oval, Gaussian, Mosaic, Text
 								
 								// Keep track of where in the object we clicked
 								// so we can move it smoothly (see mousemove)
@@ -1519,6 +1616,11 @@ function init(aArrBufAndCore) {
 								this.cstate.selection = new this.Drawable(mx, my, null, null, this.state.sPalToolSubs[this.state.sPalTool]);
 						
 							break;
+						case 'Text-':
+							
+								this.cstate.selection = new this.Drawable(mx, my, null, null, 'Text');
+							
+							break;
 						default:
 							// do nothing
 					}
@@ -1547,6 +1649,12 @@ function init(aArrBufAndCore) {
 									this.cstate.pathing = [];
 									this.cstate.valid = false; // :todo: consider: as i have to draw the selection point
 								
+								break;
+							case 'Text':
+								
+									this.cstate.typing = true;
+									this.cstate.valid = false;
+									
 								break;
 							default:
 								console.error('should never get here, well unless maybe i dont know think about it, this.cstate.selection.name:', this.cstate.selection.name);
@@ -1604,6 +1712,8 @@ function init(aArrBufAndCore) {
 							// :todo: consider: need to set valid=false because otherwise the big handle thing is left over
 							this.cstate.valid = false;
 						}
+					} else if (this.cstate.typing) {
+						// do nothing special
 					}
 				// }
 			}
@@ -1622,9 +1732,13 @@ function init(aArrBufAndCore) {
 						//		case 'Freedraw':
 						//		case 'Blur':
 										if (this.cstate.selection) {
-											var rez_valid = this.cstate.selection.delete();
-											this.cstate.selection = null;
-											this.cstate.valid = rez_valid;
+											if (this.cstate.selection.name == 'Text' && this.cstate.typing) {
+												// dont delete it as they are just deleting text
+											} else {
+												var rez_valid = this.cstate.selection.delete();
+												this.cstate.selection = null;
+												this.cstate.valid = rez_valid;
+											}
 										}
 						//			break;
 						//		default:
@@ -1651,6 +1765,70 @@ function init(aArrBufAndCore) {
 					break;
 				default:
 					// do nothing
+			}
+		},
+		keydown: function(e) {
+			if (this.cstate.typing) {
+				var mySel = this.cstate.selection;
+				if (e.key.length == 1) {
+					mySel.chars += e.key;
+					mySel.index++;
+					this.cstate.valid = false;
+				} else {
+					switch (e.key) {
+						case 'Backspace':
+							
+								if (mySel.index > 0) {
+									mySel.index--;
+									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
+									this.cstate.valid = false;
+								}
+							
+							break;
+						case 'Delete':
+							
+								if (mySel.index < mySel.chars.length) {
+									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
+									this.cstate.valid = false;
+								}
+							
+							break;
+						case 'ArrowLeft':
+							
+								if (mySel.index > 0) {
+									mySel.index--;
+									this.cstate.valid = false;
+								}
+							
+							break;
+						case 'ArrowRight':
+							
+								if (mySel.index < mySel.chars.length) {
+									mySel.index++;
+									this.cstate.valid = false;
+								}
+							
+							break;
+						case 'Home':
+							
+								if (mySel.index > 0) {
+									mySel.index = 0;
+									this.cstate.valid = false;
+								}
+							
+							break;
+						case 'End':
+							
+								if (mySel.index < mySel.chars.length) {
+									mySel.index = mySel.chars.length;
+									this.cstate.valid = false;
+								}
+							
+							break;
+						default:
+							// do nothing special
+					}
+				}
 			}
 		},
 		////// end - canvas functions
@@ -1701,6 +1879,7 @@ function init(aArrBufAndCore) {
 				this.cstate.resizing = false; // when mouses down with a tool that can draw
 				this.cstate.lining = false; // when picking new end points for a line
 				this.cstate.pathing = null; // when drawing with pencil or marker // it is set to a an array of 2 points when not null
+				this.cstate.typing = false;
 				this.cstate.selection = null;
 				
 				this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
@@ -1742,6 +1921,11 @@ function init(aArrBufAndCore) {
 							setLineDash: [],
 							lineWidth: mtmm.w(1),
 							fillStyle: 'rgba(100, 100, 100, 1)'
+						},
+						text: {
+							strokeStyle: 'black',
+							setLineDash: [0, mtmm.w(3), 0],
+							lineWidth: mtmm.w(1)
 						}
 					}
 				};
@@ -1759,6 +1943,7 @@ function init(aArrBufAndCore) {
 				window.addEventListener('mousedown', this.mousedown, false);
 				window.addEventListener('mouseup', this.mouseup, false);
 				window.addEventListener('keyup', this.keyup, false);
+				window.addEventListener('keydown', this.keydown, false);
 				
 				this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
 				// start - simon canvas stuff
@@ -3732,6 +3917,10 @@ function arraysSum(...intarr) {
 	}
 	console.log('sumarr:', sumarr);
 	return sumarr;
+}
+
+function spliceSlice(str, index, count, add) {
+  return str.slice(0, index) + (add || "") + str.slice(index + count);
 }
 
 /////////// stackblur
