@@ -2828,7 +2828,7 @@ function init(aArrBufAndCore) {
 				newVal = this.props[this.props.pStateVarName] - this.crement;
 			}
 			
-			this.limitTestThenSet(newVal, e.target);
+			this.limitTestThenSet(newVal);
 			
 			e.stopPropagation(); // so it doesnt trigger the wheel event on window. otherwise if ZoomView is showing, then it will change that zoom level
 		},
@@ -2852,10 +2852,10 @@ function init(aArrBufAndCore) {
 					return;
 			}
 			
-			this.limitTestThenSet(newVal, e.target);
+			this.limitTestThenSet(newVal);
 
 		},
-		limitTestThenSet: function(aNewVal, aInputDomEl) {
+		limitTestThenSet: function(aNewVal) {
 			// returns true if set
 			if (this.props.pMin !== undefined && aNewVal < this.props.pMin) {
 				return false; // below min limit, dont set it
@@ -2868,10 +2868,6 @@ function init(aArrBufAndCore) {
 					// its already that number
 					console.log('already!');
 					return true;
-				}
-				
-				if (aInputDomEl) {
-					aInputDomEl.value = aNewVal;
 				}
 				
 				var newStateObj = {};
@@ -2924,7 +2920,7 @@ function init(aArrBufAndCore) {
 			}
 			
 			if (this.getSetValue(this.props[this.props.pStateVarName]) != newVal) {
-				if (!this.limitTestThenSet(newVal, this.refs.input)) {
+				if (!this.limitTestThenSet(newVal)) {
 					if (this.sInputNumberMousing == this.cursor) {
 						this.sInputNumberMousing = 'not-allowed';
 						gEditorStore.setState({
@@ -2962,7 +2958,7 @@ function init(aArrBufAndCore) {
 			var newValue = parseInt(newValueStr);
 			
 			this.limitTestThenSet(newValue);
-			
+			this.lastDomElValue = newValueStr;
 		},
 		/*
 		getReadValue: function() {
@@ -3010,6 +3006,21 @@ function init(aArrBufAndCore) {
 				return NEWVAL;
 			}
 			
+		},
+		componentDidMount: function() {
+			this.lastDomElValue = this.props[this.props.pStateVarName];
+		},
+		componentDidUpdate: function(prevProps) {
+			// console.log('did update, prevProps:', prevProps);
+			var newPropVal = this.props[this.props.pStateVarName];
+			if (newPropVal != this.lastDomElValue) {
+				if (prevProps.value != newPropVal) {
+					this.refs.input.value = newPropVal;
+					console.log('ok updated input to', newPropVal);
+					this.lastDomElValue = newPropVal;
+				}
+			}
+			else { console.error('no need to update input value as it matches lastDomElValue'); }
 		},
 		render: function() {
 			// props
