@@ -228,7 +228,7 @@ function init(aArrBufAndCore) {
 			special: 'BlurTools',
 			justClick: true,
 			isOption: true,
-			props: ['sPalTool', 'sPalToolSubs', 'sPalBlurBlock', 'sPalBlurRadius']
+			props: ['sPalTool', 'sPalToolSubs', 'sPalBlurBlock', 'sPalBlurRadius', 'sInputNumberMousing']
 		},
 		{
 			special: 'Divider'
@@ -1127,6 +1127,7 @@ function init(aArrBufAndCore) {
 				this.cstate.selection.path = this.cstate.selection.path.concat(this.cstate.pathing.splice(0, 2));
 			}
 			if(!this.cstate.valid) {
+				
 				var ctx = this.ctx;
 				this.clear();
 				
@@ -1179,6 +1180,7 @@ function init(aArrBufAndCore) {
 				this.cstate.dim.draw(ctx);
 				
 				this.cstate.valid = true;
+				if (gZState) { gZState.valid = false; }
 			}
 		},
 		wheel: function(e) {
@@ -1719,6 +1721,10 @@ function init(aArrBufAndCore) {
 				// this.state.sMounted is false
 			}
 			
+			var editorWrapProps = {
+				className: 'editor'
+			};
+			
 			var cPalProps = overwriteObjWithObj(this.state, this.props);
 			cPalProps.mPalHandleMousedown = this.mPalHandleMousedown;
 			
@@ -1746,6 +1752,7 @@ function init(aArrBufAndCore) {
 				cPalPalProps.style.cursor = this.state.sInputNumberMousing;				
 				cPalProps.pZoomViewCursor = this.state.sInputNumberMousing;
 				cPalProps.pPalSubwrapCursor = this.state.sInputNumberMousing;
+				editorWrapProps.className += ' inputnumber-component-mousing';
 			} else if (this.state.sPalDragStart) {
 				cCanProps.style.cursor = 'move';
 				cPalPalProps.style.cursor = 'move';
@@ -1776,15 +1783,18 @@ function init(aArrBufAndCore) {
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				cPalPalProps.mPalZoomViewHandleMousedown = this.mPalZoomViewHandleMousedown;
 				zoomViewREl = React.createElement(ZoomView, cPalProps);
-			}
+			}			
 			
-			return React.createElement('div', {className:'editor'},
+			return React.createElement('div', editorWrapProps,
 				React.createElement('div', cPalPalProps,
 					React.createElement(Subwrap, cPalProps)
 				),
 				React.createElement('canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
 				React.createElement('canvas', cCanProps),
-				zoomViewREl
+				zoomViewREl,
+				!this.state.sInputNumberMousing ? undefined : React.createElement('style', {},
+					'.inputnumber-component-mousing input { pointer-events:none; }' // so the cursor doesnt change to text when over this
+				)
 			);
 		},
 	});
@@ -1848,6 +1858,7 @@ function init(aArrBufAndCore) {
 				var sHeight = dHeight * (1 / zoomLevel);
 				
 				ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
+				ctx.drawImage(gCState.rconn.refs.can, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
 				
 				// draw grid
 				ctx.strokeStyle = '#4A90E2';
@@ -2805,11 +2816,18 @@ function init(aArrBufAndCore) {
 
 		},
 		limitTestThenSet: function(aNewVal, aInputDomEl) {
+			// returns true if set
 			if (this.props.pMin !== undefined && aNewVal < this.props.pMin) {
-				return; // below min limit, dont set it
+				return false; // below min limit, dont set it
 			} else if (this.props.pMax !== undefined && aNewVal > this.props.pMax) {
-				return; // above min limit, dont set it
+				return false; // above min limit, dont set it
 			} else {
+				
+				if (this.props[this.props.pStateVarName] === aNewVal) {
+					// its already that number
+					console.log('already!');
+					return true;
+				}
 				
 				if (aInputDomEl) {
 					aInputDomEl.value = aNewVal;
@@ -2823,6 +2841,8 @@ function init(aArrBufAndCore) {
 				if (gCState && gCState.selection && this.props.pCStateSel.indexOf(gCState.selection.name) > -1) {
 					gCState.valid = false; // so new blur level gets applied
 				}
+				
+				return true;
 			}
 		},
 		mousedown: function(e) {
@@ -2834,6 +2854,9 @@ function init(aArrBufAndCore) {
 			gEditorStore.setState({
 				sInputNumberMousing: this.cursor
 			});
+			
+			this.sInputNumberMousing = this.cursor; // keep track locally otherwise ill need to have whoever uses InputNumber pass in sInputNumberMousing as a prop
+			
 		},
 		mousemove: function(e) {
 			
@@ -2848,13 +2871,31 @@ function init(aArrBufAndCore) {
 			
 			// i do this extra limit test here, as mouse move can move greatly so i might miss the minimum/maximum
 			if (this.props.pMin !== undefined && newVal < this.props.pMin) {
-				newVal = this.props.pMin;
+				if (this.props[this.props.pStateVarName] !== this.props.pMin) {
+					newVal = this.props.pMin;
+				}
 			} else if (this.props.pMax !== undefined && newVal < this.props.pMax) {
-				newVal = this.props.pMax;
+				if (this.props[this.props.pStateVarName] !== this.props.pMax) {
+					newVal = this.props.pMax;
+				}
 			}
 			
 			if (this.props[this.props.pStateVarName] != newVal) {
-				this.limitTestThenSet(newVal, this.refs.input);
+				if (!this.limitTestThenSet(newVal, this.refs.input)) {
+					if (this.sInputNumberMousing == this.cursor) {
+						this.sInputNumberMousing = 'not-allowed';
+						gEditorStore.setState({
+							sInputNumberMousing: 'not-allowed'
+						});
+					}
+				} else {
+					if (this.sInputNumberMousing != this.cursor) {
+						this.sInputNumberMousing = this.cursor;
+						gEditorStore.setState({
+							sInputNumberMousing: this.cursor
+						});
+					}
+				}
 			}
 			
 		},
@@ -2882,6 +2923,7 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props
+			//		sInputNumberMousing
 			//		pStateVarName
 			//		pLabel
 			//		pMin
