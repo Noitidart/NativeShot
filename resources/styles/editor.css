@@ -369,8 +369,8 @@ body {
 	justify-content: center;
 	align-items: center;
 }
-.colorpicker-codes span {
-	cursor: ew-resize;
+.colorpicker-codes label {
+	width: 100%;
 }
 
 .colorpicker-choices {

@@ -18,6 +18,7 @@ var gCState;
 var gZState;
 var gColorPickerSetState = {NativeShotEditor:null};
 var gFonts;
+var gInputNumberId = 0;
 
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
@@ -3016,11 +3017,11 @@ function init(aArrBufAndCore) {
 			if (newPropVal != this.lastDomElValue) {
 				if (prevProps.value != newPropVal) {
 					this.refs.input.value = newPropVal;
-					console.log('ok updated input to', newPropVal);
+					// console.log('ok updated input to', newPropVal);
 					this.lastDomElValue = newPropVal;
 				}
 			}
-			else { console.error('no need to update input value as it matches lastDomElValue'); }
+			// else { console.log('no need to update input value as it matches lastDomElValue'); }
 		},
 		render: function() {
 			// props
@@ -3036,16 +3037,21 @@ function init(aArrBufAndCore) {
 			//		pCursor - css cursor when mouse moving. default is ew-resize
 			//		pStateVarSpecial - set it to anything other then false/undefined/null so it get get the special set value with getSetValue. i figured NO NEED for getReadValue as i pass in the special read value as [pStateVarName] so it updates the input properly link8844444
 			//		pCStateSel - optional. array.
+			//		
 			
 			this.crement = this.props.pCrement || 1;
 			this.mousesens = this.props.pMouseSens || 10;
 			this.cursor = this.props.pCursor || 'ew-resize';
 			
-			return React.createElement('div', {className:'inputnumber'},
-				React.createElement('label', {htmlFor:'inputnumber_' + this.props.pStateVarName, className:'inputnumber-label', onMouseDown:this.mousedown},
+			if (!this.domId) { // this is why gInputNumberId cant be -1. i cant have a id of 0
+				gInputNumberId++;
+				this.domId = gInputNumberId;
+			}
+			return React.createElement('div', {className:'inputnumber', onWheel:this.wheel},
+				React.createElement('label', {htmlFor:'inputnumber_' + this.domId, className:'inputnumber-label', onMouseDown:this.mousedown},
 					this.props.pLabel
 				),
-				React.createElement('input', {id:'inputnumber_' + this.props.pStateVarName, ref:'input', type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName], maxLength:(this.props.pMax === undefined ? undefined : (this.props.pMax+'').length) })
+				React.createElement('input', {id:'inputnumber_' + this.domId, ref:'input', type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName], maxLength:(this.props.pMax === undefined ? undefined : (this.props.pMax+'').length) })
 			);
 		}
 	})
