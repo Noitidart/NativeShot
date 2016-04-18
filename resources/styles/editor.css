@@ -361,6 +361,7 @@ body {
 }
 .colorpicker-codes-hex input {
 	width: 4em;
+	text-transform: uppercase;
 }
 .colorpicker-codes div {
 	display: flex;

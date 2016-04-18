@@ -2498,13 +2498,18 @@ function init(aArrBufAndCore) {
 			var sColor = this.props.sColor + '';
 			// console.error('this.props:', this.props);
 			var rgb;
+			var hex;
 			if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
+				hex = sColor;
+				if (hex[0] == '#') {
+					hex = hex.substr(1);
+				}
 				rgb = hexToRgb(sColor);
 				// console.log('rgb:', rgb);
 			} else {
-				var hexFirst = rgbToHex(false, sColor);
-				// console.log('hexFirst:', hexFirst);
-				rgb = hexToRgb(hexFirst);
+				hex = rgbToHex(false, sColor);
+				// console.log('hex:', hex);
+				rgb = hexToRgb(hex);
 				// console.log('rgb2:', rgb);
 			}
 			
@@ -2516,7 +2521,7 @@ function init(aArrBufAndCore) {
 					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName}),
 					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
 					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
-					React.createElement(ColorPickerCodes, {pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, sAlpha:this.props.sAlpha})
+					React.createElement(ColorPickerCodes, {pHex:hex, pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, pSetStateName:this.props.pSetStateName})
 				)
 			);
 		}
@@ -2553,13 +2558,31 @@ function init(aArrBufAndCore) {
 	});
 	var ColorPickerCodes = React.createClass({
 		displayName: 'ColorPickerCodes',
+		changehex: function(e) {
+			var newValue = e.target.value;
+			console.log('newValue:', newValue);
+			if (newValue.length == 3 || newValue == 6) {
+				var setStateObj = {};
+				setStateObj[this.props.pStateColorKey] = newValue;
+				gColorPickerSetState[this.props.pSetStateName](setStateObj);
+			}
+		},
+		componentDidUpdate: function(prevProps) {
+			if (prevProps.pHex != this.props.pHex) {
+				this.refs.hexinput.value = this.props.pHex;
+			}
+		},
 		render: function() {
 			// props
 			//		pRgba
+			//		pStateColorKey
+			//		pStateAlphaKey
+			//		pSetStateName
+			//		pHex
 			
 			var rgba = this.props.pRgba;
-			var hexColor = rgbToHex(false, rgba.r, rgba.g, rgba.b); // hex color without hash
-			
+			// var hexColor = rgbToHex(false, rgba.r, rgba.g, rgba.b); // hex color without hash
+
 			var cPropsCommon = {
 				className: 'colorpicker-codes-',
 				pMin: 0,
@@ -2587,7 +2610,7 @@ function init(aArrBufAndCore) {
 			cPropsR[this.props.pStateColorKey] = rgba.r;
 			cPropsG[this.props.pStateColorKey] = rgba.g;
 			cPropsB[this.props.pStateColorKey] = rgba.b;
-			cPropsA[this.props.pStateAlphaKey] = this.props.sAlpha; // link38711111
+			cPropsA[this.props.pStateAlphaKey] = rgba.a; // link38711111
 			
 			cPropsR.pStateVarName = this.props.pStateColorKey;
 			cPropsG.pStateVarName = this.props.pStateColorKey;
@@ -2601,8 +2624,8 @@ function init(aArrBufAndCore) {
 			
 			return React.createElement('div', {className:'colorpicker-codes'},
 				React.createElement('div', {className:'colorpicker-codes-hex'},
-					React.createElement('input', {type:'text', maxLength:6, defaultValue:hexColor, key:hexColor}),
-					'Hex'
+					'Hex',
+					React.createElement('input', {ref:'hexinput', type:'text', maxLength:6, defaultValue:this.props.pHex, onChange:this.changehex})
 				),
 				React.createElement(InputNumber, cPropsR),
 				React.createElement(InputNumber, cPropsG),
@@ -2856,8 +2879,10 @@ function init(aArrBufAndCore) {
 				
 				gEditorStore.setState(newStateObj);
 				
-				if (gCState && gCState.selection && this.props.pCStateSel.indexOf(gCState.selection.name) > -1) {
-					gCState.valid = false; // so new blur level gets applied
+				if (this.props.pCStateSel) {
+					if (gCState && gCState.selection && this.props.pCStateSel.indexOf(gCState.selection.name) > -1) {
+						gCState.valid = false; // so new blur level gets applied
+					}
 				}
 				
 				return true;
@@ -2999,6 +3024,7 @@ function init(aArrBufAndCore) {
 			//		[pStateVarName]
 			//		pCursor - css cursor when mouse moving. default is ew-resize
 			//		pStateVarSpecial - set it to anything other then false/undefined/null so it get get the special set value with getSetValue. i figured NO NEED for getReadValue as i pass in the special read value as [pStateVarName] so it updates the input properly link8844444
+			//		pCStateSel - optional. array.
 			
 			this.crement = this.props.pCrement || 1;
 			this.mousesens = this.props.pMouseSens || 10;
