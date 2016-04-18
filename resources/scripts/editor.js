@@ -2516,7 +2516,7 @@ function init(aArrBufAndCore) {
 					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName}),
 					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
 					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
-					React.createElement(ColorPickerCodes, {pRgba:pRgba})
+					React.createElement(ColorPickerCodes, {pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, sAlpha:this.props.sAlpha})
 				)
 			);
 		}
@@ -2560,38 +2560,54 @@ function init(aArrBufAndCore) {
 			var rgba = this.props.pRgba;
 			var hexColor = rgbToHex(false, rgba.r, rgba.g, rgba.b); // hex color without hash
 			
+			var cPropsCommon = {
+				className: 'colorpicker-codes-',
+				pMin: 0,
+				pMouseSens: 3,
+				pMax: 255,
+			};
+			var cPropsR = overwriteObjWithObj({}, cPropsCommon);
+			var cPropsG = overwriteObjWithObj({}, cPropsCommon);
+			var cPropsB = overwriteObjWithObj({}, cPropsCommon);
+			var cPropsA = overwriteObjWithObj({}, cPropsCommon);
+			
+			
+			cPropsR.pLabel = 'R';
+			cPropsG.pLabel = 'G';
+			cPropsB.pLabel = 'B';
+			cPropsA.pLabel = 'A';
+
+			cPropsR.className += 'r';
+			cPropsG.className += 'g';
+			cPropsB.className += 'b';
+			cPropsA.className += 'a';
+			
+			cPropsA.pMax = 100;
+			
+			cPropsR[this.props.pStateColorKey] = rgba.r;
+			cPropsG[this.props.pStateColorKey] = rgba.g;
+			cPropsB[this.props.pStateColorKey] = rgba.b;
+			cPropsA[this.props.pStateAlphaKey] = this.props.sAlpha; // link38711111
+			
+			cPropsR.pStateVarName = this.props.pStateColorKey;
+			cPropsG.pStateVarName = this.props.pStateColorKey;
+			cPropsB.pStateVarName = this.props.pStateColorKey;
+			cPropsA.pStateVarName = this.props.pStateAlphaKey;
+			
+			cPropsR.pStateVarSpecial = {component:'r', rgba:rgba};
+			cPropsG.pStateVarSpecial = {component:'g', rgba:rgba};
+			cPropsB.pStateVarSpecial = {component:'b', rgba:rgba};
+			// no need for special on cPropsA because rgba.a is same as this.props.sAlpha which is the proper in gEditorStore.state[this.pStateAlphaKey] per link38711111
+			
 			return React.createElement('div', {className:'colorpicker-codes'},
 				React.createElement('div', {className:'colorpicker-codes-hex'},
 					React.createElement('input', {type:'text', maxLength:6, defaultValue:hexColor, key:hexColor}),
 					'Hex'
 				),
-				// React.createElement(InputNumber, {className:'colorpicker-codes-r', pMin:0, pCrement:5, },
-				// /*
-				React.createElement('div', {className:'colorpicker-codes-r'},
-					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.r, key:rgba.r}),
-					React.createElement('span', {},
-						'R'
-					)
-				),
-				// */
-				React.createElement('div', {className:'colorpicker-codes-g'},
-					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.g, key:rgba.g}),
-					React.createElement('span', {},
-						'G'
-					)
-				),
-				React.createElement('div', {className:'colorpicker-codes-b'},
-					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.b, key:rgba.b}),
-					React.createElement('span', {},
-						'B'
-					)
-				),
-				React.createElement('div', {className:'colorpicker-codes-a'},
-					React.createElement('input', {type:'text', maxLength:3, defaultValue:rgba.a, key:rgba.a}),
-					React.createElement('span', {},
-						'A'
-					)
-				)
+				React.createElement(InputNumber, cPropsR),
+				React.createElement(InputNumber, cPropsG),
+				React.createElement(InputNumber, cPropsB),
+				React.createElement(InputNumber, cPropsA)
 			);
 		}
 	});
@@ -2782,7 +2798,7 @@ function init(aArrBufAndCore) {
 		displayName: 'InputNumber',
 		wheel: function(e) {
 			var newVal;
-			console.log('e:', e.deltaMode, e.deltaY);
+			// console.log('e:', e.deltaMode, e.deltaY);
 			if (e.deltaY < 0) {
 				newVal = this.props[this.props.pStateVarName] + this.crement;
 			} else {
@@ -2824,7 +2840,8 @@ function init(aArrBufAndCore) {
 				return false; // above min limit, dont set it
 			} else {
 				
-				if (this.props[this.props.pStateVarName] === aNewVal) {
+				var newSetValue = this.getSetValue(aNewVal);
+				if (this.props[this.props.pStateVarName] === newSetValue) {
 					// its already that number
 					console.log('already!');
 					return true;
@@ -2835,7 +2852,7 @@ function init(aArrBufAndCore) {
 				}
 				
 				var newStateObj = {};
-				newStateObj[this.props.pStateVarName] = aNewVal;
+				newStateObj[this.props.pStateVarName] = newSetValue;
 				
 				gEditorStore.setState(newStateObj);
 				
@@ -2875,13 +2892,13 @@ function init(aArrBufAndCore) {
 				if (this.props[this.props.pStateVarName] !== this.props.pMin) {
 					newVal = this.props.pMin;
 				}
-			} else if (this.props.pMax !== undefined && newVal < this.props.pMax) {
+			} else if (this.props.pMax !== undefined && newVal > this.props.pMax) {
 				if (this.props[this.props.pStateVarName] !== this.props.pMax) {
 					newVal = this.props.pMax;
 				}
 			}
 			
-			if (this.props[this.props.pStateVarName] != newVal) {
+			if (this.getSetValue(this.props[this.props.pStateVarName]) != newVal) {
 				if (!this.limitTestThenSet(newVal, this.refs.input)) {
 					if (this.sInputNumberMousing == this.cursor) {
 						this.sInputNumberMousing = 'not-allowed';
@@ -2922,6 +2939,53 @@ function init(aArrBufAndCore) {
 			this.limitTestThenSet(newValue);
 			
 		},
+		/*
+		getReadValue: function() {
+			//////////////////// no need see link link8844444 for why
+			// if pStateVarName needs special processing to read from pStateVarName and/or set to pStateVarName
+			switch (this.props.pStateVarReadSpecial) {
+				case 'sPalLineColorRED':
+
+						
+				
+					break;
+				default:
+					return this.props[this.props.pStateVarName];
+			}
+		},
+		*/
+		getSetValue: function(NEWVAL) {
+			// if pStateVarName needs special processing to read from pStateVarName and/or set to pStateVarName
+			if (this.props.pStateVarSpecial) {
+				// in this switch make sure to return the specially processed value, that should get setState with
+				
+				// var NEWVAL = this.props[this.props.pStateVarName];
+				
+				switch (this.props.pStateVarName) {
+					case 'sPalLineColor':
+					case 'sPalFillColor':
+
+							var specialData = this.props.pStateVarSpecial;
+							var rgba = specialData.rgba;
+							
+							var newRgb = {
+								r: rgba.r,
+								g: rgba.g,
+								b: rgba.b
+							};
+							newRgb[specialData.component] = NEWVAL;
+							return 'rgb(' + newRgb.r + ', ' + newRgb.g + ', ' + newRgb.b + ')';
+					
+						break;
+					default:
+						console.error('pStateVarName of "' + this.props.pStateVarName +'" is marked as special but no special getSetValue mechanism defined');
+						throw new Error('pStateVarName of "' + this.props.pStateVarName +'" is marked as special but no special getSetValue mechanism defined');
+				}
+			} else {
+				return NEWVAL;
+			}
+			
+		},
 		render: function() {
 			// props
 			//		sInputNumberMousing
@@ -2934,6 +2998,7 @@ function init(aArrBufAndCore) {
 			// //		pCanvasStateObj
 			//		[pStateVarName]
 			//		pCursor - css cursor when mouse moving. default is ew-resize
+			//		pStateVarSpecial - set it to anything other then false/undefined/null so it get get the special set value with getSetValue. i figured NO NEED for getReadValue as i pass in the special read value as [pStateVarName] so it updates the input properly link8844444
 			
 			this.crement = this.props.pCrement || 1;
 			this.mousesens = this.props.pMouseSens || 10;
@@ -2943,7 +3008,7 @@ function init(aArrBufAndCore) {
 				React.createElement('label', {htmlFor:'inputnumber_' + this.props.pStateVarName, className:'inputnumber-label', onMouseDown:this.mousedown},
 					this.props.pLabel
 				),
-				React.createElement('input', {id:'inputnumber_' + this.props.pStateVarName, ref:'input', type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName] })
+				React.createElement('input', {id:'inputnumber_' + this.props.pStateVarName, ref:'input', type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName], maxLength:(this.props.pMax === undefined ? undefined : (this.props.pMax+'').length) })
 			);
 		}
 	})
