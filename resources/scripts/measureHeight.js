@@ -104,7 +104,7 @@
 				return {
 					relativeBot: botBound - yBaseline, // relative to baseline of 0 // bottom most row having non-black
 					relativeTop: topBound - yBaseline, // relative to baseline of 0 // top most row having non-black
-					height: botBound - topBound,
+					height: (botBound - topBound) + 1
 					width: w
 				};
 			}

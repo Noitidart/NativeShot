@@ -944,7 +944,7 @@ function init(aArrBufAndCore) {
 								w = mh.width;
 								// i want to keep the baseline at this.y
 								y = mh.relativeTop < 0 ? this.y + mh.relativeTop : this.y;
-								h = y + mh.height < this.y ? this.y - y: mh.height;
+								h = mh.relativeBot >= 0 ? (this.y + mh.relativeBot) - y : this.y - y;
 							} else {
 								w = 0;
 								h = this.size;
@@ -1065,7 +1065,7 @@ function init(aArrBufAndCore) {
 								w = mh.width;
 								// i want to keep the baseline at this.y
 								y = mh.relativeTop < 0 ? this.y + mh.relativeTop : this.y;
-								h = y + mh.height < this.y ? this.y - y: mh.height;
+								h = mh.relativeBot >= 0 ? (this.y + mh.relativeBot) - y : this.y - y;
 							} else {
 								w = 0;
 								h = this.size;
@@ -4077,7 +4077,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	return {
 		relativeBot: botBound - yBaseline, // relative to baseline of 0 // bottom most row having non-black
 		relativeTop: topBound - yBaseline, // relative to baseline of 0 // top most row having non-black
-		height: botBound - topBound,
+		height: (botBound - topBound) + 1,
 		width: w
 	};
 }
