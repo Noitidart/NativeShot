@@ -3961,6 +3961,7 @@ function spliceSlice(str, index, count, add) {
 
 function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	// if you do pass aOptions.ctx, keep in mind that the ctx properties will be changed and not set back. so you should have a devoted canvas for this
+	// if you dont pass in a width to aOptions, it will return it to you in the return object
 	var defaultOptions = {
 		width: undefined, // if you specify a width then i wont have to use measureText to get the width
 		canAndCtx: undefined // set it to object {can:,ctx:} // if not provided, i will make one
@@ -3973,8 +3974,9 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		return {
 			relativeBot: 0,
 			relativeTop: aSize * -1,
-			height: aSize
-		}
+			height: aSize,
+			width: 0
+		};
 		// otherwise i will get IndexSizeError: Index or size is negative or greater than the allowed amount error somewhere below
 	}
 	
@@ -4119,7 +4121,8 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		
 		relativeBot: botBound - yBaseline, // relative to baseline of 0 // bottom most row having non-black
 		relativeTop: topBound - yBaseline, // relative to baseline of 0 // top most row having non-black
-		height: botBound - topBound
+		height: botBound - topBound,
+		width: w
 	};
 }
 
