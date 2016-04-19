@@ -925,13 +925,29 @@ function init(aArrBufAndCore) {
 					case 'Text':
 						
 							console.log('ok drawing select on text');
-							var w = ctx.measureText(this.chars).width;
-							var linespacingAsPx = this.linespacing * this.size;
+							// var linespacingAsPx = this.linespacing * this.size;
 							
-							var ibh = linespacingAsPx; // ibeam height
-							ctx.strokeRect(this.x, this.y - ibh, w, ibh);
+							var font = this.size + 'px ' + this.face;
+							if (this.bold) {
+								font = 'bold ' + font;
+							}
+							if (this.italic) {
+								font = 'italic ' + font;
+							}
+							
+							var w = ctx.measureText(this.chars).width;
+							
+							var mh = measureHeight(font, this.size, this.chars, {width:w});
+							console.log('mh:', mh);
+
+							var x = this.x;
+							var y = this.y + mh.relativeTop;
+							var h = mh.height;
+							
+							ctx.strokeRect(this.x, y, w, h);
 							
 							// draw ibeam
+							var ibh = h; // ibeam height
 							var ibx;
 							if (this.index === 0) {
 								ibx = 0;
@@ -939,7 +955,7 @@ function init(aArrBufAndCore) {
 								ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
 							}
 							var ibw = 3;
-							ctx.fillRect(this.x + ibx, this.y - ibh, ibw, ibh);
+							ctx.fillRect(this.x + ibx, y, ibw, ibh);
 						
 						break;
 					case 'Line':
@@ -1032,16 +1048,14 @@ function init(aArrBufAndCore) {
 							ctx.font = font;
 							
 							var w = ctx.measureText(this.chars).width;
-							var linespacingAsPx = this.linespacing * this.size;
 							
-							var ibh = linespacingAsPx; // ibeam height
-							var x = this.x;
-							var y = this.y - ibh;
-							var h = ibh;
-
 							var mh = measureHeight(font, this.size, this.chars, {width:w});
 							console.log('mh:', mh);
 
+							var x = this.x;
+							var y = this.y + mh.relativeTop;
+							var h = mh.height;
+							
 							return(x <= mx) && (x + w >= mx) &&
 								(y <= my) && (y + h >= my);
 					
@@ -1793,7 +1807,7 @@ function init(aArrBufAndCore) {
 			if (this.cstate.typing) {
 				var mySel = this.cstate.selection;
 				if (e.key.length == 1) {
-					mySel.chars += e.key;
+					mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
 					mySel.index++;
 					this.cstate.valid = false;
 				} else {
@@ -3946,67 +3960,131 @@ function spliceSlice(str, index, count, add) {
 }
 
 function measureHeight(aFont, aSize, aChars, aOptions={}) {
+	// if you do pass aOptions.ctx, keep in mind that the ctx properties will be changed and not set back. so you should have a devoted canvas for this
 	var defaultOptions = {
 		width: undefined, // if you specify a width then i wont have to use measureText to get the width
-		ctx: undefined // if provided then a canvas will not be created, it will be reused.
+		canAndCtx: undefined // set it to object {can:,ctx:} // if not provided, i will make one
 	};
 	
-	console.log(aFont, aSize, aChars);
+	// console.warn(aFont, aSize, aChars);
 	
-	// the ctx properties will be changed and not set back. so you should have a devoted canvas for this
-	
-	validateOptionsObj(aOptions, defaultOptions);
-	
-	// assuming for now that getImageData works on a canvas of height and width 0
-	var ctx;
-	if (!aOptions.ctx) {
-		var can = document.createElement('canvas');
-		can.width = 300;
-		can.height = 300;
-		// can.mozOpaque = 'true';
-		ctx = can.getContext('2d');
-		
-		can.style.position = 'absolute';
-		can.style.zIndex = 10000;
-		can.style.left = 0;
-		can.style.top = 0;
-		document.body.appendChild(can);
+	if (aChars === '') {
+		// return bad data
+		return {
+			relativeBot: 0,
+			relativeTop: aSize * -1,
+			height: aSize
+		}
+		// otherwise i will get IndexSizeError: Index or size is negative or greater than the allowed amount error somewhere below
 	}
 	
+	// validateOptionsObj(aOptions, defaultOptions); // not needed because all defaults are undefined
 	
-	// ctx.textBaseline = 'top';
-	// ctx.textAlign = 'baseline';
+	// assuming for now that getImageData works on a canvas of height and width 0
+	var can;
+	var ctx; 
+	if (!aOptions.canAndCtx) {
+		can = document.createElement('canvas');;
+		can.mozOpaque = 'true';
+		ctx = can.getContext('2d');
+		
+		// can.style.position = 'absolute';
+		// can.style.zIndex = 10000;
+		// can.style.left = 0;
+		// can.style.top = 0;
+		// document.body.appendChild(can);
+	} else {
+		can = aOptions.canAndCtx.can;
+		ctx = aOptions.canAndCtx.ctx;
+	}
 	
-	ctx.font = aFont;
+		
+	var w = aOptions.width;
+	if (!w) {
+		ctx.textBaseline = 'alphabetic';
+		ctx.textAlign = 'left';	
+		ctx.font = aFont;
+		w = ctx.measureText(aChars).width;
+	}
 	
-	ctx.fillStyle = 'red';
+	w = Math.ceil(w); // needed as i use w in the calc for the loop, it needs to be a whole number
 	
-	
-	
-	var w = aOptions.width || ctx.measureText(aChars).width;
+	// must set width/height, as it wont paint outside of the bounds
 	can.width = w;
 	can.height = aSize * 3;
 	
+	ctx.font = aFont; // need to set the .font again, because after changing width/height it makes it forget for some reason
+	ctx.textBaseline = 'alphabetic';
+	ctx.textAlign = 'left';	
+	
+	ctx.fillStyle = 'white';
+	
 	console.log('w:', w);
 	
-	ctx.fillText('rg', 0, aSize*2);
+	var yBaseline = aSize*2;
+	ctx.fillText(aChars, 0, yBaseline);
 	
 	var data = ctx.getImageData(0, 0, w, aSize*3).data;
-	// console.log('data:', data);
+	console.log('data:', data);
 
 	var botBound = -1; // start at baseline, and then go below to see if anything is there
 	var topBound = -1;
-	var firstRow = -1;
-	var lastRow = -1;
 	
-	var y = (aSize*2)-1;
-	console.log('aSize:', aSize);
+	var y = yBaseline + 1;
+	console.log('yBaseline:', yBaseline);
+	
+	var firstRowWithNonBlackFound = false;
+	var yFirstRowNonBlack;
+	// find top most row with no white. starting at the baseline
+	measureHeightY:
+	while (true) {
+		y--;
+		if (y < 0) {
+			console.log('breaking due to no find 1');
+			break;
+		}
+		// console.log('checking row:', y);
+		for (var x = 0; x < w; x += 1) {
+			var n = 4 * (w * y + x);
+			var r = data[n];
+			var g = data[n + 1];
+			var b = data[n + 2];
+			// var a = data[n + 3];
+			
+			// console.log('r+g+b:', r);
+			// console.log('y:', y);
+			
+			if (r+g+b > 0) { // non black px found
+				if (!firstRowWithNonBlackFound) {
+					firstRowWithNonBlackFound = true;
+					yFirstRowNonBlack = y;
+					console.log('ok first search: non-black on row:', y);
+				}
+				break;
+			}
+			if (firstRowWithNonBlackFound) {
+				if (r === 0 && x == w - 1) {
+					topBound = y + 1;
+					break measureHeightY;
+				}
+			}
+		}
+	}
+	
+	if (!firstRowWithNonBlackFound) {
+		throw new Error('could not find a row with non-black, this should never happen');
+	}
+	
+	var y = yFirstRowNonBlack - 1; // because i know yFirstRowNonBlack has black for sure, due to search block above, the first iteration will find non-black
+	console.log('starting next search on y:', y);
+	
+	firstRowWithNonBlackFound = false;
 	// find the bottom most row with no white, starting at the baseline
 	measureHeightY:
 	while (true) {
 		y++
 		if (y > aSize * 3) {
-			console.log('breaking due to no find');
+			console.log('breaking due to no find 2');
 			break;
 		}
 		// console.log('checking row:', y);
@@ -4018,78 +4096,30 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 			// var a = data[n + 3];
 			
 			if (r+g+b > 0) { // non black px found on this y/row
+				if (!firstRowWithNonBlackFound) {
+					firstRowWithNonBlackFound = true;
+					console.log('ok second search: non-black on row:', y);
+				}
 				break; // go to next row
 			}
-			if (r === 0 && x == w - 1) {
-				botBound = y-1;
-				break measureHeightY;
-			}
-		}
-	}
-	
-	var y = (aSize*2)+1;
-	// find top most row with no white. starting at the baseline
-	measureHeightY:
-	while (true) {
-		y--;
-		if (y < aSize * -1) {
-			console.log('breaking due to no find');
-			break;
-		}
-		for (var x = 0; x < w; x += 1) {
-			var n = 4 * (w * y + x);
-			var r = data[n];
-			var g = data[n + 1];
-			var b = data[n + 2];
-			// var a = data[n + 3];
-		
-			if (r+g+b > 0) { // non black px found
-				break;
-			}
-			if (r === 0 && x == w - 1) {
-				topBound = y + 1;
-				break measureHeightY;
-			}
-		}
-	}
-/*
-	var y = aSize*3;
-	measureHeightY:
-	while (true) {
-		y--;
-		if (y < aSize * -1) {
-			break;
-		}
-		for (var x = 0; x < w; x += 1) {
-			var n = 4 * (w * y + x);
-			var r = data[n];
-			// var g = data[n + 1];
-			// var b = data[n + 2];
-			// var a = data[n + 3];
-		
-			if (r === 255) {
-				break;
-			}
-			if (firstRow == -1) {
-				if (r !== 0) {
-					firstRow = x;
-					break;
-				}
-			} else {
-				// so obviously this is `if (lastRow == -1) {`
-				if (r === 0 && x == w - 1) {
-					lastRow = y + 1;
+			if (firstRowWithNonBlackFound) {
+				if (r === 0 && x == w - 1) { // ok no non-blacks on this row
+					botBound = y-1;
 					break measureHeightY;
 				}
 			}
 		}
 	}
-*/
+	
+	// by bot i mean "bottom of bounding square" and by top i mean "top of bounding square" per the image here - http://www.whatwg.org/specs/web-apps/current-work/images/baselines.png - from - https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_text
 	return {
-		botBound: botBound,
-		topBound: topBound,
-		// firstRow: firstRow,
-		// lastRow: lastRow
+		// nonRelBot: botBound, // bottom most row having non-black
+		// nonRelTop: topBound, // top most row having non-black
+		// nonRelBaseline: yBaseline,
+		
+		relativeBot: botBound - yBaseline, // relative to baseline of 0 // bottom most row having non-black
+		relativeTop: topBound - yBaseline, // relative to baseline of 0 // top most row having non-black
+		height: botBound - topBound
 	};
 }
 
