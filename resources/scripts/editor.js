@@ -544,6 +544,9 @@ function init(aArrBufAndCore) {
 						this.size = aOptions.size || 40;
 						this.face = aOptions.face || 'serif';
 						this.align = aOptions.align || 'left';
+						this.bold = aOptions.bold || '';
+						this.italic = aOptions.italic || '';
+						this.linespacing = 1;
 				
 					break;
 				default:
@@ -607,12 +610,19 @@ function init(aArrBufAndCore) {
 						this.Style = {
 							Draw: {
 								me: {
-									font: (this.size || 40) + 'px ' + (this.face || 'serif'),
+									font: this.size + 'px ' + (this.face || 'serif'),
 									textAlign: this.align || 'left',
 									fillStyle: aOptions.fillStyle || '#000'
 								}
 							}
 						};
+						
+						if (this.bold) {
+							this.Style.Draw.me = 'bold ' + this.Style.Draw.me;
+						}
+						if (this.italic) {
+							this.Style.Draw.me = 'italic ' + this.Style.Draw.me;
+						}
 				
 					break;
 				default:
@@ -775,9 +785,7 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Text':
 					
-							var pad = 10;
-							var lineSpacing = 0; // for first line its 0
-							ctx.fillText(this.chars, this.x + pad, this.y + this.size + lineSpacing + pad);
+							ctx.fillText(this.chars, this.x, this.y);
 					
 						break;
 					case 'Gaussian':
@@ -917,24 +925,21 @@ function init(aArrBufAndCore) {
 					case 'Text':
 						
 							console.log('ok drawing select on text');
-							var pad = 10;
-							var w = ctx.measureText(this.chars).width + (2 * pad);
-							console.log('w:', w);
-							var ibh = this.size + 10; // ibeam height
-							var h = ibh + (2 * pad);
-							console.log('h:', h);
-							ctx.strokeRect(this.x, this.y, w, h);
+							var w = ctx.measureText(this.chars).width;
+							var linespacingAsPx = this.linespacing * this.size;
+							
+							var ibh = linespacingAsPx; // ibeam height
+							ctx.strokeRect(this.x, this.y - ibh, w, ibh);
 							
 							// draw ibeam
-							var letterSpacing = 3;
-							var ibx = ctx.measureText(this.chars.substr(0, this.index)).width + pad;
-							if (this.chars.length) {
-								ibx += letterSpacing;
+							var ibx;
+							if (this.index === 0) {
+								ibx = 0;
+							} else {
+								ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
 							}
-							// console.log('ibx:', ibx);
-							// console.log('ibh:', ibh);
 							var ibw = 3;
-							ctx.fillRect(this.x + ibx, this.y + pad, ibw, ibh);
+							ctx.fillRect(this.x + ibx, this.y - ibh, ibw, ibh);
 						
 						break;
 					case 'Line':
@@ -1016,16 +1021,29 @@ function init(aArrBufAndCore) {
 					case 'Text':
 					
 							var ctx = gCState.rconn.ctx;
-							ctx.font = this.size + 'px ' + this.face;
+
+							var font = this.size + 'px ' + this.face;
+							if (this.bold) {
+								font = 'bold ' + font;
+							}
+							if (this.italic) {
+								font = 'italic ' + font;
+							}
+							ctx.font = font;
 							
-							var pad = 10;
-							var w = ctx.measureText(this.chars).width + (2 * pad);
-							console.log('w:', w);
-							var ibh = this.size + 10; // ibeam height
-							var h = ibh + (2 * pad);
+							var w = ctx.measureText(this.chars).width;
+							var linespacingAsPx = this.linespacing * this.size;
 							
-							return(this.x <= mx) && (this.x + w >= mx) &&
-								(this.y <= my) && (this.y + h >= my);
+							var ibh = linespacingAsPx; // ibeam height
+							var x = this.x;
+							var y = this.y - ibh;
+							var h = ibh;
+
+							var mh = measureHeight(font, this.size, this.chars, {width:w});
+							console.log('mh:', mh);
+
+							return(x <= mx) && (x + w >= mx) &&
+								(y <= my) && (y + h >= my);
 					
 						break;
 					default:
@@ -1402,6 +1420,11 @@ function init(aArrBufAndCore) {
 								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
 							
 							break;
+						case 'Text-':
+							
+								dragFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
+							
+							break;
 						case 'Line-':
 							
 								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
@@ -1471,14 +1494,6 @@ function init(aArrBufAndCore) {
 					gDroppingMixCtx = null;
 					
 					return; // so we dont do the stuff below
-				}
-				
-				if (this.cstate.typing) {
-					console.log('exiting typing, this was selection:', this.cstate.selection);
-					this.cstate.selection = null;
-					this.cstate.typing = false;
-					this.cstate.valid = false;
-					return;
 				}
 				
 				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
@@ -1618,7 +1633,14 @@ function init(aArrBufAndCore) {
 							break;
 						case 'Text-':
 							
-								this.cstate.selection = new this.Drawable(mx, my, null, null, 'Text');
+								if (this.cstate.typing) {
+									console.log('exiting typing, this was selection:', this.cstate.selection);
+									this.cstate.selection = null;
+									this.cstate.typing = false;
+									this.cstate.valid = false;
+								} else {
+									this.cstate.selection = new this.Drawable(mx, my, null, null, 'Text');
+								}
 							
 							break;
 						default:
@@ -3921,6 +3943,154 @@ function arraysSum(...intarr) {
 
 function spliceSlice(str, index, count, add) {
   return str.slice(0, index) + (add || "") + str.slice(index + count);
+}
+
+function measureHeight(aFont, aSize, aChars, aOptions={}) {
+	var defaultOptions = {
+		width: undefined, // if you specify a width then i wont have to use measureText to get the width
+		ctx: undefined // if provided then a canvas will not be created, it will be reused.
+	};
+	
+	console.log(aFont, aSize, aChars);
+	
+	// the ctx properties will be changed and not set back. so you should have a devoted canvas for this
+	
+	validateOptionsObj(aOptions, defaultOptions);
+	
+	// assuming for now that getImageData works on a canvas of height and width 0
+	var ctx;
+	if (!aOptions.ctx) {
+		var can = document.createElement('canvas');
+		can.width = 300;
+		can.height = 300;
+		// can.mozOpaque = 'true';
+		ctx = can.getContext('2d');
+		
+		can.style.position = 'absolute';
+		can.style.zIndex = 10000;
+		can.style.left = 0;
+		can.style.top = 0;
+		document.body.appendChild(can);
+	}
+	
+	
+	// ctx.textBaseline = 'top';
+	// ctx.textAlign = 'baseline';
+	
+	ctx.font = aFont;
+	
+	ctx.fillStyle = 'red';
+	
+	
+	
+	var w = aOptions.width || ctx.measureText(aChars).width;
+	can.width = w;
+	can.height = aSize * 3;
+	
+	console.log('w:', w);
+	
+	ctx.fillText('rg', 0, aSize*2);
+	
+	var data = ctx.getImageData(0, 0, w, aSize*3).data;
+	// console.log('data:', data);
+
+	var botBound = -1; // start at baseline, and then go below to see if anything is there
+	var topBound = -1;
+	var firstRow = -1;
+	var lastRow = -1;
+	
+	var y = (aSize*2)-1;
+	console.log('aSize:', aSize);
+	// find the bottom most row with no white, starting at the baseline
+	measureHeightY:
+	while (true) {
+		y++
+		if (y > aSize * 3) {
+			console.log('breaking due to no find');
+			break;
+		}
+		// console.log('checking row:', y);
+		for (var x = 0; x < w; x += 1) {
+			var n = 4 * (w * y + x);
+			var r = data[n];
+			var g = data[n + 1];
+			var b = data[n + 2];
+			// var a = data[n + 3];
+			
+			if (r+g+b > 0) { // non black px found on this y/row
+				break; // go to next row
+			}
+			if (r === 0 && x == w - 1) {
+				botBound = y-1;
+				break measureHeightY;
+			}
+		}
+	}
+	
+	var y = (aSize*2)+1;
+	// find top most row with no white. starting at the baseline
+	measureHeightY:
+	while (true) {
+		y--;
+		if (y < aSize * -1) {
+			console.log('breaking due to no find');
+			break;
+		}
+		for (var x = 0; x < w; x += 1) {
+			var n = 4 * (w * y + x);
+			var r = data[n];
+			var g = data[n + 1];
+			var b = data[n + 2];
+			// var a = data[n + 3];
+		
+			if (r+g+b > 0) { // non black px found
+				break;
+			}
+			if (r === 0 && x == w - 1) {
+				topBound = y + 1;
+				break measureHeightY;
+			}
+		}
+	}
+/*
+	var y = aSize*3;
+	measureHeightY:
+	while (true) {
+		y--;
+		if (y < aSize * -1) {
+			break;
+		}
+		for (var x = 0; x < w; x += 1) {
+			var n = 4 * (w * y + x);
+			var r = data[n];
+			// var g = data[n + 1];
+			// var b = data[n + 2];
+			// var a = data[n + 3];
+		
+			if (r === 255) {
+				break;
+			}
+			if (firstRow == -1) {
+				if (r !== 0) {
+					firstRow = x;
+					break;
+				}
+			} else {
+				// so obviously this is `if (lastRow == -1) {`
+				if (r === 0 && x == w - 1) {
+					lastRow = y + 1;
+					break measureHeightY;
+				}
+			}
+		}
+	}
+*/
+	return {
+		botBound: botBound,
+		topBound: topBound,
+		// firstRow: firstRow,
+		// lastRow: lastRow
+	};
 }
 
 /////////// stackblur
