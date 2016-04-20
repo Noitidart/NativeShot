@@ -2729,29 +2729,34 @@ function init(aArrBufAndCore) {
 		},
 		componentDidUpdate: function(prevProps, prevState) {
 			// start - very specific to nativeshot - update selected object if applicable
-			if (gCState && gCState.selection) {
-				// if currently selection object obeys arrow settings, then apply this new arrow settings if they dont match
-				switch (gCState.selection.name) {
-					case 'Line':
-						
-							var newValid = true;
-							if (gCState.selection.arrowStart != this.props.sPalArrowStart) {
-								gCState.selection.arrowStart = this.props.sPalArrowStart;
-								newValid = false;
-							}
-							if (gCState.selection.arrowEnd != this.props.sPalArrowEnd) {
-								gCState.selection.arrowEnd = this.props.sPalArrowEnd;
-								newValid = false;
-							}
-							if (gCState.selection.arrowLength != this.props.sPalArrowLength) {
-								gCState.selection.arrowLength = this.props.sPalArrowLength;
-								newValid = false;
-							}
-							gCState.valid = newValid;
-						
-						break;
-					default:
-						// this selection is not affected
+			console.log('arrowtools did update!', 'prevProps:', uneval(prevProps), 'nowProps:', uneval(this.props));
+			if (prevProps.sPalArrowStart != this.props.sPalArrowStart ||
+				prevProps.sPalArrowEnd != this.props.sPalArrowEnd ||
+				prevProps.sPalArrowLength != this.props.sPalArrowLength ) {
+				if (gCState && gCState.selection) {
+					// if currently selection object obeys arrow settings, then apply this new arrow settings if they dont match
+					switch (gCState.selection.name) {
+						case 'Line':
+							
+								var newValid = true;
+								if (gCState.selection.arrowStart != this.props.sPalArrowStart) {
+									gCState.selection.arrowStart = this.props.sPalArrowStart;
+									newValid = false;
+								}
+								if (gCState.selection.arrowEnd != this.props.sPalArrowEnd) {
+									gCState.selection.arrowEnd = this.props.sPalArrowEnd;
+									newValid = false;
+								}
+								if (gCState.selection.arrowLength != this.props.sPalArrowLength) {
+									gCState.selection.arrowLength = this.props.sPalArrowLength;
+									newValid = false;
+								}
+								gCState.valid = newValid;
+							
+							break;
+						default:
+							// this selection is not affected
+					}
 				}
 			}
 			// end - very specific to nativeshot - update selected object if applicable
