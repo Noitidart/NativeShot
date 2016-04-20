@@ -148,7 +148,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
 			icon: 'S',
-			options: ['TextTools']
+			options: ['TextTools', 'Fill Color']
 		},
 		{
 			label: 'Blur',
@@ -620,7 +620,7 @@ function init(aArrBufAndCore) {
 								me: {
 									font: this.size + 'px ' + (this.face || 'serif'),
 									textAlign: this.align || 'left',
-									fillStyle: aOptions.fillStyle || '#000'
+									fillStyle: aOptions.fillStyle || colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha)
 								}
 							}
 						};
@@ -989,6 +989,7 @@ function init(aArrBufAndCore) {
 								ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
 							}
 							var ibw = 3;
+							ctx.fillStyle = 'black';
 							ctx.fillRect(this.x + ibx, y, ibw, ibh);
 						
 						break;
@@ -2340,6 +2341,7 @@ function init(aArrBufAndCore) {
 							switch (gCState.selection.name) {
 								case 'Rectangle':
 								case 'Oval':
+								case 'Text':
 									
 										gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
 										gCState.valid = false;
@@ -2817,6 +2819,7 @@ function init(aArrBufAndCore) {
 						switch (gCState.selection.name) {
 							case 'Rectangle':
 							case 'Oval':
+							case 'Text':
 								
 									gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
