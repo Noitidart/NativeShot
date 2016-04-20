@@ -1050,7 +1050,7 @@ function focusSelfApp() {
 }
 
 
-var SetProcessDpiAwareness;
+// var SetProcessDpiAwareness;
 function convertPrimHrToHex(aPrimHr) {
 	var a = aPrimHr >>> 0;
 	var b = '0x' + a.toString(16);
@@ -1061,16 +1061,16 @@ function shootAllMons() {
 	var collMonInfos = [];
 	var aScreenshotBuffersToTransfer = [];
 
-	if (core.os.name.indexOf('win') === 0) {
-		if (!SetProcessDpiAwareness) {
-			var shcore = ctypes.open('shcore');
-			SetProcessDpiAwareness = shcore.declare('SetProcessDpiAwareness', ostypes.TYPE.ABI, ostypes.TYPE.HRESULT, ostypes.TYPE.int);
-		}
+	// if (core.os.name.indexOf('win') === 0) {
+		// if (!SetProcessDpiAwareness) {
+			// var shcore = ctypes.open('shcore');
+			// SetProcessDpiAwareness = shcore.declare('SetProcessDpiAwareness', ostypes.TYPE.ABI, ostypes.TYPE.HRESULT, ostypes.TYPE.int);
+		// }
 		
-		var PROCESS_PER_MONITOR_DPI_AWARE = 2;
-		var rez_setaware = SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-		console.log('rez_setaware:', rez_setaware, 'convertPrimHrToHex:', convertPrimHrToHex(rez_setaware));
-	}
+		// var PROCESS_PER_MONITOR_DPI_AWARE = 2;
+		// var rez_setaware = SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+		// console.log('rez_setaware:', rez_setaware, 'convertPrimHrToHex:', convertPrimHrToHex(rez_setaware));
+	// }
 	
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
