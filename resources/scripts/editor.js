@@ -203,7 +203,8 @@ function init(aArrBufAndCore) {
 			special: 'ArrowTools',
 			icon: 'S',
 			justClick: true,
-			isOption: true
+			isOption: true,
+			props: ['sPalArrowStart', 'sPalArrowEnd', 'sPalArrowLength']
 		},
 		{
 			label: 'Fill Color',
@@ -419,6 +420,10 @@ function init(aArrBufAndCore) {
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
 				
+				sPalArrowLength: 20,
+				sPalArrowEnd: false,
+				sPalArrowStart: false,
+				
 				sPalZoomViewCoords: this.props.pPalZoomViewCoords,
 				sPalZoomViewLevel: this.props.pPalZoomViewLevel
 			};
@@ -526,6 +531,9 @@ function init(aArrBufAndCore) {
 						this.y = y;
 						this.x2 = 'x2' in aOptions ? aOptions.x2 : x;
 						this.y2 = 'y2' in aOptions ? aOptions.y2 : y;
+						this.arrowStart = aOptions.arrowStart || gCState.rconn.state.sPalArrowStart;
+						this.arrowEnd = aOptions.arrowEnd || gCState.rconn.state.sPalArrowEnd;
+						this.arrowLength = aOptions.arrowLength || gCState.rconn.state.sPalArrowLength;
 				
 					break;
 				case 'Pencil':
@@ -768,7 +776,25 @@ function init(aArrBufAndCore) {
 						
 							ctx.beginPath();
 							ctx.moveTo(this.x, this.y);
-							ctx.lineTo(this.x2, this.y2);
+							
+							// no arrows
+							if (!this.arrowStart && !this.arrowEnd) {
+								// no arrows
+								ctx.lineTo(this.x2, this.y2);
+							} else if (this.arrowStart && !this.arrowEnd) {
+								// start arrow only
+								canvas_arrow(ctx, this.x2, this.y2, this.x, this.y, this.arrowLength)
+							} else if (!this.arrowStart && this.arrowEnd) {
+								// end arrow only
+								canvas_arrow(ctx, this.x, this.y, this.x2, this.y2, this.arrowLength);
+							} else if (this.arrowStart && this.arrowEnd) {
+								// both arrows
+								canvas_arrow(ctx, this.x2, this.y2, this.x, this.y, this.arrowLength)
+								canvas_arrow(ctx, this.x, this.y, this.x2, this.y2, this.arrowLength);
+							} else {
+								throw new Error('should never ever get here');
+							}
+
 							ctx.stroke();
 						
 						break;
@@ -2691,45 +2717,85 @@ function init(aArrBufAndCore) {
 	
 	var ArrowTools = React.createClass({
 		displayName: 'ArrowTools',
+		checkStart: function() {
+			gEditorStore.setState({
+				sPalArrowStart: !this.props.sPalArrowStart
+			})
+		},
+		checkEnd: function() {
+			gEditorStore.setState({
+				sPalArrowEnd: !this.props.sPalArrowEnd
+			})
+		},
+		componentDidUpdate: function(prevProps, prevState) {
+			// start - very specific to nativeshot - update selected object if applicable
+			if (gCState && gCState.selection) {
+				// if currently selection object obeys arrow settings, then apply this new arrow settings if they dont match
+				switch (gCState.selection.name) {
+					case 'Line':
+						
+							var newValid = true;
+							if (gCState.selection.arrowStart != this.props.sPalArrowStart) {
+								gCState.selection.arrowStart = this.props.sPalArrowStart;
+								newValid = false;
+							}
+							if (gCState.selection.arrowEnd != this.props.sPalArrowEnd) {
+								gCState.selection.arrowEnd = this.props.sPalArrowEnd;
+								newValid = false;
+							}
+							if (gCState.selection.arrowLength != this.props.sPalArrowLength) {
+								gCState.selection.arrowLength = this.props.sPalArrowLength;
+								newValid = false;
+							}
+							gCState.valid = newValid;
+						
+						break;
+					default:
+						// this selection is not affected
+				}
+			}
+			// end - very specific to nativeshot - update selected object if applicable
+		},
 		render: function() {
 			// props
 			//		sPalArrowStart
 			//		sPalArrowEnd
-			//		sPalArrowWidth
 			//		sPalArrowLength
-			//		sPalArrowAngle - the concavity feature of photoshop
+			// //		sPalArrowWidth
+			// //		sPalArrowAngle - the concavity feature of photoshop
 			
 			return React.createElement('div', {className:'parrowtools'},
 				React.createElement('div', {},
-					React.createElement('input', {id:'arrow_start', type:'checkbox'}),
+					React.createElement('input', {id:'arrow_start', type:'checkbox', defaultChecked:this.props.sPalArrowStart, onClick:this.checkStart}),
 					React.createElement('label', {htmlFor:'arrow_start'},
 						'Start'
 					)
 				),
 				React.createElement('div', {},
-					React.createElement('input', {id:'arrow_end', type:'checkbox'}),
+					React.createElement('input', {id:'arrow_end', type:'checkbox', defaultChecked:this.props.sPalArrowEnd, onClick:this.checkEnd}),
 					React.createElement('label', {htmlFor:'arrow_end'},
 						'End'
 					)
 				),
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'arrow_width'},
-						'Width'
-					),
-					React.createElement('input', {id:'arrow_width', type:'text'})
-				),
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'arrow_length'},
-						'Length'
-					),
-					React.createElement('input', {id:'arrow_length', type:'text'})
-				),
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'arrow_angle'},
-						'Angle'
-					),
-					React.createElement('input', {id:'arrow_angle', type:'text'})
-				)
+				React.createElement(InputNumber, {pLabel:'Length (px)', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1})
+				// React.createElement('div', {},
+				// 	React.createElement('label', {htmlFor:'arrow_length'},
+				// 		'Length'
+				// 	),
+				// 	React.createElement('input', {id:'arrow_length', type:'text'})
+				// ),
+				// React.createElement('div', {},
+				// 	React.createElement('label', {htmlFor:'arrow_width'},
+				// 		'Width'
+				// 	),
+				// 	React.createElement('input', {id:'arrow_width', type:'text'})
+				// ),
+				// React.createElement('div', {},
+				// 	React.createElement('label', {htmlFor:'arrow_angle'},
+				// 		'Angle'
+				// 	),
+				// 	React.createElement('input', {id:'arrow_angle', type:'text'})
+				// )
 			)
 		}
 	});
@@ -4081,6 +4147,23 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		width: w
 	};
 }
+
+function canvas_arrow(context, fromx, fromy, tox, toy, headlen){
+    // var headlen = 10;   // length of head in pixels
+    var angle = Math.atan2(toy-fromy,tox-fromx);
+    context.moveTo(fromx, fromy);
+    context.lineTo(tox, toy);
+    
+	// context.moveTo(tox, toy);
+	// context.lineTo(tox, toy);
+	
+	// context.moveTo(tox, toy);
+    context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    context.moveTo(tox, toy);
+    context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+}
+
+
 
 /////////// stackblur
 
