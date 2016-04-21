@@ -227,7 +227,8 @@ function init(aArrBufAndCore) {
 		{
 			special: 'TextTools',
 			justClick: true,
-			isOption: true
+			isOption: true,
+			props: ['sPalFontSize', 'sPalFontFace', 'sPalFontBold', 'sPalFontItalic', 'sPalFontUnderline']
 		},
 		{
 			special: 'BlurTools',
@@ -428,7 +429,13 @@ function init(aArrBufAndCore) {
 				sPalZoomViewCoords: this.props.pPalZoomViewCoords,
 				sPalZoomViewLevel: this.props.pPalZoomViewLevel,
 				
-				sPalLineWidth: this.props.pPalLineWidth
+				sPalLineWidth: this.props.pPalLineWidth,
+				
+				sPalFontSize: this.props.pPalFontSize,
+				sPalFontFace: this.props.pPalFontFace,
+				sPalFontBold: this.props.pPalFontBold,
+				sPalFontItalic: this.props.pPalFontItalic,
+				sPalFontUnderline: this.props.pPalFontUnderline
 			};
 		},
 		componentDidMount: function() {
@@ -577,7 +584,7 @@ function init(aArrBufAndCore) {
 						// others
 						this.chars = '';
 						this.index = 0; // the position of the ibeam
-						this.fontsize = aOptions.fontsize;
+						this.fontsize = aOptions.fontsize; // must be a integer. no 'px' but it is assumed as px and used as such throughout
 						this.fontface = aOptions.fontface;
 						this.fontbold = aOptions.fontbold;
 						this.fontitalic = aOptions.fontitalic;
@@ -900,7 +907,7 @@ function init(aArrBufAndCore) {
 							var y;
 							var h;
 							var w;
-							var fontsize = parseInt(this.fontsize); // i expect it to be in px
+							var fontsize = this.fontsize; // i expect it to be in px
 							if (this.chars.length) {
 								var mh = measureHeight(font, fontsize, this.chars, {width:w});
 								console.log('mh:', mh);
@@ -1013,7 +1020,7 @@ function init(aArrBufAndCore) {
 							var y;
 							var h;
 							var w;
-							var fontsize = parseInt(this.fontsize); // i expect it to be in px
+							var fontsize = this.fontsize; // i expect it to be in px
 							if (this.chars.length) {
 								var mh = measureHeight(font, fontsize, this.chars, {width:w});
 								console.log('mh:', mh);
@@ -1308,6 +1315,9 @@ function init(aArrBufAndCore) {
 				var fontable = fontables[i];
 				if (fontable in aDrawable && aDrawable[fontable] !== undefined) {
 					font.push(aDrawable[fontable]);
+					if (fontable == 'fontsize') {
+						font[font.length-1] += 'px';
+					}
 				}
 			}
 			
@@ -1323,10 +1333,11 @@ function init(aArrBufAndCore) {
 			
 			// specials			
 			var fontablesDefaults = {
-				// fontitalic: undefined,
-				// fontbold: undefined,
-				fontface: 'san-serif',
-				fontsize: '24px'
+				fontitalic: gCState.rconn.state.sPalFontItalic,
+				fontbold: gCState.rconn.state.sPalFontBold,
+				fontunderline: gCState.rconn.state.sPalFontUnderline,
+				fontface: gCState.rconn.state.sPalFontFace,
+				fontsize: gCState.rconn.state.sPalFontSize
 			};
 			
 			var styleables = {
@@ -2664,7 +2675,7 @@ function init(aArrBufAndCore) {
 		displayName: 'TextTools',
 		render: function() {
 			// props
-			//		sPalFontFamily
+			//		sPalFontFace
 			//		sPalFontSize
 			//		sPalFontBold
 			//		sPalFontItalic
@@ -2691,7 +2702,7 @@ function init(aArrBufAndCore) {
 					React.createElement('label', {htmlFor:'font_size'},
 						'Size'
 					),
-					React.createElement('input', {id:'font_size', type:'text'})
+					React.createElement(InputNumber, {sLabel:'Font Size (px)', pStateVarName:'sPalFontSize', sPalFontSize:this.props.sPalFontSize, pMin:1, pCStateSel:{'Text':'fontsize'} })
 				),
 				React.createElement('div', {className:'', style:{fontWeight:'bold'} },
 					'B'
@@ -3270,6 +3281,9 @@ function init(aArrBufAndCore) {
 					var drawablePropToUpdate = this.props.pCStateSel[gCState.selection.name];
 					if (gCState && gCState.selection && drawablePropToUpdate) {
 						gCState.selection[drawablePropToUpdate] = newSetValue;
+						if (drawablePropToUpdate.indexOf('font') === 0) {
+							gCState.selection.font = gCState.rconn.calcCtxFont(gCState.selection);
+						}
 						gCState.valid = false; // so new blur level gets applied
 					}
 				}
@@ -3501,6 +3515,12 @@ function init(aArrBufAndCore) {
 	
 	var palLineWidth = 1;
 	
+	var palFontSize = 24;
+	var palFontFace = 'san-serif';
+	var palFontBold = undefined;
+	var palFontItalic = undefined;
+	var palFontUnderline = undefined;
+	
 	var Specials = {
 		Divider: Divider,
 		Accessibility: Accessibility,
@@ -3540,6 +3560,12 @@ function init(aArrBufAndCore) {
 				pPalArrowStart: palArrowStart,
 				
 				pPalLineWidth: palLineWidth,
+				
+				pPalFontSize: palFontSize,
+				pPalFontFace: palFontFace,
+				pPalFontBold: palFontBold,
+				pPalFontItalic: palFontItalic,
+				pPalFontUnderline: palFontItalic,
 				
 				pCanHandleSize: 19, // :todo: get from prefs
 				pCanInterval: 30, // ms
