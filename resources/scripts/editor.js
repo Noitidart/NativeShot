@@ -1655,7 +1655,37 @@ function init(aArrBufAndCore) {
 				if (dropping) {
 					var acceptDroppingObj = {};
 					acceptDroppingObj.sGenColorPickerDropping = null;
-					gEditorStore.setState(acceptDroppingObj);							
+					
+					if (this.cstate.selection) {
+						switch (this.cstate.selection.name) {
+							case 'Marker':
+							
+									this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist');
+									
+								break;
+							case 'Line':
+							case 'Pencil':
+							
+									this.addColorToHistory('sPalLineColor', 'sPalBothColorHist');
+							
+								break;
+							case 'Text':
+							
+									this.addColorToHistory('sPalFillColor', 'sPalBothColorHist');
+							
+								break;
+							case 'Rectangle':
+							case 'Oval':
+							
+									this.addColorToHistory(dropping.pStateColorKey, 'sPalBothColorHist');
+									
+								break;
+							default:
+								// no related color picker
+						}
+					}
+					
+					gEditorStore.setState(acceptDroppingObj);
 					gDroppingMixCtx = null;
 					
 					return; // so we dont do the stuff below
@@ -1893,6 +1923,9 @@ function init(aArrBufAndCore) {
 			if (idxCoInHist == -1) {
 				immutedHistory = cHistory.slice();
 				immutedHistory.splice(0, 0, cColor);
+				if (immutedHistory.length >= 7) {
+					immutedHistory.length = 7;
+				}
 			} else if (idxCoInHist > 0) {
 				immutedHistory = cHistory.slice();
 				immutedHistory.splice(0, 0, immutedHistory.splice(idxCoInHist, 1)[0]);
