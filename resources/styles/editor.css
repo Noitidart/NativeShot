@@ -426,18 +426,38 @@ body {
 .pdimtools,
 .ptexttools,
 .parrowtools {
+	font-size: 0.5em;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 6px;
+}
+.minfontsize .pblurlevel,
+.minfontsize .plinetools,
+.minfontsize .pdimtools,
+.minfontsize .ptexttools,
+.minfontsize .parrowtools {
 	font-size: 12px;
+}
+.inputnumber {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	margin-top: 5px;
+}
+.inputnumber input {
+	width: 3em;
+	margin: 0 3px;
+	font-size: inherit;
 }
 /* end - option_tools */
 
 /* start - ptexttools area */
 /* state:innate */
 .ptexttools {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 6px;
+	font-size: 12px;
 }
 .ptexttools-row {
 	display: flex;
@@ -457,22 +477,55 @@ body {
 	font-style: italic;
 	margin: 5px 1px 0 0;
 }
-.ptexttools .inputnumber {
-	margin-top: 5px;
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-	align-items: center;
+.pdimtools .inputnumber label {
+	white-space: nowrap;
 }
 .ptexttools .inputnumber input {
-	width: 3em;
-	margin: 0 3px;
+	font-size: auto;
+}
+.ptexttools .inputnumber {
+	margin-top: 5px;
 }
 .ptexttools select {
 	font-size: 1em;
 	margin: 0 3px;
 }
 /* end - ptexttools area */
+
+/* start - dimensions tools area */
+.pdimtools {
+	font-size: 0.5em;
+}
+.minfontsize .pdimtools {
+	font-size: 12px;
+}
+.pdimtools .inputnumber {
+	width: 100%;
+	justify-content: space-between;
+}
+.pdimtools .inputnumber input {
+	
+	width: 4em;
+	margin: 0 4px;
+}
+.minfontsize .pdimtools .inputnumber input {
+	font-size: 12px;
+}
+/* end - dimensions tools area */
+
+/* start - arrow tools area */
+.parrowtools-checks {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.parrowtools-checks div {
+	padding: 0 5px;
+}
+.parrowtools label {
+	white-space: nowrap;
+}
+/* end - arrow tools area */
 
 /* start - inputnumber-label */
 /* state:innate */

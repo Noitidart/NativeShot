@@ -2796,18 +2796,8 @@ function init(aArrBufAndCore) {
 			//		sPalHeight
 			
 			return React.createElement('div', {className:'pdimtools'},
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'drawable_width'},
-						'Width'
-					),
-					React.createElement('input', {id:'drawable_width', type:'text'})
-				),
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'drawable_height'},
-						'Height'
-					),
-					React.createElement('input', {id:'drawable_height', type:'text'})
-				)
+				React.createElement(InputNumber, {pLabel:'Width', pMin:1}),
+				React.createElement(InputNumber, {pLabel:'Height', pMin:1})
 			)
 		}
 	});
@@ -2928,16 +2918,18 @@ function init(aArrBufAndCore) {
 			// //		sPalArrowAngle - the concavity feature of photoshop
 			
 			return React.createElement('div', {className:'parrowtools'},
-				React.createElement('div', {},
-					React.createElement('input', {id:'arrow_start', type:'checkbox', defaultChecked:this.props.sPalArrowStart, onClick:this.checkStart}),
-					React.createElement('label', {htmlFor:'arrow_start'},
-						'Start'
-					)
-				),
-				React.createElement('div', {},
-					React.createElement('input', {id:'arrow_end', type:'checkbox', defaultChecked:this.props.sPalArrowEnd, onClick:this.checkEnd}),
-					React.createElement('label', {htmlFor:'arrow_end'},
-						'End'
+				React.createElement('div', {className:'parrowtools-checks'},
+					React.createElement('div', {},
+						React.createElement('input', {id:'arrow_start', type:'checkbox', defaultChecked:this.props.sPalArrowStart, onClick:this.checkStart}),
+						React.createElement('label', {htmlFor:'arrow_start'},
+							'Start'
+						)
+					),
+					React.createElement('div', {},
+						React.createElement('input', {id:'arrow_end', type:'checkbox', defaultChecked:this.props.sPalArrowEnd, onClick:this.checkEnd}),
+						React.createElement('label', {htmlFor:'arrow_end'},
+							'End'
+						)
 					)
 				),
 				React.createElement(InputNumber, {pLabel:'Length (px)', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1, pCStateSel:{'Line':'arrowLength'} })
