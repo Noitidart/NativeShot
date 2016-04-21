@@ -38,7 +38,7 @@ function unload() {
 		
 		Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
 			topic: 'updateEditorState',
-			editorstate: immutableEditorstate,
+			editorstateStr: JSON.stringify(immutableEditorstate),
 			iMon: 0
 		}));
 	}
@@ -199,7 +199,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping'}
+					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalLineColorHist', pStateHistoryKey:'$string$sPalLineColorHist'}
 				}
 			],
 			isOption: true
@@ -211,7 +211,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sGenColorPickerDropping:'sGenColorPickerDropping'}
+					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalMarkerColorHist', pStateHistoryKey:'$string$sPalMarkerColorHist'}
 				}
 			],
 			isOption: true
@@ -236,7 +236,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping'}
+					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalFillColorHist', pStateHistoryKey:'$string$sPalFillColorHist'}
 				}
 			],
 			isOption: true
@@ -434,10 +434,13 @@ function init(aArrBufAndCore) {
 
 				sPalLineColor: this.props.pPalLineColor,
 				sPalLineAlpha: this.props.pPalLineAlpha,
+				sPalLineColorHist: this.props.pPalLineColorHist,
 				sPalFillColor: this.props.pPalFillColor,
 				sPalFillAlpha: this.props.pPalFillAlpha,
+				sPalFillColorHist: this.props.pPalFillColorHist,
 				sPalMarkerColor: this.props.pPalMarkerColor,
 				sPalMarkerAlpha: this.props.pPalMarkerAlpha,
+				sPalMarkerColorHist: this.props.pPalMarkerColorHist,
 				
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
@@ -2859,6 +2862,8 @@ function init(aArrBufAndCore) {
 			//		pStateAlphaKey
 			//		pSetStateName - a string, it must be the store to use for the pStateColorKey and pStateAlphaKey
 			//		sGenColorPickerDropping
+			//		sHistory - array of strings for sColor
+			//		pStateHistoryKey
 			
 			// only supports rgb mode
 			
@@ -3480,8 +3485,9 @@ function init(aArrBufAndCore) {
 		BlurTools: BlurTools
 	};
 	
-	var editorstate = aArrBufAndCore.editorstate;
-	if (!editorstate) {
+	var editorstateStr = aArrBufAndCore.editorstateStr;
+	var editorstate;
+	if (!editorstateStr) {
 		// need to use defaults
 		
 		var palSeldSubs = {};
@@ -3507,10 +3513,13 @@ function init(aArrBufAndCore) {
 			
 			pPalLineColor: 'rgb(208, 2, 27)',
 			pPalLineAlpha: 100,
+			pPalLineColorHist: [],
 			pPalFillColor: 'rgb(74, 144, 226)',
 			pPalFillAlpha: 100,
+			pPalFillColorHist: [],
 			pPalMarkerColor: '#ffef15',
 			pPalMarkerAlpha: 50,
+			pPalMarkerColorHist: [],
 			
 			pPalBlurBlock: 5,
 			pPalBlurRadius: 10,
@@ -3533,14 +3542,19 @@ function init(aArrBufAndCore) {
 			pCanHandleSize: 19,
 			pPalSeldSubs: palSeldSubs
 		};
+	} else {
+		editorstate = JSON.parse(editorstateStr);
 	}
 	var initProps = editorstate;
+	console.log('initProps:', initProps);
 	initProps.pQS = pQS;
 	initProps.pScreenshotArrBuf = aArrBufAndCore.screenshotArrBuf;
 	initProps.pPhys = pPhys;
 	initProps.pCanInterval = 30;
 	initProps.pPalLayout = palLayout; // link1818181
 
+	console.log('initProps:', initProps);
+	
 	var initReact = function() {
 		window.addEventListener('unload', unload, false);
 		

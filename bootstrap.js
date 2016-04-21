@@ -62,7 +62,7 @@ const TWITTER_IMG_SUFFIX = ':large';
 var OSStuff = {};
 
 var gFonts;
-var gEditorState;
+var gEditorStateStr;
 
 // Lazy Imports
 const myServices = {};
@@ -480,8 +480,9 @@ var EditorFuncs = {
 		}
 	},
 	updateEditorState: function(aData) {
-		gEditorState = aData.editorstate;
-		var promise_updateEditorstate = MainWorker.post('updateEditorState', [gEditorState]);
+		gEditorStateStr = aData.editorstateStr;
+		console.log('set gEditorStateStr to:', gEditorStateStr);
+		var promise_updateEditorstate = MainWorker.post('updateEditorState', [gEditorStateStr]);
 	},
 	init: function(aData) {
 		// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
@@ -557,7 +558,7 @@ var EditorFuncs = {
 			screenshotArrBuf: colMon[iMon].screenshotArrBuf,
 			core: core,
 			fonts: gFonts,
-			editorstate: gEditorState
+			editorstateStr: gEditorStateStr
 		}, '*', [colMon[iMon].screenshotArrBuf]);
 	}
 };
@@ -4580,8 +4581,8 @@ function startup(aData, aReason) {
 	var do_afterWorkerInit = function(aInitedCore) {
 		
 		core = aInitedCore;
-		gEditorState = core.editorstate;
-		delete core.editorstate;
+		gEditorStateStr = core.editorstateStr;
+		delete core.editorstateStr;
 		
 		CustomizableUI.createWidget({
 			id: 'cui_nativeshot',
