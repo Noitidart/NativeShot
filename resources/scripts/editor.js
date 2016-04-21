@@ -22,6 +22,28 @@ var gInputNumberId = 0;
 var gDroppingCoords = [0,0];
 var gDroppingMixCtx;
 
+function unload() {
+	// if iMon == 0
+	// set the new state object from react to file
+	if (gQS.iMon === 0) {
+		console.error('sending state object:', gCState.rconn.state);
+		var immutableEditorstate = JSON.parse(JSON.stringify(gCState.rconn.state));
+		for (var p in immutableEditorstate) {
+			if (p.indexOf('sGen') !== 0) {
+				var newP = 'p' + p.substr(1); // change first char
+				immutableEditorstate[newP] = immutableEditorstate[p];
+			}
+			delete immutableEditorstate[p];
+		}
+		
+		Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+			topic: 'updateEditorState',
+			editorstate: immutableEditorstate,
+			iMon: 0
+		}));
+	}
+}
+
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
 	
@@ -177,7 +199,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sColorPickerDropping:'sColorPickerDropping'}
+					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping'}
 				}
 			],
 			isOption: true
@@ -189,7 +211,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sColorPickerDropping:'sColorPickerDropping'}
+					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sGenColorPickerDropping:'sGenColorPickerDropping'}
 				}
 			],
 			isOption: true
@@ -214,7 +236,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sColorPickerDropping:'sColorPickerDropping'}
+					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping'}
 				}
 			],
 			isOption: true
@@ -234,7 +256,7 @@ function init(aArrBufAndCore) {
 			special: 'BlurTools',
 			justClick: true,
 			isOption: true,
-			props: ['sPalTool', 'sPalToolSubs', 'sPalBlurBlock', 'sPalBlurRadius', 'sInputNumberMousing']
+			props: ['sGenPalTool', 'sPalSeldSubs', 'sPalBlurBlock', 'sPalBlurRadius', 'sGenInputNumberMousing']
 		},
 		{
 			special: 'Divider'
@@ -390,22 +412,22 @@ function init(aArrBufAndCore) {
 		displayName: 'Editor',
 		getInitialState: function() {
 			return {
-				// general
-				sMounted: false,
-				sInputNumberMousing: null, // when mousing, this is set to string of what the cursor should be
+				// general - these should not be synced to file of editor state
+				sGenInputNumberMousing: null, // when mousing, this is set to string of what the cursor should be
+				sGenColorPickerDropping: null, // when in drop, it is set to an object {pStateColorKey:'sPalLineColor',initColor:}
+				sGenCanMouseMoveCursor: null,
+				sGenPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
+				sGenPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {screenX, screenY, initX, initY}
+				sGenPalTool: 'Select', // the label of the currently active tool
+				
+				// all these keys below should be synced to fill of editor state
 				
 				// canvas realted
 				sCanHandleSize: this.props.pCanHandleSize,
-				sCanMouseMoveCursor: null,
-				
-				// drag related
-				sPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
-				sPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {screenX, screenY, initX, initY}
 				
 				// palette related
 				sPalSize: this.props.pPalSize,
-				sPalTool: 'Select', // the label of the currently active tool
-				sPalToolSubs: this.props.pPalToolSubs, // object holding the active sub for each tool label. so key is tool label. value is label of selected sab
+				sPalSeldSubs: this.props.pPalSeldSubs, // object holding the active sub for each tool label. so key is tool label. value is label of selected sab
 				sPalMultiDepresses: this.props.pPalMultiDepresses,
 				sPalX: 5, // :todo: get this from prefs
 				sPalY: 75, // :todo: get this from prefs
@@ -416,8 +438,6 @@ function init(aArrBufAndCore) {
 				sPalFillAlpha: this.props.pPalFillAlpha,
 				sPalMarkerColor: this.props.pPalMarkerColor,
 				sPalMarkerAlpha: this.props.pPalMarkerAlpha,
-				
-				sColorPickerDropping: null, // when in drop, it is set to an object {pStateColorKey:'sPalLineColor',initColor:}
 				
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
@@ -441,9 +461,74 @@ function init(aArrBufAndCore) {
 		componentDidMount: function() {
 			gEditorStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work - last tested in React 0.14.x
 			gColorPickerSetState.NativeShotEditor = this.setState.bind(this);
-			this.setState({
-				sMounted: true
-			});
+
+			///////////
+			this.ctx = this.refs.can.getContext('2d');
+			this.ctx0 = this.refs.can0.getContext('2d');
+			
+			var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
+			
+			if (this.props.pQS.win81ScaleX || this.props.pQS.win81ScaleY) {
+				var canDum = document.createElement('canvas');
+				canDum.setAttribute('width', this.props.pQS.w);
+				canDum.setAttribute('height', this.props.pQS.h);
+				
+				var ctxDum = canDum.getContext('2d');
+				ctxDum.putImageData(screenshotImageData, 0, 0);
+				
+				this.ctx0.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
+				this.ctx.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
+				
+				this.ctx0.drawImage(canDum, 0, 0);
+			} else {
+				this.ctx0.putImageData(screenshotImageData, 0, 0);
+			}
+			
+			this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
+			gCState = this.cstate;
+			
+			this.cstate.rconn = this; // connectio to the react component
+			
+			// start - simon canvas stuff
+			this.cstate.valid = false;
+			
+			this.cstate.width = this.props.pQS.w; // same as - monToMultiMon.w(this.refs.can.width);
+			this.cstate.height = this.props.pQS.h; // same as - monToMultiMon.h(this.refs.can.height);
+			
+			this.cstate.drawables = []; // the collection of things to be drawn
+			
+			this.cstate.dragging = false; // Keep track of when we are dragging
+			this.cstate.resizing = false; // when mouses down with a tool that can draw
+			this.cstate.lining = false; // when picking new end points for a line
+			this.cstate.pathing = null; // when drawing with pencil or marker // it is set to a an array of 2 points when not null
+			this.cstate.typing = false;
+			this.cstate.selection = null;
+			
+			this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
+			this.cstate.dragoffy = 0;
+			
+			this.cstate.downx = 0; // when the user mouses down on canvas
+			this.cstate.downy = 0; // when the user mouses down on canvas
+			
+			// **** Options! ****
+			// now that Style is setup, i can add Drawable's
+			// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
+			// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+			// (new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
+			
+			// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(500), null, null, 'Line', {x2:100, y2:100})).add();
+			
+			this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
+			
+			window.addEventListener('mousemove', this.mousemove, false);
+			window.addEventListener('mousedown', this.mousedown, false);
+			window.addEventListener('mouseup', this.mouseup, false);
+			window.addEventListener('keyup', this.keyup, false);
+			window.addEventListener('keydown', this.keydown, false);
+			
+			this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
+			// start - simon canvas stuff
+			///////////
 			
 			// add listeners
 			window.addEventListener('wheel', this.wheel, false);
@@ -1229,7 +1314,7 @@ function init(aArrBufAndCore) {
 				this.cstate.selection.path = this.cstate.selection.path.concat(this.cstate.pathing.splice(0, 2));
 			}
 			
-			var dropping = this.state.sColorPickerDropping;
+			var dropping = this.state.sGenColorPickerDropping;
 			if (dropping && gDroppingCoords.length) {
 				var dy = gDroppingCoords.pop();
 				var dx = gDroppingCoords.pop();
@@ -1409,23 +1494,23 @@ function init(aArrBufAndCore) {
 				gZState.valid = false;
 			}
 			
-			if (this.state.sColorPickerDropping) {
+			if (this.state.sGenColorPickerDropping) {
 				gDroppingCoords[0] = mx;
 				gDroppingCoords[1] = my;
-			} else if (this.state.sPalDragStart) {
+			} else if (this.state.sGenPalDragStart) {
 				gEditorStore.setState({
-					sPalX: this.state.sPalDragStart.sPalX + (e.screenX - this.state.sPalDragStart.screenX),
-					sPalY: this.state.sPalDragStart.sPalY + (e.screenY - this.state.sPalDragStart.screenY)
+					sPalX: this.state.sGenPalDragStart.sPalX + (e.screenX - this.state.sGenPalDragStart.screenX),
+					sPalY: this.state.sGenPalDragStart.sPalY + (e.screenY - this.state.sGenPalDragStart.screenY)
 				});
-			} else if (this.state.sPalZoomViewDragStart) {
+			} else if (this.state.sGenPalZoomViewDragStart) {
 				gEditorStore.setState({
 					sPalZoomViewCoords: {
-						x: this.state.sPalZoomViewDragStart.initX + (e.screenX - this.state.sPalZoomViewDragStart.screenX),
-						y: this.state.sPalZoomViewDragStart.initY + (e.screenY - this.state.sPalZoomViewDragStart.screenY)
+						x: this.state.sGenPalZoomViewDragStart.initX + (e.screenX - this.state.sGenPalZoomViewDragStart.screenX),
+						y: this.state.sGenPalZoomViewDragStart.initY + (e.screenY - this.state.sGenPalZoomViewDragStart.screenY)
 					}
 				});
 			} else {
-				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
+				var toolsub = this.state.sGenPalTool + '-' + (this.state.sPalSeldSubs[this.state.sGenPalTool] || '');
 				if (this.cstate.dragging) {
 					switch (this.cstate.selection.name) {
 						case 'Rectangle':
@@ -1537,15 +1622,15 @@ function init(aArrBufAndCore) {
 							}
 						}
 						if (draggableFound) {
-							if (this.state.sCanMouseMoveCursor != 'move') {
+							if (this.state.sGenCanMouseMoveCursor != 'move') {
 								this.setState({
-									sCanMouseMoveCursor: 'move'
+									sGenCanMouseMoveCursor: 'move'
 								});
 							}
 						} else {
-							if (this.state.sCanMouseMoveCursor) {
+							if (this.state.sGenCanMouseMoveCursor) {
 								this.setState({
-									sCanMouseMoveCursor: null
+									sGenCanMouseMoveCursor: null
 								});
 							}
 						}
@@ -1564,17 +1649,17 @@ function init(aArrBufAndCore) {
 			
 			if (e.target == this.refs.can) {
 				
-				var dropping = this.state.sColorPickerDropping;
+				var dropping = this.state.sGenColorPickerDropping;
 				if (dropping) {
 					var acceptDroppingObj = {};
-					acceptDroppingObj.sColorPickerDropping = null;
+					acceptDroppingObj.sGenColorPickerDropping = null;
 					gEditorStore.setState(acceptDroppingObj);							
 					gDroppingMixCtx = null;
 					
 					return; // so we dont do the stuff below
 				}
 				
-				var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
+				var toolsub = this.state.sGenPalTool + '-' + (this.state.sPalSeldSubs[this.state.sGenPalTool] || '');
 				
 				// if selectable, set a selectFilterFunc
 				var selectFilterFunc;
@@ -1695,7 +1780,7 @@ function init(aArrBufAndCore) {
 						case 'Blur-Gaussian':
 						case 'Blur-Mosaic':
 							
-								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalToolSubs[this.state.sPalTool]);
+								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalSeldSubs[this.state.sGenPalTool]);
 							
 							break;
 						case 'Line-':
@@ -1706,7 +1791,7 @@ function init(aArrBufAndCore) {
 						case 'Freedraw-Pencil':
 						case 'Freedraw-Marker':
 						
-								this.cstate.selection = new this.Drawable(mx, my, null, null, this.state.sPalToolSubs[this.state.sPalTool]);
+								this.cstate.selection = new this.Drawable(mx, my, null, null, this.state.sPalSeldSubs[this.state.sGenPalTool]);
 						
 							break;
 						case 'Text-':
@@ -1769,17 +1854,17 @@ function init(aArrBufAndCore) {
 			var mx = mouse.x;
 			var my = mouse.y;
 
-			if (this.state.sPalDragStart) {
+			if (this.state.sGenPalDragStart) {
 				gEditorStore.setState({
-					sPalDragStart: null
+					sGenPalDragStart: null
 				});
-			} else if (this.state.sPalZoomViewDragStart) {
+			} else if (this.state.sGenPalZoomViewDragStart) {
 				gEditorStore.setState({
-					sPalZoomViewDragStart: null
+					sGenPalZoomViewDragStart: null
 				});
 			} else {
 				// if (e.target == this.refs.can) { // its canceling, so even if its not can go ahead and let it go through
-					// var toolsub = this.state.sPalTool + '-' + (this.state.sPalToolSubs[this.state.sPalTool] || '');
+					// var toolsub = this.state.sGenPalTool + '-' + (this.state.sPalSeldSubs[this.state.sGenPalTool] || '');
 					if (this.cstate.dragging) {
 						this.cstate.dragging = false;
 						this.cstate.dragoffx = null;
@@ -1825,7 +1910,7 @@ function init(aArrBufAndCore) {
 				case 'Delete':
 				
 						// if (!this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing) {
-						//	switch (this.state.sPalTool) {
+						//	switch (this.state.sGenPalTool) {
 						//		case 'Select':
 						//		case 'Shapes':
 						//		case 'Line':
@@ -1849,11 +1934,11 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Escape':
 						
-						var dropping = this.state.sColorPickerDropping;
+						var dropping = this.state.sGenColorPickerDropping;
 						if (dropping) {
 							var cancelDroppingObj = {};
 							cancelDroppingObj[dropping.pStateColorKey] = dropping.initColor;
-							cancelDroppingObj.sColorPickerDropping = null;
+							cancelDroppingObj.sGenColorPickerDropping = null;
 							gEditorStore.setState(cancelDroppingObj);							
 							gDroppingMixCtx = null;
 							
@@ -1936,101 +2021,6 @@ function init(aArrBufAndCore) {
 			// props
 			//		see link1818181
 			
-			if (this.state.sMounted && this.canInited) {
-
-			} else if (this.state.sMounted && !this.canInited) {
-				this.canInited = true;
-				
-				this.ctx = this.refs.can.getContext('2d');
-				this.ctx0 = this.refs.can0.getContext('2d');
-				
-				var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
-				
-				if (this.props.pQS.win81ScaleX || this.props.pQS.win81ScaleY) {
-					var canDum = document.createElement('canvas');
-					canDum.setAttribute('width', this.props.pQS.w);
-					canDum.setAttribute('height', this.props.pQS.h);
-					
-					var ctxDum = canDum.getContext('2d');
-					ctxDum.putImageData(screenshotImageData, 0, 0);
-					
-					this.ctx0.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
-					this.ctx.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
-					
-					this.ctx0.drawImage(canDum, 0, 0);
-				} else {
-					this.ctx0.putImageData(screenshotImageData, 0, 0);
-				}
-				
-				this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
-				gCState = this.cstate;
-				
-				this.cstate.rconn = this; // connectio to the react component
-				
-				// start - simon canvas stuff
-				this.cstate.valid = false;
-				
-				this.cstate.width = this.props.pQS.w; // same as - monToMultiMon.w(this.refs.can.width);
-				this.cstate.height = this.props.pQS.h; // same as - monToMultiMon.h(this.refs.can.height);
-				
-				this.cstate.drawables = []; // the collection of things to be drawn
-				
-				this.cstate.dragging = false; // Keep track of when we are dragging
-				this.cstate.resizing = false; // when mouses down with a tool that can draw
-				this.cstate.lining = false; // when picking new end points for a line
-				this.cstate.pathing = null; // when drawing with pencil or marker // it is set to a an array of 2 points when not null
-				this.cstate.typing = false;
-				this.cstate.selection = null;
-				
-				this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
-				this.cstate.dragoffy = 0;
-				
-				this.cstate.downx = 0; // when the user mouses down on canvas
-				this.cstate.downy = 0; // when the user mouses down on canvas
-				
-				// **** Options! ****
-				var mtmm = this.mtmm;
-				// this.cstate.Style = {
-				// 	Draw: {
-				// 		line: {
-				// 			lineWidth: mtmm.w(5),
-				// 			setLineDash: [],
-				// 			strokeStyle: 'rgba(255, 0, 0, 1)',
-				// 			lineJoin: 'round'
-				// 		},
-				// 		fill: {
-				// 			fillStyle: 'rgba(100, 149, 237, 1)'
-				// 		},
-				// 		dim: {
-				// 			fillStyle: 'rgba(0, 0, 0, 0.6)'
-				// 		}
-				// 	},
-				// 	Select: {
-                // 
-				// 	}
-				// };
-				
-				// now that Style is setup, i can add Drawable's
-				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
-				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
-				// (new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
-				
-				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(500), null, null, 'Line', {x2:100, y2:100})).add();
-				
-				this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
-				
-				window.addEventListener('mousemove', this.mousemove, false);
-				window.addEventListener('mousedown', this.mousedown, false);
-				window.addEventListener('mouseup', this.mouseup, false);
-				window.addEventListener('keyup', this.keyup, false);
-				window.addEventListener('keydown', this.keydown, false);
-				
-				this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
-				// start - simon canvas stuff
-			} else {
-				// this.state.sMounted is false
-			}
-			
 			var editorWrapProps = {
 				className: 'editor'
 			};
@@ -2056,20 +2046,20 @@ function init(aArrBufAndCore) {
 			};
 			
 			// determine cursor
-			if (this.state.sInputNumberMousing) {
-				cCanProps.style.cursor = this.state.sInputNumberMousing;
-				cPalPalProps.style.cursor = this.state.sInputNumberMousing;				
-				cPalProps.pZoomViewCursor = this.state.sInputNumberMousing;
-				cPalProps.pPalSubwrapCursor = this.state.sInputNumberMousing;
+			if (this.state.sGenInputNumberMousing) {
+				cCanProps.style.cursor = this.state.sGenInputNumberMousing;
+				cPalPalProps.style.cursor = this.state.sGenInputNumberMousing;				
+				cPalProps.pZoomViewCursor = this.state.sGenInputNumberMousing;
+				cPalProps.pPalSubwrapCursor = this.state.sGenInputNumberMousing;
 				editorWrapProps.className += ' inputnumber-component-mousing';
-			} else if (this.state.sPalDragStart) {
+			} else if (this.state.sGenPalDragStart) {
 				cCanProps.style.cursor = 'move';
 				cPalPalProps.style.cursor = 'move';
 			} else {
-				if (this.state.sCanMouseMoveCursor) {
-					cCanProps.style.cursor = this.state.sCanMouseMoveCursor;
+				if (this.state.sGenCanMouseMoveCursor) {
+					cCanProps.style.cursor = this.state.sGenCanMouseMoveCursor;
 				} else {
-					switch (this.state.sPalTool) {
+					switch (this.state.sGenPalTool) {
 						case 'Select':
 						case 'Shapes':
 						case 'Line':
@@ -2103,7 +2093,7 @@ function init(aArrBufAndCore) {
 				React.createElement('canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
 				React.createElement('canvas', cCanProps),
 				zoomViewREl,
-				!this.state.sInputNumberMousing ? undefined : React.createElement('style', {},
+				!this.state.sGenInputNumberMousing ? undefined : React.createElement('style', {},
 					'.inputnumber-component-mousing input { pointer-events:none; }' // so the cursor doesnt change to text when over this
 				)
 			);
@@ -2202,7 +2192,7 @@ function init(aArrBufAndCore) {
 		},
 		mousedown: function(e) {
 			gEditorStore.setState({
-				sPalZoomViewDragStart: {screenX:e.screenX, screenY:e.screenY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
+				sGenPalZoomViewDragStart: {screenX:e.screenX, screenY:e.screenY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
 			});
 		},
 		render: function() {
@@ -2272,7 +2262,7 @@ function init(aArrBufAndCore) {
 		displayName: 'Handle',
 		mousedown: function(e) {
 			gEditorStore.setState({
-				sPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
+				sGenPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
 			});
 		},
 		render: function() {
@@ -2304,8 +2294,8 @@ function init(aArrBufAndCore) {
 								case 'Gaussian':
 								case 'Mosaic':
 									
-										if (gCState.selection.name != this.props.sPalToolSubs[this.props.sPalTool]) {
-											gCState.selection.name = this.props.sPalToolSubs[this.props.sPalTool]
+										if (gCState.selection.name != this.props.sPalSeldSubs[this.props.sGenPalTool]) {
+											gCState.selection.name = this.props.sPalSeldSubs[this.props.sGenPalTool]
 											gCState.valid = false;
 										}
 									
@@ -2427,16 +2417,16 @@ function init(aArrBufAndCore) {
 			} else {
 				// depress it and undepress other non-multiDepress
 				gEditorStore.setState({
-					sPalTool: this.props.pButton.label,
-					sCanMouseMoveCursor: null
+					sGenPalTool: this.props.pButton.label,
+					sGenCanMouseMoveCursor: null
 				});
 			}
 		},
 		render: function() {
 			// props
 			//		pButton
-			//		sPalTool
-			//		sPalToolSubs
+			//		sGenPalTool
+			//		sPalSeldSubs
 			//		sPalMultiDepresses
 			//		sPalLineAlpha
 			//		sPalLineColor
@@ -2444,15 +2434,15 @@ function init(aArrBufAndCore) {
 			//		sPalFillColor
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
-			//		sColorPickerDropping
+			//		sGenColorPickerDropping
 			
 			var cProps = {
 				className:'pbutton',
 				onClick: this.click
 			};
-			if (this.props.sPalToolSubs[this.props.pButton.label]) {
+			if (this.props.sPalSeldSubs[this.props.pButton.label]) {
 				for (var i=0; i<this.props.pButton.sub.length; i++) {
-					if (this.props.pButton.sub[i].label == this.props.sPalToolSubs[this.props.pButton.label]) {
+					if (this.props.pButton.sub[i].label == this.props.sPalSeldSubs[this.props.pButton.label]) {
 						cProps['data-subsel'] = this.props.pButton.sub[i].icon;
 					}
 				}
@@ -2464,7 +2454,7 @@ function init(aArrBufAndCore) {
 			} else if (this.props.pButton.justClick) {
 				
 			} else {
-				if (this.props.sPalTool == this.props.pButton.label) {
+				if (this.props.sGenPalTool == this.props.pButton.label) {
 					cProps.className += ' pbutton-pressed';
 				}
 			}
@@ -2472,7 +2462,7 @@ function init(aArrBufAndCore) {
 			var cButtonIcon;
 			if (['Color', 'Fill Color', 'Marker Color'].indexOf(this.props.pButton.label) > -1) {
 				var rgbaStr;
-				var dropping = this.props.sColorPickerDropping;
+				var dropping = this.props.sGenColorPickerDropping;
 				if (this.props.pButton.label == 'Color') {
 					rgbaStr = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalLineColor') {
@@ -2502,7 +2492,7 @@ function init(aArrBufAndCore) {
 						this.props.pButton.label
 					)
 				),
-				!this.props.pButton.sub ? undefined : React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
+				!this.props.pButton.sub ? undefined : React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
 					this.props.pButton.label
 				),
 				cButtonIcon
@@ -2515,23 +2505,23 @@ function init(aArrBufAndCore) {
 			e.stopPropagation(); // so it doesnt trigger the setState due to click on the pbutton
 			
 			if (!this.props.pSubButton.unfixable) {
-				var sPalToolSubs = cloneObject(this.props.sPalToolSubs);
-				sPalToolSubs[this.props.pButton.label] = this.props.pSubButton.label;
+				var sPalSeldSubs = cloneObject(this.props.sPalSeldSubs);
+				sPalSeldSubs[this.props.pButton.label] = this.props.pSubButton.label;
 			
 				gEditorStore.setState({
-					sPalTool: this.props.pButton.label,
-					sPalToolSubs: sPalToolSubs
+					sGenPalTool: this.props.pButton.label,
+					sPalSeldSubs: sPalSeldSubs
 				});
 			}
 			
-			if (this.props.sPalTool == 'Blur') {
+			if (this.props.sGenPalTool == 'Blur') {
 				if (gCState && gCState.selection) {
 					switch (gCState.selection.name) {
 						case 'Gaussian':
 						case 'Mosaic':
 							
-								if (gCState.selection.name != sPalToolSubs[this.props.sPalTool]) {
-									gCState.selection.name = sPalToolSubs[this.props.sPalTool];
+								if (gCState.selection.name != sPalSeldSubs[this.props.sGenPalTool]) {
+									gCState.selection.name = sPalSeldSubs[this.props.sGenPalTool];
 									gCState.valid = false;
 								}
 							
@@ -2550,10 +2540,10 @@ function init(aArrBufAndCore) {
 			//		sPalFillColor
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
-			//		sColorPickerDropping
+			//		sGenColorPickerDropping
 			//		pSubButton
 			//		pButton
-			//		sPalToolSubs
+			//		sPalSeldSubs
 
 			var cProps = {
 				className:'pbutton',
@@ -2591,7 +2581,7 @@ function init(aArrBufAndCore) {
 				}
 			}
 
-			if (!this.props.pSubButton.special && this.props.sPalToolSubs[this.props.pButton.label] == this.props.pSubButton.label) {
+			if (!this.props.pSubButton.special && this.props.sPalSeldSubs[this.props.pButton.label] == this.props.pSubButton.label) {
 				cProps.className += ' pbutton-pressed';
 			}
 			
@@ -2618,10 +2608,10 @@ function init(aArrBufAndCore) {
 			// props
 			//		sPalBlurRadius
 			//		sPalBlurBlock
-			//		sPalTool
-			//		sPalToolSubs
+			//		sGenPalTool
+			//		sPalSeldSubs
 			
-			var subtool = this.props.sPalToolSubs[this.props.sPalTool]
+			var subtool = this.props.sPalSeldSubs[this.props.sGenPalTool]
 			
 			var cInputNumberProps = {
 				pMin: 1,
@@ -2868,7 +2858,7 @@ function init(aArrBufAndCore) {
 			//		pStateColorKey
 			//		pStateAlphaKey
 			//		pSetStateName - a string, it must be the store to use for the pStateColorKey and pStateAlphaKey
-			//		sColorPickerDropping
+			//		sGenColorPickerDropping
 			
 			// only supports rgb mode
 			
@@ -2896,7 +2886,7 @@ function init(aArrBufAndCore) {
 			
 			return React.createElement('div', {className:'colorpicker'},
 				React.createElement('div', {className:'colorpicker-inner'},
-					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, sColorPickerDropping:this.props.sColorPickerDropping, sColor:this.props.sColor}),
+					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, sGenColorPickerDropping:this.props.sGenColorPickerDropping, sColor:this.props.sColor}),
 					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
 					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
 					React.createElement(ColorPickerCodes, {pHex:hex, pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, pSetStateName:this.props.pSetStateName})
@@ -3026,7 +3016,7 @@ function init(aArrBufAndCore) {
 			gDroppingMixCtx = mixcan.getContext('2d');
 			
 			gColorPickerSetState[this.props.pSetStateName]({
-				sColorPickerDropping: {
+				sGenColorPickerDropping: {
 					initColor: this.props.sColor, // the original color before picking. so if user hits Esc i cancel the dropping and restore this color
 					pStateColorKey: this.props.pStateColorKey
 				}
@@ -3073,18 +3063,18 @@ function init(aArrBufAndCore) {
 			// props
 			// 		pSub
 			//		pButton
-			//		sPalToolSubs
+			//		sPalSeldSubs
 			//		sPalLineAlpha
 			//		sPalLineColor
 			//		sPalFillAlpha
 			//		sPalFillColor
-			//		sColorPickerDropping
+			//		sGenColorPickerDropping
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
 			
 			var cChildren = [];
 			for (var i=0; i<this.props.pSub.length; i++) {
-				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalToolSubs:this.props.sPalToolSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
+				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 			}
 			
 			return React.createElement('div', {className:'psub'},
@@ -3105,14 +3095,14 @@ function init(aArrBufAndCore) {
 			var iEnd = pPalLayout.length;
 			
 			// start - get active tool options
-			// console.log('this.props.sPalTool:', this.props.sPalTool);
+			// console.log('this.props.sGenPalTool:', this.props.sGenPalTool);
 			var activeToolOptions;
 			
 			
 			var activeToolEntry;
 			for (var i=0; i<iEnd; i++) {
 				var cLayoutEntry = pPalLayout[i];
-				if (cLayoutEntry.label == this.props.sPalTool || cLayoutEntry.special == this.props.sPalTool) {
+				if (cLayoutEntry.label == this.props.sGenPalTool || cLayoutEntry.special == this.props.sGenPalTool) {
 					activeToolEntry = cLayoutEntry;
 					break;
 				}
@@ -3120,7 +3110,7 @@ function init(aArrBufAndCore) {
 			activeToolOptions = activeToolEntry.options || [];
 
 			// test if activeToolEntry has an active sub, and if it that sub as options
-			var activeToolActiveSubLabel = this.props.sPalToolSubs[activeToolEntry.label];
+			var activeToolActiveSubLabel = this.props.sPalSeldSubs[activeToolEntry.label];
 			if (activeToolActiveSubLabel) {
 				// yes it has a sub
 				
@@ -3183,7 +3173,7 @@ function init(aArrBufAndCore) {
 						}
 					}
 					*/
-					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:cLayoutEntry}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalToolSubs:this.props.sPalToolSubs, pButton:cLayoutEntry, sPalTool:this.props.sPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
+					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:cLayoutEntry}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalSeldSubs:this.props.sPalSeldSubs, pButton:cLayoutEntry, sGenPalTool:this.props.sGenPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 				}
 			}
 			
@@ -3195,7 +3185,7 @@ function init(aArrBufAndCore) {
 				}
 			};
 			
-			if (this.props.sPalDragStart) {
+			if (this.props.sGenPalDragStart) {
 				cProps.style.cursor = 'move';
 			}
 			
@@ -3298,10 +3288,10 @@ function init(aArrBufAndCore) {
 			window.addEventListener('mousemove', this.mousemove, false);
 			
 			gEditorStore.setState({
-				sInputNumberMousing: this.cursor
+				sGenInputNumberMousing: this.cursor
 			});
 			
-			this.sInputNumberMousing = this.cursor; // keep track locally otherwise ill need to have whoever uses InputNumber pass in sInputNumberMousing as a prop
+			this.sGenInputNumberMousing = this.cursor; // keep track locally otherwise ill need to have whoever uses InputNumber pass in sGenInputNumberMousing as a prop
 			
 		},
 		mousemove: function(e) {
@@ -3328,17 +3318,17 @@ function init(aArrBufAndCore) {
 			
 			if (this.getSetValue(this.props[this.props.pStateVarName]) != newVal) {
 				if (!this.limitTestThenSet(newVal)) {
-					if (this.sInputNumberMousing == this.cursor) {
-						this.sInputNumberMousing = 'not-allowed';
+					if (this.sGenInputNumberMousing == this.cursor) {
+						this.sGenInputNumberMousing = 'not-allowed';
 						gEditorStore.setState({
-							sInputNumberMousing: 'not-allowed'
+							sGenInputNumberMousing: 'not-allowed'
 						});
 					}
 				} else {
-					if (this.sInputNumberMousing != this.cursor) {
-						this.sInputNumberMousing = this.cursor;
+					if (this.sGenInputNumberMousing != this.cursor) {
+						this.sGenInputNumberMousing = this.cursor;
 						gEditorStore.setState({
-							sInputNumberMousing: this.cursor
+							sGenInputNumberMousing: this.cursor
 						});
 					}
 				}
@@ -3349,7 +3339,7 @@ function init(aArrBufAndCore) {
 			window.removeEventListener('mouseup', this.mouseup, false);
 			window.removeEventListener('mousemove', this.mousemove, false);
 			gEditorStore.setState({
-				sInputNumberMousing: null
+				sGenInputNumberMousing: null
 			});
 		},
 		change: function(e) {
@@ -3431,7 +3421,7 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props
-			//		sInputNumberMousing
+			//		sGenInputNumberMousing
 			//		pStateVarName
 			//		pLabel
 			//		pMin
@@ -3478,49 +3468,6 @@ function init(aArrBufAndCore) {
 		pPhys.h = pQS.h;
 	}
 	
-	var palToolSubs = {};
-	for (var i=0; i<palLayout.length; i++) {
-		if (palLayout[i].sub) {
-			var hasFixableSubs = false;
-			for (var j=0; j<palLayout[i].sub.length; j++) {
-				if (!('special' in palLayout[i].sub[j]) && !('unfixable' in palLayout[i].sub[j])) {
-					hasFixableSubs = palLayout[i].sub[j].label;
-					break;
-				}
-			}
-			if (hasFixableSubs) {
-				palToolSubs[palLayout[i].label] = hasFixableSubs;
-			}
-		}
-	}
-	
-	var palMultiDepresses = {}; // if its depressed, then the tool label is the key and the value is true
-
-	var palLineColor = 'rgb(74, 144, 226)'; // :todo: get from prefs
-	var palLineAlpha = 100; // :todo: get from prefs
-	var palFillColor = 'rgb(208, 2, 27)'; // :todo: get from prefs
-	var palFillAlpha = 100; // :todo: get from prefs
-	var palMarkerColor = '#ffef15';
-	var palMarkerAlpha = 50;
-	
-	var palBlurBlock = 5;
-	var palBlurRadius = 10;
-
-	var palZoomViewCoords = {x:20, y:300};
-	var palZoomViewLevel = 8;
-	
-	var palArrowLength = 20;
-	var palArrowEnd = false;
-	var palArrowStart = false;
-	
-	var palLineWidth = 1;
-	
-	var palFontSize = 24;
-	var palFontFace = 'san-serif';
-	var palFontBold = undefined;
-	var palFontItalic = undefined;
-	var palFontUnderline = undefined;
-	
 	var Specials = {
 		Divider: Divider,
 		Accessibility: Accessibility,
@@ -3533,48 +3480,72 @@ function init(aArrBufAndCore) {
 		BlurTools: BlurTools
 	};
 	
+	var editorstate = aArrBufAndCore.editorstate;
+	if (!editorstate) {
+		// need to use defaults
+		
+		var palSeldSubs = {};
+		for (var i=0; i<palLayout.length; i++) {
+			if (palLayout[i].sub) {
+				var hasFixableSubs = false;
+				for (var j=0; j<palLayout[i].sub.length; j++) {
+					if (!('special' in palLayout[i].sub[j]) && !('unfixable' in palLayout[i].sub[j])) {
+						hasFixableSubs = palLayout[i].sub[j].label;
+						break;
+					}
+				}
+				if (hasFixableSubs) {
+					palSeldSubs[palLayout[i].label] = hasFixableSubs;
+				}
+			}
+		}
+		
+		editorstate = {
+			pPalSize: 40,
+			pPalSeldSubs: palSeldSubs,
+			pPalMultiDepresses: {}, // if its depressed, then the tool label is the key and the value is true
+			
+			pPalLineColor: 'rgb(208, 2, 27)',
+			pPalLineAlpha: 100,
+			pPalFillColor: 'rgb(74, 144, 226)',
+			pPalFillAlpha: 100,
+			pPalMarkerColor: '#ffef15',
+			pPalMarkerAlpha: 50,
+			
+			pPalBlurBlock: 5,
+			pPalBlurRadius: 10,
+			
+			pPalZoomViewCoords: {x:20, y:300},
+			pPalZoomViewLevel: 8,
+			
+			pPalArrowLength: 20,
+			pPalArrowEnd: false,
+			pPalArrowStart: false,
+			
+			pPalLineWidth: 4,
+			
+			pPalFontSize: 24,
+			pPalFontFace: 'sans-serif',
+			pPalFontBold: undefined,
+			pPalFontItalic: undefined,
+			pPalFontUnderline: undefined,
+			
+			pCanHandleSize: 19,
+			pPalSeldSubs: palSeldSubs
+		};
+	}
+	var initProps = editorstate;
+	initProps.pQS = pQS;
+	initProps.pScreenshotArrBuf = aArrBufAndCore.screenshotArrBuf;
+	initProps.pPhys = pPhys;
+	initProps.pCanInterval = 30;
+	initProps.pPalLayout = palLayout; // link1818181
+
 	var initReact = function() {
+		window.addEventListener('unload', unload, false);
+		
 		ReactDOM.render(
-			React.createElement(Editor, {
-				// link1818181
-				pPalLayout: palLayout,
-				pPalSize: 40, // :todo: get from prefs
-				pPalToolSubs: palToolSubs, // :todo: get from prefs
-				pPalMultiDepresses: palMultiDepresses, // :todo: get from prefs
-				
-				pPalLineColor: palLineColor, 
-				pPalLineAlpha: palLineAlpha,
-				pPalFillColor: palFillColor,
-				pPalFillAlpha: palFillAlpha,
-				pPalMarkerColor: palMarkerColor,
-				pPalMarkerAlpha: palMarkerAlpha,
-				
-				pPalBlurBlock: palBlurBlock,
-				pPalBlurRadius: palBlurRadius,
-				
-				pPalZoomViewCoords: palZoomViewCoords,
-				pPalZoomViewLevel: palZoomViewLevel,
-				
-				pPalArrowLength: palArrowLength,
-				pPalArrowEnd: palArrowEnd,
-				pPalArrowStart: palArrowStart,
-				
-				pPalLineWidth: palLineWidth,
-				
-				pPalFontSize: palFontSize,
-				pPalFontFace: palFontFace,
-				pPalFontBold: palFontBold,
-				pPalFontItalic: palFontItalic,
-				pPalFontUnderline: palFontItalic,
-				
-				pCanHandleSize: 19, // :todo: get from prefs
-				pCanInterval: 30, // ms
-				
-				pScreenshotArrBuf: aArrBufAndCore.screenshotArrBuf, // i hold it, as i plan to transfer it back to ChromeWorker in future
-				
-				pQS: pQS,
-				pPhys: pPhys // the actually used height/width on this canvas
-			}),
+			React.createElement(Editor, initProps),
 			document.getElementById('react_wrap') // document.body
 		);
 	};

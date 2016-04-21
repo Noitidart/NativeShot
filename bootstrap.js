@@ -62,6 +62,7 @@ const TWITTER_IMG_SUFFIX = ':large';
 var OSStuff = {};
 
 var gFonts;
+var gEditorState;
 
 // Lazy Imports
 const myServices = {};
@@ -478,6 +479,10 @@ var EditorFuncs = {
 			}
 		}
 	},
+	updateEditorState: function(aData) {
+		core.editorstate = aData.editorstate;
+		var promise_updateEditorstate = MainWorker.post('updateEditorState', [gEditorState]);
+	},
 	init: function(aData) {
 		// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
 		// also transfer the screenshot data to the window
@@ -551,7 +556,8 @@ var EditorFuncs = {
 			topic: 'init',
 			screenshotArrBuf: colMon[iMon].screenshotArrBuf,
 			core: core,
-			fonts: gFonts
+			fonts: gFonts,
+			editorstate: gEditorState
 		}, '*', [colMon[iMon].screenshotArrBuf]);
 	}
 };
@@ -4574,6 +4580,8 @@ function startup(aData, aReason) {
 	var do_afterWorkerInit = function(aInitedCore) {
 		
 		core = aInitedCore;
+		gEditorState = core.editorstate;
+		delete core.editorstate;
 		
 		CustomizableUI.createWidget({
 			id: 'cui_nativeshot',
