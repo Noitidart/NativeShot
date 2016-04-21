@@ -1401,10 +1401,31 @@ function init(aArrBufAndCore) {
 			for (var i=0; i<l; i++) {
 				var fontable = fontables[i];
 				if (fontable in aDrawable && aDrawable[fontable] !== undefined) {
-					font.push(aDrawable[fontable]);
-					if (fontable == 'fontsize') {
-						font[font.length-1] += 'px';
+					var pushable = aDrawable[fontable];
+					
+					// custom processing on pushable
+					switch (fontable) {
+						case 'fontsize':
+							
+								pushable += 'px';
+							
+							break;
+						case 'fontbold':
+							
+								pushable = pushable ? 'bold' : undefined;
+							
+							break;
+						case 'fontitalic':
+							
+								pushable = pushable ? 'italic' : undefined;
+							
+							break;
+						default:
+							// no extra processing on pushable
 					}
+					
+					// push it
+					font.push(pushable);
 				}
 			}
 			
@@ -2406,6 +2427,33 @@ function init(aArrBufAndCore) {
 						}
 					
 					break;
+				case 'Text':
+					
+						if (gCState && gCState.selection && gCState.selection.name == 'Text') {
+							var newValid = true; // valid based on the tests below
+							if (gCState.selection.fontface != this.props.sPalFontFace) {
+								gCState.selection.fontface = this.props.sPalFontFace;
+								newValid = false;
+							}
+							if (gCState.selection.fontbold != this.props.sPalFontBold) {
+								gCState.selection.fontbold = this.props.sPalFontBold;
+								newValid = false;
+							}
+							if (gCState.selection.fontitalic != this.props.sPalFontItalic) {
+								gCState.selection.fontitalic = this.props.sPalFontItalic;
+								newValid = false;
+							}
+							if (gCState.selection.fontsize != this.props.sPalFontSize) {
+								gCState.selection.fontitalic = this.props.sPalFontSize;
+								newValid = false;
+							}
+							if (!newValid) {
+								gCState.selection.font = gCState.rconn.calcCtxFont(gCState.selection);
+								gCState.valid = false;
+							}
+						}
+					
+					break;
 				case 'Color':
 					
 						if (gCState && gCState.selection) {
@@ -2766,6 +2814,38 @@ function init(aArrBufAndCore) {
 	
 	var TextTools = React.createClass({
 		displayName: 'TextTools',
+		componentDidUpdate: function(prevProps, prevState) {
+			if (gCState && gCState.selection && gCState.selection.name == 'Text') {
+				var newValid = true;
+				if (prevProps.sPalFontFace != this.props.sPalFontFace) {
+					gCState.selection.fontface = this.props.sPalFontFace;
+					newValid = false;
+				}
+				if (prevProps.sPalFontBold != this.props.sPalFontBold) {
+					gCState.selection.fontbold = this.props.sPalFontBold;
+					newValid = false;
+				}
+				if (prevProps.sPalFontItalic != this.props.sPalFontItalic) {
+					gCState.selection.fontitalic = this.props.sPalFontItalic;
+					newValid = false;
+				}
+				// sPalFontSize is handled by InputNumber
+				if (!newValid) {
+					gCState.selection.font = gCState.rconn.calcCtxFont(gCState.selection);
+					gCState.valid = newValid;
+				} // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
+			}
+		},
+		change: function(e) {
+			var setStateObj = {};
+			setStateObj.sPalFontFace = e.target.value;
+			gEditorStore.setState(setStateObj);
+		},
+		click: function(aStateVar, e) {
+			var setStateObj = {};
+			setStateObj[aStateVar] = !this.props[aStateVar];
+			gEditorStore.setState(setStateObj);
+		},
 		render: function() {
 			// props
 			//		sPalFontFace
@@ -2783,28 +2863,27 @@ function init(aArrBufAndCore) {
 			// :todo: list all the fonts on the system
 			
 			return React.createElement('div', {className:'ptexttools'},
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'font_family'},
-						'Font'
-					),
-					React.createElement('select', {id:'font_family'},
-						cFontFamilies
+				React.createElement('div', {className:'ptexttools-row'},
+					React.createElement('div', {},
+						React.createElement('label', {htmlFor:'font_family'},
+							'Font'
+						),
+						React.createElement('select', {id:'font_family', defaultValue:this.props.sPalFontFace, onChange:this.change},
+							cFontFamilies
+						)
 					)
 				),
-				React.createElement('div', {},
-					React.createElement('label', {htmlFor:'font_size'},
-						'Size'
+				React.createElement('div', {className:'ptexttools-row'},
+					React.createElement(InputNumber, {pLabel:'Font Size (px)', pStateVarName:'sPalFontSize', sPalFontSize:this.props.sPalFontSize, pMin:1, pCStateSel:{'Text':'fontsize'} }),
+					React.createElement('div', {className:'pbutton ptexttools-bold' + (this.props.sPalFontBold ? ' pbutton-pressed' : ''), onClick:this.click.bind(this, 'sPalFontBold')},
+						'B'
 					),
-					React.createElement(InputNumber, {sLabel:'Font Size (px)', pStateVarName:'sPalFontSize', sPalFontSize:this.props.sPalFontSize, pMin:1, pCStateSel:{'Text':'fontsize'} })
-				),
-				React.createElement('div', {className:'', style:{fontWeight:'bold'} },
-					'B'
-				),
-				React.createElement('div', {className:'', style:{fontStyle:'italic'} },
-					'I'
-				),
-				React.createElement('div', {className:'', style:{textDecoration:'underline'} },
-					'U'
+					React.createElement('div', {className:'pbutton ptexttools-italic' + (this.props.sPalFontItalic ? ' pbutton-pressed' : ''), onClick:this.click.bind(this, 'sPalFontItalic')},
+						'I'
+					)
+					// React.createElement('div', {className:'pbutton ptexttools-italic' },
+					// 	'U'
+					// )
 				)
 			)
 		}
@@ -2823,39 +2902,22 @@ function init(aArrBufAndCore) {
 			})
 		},
 		componentDidUpdate: function(prevProps, prevState) {
-			// start - very specific to nativeshot - update selected object if applicable
-			console.log('arrowtools did update!', 'prevProps:', uneval(prevProps), 'nowProps:', uneval(this.props));
-			if (prevProps.sPalArrowStart != this.props.sPalArrowStart ||
-				prevProps.sPalArrowEnd != this.props.sPalArrowEnd ) {
-				// prevProps.sPalArrowLength != this.props.sPalArrowLength ) { // handled by input number
-				if (gCState && gCState.selection) {
-					// if currently selection object obeys arrow settings, then apply this new arrow settings if they dont match
-					switch (gCState.selection.name) {
-						case 'Line':
-							
-								var newValid = true;
-								if (gCState.selection.arrowStart != this.props.sPalArrowStart) {
-									gCState.selection.arrowStart = this.props.sPalArrowStart;
-									newValid = false;
-								}
-								if (gCState.selection.arrowEnd != this.props.sPalArrowEnd) {
-									gCState.selection.arrowEnd = this.props.sPalArrowEnd;
-									newValid = false;
-								}
-								// handled by InputNumber
-								// if (gCState.selection.arrowLength != this.props.sPalArrowLength) {
-								// 	gCState.selection.arrowLength = this.props.sPalArrowLength;
-								// 	newValid = false;
-								// }
-								gCState.valid = newValid;
-							
-							break;
-						default:
-							// this selection is not affected
-					}
+			// console.log('arrowtools did update!', 'prevProps:', uneval(prevProps), 'nowProps:', uneval(this.props));
+			if (gCState && gCState.selection && gCState.selection.name == 'Line') {
+				var newValid = true;
+				if (prevProps.sPalArrowStart != this.props.sPalArrowStart) {
+					gCState.selection.arrowStart = this.props.sPalArrowStart;
+					newValid = false;
 				}
+				if (prevProps.sPalArrowEnd != this.props.sPalArrowEnd) {
+					gCState.selection.arrowEnd = this.props.sPalArrowEnd;
+					newValid = false;
+				}
+				// sPalArrowLength is handled by InputNumber
+				if (!newValid) {
+					gCState.valid = newValid;
+				} // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
 			}
-			// end - very specific to nativeshot - update selected object if applicable
 		},
 		render: function() {
 			// props
@@ -3675,7 +3737,7 @@ function init(aArrBufAndCore) {
 			pPalLineWidth: 4,
 			
 			pPalFontSize: 24,
-			pPalFontFace: 'sans-serif',
+			pPalFontFace: 'Arial',
 			pPalFontBold: undefined,
 			pPalFontItalic: undefined,
 			pPalFontUnderline: undefined,
@@ -4286,7 +4348,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	var topBound = -1;
 	
 	// measureHeightY:
-	for (y=0; y<=yEnd; y++) {
+	for (var y=0; y<=yEnd; y++) {
 		for (var x = 0; x < w; x += 1) {
 			var n = 4 * (w * y + x);
 			var r = data[n];

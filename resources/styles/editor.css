@@ -430,6 +430,51 @@ body {
 }
 /* end - option_tools */
 
+/* start - ptexttools area */
+/* state:innate */
+.ptexttools {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	padding: 6px;
+}
+.ptexttools-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+.ptexttools .pbutton {
+	font-family: Times New Roman;
+}
+.ptexttools-bold {
+	font-weight: bold;
+	margin: 5px 4px 0 1px;
+}
+.ptexttools-italic {
+	font-style: italic;
+	margin: 5px 1px 0 0;
+}
+.ptexttools .inputnumber {
+	margin-top: 5px;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+.ptexttools .inputnumber input {
+	width: 3em;
+	margin: 0 3px;
+	font-size: 1em;
+}
+.ptexttools select {
+	font-size: 1em;
+	margin: 0 3px;
+}
+/* end - ptexttools area */
+
 /* start - inputnumber-label */
 /* state:innate */
 .inputnumber-label {
