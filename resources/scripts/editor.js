@@ -197,7 +197,8 @@ function init(aArrBufAndCore) {
 		{
 			special: 'LineTools',
 			justClick: true,
-			isOption: true
+			isOption: true,
+			props: ['sPalLineWidth']
 		},
 		{
 			special: 'ArrowTools',
@@ -420,12 +421,14 @@ function init(aArrBufAndCore) {
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
 				
-				sPalArrowLength: 20,
-				sPalArrowEnd: false,
-				sPalArrowStart: false,
+				sPalArrowLength: this.props.pPalArrowLength,
+				sPalArrowEnd: this.props.pPalArrowEnd,
+				sPalArrowStart: this.props.pPalArrowStart,
 				
 				sPalZoomViewCoords: this.props.pPalZoomViewCoords,
-				sPalZoomViewLevel: this.props.pPalZoomViewLevel
+				sPalZoomViewLevel: this.props.pPalZoomViewLevel,
+				
+				sPalLineWidth: this.props.pPalLineWidth
 			};
 		},
 		componentDidMount: function() {
@@ -515,25 +518,41 @@ function init(aArrBufAndCore) {
 		////// start - canvas functions
 		Drawable: function(x, y, w, h, name, aOptions={}) {
 
-			// set dimensions
+			// set obj props
+			this.name = name;
+			
+			// set rest
 			switch (name) {
 				case 'dim':
 					
+						// dimensions
 						this.x = 0;
 						this.y = 0;
 						this.w = gQS.w;
 						this.h = gQS.h;
+						
+						// styleables (are a property on ctx like ctx.fillStyle or ctx.setLineDash) if undefined, that it is populated with respect to toolbar
+						this.fillStyle = 'rgba(0, 0, 0, 0.6)';
 					
 					break;
 				case 'Line':
 				
+						// dimensions
 						this.x = x;
 						this.y = y;
 						this.x2 = 'x2' in aOptions ? aOptions.x2 : x;
 						this.y2 = 'y2' in aOptions ? aOptions.y2 : y;
+						
+						// other props
 						this.arrowStart = aOptions.arrowStart || gCState.rconn.state.sPalArrowStart;
 						this.arrowEnd = aOptions.arrowEnd || gCState.rconn.state.sPalArrowEnd;
 						this.arrowLength = aOptions.arrowLength || gCState.rconn.state.sPalArrowLength;
+						
+						// styleables - if undefined, then it is set to the default value with respect to pal
+						this.lineWidth = aOptions.lineWidth; // lineWidth is not set, then it is undefined, and then setStyleablesDefaults will set it to the default value, which respects pal
+						this.strokeStyle = aOptions.strokeStyle;
+						this.setLineDash = aOptions.setLineDash;
+						this.lineJoin = aOptions.lineJoin;
 				
 					break;
 				case 'Pencil':
@@ -541,142 +560,111 @@ function init(aArrBufAndCore) {
 				
 						// has to be drawn, i dont allow constructing this with predefiend path. as in i dont offer aOptions.path
 						this.path = [x, y];
+						
+						// styleables
+						this.lineWidth = aOptions.lineWidth;
+						this.strokeStyle = aOptions.strokeStyle;
+						this.setLineDash = aOptions.setLineDash;
+						this.lineJoin = aOptions.lineJoin;
 				
 					break;
 				case 'Text':
 				
+						// dimensions
 						this.x = x;
 						this.y = y;
+						
+						// others
 						this.chars = '';
 						this.index = 0; // the position of the ibeam
-						this.size = aOptions.size || 40;
-						this.face = aOptions.face || 'serif';
-						this.align = aOptions.align || 'left';
-						this.bold = aOptions.bold || '';
-						this.italic = aOptions.italic || '';
+						this.fontsize = aOptions.fontsize;
+						this.fontface = aOptions.fontface;
+						this.fontbold = aOptions.fontbold;
+						this.fontitalic = aOptions.fontitalic;
 						this.linespacing = 1;
+						
+						// styleables
+						this.fillStyle = aOptions.fillStyle;
+						this.textAlign = aOptions.textAlign;
+						this.font = undefined; // i need to set it to undefined otherwise setStyleablesDefaults will not set it // user should only set fontsize,fontface,fontbold,fontitalic. the .font will be calculated by setStyleablesDefaults
 				
 					break;
-				default:
-					this.x = x;
-					this.y = y;
-					this.w = w;
-					this.h = h;
-			}
-			this.name = name;
-			
-			// set other props
-			
-			switch (name) {
+				case 'Gaussian':
+					
+						// dimensions
+						this.x = x;
+						this.y = y;
+						this.w = w;
+						this.h = h;
+						
+						// other
+						this.level = aOptions.level || gCState.rconn.state.sPalBlurRadius
+						
+					break;
+				case 'Mosaic':
+					
+						// dimensions
+						this.x = x;
+						this.y = y;
+						this.w = w;
+						this.h = h;
+						
+						// other
+						this.level = aOptions.level || gCState.rconn.state.sPalBlurBlock;
+				
+				case 'cutout':
+					
+						// dimensions
+						this.x = x;
+						this.y = y;
+						this.w = w;
+						this.h = h;
+						
+					break;
 				case 'Rectangle':
 				case 'Oval':
 					
-						// console.error('gCState:', gCState);
-						this.Style = {
-							Draw: {
-								me: {
-									fillStyle: aOptions.fillStyle || colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha), //gCState.Style.Draw.fill.fillStyle,
-									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha), // gCState.Style.Draw.line.strokeStyle,
-									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
-									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth
-								}
-							}
-						}
-					
-					break;
-				case 'Line':
-				case 'Pencil':
-				
-						this.Style = {
-							Draw: {
-								me: {
-									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha),
-									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
-									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
-									lineJoin: aOptions.lineJoin || gCState.Style.Draw.line.lineJoin
-								}
-							}
-						};
+						// dimensions
+						this.x = x;
+						this.y = y;
+						this.w = w;
+						this.h = h;
 						
-					break;
-				case 'Marker':
+						// styleables
+						this.fillStyle = undefined;
+						this.strokeStyle = undefined;
+						this.lineWidth = undefined;
+						this.setLineDash = undefined;
+						this.lineJoin = undefined;
 					
-						this.Style = {
-							Draw: {
-								me: {
-									strokeStyle: aOptions.strokeStyle || colorStrToRGBA(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha),
-									setLineDash: aOptions.setLineDash || gCState.Style.Draw.line.setLineDash,
-									lineWidth: aOptions.lineWidth || gCState.Style.Draw.line.lineWidth,
-									lineJoin: aOptions.lineJoin || gCState.Style.Draw.line.lineJoin
-								}
-							}
-						};
-					
-					break;
-				case 'Text':
-				
-						this.Style = {
-							Draw: {
-								me: {
-									font: this.size + 'px ' + (this.face || 'serif'),
-									textAlign: this.align || 'left',
-									fillStyle: aOptions.fillStyle || colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha)
-								}
-							}
-						};
-						
-						if (this.bold) {
-							this.Style.Draw.me = 'bold ' + this.Style.Draw.me;
-						}
-						if (this.italic) {
-							this.Style.Draw.me = 'italic ' + this.Style.Draw.me;
-						}
-				
 					break;
 				default:
-					// nothing special
+					console.error('no props specified for a drawable with name "' + this.name + '"');
+					throw new Error('no props specified for a drawable with name "' + this.name + '"');
 			}
 			
+			// set styleables
+			gCState.rconn.setStyleablesDefaults(this);
+			
 			this.draw = function(ctx) {
-				// returns the valid value
+				// returns the value i should set gCState.valid to
 				
+				if (['cutout'].indexOf(this.name) > -1) {
+					// not drawable
+					console.error('trying to draw an undrawable, this:', this);
+					return true;
+				}
+				
+				// do check if it no select should be drawn, if it has 0 dimensions:
 				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
 				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
 					console.error('width or height is 0 so not drawing');
 					return true;
 				}
 				
-				// set styles
-				var curStyle;
-				switch (this.name) {
-					case 'dim':
-						
-							curStyle = gCState.Style.Draw.dim;
-						
-						break;
-					case 'Rectangle':
-					case 'Oval':
-					case 'Line':
-					case 'Pencil':
-					case 'Marker':
-					case 'Text':
-					
-							curStyle = this.Style.Draw.me;
-					
-						break;
-					case 'Gaussian':
-					case 'Mosaic':
-						
-							// no styles needed
-						
-						break;
-					default:
-						// not drawable
-						return true; // so valid is no need to update to false
-				}
-				
-				// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
-				gCState.rconn.applyCtxStyle(curStyle);				
+				// style the ctx
+				console.log('applying styles of this:', this);
+				gCState.rconn.applyCtxStyle(this); // whatever keys exist that are in styleables will be styled to ctx
 				
 				// draw it
 				switch (this.name) {
@@ -684,32 +672,10 @@ function init(aArrBufAndCore) {
 
 							var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 							if (!cutouts.length) {
-								ctx.fillRect(0, 0, gQS.w, gQS.h);
+								ctx.fillRect(0, 0, this.w, this.h);
 							} else {
 								
-								/*
-								// build cutoutsUnionRect
-								var cutoutsUnionRect;
-								for (var i=0; i<cutouts.length; i++) {
-									var cutoutClone = gCState.rconn.makeDimsPositive(cutouts[i], true);
-									var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
-									if (!i) {
-										cutoutsUnionRect = unionRect;
-									} else {
-										cutoutsUnionRect = cutoutsUnionRect.union(unionRect);
-									}
-								}
-								
-								var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
-								
-								var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
-								
-								for (var i=0; i<dimRects.length; i++) {
-									ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
-								}
-								*/
-								
-								var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
+								var fullscreenRect = new Rect(0, 0, this.w, this.h);
 								var cutoutsAsRects = [];
 								cutouts.forEach(function(cutout) {
 									var cutoutClone = gCState.rconn.makeDimsPositive(cutout, true);
@@ -724,16 +690,6 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Rectangle':
 					
-							
-							// var lw = this.Style.Draw.me.lineWidth;
-							// var lw2 = lw * 2;
-							// // ctx.rect(this.x, this.y, this.w, this.h);
-							// // ctx.rect(this.x+lw, this.y+lw, this.w-lw2, this.h-lw2);  // offset position and size
-							// // ctx.fill('evenodd');                      // !important
-							// // ctx.strokeRect(this.x, this.y, this.w, this.h);
-							// 
-							// ctx.fillRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
-							// ctx.strokeRect(this.x + lw, this.y + lw, this.w - lw2, this.h - lw2);
 							ctx.fillRect(this.x, this.y, this.w, this.h);
 							ctx.strokeRect(this.x, this.y, this.w, this.h);
 						
@@ -818,7 +774,7 @@ function init(aArrBufAndCore) {
 						
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
-							var level = gCState.rconn.state.sPalBlurRadius;
+							var level = this.level; // gCState.rconn.state.sPalBlurRadius;
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -836,7 +792,7 @@ function init(aArrBufAndCore) {
 						
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
-							var level = gCState.rconn.state.sPalBlurBlock;
+							var level = this.level;
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -860,24 +816,17 @@ function init(aArrBufAndCore) {
 			this.select = function(ctx) {
 				// returns the valid value
 				
-				if (this.name == 'dim') {
-					// not selectable
-					return;
-				}
-				
-				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
-				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
-					console.error('width or height is 0 so not drawing');
-					return true;
-				}
-				
 				// console.error('doing select for drawable:', this);
-				// set styles
+				// set styles - and determine if its selectable
 				var curStyle;
 				switch (this.name) {
 					case 'cutout':
 						
-							curStyle = gCState.Style.Select.cutout;
+							curStyle = {
+								lineWidth: gCState.rconn.mtmm.w(3),
+								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
+								strokeStyle: 'black'
+							};
 						
 						break;
 					case 'Rectangle':
@@ -885,24 +834,46 @@ function init(aArrBufAndCore) {
 					case 'Gaussian':
 					case 'Mosaic':
 					
-							curStyle = gCState.Style.Select.shape;
+							curStyle = {
+								lineWidth: gCState.rconn.mtmm.w(3),
+								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
+								strokeStyle: 'springgreen'
+							};
 					
 						break;
 					case 'Line':
 					case 'Pencil':
 					case 'Marker':
 					
-							curStyle = gCState.Style.Select.line;
+							curStyle = {
+								strokeStyle: 'white',
+								setLineDash: [],
+								lineWidth: gCState.rconn.mtmm.w(1),
+								fillStyle: 'rgba(100, 100, 100, 1)'
+							};
 					
 						break;
 					case 'Text':
 						
-							curStyle = gCState.Style.Select.text;
+							curStyle = {
+								strokeStyle: 'black',
+								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
+								lineWidth: gCState.rconn.mtmm.w(1)
+							};
 						
 						break;
 					default:
 						// not selectable
+							// dim
+						console.warn('this drawable is NOT selectable! tried to select a drawable with name:', this.name, 'drawable obj:', this);
 						return true; // so no need to invalidate
+				}
+				
+				// do check if it no select should be drawn, if it has 0 dimensions:
+				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
+				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
+					console.error('width or height is 0 so not drawing');
+					return true;
 				}
 				
 				// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
@@ -910,35 +881,6 @@ function init(aArrBufAndCore) {
 				
 				// draw the selection of it
 				switch (this.name) {
-					case 'dim':
-
-							var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
-							if (!cutouts.length) {
-								// no selection
-							} else {
-								
-								// build cutoutsUnionRect
-								var cutoutsUnionRect;
-								for (var i=0; i<cutouts.length; i++) {
-									var cutoutClone = gCState.rconn.makeDimsPositive(cutouts[i], true);
-									var unionRect = new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h);
-									if (!i) {
-										cutoutsUnionRect = unionRect;
-									} else {
-										cutoutsUnionRect.union(unionRect);
-									}
-								}
-								
-								var fullscreenRect = new Rect(0, 0, gQS.w, gQS.h);
-								
-								var dimRects = fullscreenRect.subtract(cutoutsUnionRect);
-								
-								for (var i=0; i<dimRects.length; i++) {
-									ctx.strokeRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
-								}
-							}
-					
-						break;
 					case 'cutout':
 					case 'Rectangle':
 					case 'Oval':
@@ -952,20 +894,15 @@ function init(aArrBufAndCore) {
 						
 							// var linespacingAsPx = this.linespacing * this.size;
 							
-							var font = this.size + 'px ' + this.face;
-							if (this.bold) {
-								font = 'bold ' + font;
-							}
-							if (this.italic) {
-								font = 'italic ' + font;
-							}
+							var font = gCState.rconn.calcCtxFont(this);
 							
 							var x;
 							var y;
 							var h;
 							var w;
+							var fontsize = parseInt(this.fontsize); // i expect it to be in px
 							if (this.chars.length) {
-								var mh = measureHeight(font, this.size, this.chars, {width:w});
+								var mh = measureHeight(font, fontsize, this.chars, {width:w});
 								console.log('mh:', mh);
 								w = mh.width;
 								// i want to keep the baseline at this.y
@@ -973,8 +910,8 @@ function init(aArrBufAndCore) {
 								h = mh.relativeBot >= 0 ? (this.y + mh.relativeBot) - y : this.y - y;
 							} else {
 								w = 0;
-								h = this.size;
-								y = this.y - this.size;
+								h = fontsize;
+								y = this.y - fontsize;
 							}
 							x = this.x;
 							
@@ -989,7 +926,7 @@ function init(aArrBufAndCore) {
 								ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
 							}
 							var ibw = 3;
-							ctx.fillStyle = 'black';
+							ctx.fillStyle = 'black'; // ibeam color
 							ctx.fillRect(this.x + ibx, y, ibw, ibh);
 						
 						break;
@@ -1025,7 +962,7 @@ function init(aArrBufAndCore) {
 					
 						break;
 					default:
-						// should never get here, as would have returned earlier, as this one is not drawable
+						console.error('should never get here, as would have returned earlier, as this one is not drawable');
 				}
 				
 				return false;
@@ -1033,26 +970,22 @@ function init(aArrBufAndCore) {
 			
 			this.contains = function(mx, my) {
 				
-				if (this.name == 'dim') {
-					// i have never a need to test if mouse is within dim
-					// i think i dont need this as dim is unselectable
-					return false;
+				// is uncontainable
+				if (['dim'].indexOf(this.name) > -1) {
+					console.error('tried to test contains on an uncontainable! this:', this);
+					return;
 				}
 				
 				switch (this.name) {
 					case 'Line':
 					
 							var ctx = gCState.rconn.ctx;
-							// var lines = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'Line' });
-							// var l = lines.length;
-							// for (var i=0; i<l; i++) {
-								ctx.beginPath();
-								ctx.setLineDash([]);
-								ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
-								ctx.moveTo(this.x, this.y);
-								ctx.lineTo(this.x2, this.y2);
-								return ctx.isPointInStroke(mx, my);
-							// }
+							ctx.beginPath();
+							ctx.setLineDash([]);
+							ctx.lineWidth = this.lineWidth >= 20 ? this.lineWidth : 20;
+							ctx.moveTo(this.x, this.y);
+							ctx.lineTo(this.x2, this.y2);
+							return ctx.isPointInStroke(mx, my);
 					
 						break;
 					case 'Pencil':
@@ -1060,7 +993,7 @@ function init(aArrBufAndCore) {
 						
 							var ctx = gCState.rconn.ctx;
 							ctx.setLineDash([]);
-							ctx.lineWidth = this.Style.Draw.me.lineWidth >= 20 ? this.Style.Draw.me.lineWidth : 20;
+							ctx.lineWidth = this.lineWidth >= 20 ? this.lineWidth : 20;
 							ctx.beginPath();
 							ctx.moveTo(this.path[0], this.path[1]);
 							for (var i=2; i<this.path.length; i+=2) {
@@ -1073,21 +1006,16 @@ function init(aArrBufAndCore) {
 					
 							var ctx = gCState.rconn.ctx;
 							
-							var font = this.size + 'px ' + this.face;
-							if (this.bold) {
-								font = 'bold ' + font;
-							}
-							if (this.italic) {
-								font = 'italic ' + font;
-							}
+							var font = gCState.rconn.calcCtxFont(this);
 							ctx.font = font;
 							
 							var x;
 							var y;
 							var h;
 							var w;
+							var fontsize = parseInt(this.fontsize); // i expect it to be in px
 							if (this.chars.length) {
-								var mh = measureHeight(font, this.size, this.chars, {width:w});
+								var mh = measureHeight(font, fontsize, this.chars, {width:w});
 								console.log('mh:', mh);
 								w = mh.width;
 								// i want to keep the baseline at this.y
@@ -1095,8 +1023,8 @@ function init(aArrBufAndCore) {
 								h = mh.relativeBot >= 0 ? (this.y + mh.relativeBot) - y : this.y - y;
 							} else {
 								w = 0;
-								h = this.size;
-								y = this.y - this.size;
+								h = fontsize;
+								y = this.y - fontsize;
 							}
 							x = this.x;
 							
@@ -1238,15 +1166,26 @@ function init(aArrBufAndCore) {
 			
 			return aDrawable;
 		},
-		applyCtxStyle: function(aStyleObj) {
-			// aStyleObj is an object with keys that are properties/methods of aCtx
-			for (var p in aStyleObj) {
-				if (p.indexOf('set') === 0) {
-					// its a func
-					this.ctx[p].call(this.ctx, aStyleObj[p]);
-				} else {
-					// else its an attribute
-					this.ctx[p] = aStyleObj[p];
+		applyCtxStyle: function(aObj) {
+			// aObj is any object with keys that are properties/methods of aCtx that are in this below styleables object
+			var styleables = {
+				lineWidth: 0,
+				fillStyle: 0,
+				textAlign: 0,
+				lineJoin: 0,
+				font: 0,
+				setLineDash: 0,
+				strokeStyle: 0
+			};
+			for (var p in aObj) {
+				if (p in styleables) {
+					if (p.indexOf('set') === 0) {
+						// its a func
+						this.ctx[p].call(this.ctx, aObj[p]);
+					} else {
+						// else its an attribute
+						this.ctx[p] = aObj[p];
+					}
 				}
 			}			
 		},
@@ -1358,6 +1297,76 @@ function init(aArrBufAndCore) {
 				this.cstate.valid = true;
 				if (gZState) { gZState.valid = false; }
 			}
+		},
+		calcCtxFont: function(aDrawable) {
+			// returns a string which can be used with ctx.font = ''
+			var font = [];
+			var fontables = ['fontitalic', 'fontbold', 'fontsize', 'fontface']; // an array not an object, as the order matters
+			
+			var l = fontables.length;
+			for (var i=0; i<l; i++) {
+				var fontable = fontables[i];
+				if (fontable in aDrawable && aDrawable[fontable] !== undefined) {
+					font.push(aDrawable[fontable]);
+				}
+			}
+			
+			if (font.length) {
+				console.log('ok cacled font is:', font.join(' '));
+				return font.join(' ');
+			} else {
+				return undefined; // so setStyleablesDefaults will then set it to the default
+			}
+		},
+		setStyleablesDefaults: function(aDrawable) {
+			// the styles and the value is their default value
+			
+			// specials			
+			var fontablesDefaults = {
+				// fontitalic: undefined,
+				// fontbold: undefined,
+				fontface: 'san-serif',
+				fontsize: '24px'
+			};
+			
+			var styleables = {
+				lineWidth: gCState.rconn.state.sPalLineWidth,
+				fillStyle: colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha),
+				textAlign: 'left',
+				lineJoin: 'butt',
+				font: this.calcCtxFont(fontablesDefaults),
+				setLineDash: [],
+				strokeStyle: aDrawable.name == 'Marker' ? colorStrToRGBA(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha) : colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha)
+			};
+			
+			// console.log('styleables.font:', styleables.font);
+			
+			for (var p in styleables) {
+				if (p in aDrawable) {
+					if (p == 'font') {
+						// special case
+						aDrawable.font = this.calcCtxFont(aDrawable);
+						if (aDrawable.font === undefined) {
+							// ok need to set defaults
+							console.log('ok NEED TO SET DEFAULTS FONT');
+							aDrawable.font = styleables.font;
+							for (var pf in fontablesDefaults) {
+								aDrawable[pf] = fontablesDefaults[pf];
+							}
+							console.log('ok set to default font:', aDrawable.font);
+						} // else do nothing, it already has one set
+					} else {
+						// for everything other then 'font'
+						if (aDrawable[p] === undefined) {
+							// set to default value
+							aDrawable[p] = styleables[p];
+						} // else ok do nothing, it has a value
+					}
+				} else {
+					delete styleables[p];
+				}
+			}
+			return styleables;
 		},
 		wheel: function(e) {
 			// console.log('wheel:', e.deltaMode, e.deltaX, e.deltaY);
@@ -1970,45 +1979,25 @@ function init(aArrBufAndCore) {
 				
 				// **** Options! ****
 				var mtmm = this.mtmm;
-				this.cstate.Style = {
-					Draw: {
-						line: {
-							lineWidth: mtmm.w(5),
-							setLineDash: [],
-							strokeStyle: 'rgba(255, 0, 0, 1)',
-							lineJoin: 'round'
-						},
-						fill: {
-							fillStyle: 'rgba(100, 149, 237, 1)'
-						},
-						dim: {
-							fillStyle: 'rgba(0, 0, 0, 0.6)'
-						}
-					},
-					Select: {
-						cutout: {
-							lineWidth: mtmm.w(3),
-							setLineDash: [0, mtmm.w(3), 0],
-							strokeStyle: 'black'
-						},
-						shape: {
-							lineWidth: mtmm.w(3),
-							setLineDash: [0, mtmm.w(3), 0],
-							strokeStyle: 'springgreen'
-						},
-						line: {
-							strokeStyle: 'white',
-							setLineDash: [],
-							lineWidth: mtmm.w(1),
-							fillStyle: 'rgba(100, 100, 100, 1)'
-						},
-						text: {
-							strokeStyle: 'black',
-							setLineDash: [0, mtmm.w(3), 0],
-							lineWidth: mtmm.w(1)
-						}
-					}
-				};
+				// this.cstate.Style = {
+				// 	Draw: {
+				// 		line: {
+				// 			lineWidth: mtmm.w(5),
+				// 			setLineDash: [],
+				// 			strokeStyle: 'rgba(255, 0, 0, 1)',
+				// 			lineJoin: 'round'
+				// 		},
+				// 		fill: {
+				// 			fillStyle: 'rgba(100, 149, 237, 1)'
+				// 		},
+				// 		dim: {
+				// 			fillStyle: 'rgba(0, 0, 0, 0.6)'
+				// 		}
+				// 	},
+				// 	Select: {
+                // 
+				// 	}
+				// };
 				
 				// now that Style is setup, i can add Drawable's
 				// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
@@ -2325,7 +2314,7 @@ function init(aArrBufAndCore) {
 								case 'Line':
 								case 'Pencil':
 									
-										gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
+										gCState.selection.strokeStyle = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
 										gCState.valid = false;
 									
 									break;
@@ -2343,7 +2332,7 @@ function init(aArrBufAndCore) {
 								case 'Oval':
 								case 'Text':
 									
-										gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+										gCState.selection.fillStyle = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
 										gCState.valid = false;
 									
 									break;
@@ -2359,7 +2348,7 @@ function init(aArrBufAndCore) {
 							switch (gCState.selection.name) {
 								case 'Marker':
 									
-										gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+										gCState.selection.strokeStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 										gCState.valid = false;
 									
 									break;
@@ -2607,7 +2596,7 @@ function init(aArrBufAndCore) {
 			// props
 			//		sPalLineWidth
 			return React.createElement('div', {className:'plinetools'},
-				'line width'
+				React.createElement(InputNumber, {pLabel:'Line Width (px)', pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:2, pCStateSel:{'Rectangle':'lineWidth', 'Oval':'lineWidth', 'Line':'lineWidth', 'Pencil':'lineWidth', 'Marker':'lineWidth'}})
 			);
 		}
 	});
@@ -2625,7 +2614,7 @@ function init(aArrBufAndCore) {
 			
 			var cInputNumberProps = {
 				pMin: 1,
-				pCStateSel: ['Gaussian', 'Mosaic'],
+				pCStateSel: {'Gaussian':'level', 'Mosaic':'level'},
 				key: subtool
 			};
 			
@@ -2733,8 +2722,8 @@ function init(aArrBufAndCore) {
 			// start - very specific to nativeshot - update selected object if applicable
 			console.log('arrowtools did update!', 'prevProps:', uneval(prevProps), 'nowProps:', uneval(this.props));
 			if (prevProps.sPalArrowStart != this.props.sPalArrowStart ||
-				prevProps.sPalArrowEnd != this.props.sPalArrowEnd ||
-				prevProps.sPalArrowLength != this.props.sPalArrowLength ) {
+				prevProps.sPalArrowEnd != this.props.sPalArrowEnd ) {
+				// prevProps.sPalArrowLength != this.props.sPalArrowLength ) { // handled by input number
 				if (gCState && gCState.selection) {
 					// if currently selection object obeys arrow settings, then apply this new arrow settings if they dont match
 					switch (gCState.selection.name) {
@@ -2749,10 +2738,11 @@ function init(aArrBufAndCore) {
 									gCState.selection.arrowEnd = this.props.sPalArrowEnd;
 									newValid = false;
 								}
-								if (gCState.selection.arrowLength != this.props.sPalArrowLength) {
-									gCState.selection.arrowLength = this.props.sPalArrowLength;
-									newValid = false;
-								}
+								// handled by InputNumber
+								// if (gCState.selection.arrowLength != this.props.sPalArrowLength) {
+								// 	gCState.selection.arrowLength = this.props.sPalArrowLength;
+								// 	newValid = false;
+								// }
 								gCState.valid = newValid;
 							
 							break;
@@ -2784,7 +2774,7 @@ function init(aArrBufAndCore) {
 						'End'
 					)
 				),
-				React.createElement(InputNumber, {pLabel:'Length (px)', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1})
+				React.createElement(InputNumber, {pLabel:'Length (px)', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1, pCStateSel:{'Line':'arrowLength'} })
 				// React.createElement('div', {},
 				// 	React.createElement('label', {htmlFor:'arrow_length'},
 				// 		'Length'
@@ -2821,7 +2811,7 @@ function init(aArrBufAndCore) {
 							case 'Oval':
 							case 'Text':
 								
-									gCState.selection.Style.Draw.me.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.selection.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
 								
 								break;
@@ -2836,7 +2826,7 @@ function init(aArrBufAndCore) {
 							case 'Line':
 							case 'Pencil':
 								
-									gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.selection.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
 								
 								break;
@@ -2848,7 +2838,7 @@ function init(aArrBufAndCore) {
 						switch (gCState.selection.name) {
 							case 'Marker':
 								
-									gCState.selection.Style.Draw.me.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.selection.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
 								
 								break;
@@ -3277,7 +3267,9 @@ function init(aArrBufAndCore) {
 				gEditorStore.setState(newStateObj);
 				
 				if (this.props.pCStateSel) {
-					if (gCState && gCState.selection && this.props.pCStateSel.indexOf(gCState.selection.name) > -1) {
+					var drawablePropToUpdate = this.props.pCStateSel[gCState.selection.name];
+					if (gCState && gCState.selection && drawablePropToUpdate) {
+						gCState.selection[drawablePropToUpdate] = newSetValue;
 						gCState.valid = false; // so new blur level gets applied
 					}
 				}
@@ -3503,6 +3495,12 @@ function init(aArrBufAndCore) {
 	var palZoomViewCoords = {x:20, y:300};
 	var palZoomViewLevel = 8;
 	
+	var palArrowLength = 20;
+	var palArrowEnd = false;
+	var palArrowStart = false;
+	
+	var palLineWidth = 1;
+	
 	var Specials = {
 		Divider: Divider,
 		Accessibility: Accessibility,
@@ -3536,6 +3534,12 @@ function init(aArrBufAndCore) {
 				
 				pPalZoomViewCoords: palZoomViewCoords,
 				pPalZoomViewLevel: palZoomViewLevel,
+				
+				pPalArrowLength: palArrowLength,
+				pPalArrowEnd: palArrowEnd,
+				pPalArrowStart: palArrowStart,
+				
+				pPalLineWidth: palLineWidth,
 				
 				pCanHandleSize: 19, // :todo: get from prefs
 				pCanInterval: 30, // ms
