@@ -460,7 +460,7 @@ var observers = {
 			Services.obs.addObserver(observers['nativeshot-editor-request'], core.addon.id + '_nativeshot-editor-request', false);
 		},
 		unreg: function () {
-			Services.obs.removeObserver(observers['nativeshot-editor-request'], core.addon.id + 'nativeshot-editor-request');
+			Services.obs.removeObserver(observers['nativeshot-editor-request'], core.addon.id + '_nativeshot-editor-request');
 		}
 	}
 };

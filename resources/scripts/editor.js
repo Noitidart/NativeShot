@@ -1816,15 +1816,14 @@ function init(aArrBufAndCore) {
 					if (this.cstate.selection) {
 						this.cstate.selection.add();
 						
-						// as newly added, lets figure out the tool and add to current history of respective color
-							switch (this.state.sGenPalTool) {
+							switch (this.cstate.selection.name) {
 								case 'Marker':
 								
 										this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist');
 										
 									break;
 								case 'Line':
-								case 'Freedraw':
+								case 'Pencil':
 								
 										this.addColorToHistory('sPalLineColor', 'sPalLineColorHist');
 										
@@ -1834,7 +1833,8 @@ function init(aArrBufAndCore) {
 										this.addColorToHistory('sPalFillColor', 'sPalFillColorHist');
 								
 									break;
-								case 'Shapes':
+								case 'Rectangle':
+								case 'Oval':
 								
 										this.addColorToHistory('sPalLineColor', 'sPalLineColorHist');
 										this.addColorToHistory('sPalFillColor', 'sPalFillColorHist');
@@ -3445,6 +3445,7 @@ function init(aArrBufAndCore) {
 				switch (this.props.pStateVarName) {
 					case 'sPalLineColor':
 					case 'sPalFillColor':
+					case 'sPalMarkerColor':
 
 							var specialData = this.props.pStateVarSpecial;
 							var rgba = specialData.rgba;
