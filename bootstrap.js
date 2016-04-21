@@ -480,7 +480,7 @@ var EditorFuncs = {
 		}
 	},
 	updateEditorState: function(aData) {
-		core.editorstate = aData.editorstate;
+		gEditorState = aData.editorstate;
 		var promise_updateEditorstate = MainWorker.post('updateEditorState', [gEditorState]);
 	},
 	init: function(aData) {

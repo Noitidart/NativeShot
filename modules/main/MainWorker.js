@@ -200,12 +200,13 @@ function init(objCore) { // function name init required for SIPWorker
 	
 	var editorstate;
 	try {
-		editorstate = OS.Path.read(core.addon.path.editorstate, {encoding:'utf-8'});
+		editorstate = OS.File.read(core.addon.path.editorstate, {encoding:'utf-8'});
+		editorstate = JSON.parse(editorstate);
 	} catch(OSFileError) {
 		console.log('OSFileError on read editorstate:', OSFileError);
 	}
 	core.editorstate = editorstate; // canvas will load in defaults on first load
-	
+	console.log('sending back editorstate:', core.editorstate);
 	console.log('OAuthWorker init success');
 	return core; // for SIPWorker returnung is not required
 }
