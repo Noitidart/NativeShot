@@ -757,7 +757,7 @@ function init(aArrBufAndCore) {
 				}
 				
 				// style the ctx
-				console.log('applying styles of this:', this);
+				// console.log('applying styles of this:', this);
 				gCState.rconn.applyCtxStyle(this); // whatever keys exist that are in styleables will be styled to ctx
 				
 				// draw it
@@ -1409,7 +1409,7 @@ function init(aArrBufAndCore) {
 			}
 			
 			if (font.length) {
-				console.log('ok cacled font is:', font.join(' '));
+				// console.log('ok cacled font is:', font.join(' '));
 				return font.join(' ');
 			} else {
 				return undefined; // so setStyleablesDefaults will then set it to the default
@@ -1656,28 +1656,29 @@ function init(aArrBufAndCore) {
 					var acceptDroppingObj = {};
 					acceptDroppingObj.sGenColorPickerDropping = null;
 					
+					var addColorSetStateObj = {};
 					if (this.cstate.selection) {
 						switch (this.cstate.selection.name) {
 							case 'Marker':
 							
-									this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist');
+									addColorSetStateObj = this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', true);
 									
 								break;
 							case 'Line':
 							case 'Pencil':
 							
-									this.addColorToHistory('sPalLineColor', 'sPalBothColorHist');
+									addColorSetStateObj = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
 							
 								break;
 							case 'Text':
 							
-									this.addColorToHistory('sPalFillColor', 'sPalBothColorHist');
+									addColorSetStateObj = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
 							
 								break;
 							case 'Rectangle':
 							case 'Oval':
 							
-									this.addColorToHistory(dropping.pStateColorKey, 'sPalBothColorHist');
+									addColorSetStateObj = this.addColorToHistory(dropping.pStateColorKey, 'sPalBothColorHist', true);
 									
 								break;
 							default:
@@ -1685,7 +1686,7 @@ function init(aArrBufAndCore) {
 						}
 					}
 					
-					gEditorStore.setState(acceptDroppingObj);
+					gEditorStore.setState(overwriteObjWithObj(acceptDroppingObj, addColorSetStateObj));
 					gDroppingMixCtx = null;
 					
 					return; // so we dont do the stuff below
@@ -1848,25 +1849,27 @@ function init(aArrBufAndCore) {
 							switch (this.cstate.selection.name) {
 								case 'Marker':
 								
-										this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist');
+										this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);
 										
 									break;
 								case 'Line':
 								case 'Pencil':
 								
-										this.addColorToHistory('sPalLineColor', 'sPalBothColorHist');
+										this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
 								
 									break;
 								case 'Text':
 								
-										this.addColorToHistory('sPalFillColor', 'sPalBothColorHist');
+										this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
 								
 									break;
 								case 'Rectangle':
 								case 'Oval':
 								
-										this.addColorToHistory('sPalLineColor', 'sPalBothColorHist');
-										this.addColorToHistory('sPalFillColor', 'sPalBothColorHist');
+										var setStateObjLine = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
+										var setStateObjFill = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
+										
+										gEditorStore.setState(overwriteObjWithObj(setStateObjLine, setStateObjFill));
 										
 									break;
 								default:
@@ -1911,12 +1914,17 @@ function init(aArrBufAndCore) {
 				}
 			}
 		},
-		addColorToHistory: function(aStateColorVar, aStateHistoryVar) {
-			if (!aStateColorVar || !aStateHistoryVar) {
+		addColorToHistory: function(aStateColorVarOrColor, aStateHistoryVar, justReturnSetStateObj) {
+			// aStateColorVarOrColor can be a color.
+			// if justReturnSetStateObj is true, it just returns the setStateObj, otherwise it sets it
+			if (!aStateColorVarOrColor || !aStateHistoryVar) {
 				return;
 			}
-			// console.log('aStateColorVar:', aStateColorVar, 'aStateHistoryVar:', aStateHistoryVar, 'this.state:', this.state);
-			var cColor = this.state[aStateColorVar]
+			// console.log('aStateColorVarOrColor:', aStateColorVarOrColor, 'aStateHistoryVar:', aStateHistoryVar, 'this.state:', this.state);
+			var cColor = this.state[aStateColorVarOrColor];
+			if (cColor === undefined) {
+				cColor = aStateColorVarOrColor;
+			}
 			var cHistory = this.state[aStateHistoryVar];
 			var idxCoInHist = cHistory.indexOf(cColor);
 			var immutedHistory;
@@ -1934,7 +1942,11 @@ function init(aArrBufAndCore) {
 			if (immutedHistory) {
 				var setStateObj = {};
 				setStateObj[aStateHistoryVar] = immutedHistory;
-				gEditorStore.setState(setStateObj);
+				if (justReturnSetStateObj) {
+					 return setStateObj;
+				} else {
+					gEditorStore.setState(setStateObj);
+				}
 			}
 		},
 		mouseup: function(e) {
@@ -2404,6 +2416,7 @@ function init(aArrBufAndCore) {
 								case 'Pencil':
 									
 										gCState.selection.strokeStyle = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
+										gCState.rconn.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
 										gCState.valid = false;
 									
 									break;
@@ -2422,6 +2435,7 @@ function init(aArrBufAndCore) {
 								case 'Text':
 									
 										gCState.selection.fillStyle = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+										gCState.rconn.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
 										gCState.valid = false;
 									
 									break;
@@ -2438,6 +2452,7 @@ function init(aArrBufAndCore) {
 								case 'Marker':
 									
 										gCState.selection.strokeStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+										gCState.rconn.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);										
 										gCState.valid = false;
 									
 									break;
@@ -3097,7 +3112,40 @@ function init(aArrBufAndCore) {
 		click: function(aColor) {
 			var setStateObj = {};
 			setStateObj[this.props.pStateColorKey] = aColor;
-			gColorPickerSetState[this.props.pSetStateName](setStateObj);
+			
+			var addColorSetStateObj = {};
+			if (gCState.selection) {
+				switch (gCState.selection.name) {
+					case 'Marker':
+					
+							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalMarkerColorHist', true);
+							
+						break;
+					case 'Line':
+					case 'Pencil':
+					
+							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
+					
+						break;
+					case 'Text':
+					
+							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
+					
+						break;
+					case 'Rectangle':
+					case 'Oval':
+					
+							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
+							
+						break;
+					default:
+						// no related color picker
+				}
+			}
+			
+			console.log('addColorSetStateObj:', addColorSetStateObj);
+			
+			gColorPickerSetState[this.props.pSetStateName](overwriteObjWithObj(setStateObj, addColorSetStateObj));
 		},
 		dropperClick: function() {
 			var mixcan = document.createElement('canvas');
