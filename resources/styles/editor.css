@@ -437,7 +437,6 @@ body {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	position: relative;
 	padding: 6px;
 }
 .ptexttools-row {
@@ -448,6 +447,7 @@ body {
 }
 .ptexttools .pbutton {
 	font-family: Times New Roman;
+	position: static;
 }
 .ptexttools-bold {
 	font-weight: bold;
@@ -467,7 +467,6 @@ body {
 .ptexttools .inputnumber input {
 	width: 3em;
 	margin: 0 3px;
-	font-size: 1em;
 }
 .ptexttools select {
 	font-size: 1em;

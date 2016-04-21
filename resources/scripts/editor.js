@@ -2865,9 +2865,9 @@ function init(aArrBufAndCore) {
 			return React.createElement('div', {className:'ptexttools'},
 				React.createElement('div', {className:'ptexttools-row'},
 					React.createElement('div', {},
-						React.createElement('label', {htmlFor:'font_family'},
-							'Font'
-						),
+						// React.createElement('label', {htmlFor:'font_family'},
+							// 'Font'
+						// ),
 						React.createElement('select', {id:'font_family', defaultValue:this.props.sPalFontFace, onChange:this.change},
 							cFontFamilies
 						)
