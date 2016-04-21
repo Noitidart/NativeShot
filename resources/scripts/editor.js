@@ -199,7 +199,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalLineColorHist', pStateHistoryKey:'$string$sPalLineColorHist'}
+					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalBothColorHist', pStateHistoryKey:'$string$sPalBothColorHist'}
 				}
 			],
 			isOption: true
@@ -236,7 +236,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalFillColorHist', pStateHistoryKey:'$string$sPalFillColorHist'}
+					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalBothColorHist', pStateHistoryKey:'$string$sPalBothColorHist'}
 				}
 			],
 			isOption: true
@@ -434,13 +434,12 @@ function init(aArrBufAndCore) {
 
 				sPalLineColor: this.props.pPalLineColor,
 				sPalLineAlpha: this.props.pPalLineAlpha,
-				sPalLineColorHist: this.props.pPalLineColorHist,
 				sPalFillColor: this.props.pPalFillColor,
 				sPalFillAlpha: this.props.pPalFillAlpha,
-				sPalFillColorHist: this.props.pPalFillColorHist,
 				sPalMarkerColor: this.props.pPalMarkerColor,
 				sPalMarkerAlpha: this.props.pPalMarkerAlpha,
 				sPalMarkerColorHist: this.props.pPalMarkerColorHist,
+				sPalBothColorHist: this.props.pPalBothColorHist,
 				
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
@@ -1825,19 +1824,19 @@ function init(aArrBufAndCore) {
 								case 'Line':
 								case 'Pencil':
 								
-										this.addColorToHistory('sPalLineColor', 'sPalLineColorHist');
-										
+										this.addColorToHistory('sPalLineColor', 'sPalBothColorHist');
+								
 									break;
 								case 'Text':
 								
-										this.addColorToHistory('sPalFillColor', 'sPalFillColorHist');
+										this.addColorToHistory('sPalFillColor', 'sPalBothColorHist');
 								
 									break;
 								case 'Rectangle':
 								case 'Oval':
 								
-										this.addColorToHistory('sPalLineColor', 'sPalLineColorHist');
-										this.addColorToHistory('sPalFillColor', 'sPalFillColorHist');
+										this.addColorToHistory('sPalLineColor', 'sPalBothColorHist');
+										this.addColorToHistory('sPalFillColor', 'sPalBothColorHist');
 										
 									break;
 								default:
@@ -3088,7 +3087,10 @@ function init(aArrBufAndCore) {
 			//		sHistory
 			
 			var historyColors = this.props.sHistory;
-			var defaultColors = ['#B8E986', '#9B9B9B', '#9013FE', '#4A90E2'];
+			var defaultColors = ['#000000', '#ffffff', '#4A90E2', '#D0021B', '#F5A623', '#F8E71C', '#00B050', '#9013FE'];
+			if (this.props.pStateColorKey == 'sPalMarkerColor') {
+				defaultColors = ['#77ef15', '#ffef15']
+			}
 			
 			var historyElements = [];
 			var defaultElements = [];
@@ -3572,10 +3574,9 @@ function init(aArrBufAndCore) {
 			
 			pPalLineColor: 'rgb(208, 2, 27)',
 			pPalLineAlpha: 100,
-			pPalLineColorHist: [],
+			pPalBothColorHist: [],
 			pPalFillColor: 'rgb(74, 144, 226)',
 			pPalFillAlpha: 100,
-			pPalFillColorHist: [],
 			pPalMarkerColor: '#ffef15',
 			pPalMarkerAlpha: 50,
 			pPalMarkerColorHist: [],
