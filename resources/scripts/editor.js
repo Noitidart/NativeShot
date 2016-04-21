@@ -1815,6 +1815,36 @@ function init(aArrBufAndCore) {
 					
 					if (this.cstate.selection) {
 						this.cstate.selection.add();
+						
+						// as newly added, lets figure out the tool and add to current history of respective color
+							switch (this.state.sGenPalTool) {
+								case 'Marker':
+								
+										this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist');
+										
+									break;
+								case 'Line':
+								case 'Freedraw':
+								
+										this.addColorToHistory('sPalLineColor', 'sPalLineColorHist');
+										
+									break;
+								case 'Text':
+								
+										this.addColorToHistory('sPalFillColor', 'sPalFillColorHist');
+								
+									break;
+								case 'Shapes':
+								
+										this.addColorToHistory('sPalLineColor', 'sPalLineColorHist');
+										this.addColorToHistory('sPalFillColor', 'sPalFillColorHist');
+										
+									break;
+								default:
+									// no related color picker
+							}
+						
+						// set the proper cstate action bool
 						switch (this.cstate.selection.name) {
 							case 'cutout':
 							case 'Rectangle':
@@ -1850,6 +1880,29 @@ function init(aArrBufAndCore) {
 						return;
 					}
 				}
+			}
+		},
+		addColorToHistory: function(aStateColorVar, aStateHistoryVar) {
+			if (!aStateColorVar || !aStateHistoryVar) {
+				return;
+			}
+			// console.log('aStateColorVar:', aStateColorVar, 'aStateHistoryVar:', aStateHistoryVar, 'this.state:', this.state);
+			var cColor = this.state[aStateColorVar]
+			var cHistory = this.state[aStateHistoryVar];
+			var idxCoInHist = cHistory.indexOf(cColor);
+			var immutedHistory;
+			if (idxCoInHist == -1) {
+				immutedHistory = cHistory.slice();
+				immutedHistory.splice(0, 0, cColor);
+			} else if (idxCoInHist > 0) {
+				immutedHistory = cHistory.slice();
+				immutedHistory.splice(0, 0, immutedHistory.splice(idxCoInHist, 1)[0]);
+			} // else idxCoInHist is 0 so its already in most recent position so do nothing
+			
+			if (immutedHistory) {
+				var setStateObj = {};
+				setStateObj[aStateHistoryVar] = immutedHistory;
+				gEditorStore.setState(setStateObj);
 			}
 		},
 		mouseup: function(e) {
@@ -2891,7 +2944,7 @@ function init(aArrBufAndCore) {
 			
 			return React.createElement('div', {className:'colorpicker'},
 				React.createElement('div', {className:'colorpicker-inner'},
-					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, sGenColorPickerDropping:this.props.sGenColorPickerDropping, sColor:this.props.sColor}),
+					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, sGenColorPickerDropping:this.props.sGenColorPickerDropping, sColor:this.props.sColor, pStateHistoryKey:this.props.pStateHistoryKey, sHistory:this.props.sHistory}),
 					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
 					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
 					React.createElement(ColorPickerCodes, {pHex:hex, pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, pSetStateName:this.props.pSetStateName})
@@ -3031,8 +3084,10 @@ function init(aArrBufAndCore) {
 			//		pSetStateName
 			//		pStateColorKey
 			//		pStateDroppingKey
+			//		pStateHistoryKey
+			//		sHistory
 			
-			var historyColors = ['#D0021B', '#F5A623', '#F8E71C'];
+			var historyColors = this.props.sHistory;
 			var defaultColors = ['#B8E986', '#9B9B9B', '#9013FE', '#4A90E2'];
 			
 			var historyElements = [];
@@ -3049,7 +3104,10 @@ function init(aArrBufAndCore) {
 			return React.createElement('div', {className:'colorpicker-choices'},
 				React.createElement('div', {className:'colorpicker-choices-wrap'},
 					React.createElement('div', {className:'colorpicker-choices-history'},
-						historyElements
+						React.createElement('div', {className:'colorpicker-choices-opt colorpicker-history-icon'},
+							'H'
+						),
+						!historyElements.length ? React.createElement('span', {style:{fontStyle:'italic'}}, 'No recent colors') : historyElements
 					),
 					React.createElement('div', {className:'colorpicker-choices-default'},
 						defaultElements
