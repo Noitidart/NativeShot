@@ -510,6 +510,8 @@ function init(aArrBufAndCore) {
 			this.cstate.selection = null;
 			this.cstate.selectionHandles = [];
 			
+			this.cstate.resizedown = null;
+			
 			this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
 			this.cstate.dragoffy = 0;
 			
@@ -1691,12 +1693,56 @@ function init(aArrBufAndCore) {
 					}
 					this.cstate.valid = false; // Something's dragging so we must redraw
 				} else if (this.cstate.resizing) {
-					this.cstate.selection.w = mx - this.cstate.downx;
-					if (e.shiftKey) {
-						this.cstate.selection.h = this.cstate.selection.w;
-					} else {
-						this.cstate.selection.h = my - this.cstate.downy;
+					var resizedown = this.cstate.resizedown;
+					var oldx = this.cstate.selection.x;
+					var oldy = this.cstate.selection.y;
+					
+					switch(this.cstate.resizing) {
+						case 2:
+							this.cstate.selection.x = mx;
+							this.cstate.selection.y = my;
+							this.cstate.selection.w += oldx - mx;
+							this.cstate.selection.h += oldy - my;
+							break;
+						case 3:
+							this.cstate.selection.y = my;
+							this.cstate.selection.h += oldy - my;
+							break;
+						case 4:
+							this.cstate.selection.y = my;
+							this.cstate.selection.w = mx - oldx;
+							this.cstate.selection.h += oldy - my;
+							break;
+						case 5:
+							this.cstate.selection.x = mx;
+							this.cstate.selection.w += oldx - mx;
+							break;
+						case 6: //g
+							this.cstate.selection.w = mx - oldx;
+							break;
+						case 7:
+							this.cstate.selection.x = mx;
+							this.cstate.selection.w += oldx - mx;
+							this.cstate.selection.h = my - oldy;
+							break;
+						case 8://g
+							this.cstate.selection.h = my - oldy;
+							break;
+						case 9://g
+							this.cstate.selection.w = mx - oldx;
+							this.cstate.selection.h = my - oldy;
+							break;
+						default:
+							console.error('should never get here');
 					}
+					
+					// this.cstate.selection.w = mx - this.cstate.downx;
+					
+					// if (e.shiftKey) {
+						// this.cstate.selection.h = this.cstate.selection.w;
+					// } else {
+						// this.cstate.selection.h = my - this.cstate.downy;
+					// }
 					gEditorStore.setState({
 						sGenPalW: Math.abs(this.cstate.selection.w),
 						sGenPalH: Math.abs(this.cstate.selection.h)
@@ -1955,55 +2001,67 @@ function init(aArrBufAndCore) {
 					// console.log('iterating drawables:', drawables);
 					var l = drawables.length;
 					for(var i=l-1; i>=0; i--) {
-						if(drawables[i].contains(mx, my)) {
+						var isContained = drawables[i].contains(mx, my);
+						if (isContained) {
 							console.log('ok you clicked in this drawable:', drawables[i]);
 							var mySel = drawables[i];
 							
 							mySel.bringtofront();
-														
-							// introduced for line dragging
-							if (mySel.name == 'Line') {
-								this.cstate.dragdown = {
-									// the initial x and y the user mouse downed on
-									mx: mx,
-									my: my,
-									// the initial x and y of the drawable
-									x: mySel.x,
-									y: mySel.y,
-									// for line we have x2 and y2
-									x2: mySel.x2,
-									y2: mySel.y2
-								};
-							} else 
-							// introduced for pencil/marker dragging
-							if (['Pencil', 'Marker'].indexOf(mySel.name) > -1) {
-								this.cstate.dragdown = {
-									// the initial x and y the user mouse downed on
-									mx: mx,
-									my: my,
-									// the initial path
-									path: mySel.path.slice()
+							
+							if (isContained === 1) {
+								// introduced for line dragging
+								if (mySel.name == 'Line') {
+									this.cstate.dragdown = {
+										// the initial x and y the user mouse downed on
+										mx: mx,
+										my: my,
+										// the initial x and y of the drawable
+										x: mySel.x,
+										y: mySel.y,
+										// for line we have x2 and y2
+										x2: mySel.x2,
+										y2: mySel.y2
+									};
+								} else 
+								// introduced for pencil/marker dragging
+								if (['Pencil', 'Marker'].indexOf(mySel.name) > -1) {
+									this.cstate.dragdown = {
+										// the initial x and y the user mouse downed on
+										mx: mx,
+										my: my,
+										// the initial path
+										path: mySel.path.slice()
+									}
 								}
-							}
-							// end introduced
-							 else {
-								// cutout, Rectangle, Oval, Gaussian, Mosaic, Text
+								// end introduced
+								 else {
+									// cutout, Rectangle, Oval, Gaussian, Mosaic, Text
+									
+									// Keep track of where in the object we clicked
+									// so we can move it smoothly (see mousemove)
+									this.cstate.dragoffx = mx - mySel.x;
+									this.cstate.dragoffy = my - mySel.y;
+								}
 								
-								// Keep track of where in the object we clicked
-								// so we can move it smoothly (see mousemove)
-								this.cstate.dragoffx = mx - mySel.x;
-								this.cstate.dragoffy = my - mySel.y;
-							}
-							
-							this.cstate.dragging = true;
-							this.cstate.selection = mySel;
-							this.cstate.valid = false;
-							
-							if ('w' in this.cstate.selection) {
-								this.setState({
-									sGenPalW: this.cstate.selection.w,
-									sGenPalH: this.cstate.selection.h
-								});
+								this.cstate.dragging = true;
+								this.cstate.selection = mySel;
+								// this.cstate.valid = false;
+								
+								if ('w' in this.cstate.selection) {
+									this.setState({
+										sGenPalW: this.cstate.selection.w,
+										sGenPalH: this.cstate.selection.h
+									});
+								}
+							} else if (isContained >= 2 && isContained <= 9) {
+								// rect resizing
+								this.cstate.resizing = isContained;
+								// this.cstate.resizedown = {
+									// x: this.cstate.selection.x,
+									// y: this.cstate.selection.y
+								// };
+								this.cstate.selection = mySel;
+								// this.cstate.valid = false;
 							}
 							
 							return;
@@ -2106,7 +2164,11 @@ function init(aArrBufAndCore) {
 							case 'Gaussian':
 							case 'Mosaic':
 								
-									this.cstate.resizing = true;
+									this.cstate.resizedown = {
+										x: this.cstate.selection.x,
+										y: this.cstate.selection.y
+									};
+									this.cstate.resizing = 9;
 								
 								break;
 							case 'Line':
@@ -2194,6 +2256,7 @@ function init(aArrBufAndCore) {
 						this.cstate.dragdown = null;
 					} else if (this.cstate.resizing) {
 						this.cstate.resizing = false;
+						this.cstate.resizedown = null;
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
 							this.cstate.selection.delete();
