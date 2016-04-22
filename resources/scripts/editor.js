@@ -244,7 +244,8 @@ function init(aArrBufAndCore) {
 		{
 			special: 'DimensionTools',
 			justClick: true,
-			isOption: true
+			isOption: true,
+			props: ['sGenPalW', 'sGenPalH']
 		},
 		{
 			special: 'TextTools',
@@ -419,6 +420,8 @@ function init(aArrBufAndCore) {
 				sGenPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
 				sGenPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {screenX, screenY, initX, initY}
 				sGenPalTool: 'Select', // the label of the currently active tool
+				sGenPalW: 0, // width
+				sGenPalH: 0, // height
 				
 				// all these keys below should be synced to fill of editor state
 				
@@ -1221,7 +1224,7 @@ function init(aArrBufAndCore) {
 							valid = false;
 						}
 						if (this.cstate.selection && this.cstate.selection == drawable) {
-							this.cstate.selection = null;
+							this.clearSelection();
 						}
 					}
 				} else {
@@ -1229,7 +1232,7 @@ function init(aArrBufAndCore) {
 						valid = false;
 					}
 					if (this.cstate.selection && this.cstate.selection == drawable) {
-						this.cstate.selection = null;
+						this.clearSelection();
 					}
 				}
 			}
@@ -1580,6 +1583,10 @@ function init(aArrBufAndCore) {
 					} else {
 						this.cstate.selection.h = my - this.cstate.downy;
 					}
+					gEditorStore.setState({
+						sGenPalW: Math.abs(this.cstate.selection.w),
+						sGenPalH: Math.abs(this.cstate.selection.h)
+					})
 					this.cstate.valid = false;
 				} else if (this.cstate.lining) {
 					this.cstate.selection.x2 = mx;
@@ -1661,6 +1668,25 @@ function init(aArrBufAndCore) {
 				}
 			}
 			
+		},
+		clearSelection: function() {
+			// returns new "valid" value
+			var wasSel = this.cstate.selection;
+			if (!wasSel) {
+				// nothing selected
+				return true;
+			} else {			
+				this.cstate.selection = null;
+				
+				if ('w' in wasSel) {
+					gEditorStore.setState({
+						sGenPalW: 0,
+						sGenPalH: 0
+					});
+				}
+				
+				return false;
+			}
 		},
 		mousedown: function(e) {
 			var mouse = this.getMouse(e);
@@ -1805,12 +1831,20 @@ function init(aArrBufAndCore) {
 							this.cstate.dragging = true;
 							this.cstate.selection = mySel;
 							this.cstate.valid = false;
+							
+							if ('w' in this.cstate.selection) {
+								this.setState({
+									sGenPalW: this.cstate.selection.w,
+									sGenPalH: this.cstate.selection.h
+								});
+							}
+							
 							return;
 						}
 					}
 					
 					if (this.cstate.selection) {
-						this.cstate.selection = null;
+						this.clearSelection();
 						console.log('ok removing from selection this:', this);
 						this.cstate.valid = false;
 					}
@@ -1852,7 +1886,7 @@ function init(aArrBufAndCore) {
 							
 								if (this.cstate.typing) {
 									console.log('exiting typing, this was selection:', this.cstate.selection);
-									this.cstate.selection = null;
+									this.clearSelection();
 									this.cstate.typing = false;
 									this.cstate.valid = false;
 								} else {
@@ -1996,7 +2030,7 @@ function init(aArrBufAndCore) {
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
 							this.cstate.selection.delete();
-							this.cstate.selection = null;
+							this.clearSelection();
 						} else {
 							this.makeDimsPositive(this.cstate.selection); // no need to set valid=false
 						}
@@ -2005,7 +2039,7 @@ function init(aArrBufAndCore) {
 						if (this.cstate.selection.x == this.cstate.selection.x2 && this.cstate.selection.y == this.cstate.selection.y2) {
 							// 0 size
 							this.cstate.selection.delete();
-							this.cstate.selection = null;
+							this.clearSelection();
 							// need to set valid=false because otherwise the big handle thing is left over
 							this.cstate.valid = false;
 						}
@@ -2014,7 +2048,7 @@ function init(aArrBufAndCore) {
 						if (this.cstate.selection.path.length == 2) {
 							// only two points, meaning just where they moused down
 							this.cstate.selection.delete();
-							this.cstate.selection = null;
+							this.clearSelection();
 							// :todo: consider: need to set valid=false because otherwise the big handle thing is left over
 							this.cstate.valid = false;
 						}
@@ -2042,7 +2076,7 @@ function init(aArrBufAndCore) {
 												// dont delete it as they are just deleting text
 											} else {
 												var rez_valid = this.cstate.selection.delete();
-												this.cstate.selection = null;
+												this.clearSelection();
 												this.cstate.valid = rez_valid;
 											}
 										}
@@ -2534,7 +2568,7 @@ function init(aArrBufAndCore) {
 						// 	valid = false;
 						// }
 						// if (gCanState.selection) {
-						// 	gCanState.selection = null;
+						// 	gCState.rconn.clearSelection();
 						// 	valid = false;
 						// }
 						// gCanState.valid = valid;
@@ -2544,7 +2578,7 @@ function init(aArrBufAndCore) {
 				case 'Shapes':
 				
 						if (gCState.selection) {
-							gCState.selection = null;
+							gCState.rconn.clearSelection();
 							gCState.valid = false;
 						}
 					
@@ -2796,8 +2830,8 @@ function init(aArrBufAndCore) {
 			//		sPalHeight
 			
 			return React.createElement('div', {className:'pdimtools'},
-				React.createElement(InputNumber, {pLabel:'Width', pMin:1}),
-				React.createElement(InputNumber, {pLabel:'Height', pMin:1})
+				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW}),
+				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH})
 			)
 		}
 	});
