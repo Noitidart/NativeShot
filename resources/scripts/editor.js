@@ -3297,8 +3297,12 @@ function init(aArrBufAndCore) {
 			
 			return React.createElement('div', {className:'colorpicker-sliders'},
 				React.createElement('div', {className:'colorpicker-sliders-wrap'},
-					React.createElement('div', {className:'colorpicker-slider-rainbow'}),
-					React.createElement('div', {className:'colorpicker-slider-alpha'})
+					React.createElement('div', {className:'colorpicker-slider-rainbow'},
+						React.createElement('div', {className:'colorpicker-slider-thingy'})
+					),
+					React.createElement('div', {className:'colorpicker-slider-alpha'},
+						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + this.props.pRgba.a+'% - ' + Math.round(9*(this.props.pRgba.a/100)) + 'px)'} }) /* -5px to counter the width so it doesnt oveflow at 100% */
+					)
 				),
 				React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
 			);

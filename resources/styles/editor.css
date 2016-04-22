@@ -323,14 +323,13 @@ body {
 	position: relative;
 	cursor: pointer;
 }
-.colorpicker-slider-rainbow::before,
-.colorpicker-slider-alpha::before {
+.colorpicker-slider-thingy {
 	content: '';
 	position: absolute;
 	box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.6);
 	background: rgb(255, 255, 255) none repeat scroll 0% 0%;
 	height: 100%;
-	width: 5px;
+	width: 8px;
 	border-radius: 1px;
 	cursor: ew-resize;
 }
