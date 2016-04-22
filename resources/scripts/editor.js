@@ -2108,8 +2108,8 @@ function init(aArrBufAndCore) {
 			}
 		},
 		keydown: function(e) {
+			var mySel = this.cstate.selection;
 			if (this.cstate.typing) {
-				var mySel = this.cstate.selection;
 				if (e.key.length == 1) {
 					mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
 					mySel.index++;
@@ -2168,6 +2168,122 @@ function init(aArrBufAndCore) {
 						default:
 							// do nothing special
 					}
+				}
+			// } else if (mySel && !this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing && !this.cstate.typing) {
+			} else if (mySel && !this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing && !this.cstate.typing) {
+				// hotkeys for move (and resize if applicable)
+				if (e.altKey) {
+					// resize
+					if ('w' in mySel) {
+						var resizeBy = 1; // pixels to move by
+						if (e.shiftKey) {
+							resizeBy = 10;
+						}
+						var newW = mySel.w;
+						var newH = mySel.h;
+						switch (e.key) {
+							case 'ArrowDown':
+								
+									newH -= resizeBy;
+								
+								break;
+							case 'ArrowUp':
+								
+									newH += resizeBy;
+								
+								break;
+							case 'ArrowRight':
+								
+									newW += resizeBy;
+								
+								break;
+							case 'ArrowLeft':
+								
+									newW -= resizeBy;
+								
+								break;
+							default:
+								// nothing special
+								return;
+						}
+						var newValid = true;
+						if (mySel.w !== newW && newW >= 0) {
+							mySel.w = newW;
+							newValid = false;
+						}
+						if (mySel.h !== newH && newH >= 0) {
+							mySel.h = newH;
+							newValid = false;
+						}
+						if (!newValid) {
+							gCState.valid = false;
+							gEditorStore.setState({
+								sGenPalW: newW,
+								sGenPalH: newH
+							})
+						}
+					}
+				} else {
+					// move
+					var moveBy = 1; // pixels to move by
+					if (e.shiftKey) {
+						moveBy = 10;
+					}
+
+					var moveDirX = 0;
+					var moveDirY = 0;
+					switch (e.key) {
+						case 'ArrowDown':
+							
+								moveDirY = 1;
+							
+							break;
+						case 'ArrowUp':
+							
+								moveDirY = -1;
+							
+							break;
+						case 'ArrowRight':
+							
+								moveDirX = 1;
+							
+							break;
+						case 'ArrowLeft':
+							
+								moveDirX = -1;
+							
+							break;
+						default:
+							// nothing special
+							return;
+					}
+					
+					var moveByX = moveBy * moveDirX;
+					var moveByY = moveBy * moveDirY;
+					
+					// determine move type
+					if ('w' in mySel) {
+						mySel.x += moveByX;
+						mySel.y += moveByY;
+					} else if ('x2' in mySel) {
+						mySel.x += moveByX;
+						mySel.y += moveByY;
+						mySel.x2 += moveByX;
+						mySel.y2 += moveByY;
+					} else if ('path' in mySel) {
+						var path = mySel.path;
+						var l = path.length;
+						for (var i=0; i<l; i++) {
+							if (i % 2) {
+								path[i] += moveByY;
+							} else {
+								path[i] += moveByX;
+							}
+						}
+					}
+					else { console.warn('should never get here'); }
+					
+					gCState.valid = false;
 				}
 			}
 		},
