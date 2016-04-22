@@ -1212,6 +1212,33 @@ function init(aArrBufAndCore) {
 										return i + 2;
 								}
 							}
+							
+							// check if mouse is on the border, if it is then do that resize
+							var borderWidth = 2;
+							
+							// top border
+							if ((this.x <= mx) && (this.x + this.w >= mx) &&
+								(this.y - borderWidth <= my) && (this.y + borderWidth >= my)) {
+									return 3;
+							}
+							
+							// left border
+							if ((this.x - borderWidth <= mx) && (this.x + borderWidth >= mx) &&
+								(this.y <= my) && (this.h + this.y >= my)) {
+									return 5;
+							}
+							
+							// right border
+							if ((this.w + this.x - borderWidth <= mx) && (this.w + this.x + borderWidth >= mx) &&
+								(this.y <= my) && (this.h + this.y >= my)) {
+									return 6;
+							}
+							
+							// bottom border
+							if ((this.x <= mx) && (this.x + this.w >= mx) &&
+								(this.h + this.y - borderWidth <= my) && (this.h + this.y + borderWidth >= my)) {
+									return 8;
+							}
 						}
 						// All we have to do is make sure the Mouse X,Y fall in the area between
 						// the shape's X and (X + Width) and its Y and (Y + Height)
