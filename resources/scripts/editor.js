@@ -2262,10 +2262,7 @@ function init(aArrBufAndCore) {
 					var moveByY = moveBy * moveDirY;
 					
 					// determine move type
-					if ('w' in mySel) {
-						mySel.x += moveByX;
-						mySel.y += moveByY;
-					} else if ('x2' in mySel) {
+					if ('x2' in mySel) {
 						mySel.x += moveByX;
 						mySel.y += moveByY;
 						mySel.x2 += moveByX;
@@ -2280,8 +2277,11 @@ function init(aArrBufAndCore) {
 								path[i] += moveByX;
 							}
 						}
+					} else {
+						// this is not always true `if ('w' in mySel || ) {` as for text
+						mySel.x += moveByX;
+						mySel.y += moveByY;
 					}
-					else { console.warn('should never get here'); }
 					
 					gCState.valid = false;
 				}
