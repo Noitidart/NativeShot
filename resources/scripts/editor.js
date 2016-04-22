@@ -508,6 +508,7 @@ function init(aArrBufAndCore) {
 			this.cstate.pathing = null; // when drawing with pencil or marker // it is set to a an array of 2 points when not null
 			this.cstate.typing = false;
 			this.cstate.selection = null;
+			this.cstate.selectionHandles = [];
 			
 			this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
 			this.cstate.dragoffy = 0;
@@ -788,7 +789,9 @@ function init(aArrBufAndCore) {
 					case 'Rectangle':
 					
 							ctx.fillRect(this.x, this.y, this.w, this.h);
-							ctx.strokeRect(this.x, this.y, this.w, this.h);
+							if (this.lineWidth > 0) {
+								ctx.strokeRect(this.x, this.y, this.w, this.h);
+							}
 						
 						break;
 					case 'Oval':
@@ -822,7 +825,9 @@ function init(aArrBufAndCore) {
 							// ctx.quadraticCurveTo(x,ye,x,ym);
 
 							ctx.fill();
-							ctx.stroke();
+							if (this.lineWidth > 0) {
+								ctx.stroke();
+							}
 						
 						break;
 					case 'Line':
@@ -920,7 +925,7 @@ function init(aArrBufAndCore) {
 					case 'cutout':
 						
 							curStyle = {
-								lineWidth: gCState.rconn.mtmm.w(3),
+								lineWidth: 1,
 								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
 								strokeStyle: 'black'
 							};
@@ -932,9 +937,9 @@ function init(aArrBufAndCore) {
 					case 'Mosaic':
 					
 							curStyle = {
-								lineWidth: gCState.rconn.mtmm.w(3),
+								lineWidth: 1,
 								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
-								strokeStyle: 'springgreen'
+								strokeStyle: 'black'
 							};
 					
 						break;
@@ -985,6 +990,68 @@ function init(aArrBufAndCore) {
 					case 'Mosaic':
 					
 							ctx.strokeRect(this.x, this.y, this.w, this.h);
+							
+							// draw handles
+							var handleSize = gCState.rconn.state.sCanHandleSize;
+							var half = handleSize / 2;
+							
+							var selectionHandles = gCState.selectionHandles;
+							
+							// top left, middle, right
+							selectionHandles[0] = {
+								x: this.x-half,
+								y: this.y-half
+							};
+							
+							selectionHandles[1] = {
+								x: this.x+this.w/2-half,
+								y: this.y-half
+							};
+							
+							selectionHandles[2] = {
+								x: this.x+this.w-half,
+								y: this.y-half
+							};
+							
+							//middle left
+							selectionHandles[3] = {
+								x: this.x-half,
+								y: this.y+this.h/2-half
+							};
+							
+							//middle right
+							selectionHandles[4] = {
+								x: this.x+this.w-half,
+								y: this.y+this.h/2-half
+							};
+							
+							//bottom left, middle, right
+							selectionHandles[6] = {
+								x: this.x+this.w/2-half,
+								y: this.y+this.h-half
+							};
+							
+							selectionHandles[5] = {
+								x: this.x-half,
+								y: this.y+this.h-half
+							};
+							
+							selectionHandles[7] = {
+								x: this.x+this.w-half,
+								y: this.y+this.h-half
+							};
+							
+							ctx.fillStyle = '#000000';
+							ctx.setLineDash([]);
+							ctx.strokeStyle = '#ffffff';
+							ctx.beginPath();
+							for (i = 0; i < 8; i += 1) {
+								cur = selectionHandles[i];
+								ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							};
+							
+							ctx.fill();
+							ctx.stroke();
 						
 						break;
 					case 'Text':
@@ -1211,7 +1278,11 @@ function init(aArrBufAndCore) {
 				drawables.push(drawables.splice(drawables.indexOf(this), 1)[0]);
 			};
 		},
-		deleteAll: function(aDrawableNamesArr) {
+		dContainsHandles: function(aDrawable, aCtx, aX, aY) {
+			// returns true if the handles of the drawable contain aX and aY
+			
+		},
+		dDeleteAll: function(aDrawableNamesArr) {
 			// does .delete() for all that are found with the name
 			var valid = true;
 			var drawables = this.cstate.drawables;
@@ -1857,7 +1928,7 @@ function init(aArrBufAndCore) {
 						
 								if (!e.shiftKey) {
 									// remove all previous cutouts
-									gCState.rconn.deleteAll(['cutout']);
+									gCState.rconn.dDeleteAll(['cutout']);
 								}
 								
 								this.cstate.selection = new this.Drawable(mx, my, 0, 0, 'cutout');
@@ -2688,7 +2759,7 @@ function init(aArrBufAndCore) {
 						// 	valid = false;
 						// }
 						// gCanState.valid = valid;
-						gCState.valid = gCState.rconn.deleteAll(['cutout']);
+						gCState.valid = gCState.rconn.dDeleteAll(['cutout']);
 						
 					break;
 				case 'Shapes':
@@ -2898,7 +2969,7 @@ function init(aArrBufAndCore) {
 			// props
 			//		sPalLineWidth
 			return React.createElement('div', {className:'plinetools'},
-				React.createElement(InputNumber, {pLabel:'Line Width (px)', pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:2, pCStateSel:{'Rectangle':'lineWidth', 'Oval':'lineWidth', 'Line':'lineWidth', 'Pencil':'lineWidth', 'Marker':'lineWidth'}})
+				React.createElement(InputNumber, {pLabel:'Line Width (px)', pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:0, pCStateSel:{'Rectangle':'lineWidth', 'Oval':'lineWidth', 'Line':'lineWidth', 'Pencil':'lineWidth', 'Marker':'lineWidth'}})
 			);
 		}
 	});

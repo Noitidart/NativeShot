@@ -356,13 +356,18 @@ body {
 	flex-direction: row;
 	justify-content: space-between;
 }
-.colorpicker-codes input {
+.colorpicker-codes .inputnumber {
+	margin: auto;
+}
+.colorpicker-codes .inputnumber input {
 	width: 2em;
 	text-align: center;
+	margin: auto;
 }
 .colorpicker-codes-hex input {
 	width: 4em;
 	text-transform: uppercase;
+	font-size: 12px;
 }
 .colorpicker-codes div {
 	display: flex;
