@@ -618,6 +618,7 @@ function init(aArrBufAndCore) {
 
 			// set obj props
 			this.name = name;
+			//this.id = (new Date()).getTime();
 			
 			// set rest
 			switch (name) {
@@ -1133,7 +1134,7 @@ function init(aArrBufAndCore) {
 			};
 			
 			this.contains = function(mx, my) {
-				
+				// returns 0 if not contained. returns 1 if contained in draggable area. returns 2 - 9 if in resizable area
 				// is uncontainable
 				if (['dim'].indexOf(this.name) > -1) {
 					console.error('tried to test contains on an uncontainable! this:', this);
@@ -1149,7 +1150,7 @@ function init(aArrBufAndCore) {
 							ctx.lineWidth = this.lineWidth >= 20 ? this.lineWidth : 20;
 							ctx.moveTo(this.x, this.y);
 							ctx.lineTo(this.x2, this.y2);
-							return ctx.isPointInStroke(mx, my);
+							return ctx.isPointInStroke(mx, my) ? 1 : 0;
 					
 						break;
 					case 'Pencil':
@@ -1163,7 +1164,7 @@ function init(aArrBufAndCore) {
 							for (var i=2; i<this.path.length; i+=2) {
 								ctx.lineTo(this.path[i], this.path[i+1]);
 							}
-							return ctx.isPointInStroke(mx, my);
+							return ctx.isPointInStroke(mx, my) ? 1 : 0;
 						
 						break;
 					case 'Text':
@@ -1192,17 +1193,32 @@ function init(aArrBufAndCore) {
 							}
 							x = this.x;
 							
-							return(x <= mx) && (x + w >= mx) &&
-								(y <= my) && (y + h >= my);
+							if ((x <= mx) && (x + w >= mx) &&
+								(y <= my) && (y + h >= my)) {
+									return 1;
+							}
 					
 						break;
 					default:
 						// cutout, Rectangle, Oval, Gaussian, Mosaic
 					
+						// is this selected
+						if (gCState.selection && gCState.selection == this) {
+							var selectionHandles = gCState.selectionHandles;
+							var handleSize = gCState.rconn.state.sCanHandleSize;
+							for (var i=0; i<8; i++) {
+								if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
+									(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
+										return i + 2;
+								}
+							}
+						}
 						// All we have to do is make sure the Mouse X,Y fall in the area between
 						// the shape's X and (X + Width) and its Y and (Y + Height)
-						return(this.x <= mx) && (this.x + this.w >= mx) &&
-							(this.y <= my) && (this.y + this.h >= my);
+						if ((this.x <= mx) && (this.x + this.w >= mx) &&
+							(this.y <= my) && (this.y + this.h >= my)) {
+								return 1;
+						}
 				}
 			};
 			
@@ -1714,19 +1730,72 @@ function init(aArrBufAndCore) {
 						var draggableFound = false;
 						var drawables = this.cstate.drawables.filter(dragFilterFunc);
 						var l = drawables.length - 1;
+						var isContained;
 						for (var i=l; i>-1; i--) {
 							var drawable = drawables[i];
-							if (drawable.contains(mx, my)) {
+							isContained = drawable.contains(mx, my);
+							if (isContained) {
 								// console.error('yes drawable contains:', drawable);
-								draggableFound = true;
 								break;
 							}
 						}
-						if (draggableFound) {
-							if (this.state.sGenCanMouseMoveCursor != 'move') {
-								this.setState({
-									sGenCanMouseMoveCursor: 'move'
-								});
+						if (isContained) {
+							var cursor;
+							switch (isContained) {
+								case 1:
+								
+										cursor = 'move'; // draggable
+									
+									break;
+								case 2:
+								
+										cursor = 'nw-resize'; // rect resize
+								
+									break;
+								case 3:
+								
+										cursor = 'n-resize'; // rect resize
+									
+									break;
+								case 4:
+								
+										cursor='ne-resize'; // rect resize
+									
+									break;
+								case 5:
+								
+										cursor = 'w-resize'; // rect resize
+								
+									break;
+								case 6:
+								
+										cursor = 'e-resize';
+								
+									break;
+								case 7:
+									
+										cursor = 'sw-resize';
+									
+									break;
+								case 8:
+									
+										cursor = 's-resize';
+									
+									break;
+								case 9:
+								
+										cursor = 'se-resize';
+								
+									break;
+								default:
+									console.error('should never get here');
+							}
+							if (cursor) {
+								if (this.state.sGenCanMouseMoveCursor != cursor) {
+									this.setState({
+										sGenCanMouseMoveCursor: cursor
+									});
+								}
 							}
 						} else {
 							if (this.state.sGenCanMouseMoveCursor) {
