@@ -1229,7 +1229,7 @@ function init(aArrBufAndCore) {
 							var fontsize = this.fontsize; // i expect it to be in px
 							if (this.chars.length) {
 								var mh = measureHeight(font, fontsize, this.chars, {width:w});
-								console.log('mh:', mh);
+								// console.log('mh:', mh);
 								w = mh.width;
 								// i want to keep the baseline at this.y
 								y = mh.relativeTop < 0 ? this.y + mh.relativeTop : this.y;
@@ -1819,9 +1819,11 @@ function init(aArrBufAndCore) {
 					this.cstate.pathing[0] = mx;
 					this.cstate.pathing[1] = my;
 					this.cstate.valid = false;
-				} else if (this.cstate.typing) {
+				}
+				// else if (this.cstate.typing) {
 					// do nothing
-				} else {
+				//}
+				else {
 					// just moving, see if mouse is over a resize point, or a drag point
 					var dragFilterFunc;
 					switch (toolsub) {
@@ -1880,7 +1882,11 @@ function init(aArrBufAndCore) {
 							switch (isContained) {
 								case 1:
 								
-										cursor = 'move'; // draggable
+										if (drawable.name == 'Text' && gCState.typing && gCState.selection == drawable) {
+											cursor = 'text'; // typing
+										} else {
+											cursor = 'move'; // draggable
+										}
 									
 									break;
 								case 2:
