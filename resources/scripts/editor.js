@@ -1613,12 +1613,12 @@ function init(aArrBufAndCore) {
 			
 			var styleables = {
 				lineWidth: gCState.rconn.state.sPalLineWidth,
-				fillStyle: colorStrToRGBA(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha),
+				fillStyle: colorStrToCssRgba(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha),
 				textAlign: 'left',
 				lineJoin: 'butt',
 				font: this.calcCtxFont(fontablesDefaults),
 				setLineDash: [],
-				strokeStyle: aDrawable.name == 'Marker' ? colorStrToRGBA(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha) : colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha)
+				strokeStyle: aDrawable.name == 'Marker' ? colorStrToCssRgba(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha) : colorStrToCssRgba(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha)
 			};
 			
 			if (aDrawable.name == 'Line') { // non-isomorphic but i gotta
@@ -2318,7 +2318,10 @@ function init(aArrBufAndCore) {
 				// if selectFilterFunc then lets test if should select or deselect
 				var mySel = this.cstate.selection;
 				if (mySel) {
-					var isContained = mySel.contains(mx, my);
+					if (mySel.name == 'cutout') {
+						return;
+					}
+					var isContained = mySel.contains(mx, my); // dim is not selectable so this will not trigger for it. it will be false. but for cutout it will. and we want to ignore cutout
 					if (isContained) {
 						var propToStateDict = {
 							lineWidth: 'sPalLineWidth',
@@ -2330,16 +2333,46 @@ function init(aArrBufAndCore) {
 							fontitalic: 'sPalFontItalic',
 							fontface: 'sPalFontFace',
 							blurblock: 'sPalBlurBlock',
-							blurradius: 'sPalBlurRadius'
+							blurradius: 'sPalBlurRadius',
+							fillStyle: 'sPalFill', // partial as i do alpha too
+							strokeStyle: mySel.name == 'Marker' ? 'sPalMarker' : 'sPalLine'  // partial as i do alpha too
 						};
 						var setStateObj = {};
-						var boolHasNew = false;
 						for (var p in propToStateDict) {
 							if (p in mySel) {
 								var stateVar = propToStateDict[p];
-								if (this.state[stateVar] !== mySel[p]) {
-									setStateObj[stateVar] = mySel[p];
-									boolHasNew = true;
+								switch (p) {
+									case 'fillStyle':
+									case 'strokeStyle':
+										
+											if (mySel.name == 'Line' && p == 'fillStyle') {
+												continue; // skip this one, as for line fillStyle is matched strokeStyle
+											}
+											
+											var stateVarColor = stateVar + 'Color';
+											var stateVarAlpha = stateVar + 'Alpha';
+											
+											console.log('mySel[p]:', mySel[p], 'where p:', p);
+											console.log('sending aAlpha as:', mySel[p]);
+											var selRgba = colorStrToCssRgba(mySel[p], mySel[p], true);
+											selRgba.a *= 100;
+											console.log('sending 0 in as aAlpha');
+											var stateColorRGB = colorStrToCssRgba(this.state[stateVarColor], 0, true);
+											console.log('stateColorRGB:', stateColorRGB);
+											var stateAlpha = this.state[stateVarAlpha];
+											
+											if (selRgba.r !== stateColorRGB.r || selRgba.g !== stateColorRGB.g || selRgba.b !== stateColorRGB.b) {
+												setStateObj[stateVarColor] = 'rgb(' + selRgba.r + ', ' + selRgba.g + ', ' + selRgba.b + ')';
+											}
+											if (selRgba.a !== stateAlpha) {
+												setStateObj[stateVarAlpha] = selRgba.a;
+											}
+										
+										break;
+									default:
+										if (this.state[stateVar] !== mySel[p]) {
+											setStateObj[stateVar] = mySel[p];
+										}
 								}
 							}
 						}
@@ -2350,10 +2383,9 @@ function init(aArrBufAndCore) {
 								var sPalSeldSubs = cloneObject(this.state.sPalSeldSubs);
 								sPalSeldSubs.Blur = shouldBeSubTool;
 								setStateObj.sPalSeldSubs = sPalSeldSubs;
-								boolHasNew = true;
 							}
 						}
-						if (boolHasNew) {
+						if (objectHasKeys(setStateObj)) {
 							this.setState(setStateObj);
 						}
 					}
@@ -3017,7 +3049,7 @@ function init(aArrBufAndCore) {
 								case 'Line':
 								case 'Pencil':
 									
-										gCState.selection.strokeStyle = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
+										gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sPalLineColor, this.props.sPalLineAlpha);
 										gCState.rconn.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
 										gCState.valid = false;
 									
@@ -3036,7 +3068,7 @@ function init(aArrBufAndCore) {
 								case 'Oval':
 								case 'Text':
 									
-										gCState.selection.fillStyle = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+										gCState.selection.fillStyle = colorStrToCssRgba(this.props.sPalFillColor, this.props.sPalFillAlpha);
 										gCState.rconn.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
 										gCState.valid = false;
 									
@@ -3053,7 +3085,7 @@ function init(aArrBufAndCore) {
 							switch (gCState.selection.name) {
 								case 'Marker':
 									
-										gCState.selection.strokeStyle = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+										gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 										gCState.rconn.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);										
 										gCState.valid = false;
 									
@@ -3169,18 +3201,18 @@ function init(aArrBufAndCore) {
 				var rgbaStr;
 				var dropping = this.props.sGenColorPickerDropping;
 				if (this.props.pButton.label == 'Color') {
-					rgbaStr = colorStrToRGBA(this.props.sPalLineColor, this.props.sPalLineAlpha);
+					rgbaStr = colorStrToCssRgba(this.props.sPalLineColor, this.props.sPalLineAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalLineColor') {
 						cProps.className += ' eyedropper';
 					}
 				} else if (this.props.pButton.label == 'Fill Color') {
-					rgbaStr = colorStrToRGBA(this.props.sPalFillColor, this.props.sPalFillAlpha);
+					rgbaStr = colorStrToCssRgba(this.props.sPalFillColor, this.props.sPalFillAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalFillColor') {
 						cProps.className += ' eyedropper';
 					}
 				} else {
 					// its Marker Color
-					rgbaStr = colorStrToRGBA(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+					rgbaStr = colorStrToCssRgba(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalMarkerColor') {
 						cProps.className += ' eyedropper';
 					}
@@ -3522,7 +3554,7 @@ function init(aArrBufAndCore) {
 							case 'Oval':
 							case 'Text':
 								
-									gCState.selection.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
 								
 								break;
@@ -3537,9 +3569,9 @@ function init(aArrBufAndCore) {
 							case 'Line':
 							case 'Pencil':
 								
-									gCState.selection.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 									if (gCState.selection.name == 'Line') { // as fillStyle for line is set equal to that of its strokeStyle
-										gCState.selection.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+										gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 									}
 									gCState.valid = false;
 								
@@ -3552,7 +3584,7 @@ function init(aArrBufAndCore) {
 						switch (gCState.selection.name) {
 							case 'Marker':
 								
-									gCState.selection.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 									gCState.valid = false;
 								
 								break;
@@ -4689,9 +4721,10 @@ function rgbToHex(withHash, rOrStr, g, b) {
 	}
 }
 
-function colorStrToRGBA(aColorStr, aAlpha) {
-	// returns 'rgba(#, #, #, #)'
-	// aAlpha can be 0 to 1 or 0 to 100
+function colorStrToCssRgba(aColorStr, aAlpha, retObj) {
+	// if regObj false, then returns 'rgba(#, #, #, #)', else returns object of rgba
+	// if aAlpha is a number -- CANNOT be 0 to 1 IT MUST BE 0 to 100 OR a string like rgba(2, 2, 2, 100)
+	// HOWEVER if aAlpha is a str then must be 0 to 1
 	
 	var sColor = aColorStr;
 	
@@ -4707,16 +4740,25 @@ function colorStrToRGBA(aColorStr, aAlpha) {
 	}
 	
 	var sAlpha;
-	if (aAlpha <= 1) {
-		sAlpha = aAlpha;
-	} else {
-		sAlpha = aAlpha / 100;
+	if (isNaN(aAlpha)) {
+		// then its a string
+		console.log('aAlpha:', aAlpha);
+		aAlpha = /\.?\d+(?!.*\d)/.exec(aAlpha);
+		if (!aAlpha) {
+			throw new Error('no number in aAlpha: ' + aAlpha);
+		}
+		aAlpha = aAlpha[0] * 100;
 	}
+	sAlpha = aAlpha / 100;
 	
 	var pRgba = rgb;
 	pRgba.a = sAlpha;
 	
-	return 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + pRgba.a + ')';
+	if (retObj) {
+		return pRgba;
+	} else {
+		return 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + pRgba.a + ')';
+	}
 }
 
 // rev1 - https://gist.github.com/Noitidart/6c866a4fa964354d4ab8540a96ca4d0f
@@ -4987,6 +5029,13 @@ function radians(degrees) {
 function degrees(radians) {
   return radians * 180 / Math.PI;
 };
+
+function objectHasKeys(aObject) {
+	for (var p in aObject) {
+		return true;
+	}
+	return false;
+}
 
 /////////// stackblur
 
