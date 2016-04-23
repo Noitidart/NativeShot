@@ -2310,18 +2310,40 @@ function init(aArrBufAndCore) {
 			}
 		},
 		dblclick: function(e) {
+			if (e.target == this.refs.can) {
+				var mouse = this.getMouse(e);
+				var mx = mouse.x;
+				var my = mouse.y;
 
-			// if selectFilterFunc then lets test if should select or deselect
-			if (this.cstate.selection) {
-				var isContained = this.cstate.selection.contains(mx, my);
-				if (isContained) {
-					console.log('ok you clicked in this drawable:', drawables[i]);
-					var mySel = drawables[i];
-					
-					mySel.bringtofront();
-					
+				// if selectFilterFunc then lets test if should select or deselect
+				var mySel = this.cstate.selection;
+				if (mySel) {
+					var isContained = mySel.contains(mx, my);
 					if (isContained) {
-						
+						var propToStateDict = {
+							lineWidth: 'sPalLineWidth',
+							arrowLength: 'sPalArrowLength',
+							arrowEnd: 'sPalArrowEnd',
+							arrowStart: 'sPalArrowStart',
+							fontsize: 'sPalFontSize',
+							fontbold: 'sPalFontBold',
+							fontitalic: 'sPalFontItalic',
+							fontface: 'sPalFontFace'
+						};
+						var setStateObj = {};
+						var boolHasNew = false;
+						for (var p in propToStateDict) {
+							if (p in mySel) {
+								var stateVar = propToStateDict[p];
+								if (this.state[stateVar] !== mySel[p]) {
+									setStateObj[stateVar] = mySel[p];
+									boolHasNew = true;
+								}
+							}
+						}
+						if (boolHasNew) {
+							this.setState(setStateObj);
+						}
 					}
 				}
 			}
@@ -2926,6 +2948,33 @@ function init(aArrBufAndCore) {
 						}
 					
 					break;
+				case 'Line':
+					
+						if (gCState && gCState.selection && gCState.selection.name == this.props.pButton.label) {
+							var mySel = gCState.selection;
+							var propToStateDict = {
+								lineWidth: 'sPalLineWidth',
+								arrowLength: 'sPalArrowLength',
+								arrowStart: 'sPalArrowStart',
+								arrowEnd: 'sPalArrowEnd'
+							};
+							
+							var boolHasNew = false;
+							for (var p in propToStateDict) {
+								if (p in mySel) {
+									var stateVar = propToStateDict[p];
+									if (gCState.rconn.state[stateVar] !== mySel[p]) {
+										mySel[p] = gCState.rconn.state[stateVar];
+										boolHasNew = true;
+									}
+								}
+							}
+							if (boolHasNew) {
+								gCState.valid = false;
+							}
+						}
+					
+					break;
 				case 'Color':
 					
 						if (gCState && gCState.selection) {
@@ -3297,6 +3346,9 @@ function init(aArrBufAndCore) {
 					gCState.valid = newValid;
 				} // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
 			}
+			if (prevProps.sPalFontFace != this.props.sPalFontFace) {
+				this.refs.selectface.selectedIndex = gFonts.indexOf(this.props.sPalFontFace);
+			}
 		},
 		change: function(e) {
 			var setStateObj = {};
@@ -3330,7 +3382,7 @@ function init(aArrBufAndCore) {
 						// React.createElement('label', {htmlFor:'font_family'},
 							// 'Font'
 						// ),
-						React.createElement('select', {id:'font_family', defaultValue:this.props.sPalFontFace, onChange:this.change},
+						React.createElement('select', {id:'font_family', defaultValue:this.props.sPalFontFace, onChange:this.change, ref:'selectface'},
 							cFontFamilies
 						)
 					)
@@ -3380,6 +3432,12 @@ function init(aArrBufAndCore) {
 					gCState.valid = newValid;
 				} // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
 			}
+			if (prevProps.sPalArrowStart != this.props.sPalArrowStart) {
+				this.refs.checkstart.checked = this.props.sPalArrowStart;
+			}
+			if (prevProps.sPalArrowEnd != this.props.sPalArrowEnd) {
+				this.refs.checkend.checked = this.props.sPalArrowEnd;
+			}
 		},
 		render: function() {
 			// props
@@ -3392,13 +3450,13 @@ function init(aArrBufAndCore) {
 			return React.createElement('div', {className:'parrowtools'},
 				React.createElement('div', {className:'parrowtools-checks'},
 					React.createElement('div', {},
-						React.createElement('input', {id:'arrow_start', type:'checkbox', defaultChecked:this.props.sPalArrowStart, onClick:this.checkStart}),
+						React.createElement('input', {id:'arrow_start', type:'checkbox', defaultChecked:this.props.sPalArrowStart, onClick:this.checkStart, ref:'checkstart'}),
 						React.createElement('label', {htmlFor:'arrow_start'},
 							'Start'
 						)
 					),
 					React.createElement('div', {},
-						React.createElement('input', {id:'arrow_end', type:'checkbox', defaultChecked:this.props.sPalArrowEnd, onClick:this.checkEnd}),
+						React.createElement('input', {id:'arrow_end', type:'checkbox', defaultChecked:this.props.sPalArrowEnd, onClick:this.checkEnd, ref:'checkend'}),
 						React.createElement('label', {htmlFor:'arrow_end'},
 							'End'
 						)
