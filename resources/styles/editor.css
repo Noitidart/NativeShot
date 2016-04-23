@@ -367,6 +367,7 @@ body {
 	width: 4em;
 	text-transform: uppercase;
 	font-size: 12px;
+	text-align: center;
 }
 .colorpicker-codes div {
 	display: flex;

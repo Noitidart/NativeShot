@@ -650,9 +650,9 @@ function init(aArrBufAndCore) {
 						// styleables - if undefined, then it is set to the default value with respect to pal
 						this.lineWidth = aOptions.lineWidth; // lineWidth is not set, then it is undefined, and then setStyleablesDefaults will set it to the default value, which respects pal
 						this.strokeStyle = aOptions.strokeStyle;
+						this.fillStyle = this.strokeStyle; // needed for drawing arrow
 						this.setLineDash = aOptions.setLineDash;
 						this.lineJoin = aOptions.lineJoin;
-						this.fillStyle = this.strokeStyle; // needed for drawing arrow
 				
 					break;
 				case 'Pencil':
@@ -1619,6 +1619,10 @@ function init(aArrBufAndCore) {
 				setLineDash: [],
 				strokeStyle: aDrawable.name == 'Marker' ? colorStrToRGBA(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha) : colorStrToRGBA(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha)
 			};
+			
+			if (aDrawable.name == 'Line') { // non-isomorphic but i gotta
+				styleables.fillStyle = styleables.strokeStyle;
+			}
 			
 			// console.log('styleables.font:', styleables.font);
 			
@@ -3425,6 +3429,9 @@ function init(aArrBufAndCore) {
 							case 'Pencil':
 								
 									gCState.selection.strokeStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									if (gCState.selection.name == 'Line') { // as fillStyle for line is set equal to that of its strokeStyle
+										gCState.selection.fillStyle = colorStrToRGBA(this.props.sColor, this.props.sAlpha);
+									}
 									gCState.valid = false;
 								
 								break;
@@ -4166,11 +4173,11 @@ function init(aArrBufAndCore) {
 			pPalZoomViewCoords: {x:20, y:300},
 			pPalZoomViewLevel: 8,
 			
-			pPalArrowLength: 20,
+			pPalArrowLength: 24,
 			pPalArrowEnd: false,
 			pPalArrowStart: false,
 			
-			pPalLineWidth: 4,
+			pPalLineWidth: 12,
 			
 			pPalFontSize: 24,
 			pPalFontFace: 'Arial',
