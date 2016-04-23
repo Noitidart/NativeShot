@@ -531,6 +531,7 @@ function init(aArrBufAndCore) {
 			window.addEventListener('mouseup', this.mouseup, false);
 			window.addEventListener('keyup', this.keyup, false);
 			window.addEventListener('keydown', this.keydown, false);
+			window.addEventListener('dblclick', this.dblclick, false);
 			
 			this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
 			// start - simon canvas stuff
@@ -2284,7 +2285,7 @@ function init(aArrBufAndCore) {
 					return rgbToHex(true, aEntry).toUpperCase();
 				}
 			});
-			console.log('cHistory:', cHistory);
+			// console.log('cHistory:', cHistory);
 			var idxCoInHist = cHistory.indexOf(cColor);
 			var immutedHistory;
 			if (idxCoInHist == -1) {
@@ -2305,6 +2306,23 @@ function init(aArrBufAndCore) {
 					 return setStateObj;
 				} else {
 					gEditorStore.setState(setStateObj);
+				}
+			}
+		},
+		dblclick: function(e) {
+
+			// if selectFilterFunc then lets test if should select or deselect
+			if (this.cstate.selection) {
+				var isContained = this.cstate.selection.contains(mx, my);
+				if (isContained) {
+					console.log('ok you clicked in this drawable:', drawables[i]);
+					var mySel = drawables[i];
+					
+					mySel.bringtofront();
+					
+					if (isContained) {
+						
+					}
 				}
 			}
 		},
@@ -2898,7 +2916,7 @@ function init(aArrBufAndCore) {
 								newValid = false;
 							}
 							if (gCState.selection.fontsize != this.props.sPalFontSize) {
-								gCState.selection.fontitalic = this.props.sPalFontSize;
+								gCState.selection.fontsize = this.props.sPalFontSize;
 								newValid = false;
 							}
 							if (!newValid) {
