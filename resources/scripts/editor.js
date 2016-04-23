@@ -699,7 +699,7 @@ function init(aArrBufAndCore) {
 						this.h = h;
 						
 						// other
-						this.level = aOptions.level || gCState.rconn.state.sPalBlurRadius
+						this.blurradius = aOptions.level || gCState.rconn.state.sPalBlurRadius
 						
 					break;
 				case 'Mosaic':
@@ -711,7 +711,7 @@ function init(aArrBufAndCore) {
 						this.h = h;
 						
 						// other
-						this.level = aOptions.level || gCState.rconn.state.sPalBlurBlock;
+						this.blurblock = aOptions.level || gCState.rconn.state.sPalBlurBlock;
 				
 				case 'cutout':
 					
@@ -871,7 +871,7 @@ function init(aArrBufAndCore) {
 						
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
-							var level = this.level; // gCState.rconn.state.sPalBlurRadius;
+							var level = this.blurradius; // gCState.rconn.state.sPalBlurRadius;
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -889,7 +889,7 @@ function init(aArrBufAndCore) {
 						
 							var positived = gCState.rconn.makeDimsPositive(this, true);
 							
-							var level = this.level;
+							var level = this.blurblock;
 							
 							// get section of screenshot
 							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
@@ -2328,7 +2328,9 @@ function init(aArrBufAndCore) {
 							fontsize: 'sPalFontSize',
 							fontbold: 'sPalFontBold',
 							fontitalic: 'sPalFontItalic',
-							fontface: 'sPalFontFace'
+							fontface: 'sPalFontFace',
+							blurblock: 'sPalBlurBlock',
+							blurradius: 'sPalBlurRadius'
 						};
 						var setStateObj = {};
 						var boolHasNew = false;
@@ -2339,6 +2341,16 @@ function init(aArrBufAndCore) {
 									setStateObj[stateVar] = mySel[p];
 									boolHasNew = true;
 								}
+							}
+						}
+						// special case for blur, if they have Mosaic tool active, and then they go to Gaussian, then i have to change the subtool
+						if (this.state.sGenPalTool == 'Blur') {
+							var shouldBeSubTool = mySel.name;
+							if (this.state.sPalSeldSubs.Blur != shouldBeSubTool) {
+								var sPalSeldSubs = cloneObject(this.state.sPalSeldSubs);
+								sPalSeldSubs.Blur = shouldBeSubTool;
+								setStateObj.sPalSeldSubs = sPalSeldSubs;
+								boolHasNew = true;
 							}
 						}
 						if (boolHasNew) {
@@ -2898,6 +2910,7 @@ function init(aArrBufAndCore) {
 		}
 	});
 	
+	var gChangingSubToolTo;
 	var Button = React.createClass({
 		displayName: 'Button',
 		click: function() {
@@ -2909,8 +2922,28 @@ function init(aArrBufAndCore) {
 								case 'Gaussian':
 								case 'Mosaic':
 									
-										if (gCState.selection.name != this.props.sPalSeldSubs[this.props.sGenPalTool]) {
-											gCState.selection.name = this.props.sPalSeldSubs[this.props.sGenPalTool]
+										var cSubTool = this.props.sPalSeldSubs[this.props.sGenPalTool];
+										if (gChangingSubToolTo) {
+											cSubTool = gChangingSubToolTo;
+											gChangingSubToolTo = null;
+										}
+										var newValid = true;
+										if (gCState.selection.name != cSubTool) {
+											gCState.selection.name = cSubTool;
+											delete gCState.selection.blurradius;
+											delete gCState.selection.blurblock;
+											var propVar = gCState.selection.name == 'Gaussian' ? 'blurradius' : 'blurblock';
+											var stateVar = gCState.selection.name == 'Gaussian' ? 'sPalBlurRadius' : 'sPalBlurBlock';
+											gCState.selection[propVar] = gCState.rconn.state[stateVar];
+											newValid = false;
+										}
+										var propVar = gCState.selection.name == 'Gaussian' ? 'blurradius' : 'blurblock';
+										var stateVar = gCState.selection.name == 'Gaussian' ? 'sPalBlurRadius' : 'sPalBlurBlock';
+										if (gCState.selection[propVar] !== gCState.rconn.state[stateVar]) {
+											gCState.selection[propVar] = gCState.rconn.state[stateVar];
+											newValid = false;
+										}
+										if (!newValid) {
 											gCState.valid = false;
 										}
 									
@@ -3174,8 +3207,12 @@ function init(aArrBufAndCore) {
 	
 	var SubButton = React.createClass({
 		click: function(e) {
-			e.stopPropagation(); // so it doesnt trigger the setState due to click on the pbutton
+			var dontStopPropagation = false;
 			
+			if (this.props.sGenPalTool == 'Blur') {
+				dontStopPropagation = true;
+				gChangingSubToolTo = this.props.pSubButton.label;
+			}
 			if (!this.props.pSubButton.unfixable) {
 				var sPalSeldSubs = cloneObject(this.props.sPalSeldSubs);
 				sPalSeldSubs[this.props.pButton.label] = this.props.pSubButton.label;
@@ -3186,22 +3223,8 @@ function init(aArrBufAndCore) {
 				});
 			}
 			
-			if (this.props.sGenPalTool == 'Blur') {
-				if (gCState && gCState.selection) {
-					switch (gCState.selection.name) {
-						case 'Gaussian':
-						case 'Mosaic':
-							
-								if (gCState.selection.name != sPalSeldSubs[this.props.sGenPalTool]) {
-									gCState.selection.name = sPalSeldSubs[this.props.sGenPalTool];
-									gCState.valid = false;
-								}
-							
-							break;
-						default:
-							// this selection is not affected
-					}
-				}
+			if (!dontStopPropagation) {
+				e.stopPropagation();
 			}
 		},
 		render: function() {
@@ -3287,7 +3310,7 @@ function init(aArrBufAndCore) {
 			
 			var cInputNumberProps = {
 				pMin: 1,
-				pCStateSel: {'Gaussian':'level', 'Mosaic':'level'},
+				pCStateSel: {'Gaussian':'blurradius', 'Mosaic':'blurblock'},
 				key: subtool
 			};
 			
