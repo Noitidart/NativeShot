@@ -1486,7 +1486,7 @@ function init(aArrBufAndCore) {
 				gDroppingMixCtx.drawImage(this.refs.can, dx, dy, 1, 1, 0, 0, 1, 1);
 				var mixedRGBA = gDroppingMixCtx.getImageData(0, 0, 1, 1).data;
 				var newDropperObj = {};
-				newDropperObj[dropping.pStateColorKey] = 'rgb(' + mixedRGBA[0] + ', ' + mixedRGBA[1] + ', ' + mixedRGBA[2] + ')';
+				newDropperObj[dropping.pStateColorKey] = 'rgb(' + mixedRGBA[0] + ', ' + mixedRGBA[1] + ', ' + mixedRGBA[2] + ')'; // rgbToHex(true, mixedRGBA[0], mixedRGBA[0], mixedRGBA[2]);
 				gEditorStore.setState(newDropperObj);
 				
 
@@ -2274,7 +2274,17 @@ function init(aArrBufAndCore) {
 			if (cColor === undefined) {
 				cColor = aStateColorVarOrColor;
 			}
-			var cHistory = this.state[aStateHistoryVar];
+			if (cColor[0] != '#') {
+				cColor = rgbToHex(true, cColor).toUpperCase();
+			}
+			var cHistory = this.state[aStateHistoryVar].map(function(aEntry) {
+				if (aEntry[0] == '#') {
+					return aEntry.toUpperCase();
+				} else {
+					return rgbToHex(true, aEntry).toUpperCase();
+				}
+			});
+			console.log('cHistory:', cHistory);
 			var idxCoInHist = cHistory.indexOf(cColor);
 			var immutedHistory;
 			if (idxCoInHist == -1) {
@@ -4542,6 +4552,7 @@ function queryStringAsJson(aQueryString) {
 
 function hexToRgb(hex) {
     // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+	// returned is in lower case
     var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
     hex = hex.replace(shorthandRegex, function(m, r, g, b) {
         return r + r + g + g + b + b;
