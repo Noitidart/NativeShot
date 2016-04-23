@@ -1140,15 +1140,31 @@ function init(aArrBufAndCore) {
 					case 'Pencil':
 					case 'Marker':
 					
+							// ctx.beginPath();
+							// ctx.arc(this.path[0], this.path[1], gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							// ctx.fill();
+							// ctx.stroke();
+							
+							// ctx.beginPath();
+							// ctx.arc(this.path[this.path.length - 2], this.path[this.path.length - 1], gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							// ctx.fill();
+							// ctx.stroke();
+							// draw handles
+							var handleSize = gCState.rconn.state.sCanHandleSize;
+							var half = handleSize / 2;
+							
+							// var selectionHandles = gCState.selectionHandles;
+							// selectionHandles.length = 2;
+							
 							ctx.beginPath();
-							ctx.arc(this.path[0], this.path[1], gCState.rconn.state.sCanHandleSize, 0, 360);
-							
-							ctx.fill();
-							ctx.stroke();
-							
-							ctx.beginPath();
-							ctx.arc(this.path[this.path.length - 2], this.path[this.path.length - 1], gCState.rconn.state.sCanHandleSize, 0, 360);
-							
+							// for (i = 0; i < 2; i += 1) {
+								// cur = selectionHandles[i];
+								// ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							// };
+							ctx.rect(this.path[0] - half, this.path[1] - half, handleSize, handleSize);
+							ctx.rect(this.path[this.path.length-2] - half, this.path[this.path.length-1] - half, handleSize, handleSize);
 							ctx.fill();
 							ctx.stroke();
 					
