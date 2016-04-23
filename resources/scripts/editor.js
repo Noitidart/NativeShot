@@ -21,7 +21,8 @@ var gFonts;
 var gInputNumberId = 0;
 var gDroppingCoords = [0,0];
 var gDroppingMixCtx;
-
+var gCanMeasureHeight;
+var gCtxMeasureHeight;
 function unload() {
 	// if iMon == 0
 	// set the new state object from react to file
@@ -1061,8 +1062,8 @@ function init(aArrBufAndCore) {
 							var w;
 							var fontsize = this.fontsize; // i expect it to be in px
 							if (this.chars.length) {
-								var mh = measureHeight(font, fontsize, this.chars, {width:w});
-								console.log('mh:', mh);
+								var mh = measureHeight(font, fontsize, this.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
+								// console.log('mh:', mh);
 								w = mh.width;
 								// i want to keep the baseline at this.y
 								y = mh.relativeTop < 0 ? this.y + mh.relativeTop : this.y;
@@ -1228,7 +1229,7 @@ function init(aArrBufAndCore) {
 							var w;
 							var fontsize = this.fontsize; // i expect it to be in px
 							if (this.chars.length) {
-								var mh = measureHeight(font, fontsize, this.chars, {width:w});
+								var mh = measureHeight(font, fontsize, this.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
 								// console.log('mh:', mh);
 								w = mh.width;
 								// i want to keep the baseline at this.y
@@ -3024,7 +3025,11 @@ function init(aArrBufAndCore) {
 					
 					break;
 				case 'Text':
-					
+						
+						if (!gCanMeasureHeight) {
+							gCanMeasureHeight = document.createElement('canvas');
+							gCtxMeasureHeight = gCanMeasureHeight.getContext('2d');
+						}
 						if (gCState && gCState.selection && gCState.selection.name == 'Text') {
 							var newValid = true; // valid based on the tests below
 							if (gCState.selection.fontface != this.props.sPalFontFace) {
