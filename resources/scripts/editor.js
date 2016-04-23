@@ -2276,8 +2276,9 @@ function init(aArrBufAndCore) {
 				cColor = aStateColorVarOrColor;
 			}
 			if (cColor[0] != '#') {
-				cColor = rgbToHex(true, cColor).toUpperCase();
+				cColor = rgbToHex(true, cColor);
 			}
+			cColor = cColor.toUpperCase();
 			var cHistory = this.state[aStateHistoryVar].map(function(aEntry) {
 				if (aEntry[0] == '#') {
 					return aEntry.toUpperCase();
@@ -2285,8 +2286,8 @@ function init(aArrBufAndCore) {
 					return rgbToHex(true, aEntry).toUpperCase();
 				}
 			});
-			// console.log('cHistory:', cHistory);
 			var idxCoInHist = cHistory.indexOf(cColor);
+			console.log('cColor:', cColor, 'cHistory:', cHistory, 'idxCoInHist:', idxCoInHist);
 			var immutedHistory;
 			if (idxCoInHist == -1) {
 				immutedHistory = cHistory.slice();
