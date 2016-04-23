@@ -951,10 +951,10 @@ function init(aArrBufAndCore) {
 					case 'Marker':
 					
 							curStyle = {
-								strokeStyle: 'white',
+								strokeStyle: '#ffffff',
 								setLineDash: [],
-								lineWidth: gCState.rconn.mtmm.w(1),
-								fillStyle: 'rgba(100, 100, 100, 1)'
+								lineWidth: 1,
+								fillStyle: '#000000'
 							};
 					
 						break;
@@ -1099,15 +1099,40 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Line':
 
+							// ctx.beginPath();
+							// ctx.arc(this.x, this.y, gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							// ctx.fill();
+							// ctx.stroke();
+							
+							// ctx.beginPath();
+							// ctx.arc(this.x2, this.y2, gCState.rconn.state.sCanHandleSize, 0, 360);
+							
+							// ctx.fill();
+							// ctx.stroke();
+							
+							// draw handles
+							var handleSize = gCState.rconn.state.sCanHandleSize;
+							var half = handleSize / 2;
+							
+							var selectionHandles = gCState.selectionHandles;
+							selectionHandles.length = 2;
+							
+							selectionHandles[0] = {
+								x: this.x-half,
+								y: this.y-half
+							};
+							
+							selectionHandles[1] = {
+								x: this.x2-half,
+								y: this.y2-half
+							};
+							
 							ctx.beginPath();
-							ctx.arc(this.x, this.y, gCState.rconn.state.sCanHandleSize, 0, 360);
-							
-							ctx.fill();
-							ctx.stroke();
-							
-							ctx.beginPath();
-							ctx.arc(this.x2, this.y2, gCState.rconn.state.sCanHandleSize, 0, 360);
-							
+							for (i = 0; i < 2; i += 1) {
+								cur = selectionHandles[i];
+								ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							};
 							ctx.fill();
 							ctx.stroke();
 						
@@ -1145,6 +1170,17 @@ function init(aArrBufAndCore) {
 				
 				switch (this.name) {
 					case 'Line':
+					
+							if (gCState.selection && gCState.selection == this) {
+								var selectionHandles = gCState.selectionHandles;
+								var handleSize = gCState.rconn.state.sCanHandleSize;
+								for (var i=0; i<2; i++) {
+									if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
+										(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
+											return i + 10;
+									}
+								}
+							}
 					
 							var ctx = gCState.rconn.ctx;
 							ctx.beginPath();
@@ -1717,7 +1753,7 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.x = mx;
 							this.cstate.selection.w += oldx - mx;
 							break;
-						case 6: //g
+						case 6:
 							this.cstate.selection.w = mx - oldx;
 							break;
 						case 7:
@@ -1725,12 +1761,22 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.w += oldx - mx;
 							this.cstate.selection.h = my - oldy;
 							break;
-						case 8://g
+						case 8:
 							this.cstate.selection.h = my - oldy;
 							break;
-						case 9://g
+						case 9:
 							this.cstate.selection.w = mx - oldx;
 							this.cstate.selection.h = my - oldy;
+							break;
+						case 10:
+							// lining start
+							this.cstate.selection.x = mx;
+							this.cstate.selection.y = my;
+							break;
+						case 11:
+							// lining end
+							this.cstate.selection.x2 = mx;
+							this.cstate.selection.y2 = my;
 							break;
 						default:
 							console.error('should never get here');
@@ -1749,8 +1795,15 @@ function init(aArrBufAndCore) {
 					})
 					this.cstate.valid = false;
 				} else if (this.cstate.lining) {
-					this.cstate.selection.x2 = mx;
-					this.cstate.selection.y2 = my;
+					if (this.cstate.lining == 10) {
+						// lining start
+						this.cstate.selection.x = mx;
+						this.cstate.selection.y = my;
+					} else if (this.cstate.lining == 11) {
+						// lining end
+						this.cstate.selection.x2 = mx;
+						this.cstate.selection.y2 = my;
+					}
 					this.cstate.valid = false;
 				} else if (this.cstate.pathing) {
 					this.cstate.pathing[0] = mx;
@@ -1858,6 +1911,16 @@ function init(aArrBufAndCore) {
 								case 9:
 								
 										cursor = 'se-resize';
+								
+									break;
+								case 10:
+								
+										cursor = 'grab'; // lining start
+								
+									break;
+								case 11:
+								
+										cursor = 'grab'; // lining end
 								
 									break;
 								default:
@@ -2045,7 +2108,7 @@ function init(aArrBufAndCore) {
 								
 								this.cstate.dragging = true;
 								this.cstate.selection = mySel;
-								// this.cstate.valid = false;
+								this.cstate.valid = false; // this is needed, as if its a newly selected object, then if i dont set this, the selection border wont be drawn
 								
 								if ('w' in this.cstate.selection) {
 									this.setState({
@@ -2061,7 +2124,10 @@ function init(aArrBufAndCore) {
 									// y: this.cstate.selection.y
 								// };
 								this.cstate.selection = mySel;
-								// this.cstate.valid = false;
+								// this.cstate.valid = false; // not needed for resizing, as resizing only happens after a selection was made
+							} else if (isContained >= 10 && isContained <= 11) {
+								// lining resizing
+								this.cstate.lining = isContained;
 							}
 							
 							return;
@@ -2173,7 +2239,7 @@ function init(aArrBufAndCore) {
 								break;
 							case 'Line':
 								
-									this.cstate.lining = true;
+									this.cstate.lining = 11;
 									this.cstate.valid = false; // as i have to draw the selection point
 								
 								break;
