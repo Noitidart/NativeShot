@@ -510,8 +510,6 @@ function init(aArrBufAndCore) {
 			this.cstate.selection = null;
 			this.cstate.selectionHandles = [];
 			
-			this.cstate.resizedown = null;
-			
 			this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
 			this.cstate.dragoffy = 0;
 			
@@ -654,6 +652,7 @@ function init(aArrBufAndCore) {
 						this.strokeStyle = aOptions.strokeStyle;
 						this.setLineDash = aOptions.setLineDash;
 						this.lineJoin = aOptions.lineJoin;
+						this.fillStyle = this.strokeStyle; // needed for drawing arrow
 				
 					break;
 				case 'Pencil':
@@ -837,26 +836,18 @@ function init(aArrBufAndCore) {
 						
 							ctx.beginPath();
 							ctx.moveTo(this.x, this.y);
-							
-							// no arrows
-							if (!this.arrowStart && !this.arrowEnd) {
-								// no arrows
-								ctx.lineTo(this.x2, this.y2);
-							} else if (this.arrowStart && !this.arrowEnd) {
-								// start arrow only
-								canvas_arrow(ctx, this.x2, this.y2, this.x, this.y, this.arrowLength)
-							} else if (!this.arrowStart && this.arrowEnd) {
-								// end arrow only
-								canvas_arrow(ctx, this.x, this.y, this.x2, this.y2, this.arrowLength);
-							} else if (this.arrowStart && this.arrowEnd) {
-								// both arrows
-								canvas_arrow(ctx, this.x2, this.y2, this.x, this.y, this.arrowLength)
-								canvas_arrow(ctx, this.x, this.y, this.x2, this.y2, this.arrowLength);
-							} else {
-								throw new Error('should never ever get here');
-							}
-
+							ctx.lineTo(this.x2, this.y2);
 							ctx.stroke();
+
+							if (this.arrowEnd) {
+								// end arrow
+								canvas_arrow(ctx, this.x, this.y, this.x2, this.y2, this.arrowLength);
+							}
+							
+							if (this.arrowStart) {
+								// start arrow
+								canvas_arrow(ctx, this.x2, this.y2, this.x, this.y, this.arrowLength)
+							}
 						
 						break;
 					case 'Pencil':
@@ -1745,7 +1736,6 @@ function init(aArrBufAndCore) {
 					}
 					this.cstate.valid = false; // Something's dragging so we must redraw
 				} else if (this.cstate.resizing) {
-					var resizedown = this.cstate.resizedown;
 					var oldx = this.cstate.selection.x;
 					var oldy = this.cstate.selection.y;
 					
@@ -1783,6 +1773,10 @@ function init(aArrBufAndCore) {
 						case 9:
 							this.cstate.selection.w = mx - oldx;
 							this.cstate.selection.h = my - oldy;
+							
+							if (e.shiftKey) {
+								this.cstate.selection.h = this.cstate.selection.w;
+							}
 							break;
 						case 10:
 							// lining start
@@ -1798,13 +1792,6 @@ function init(aArrBufAndCore) {
 							console.error('should never get here');
 					}
 					
-					// this.cstate.selection.w = mx - this.cstate.downx;
-					
-					// if (e.shiftKey) {
-						// this.cstate.selection.h = this.cstate.selection.w;
-					// } else {
-						// this.cstate.selection.h = my - this.cstate.downy;
-					// }
 					gEditorStore.setState({
 						sGenPalW: Math.abs(this.cstate.selection.w),
 						sGenPalH: Math.abs(this.cstate.selection.h)
@@ -2135,10 +2122,6 @@ function init(aArrBufAndCore) {
 							} else if (isContained >= 2 && isContained <= 9) {
 								// rect resizing
 								this.cstate.resizing = isContained;
-								// this.cstate.resizedown = {
-									// x: this.cstate.selection.x,
-									// y: this.cstate.selection.y
-								// };
 								this.cstate.selection = mySel;
 								// this.cstate.valid = false; // not needed for resizing, as resizing only happens after a selection was made
 							} else if (isContained >= 10 && isContained <= 11) {
@@ -2246,10 +2229,6 @@ function init(aArrBufAndCore) {
 							case 'Gaussian':
 							case 'Mosaic':
 								
-									this.cstate.resizedown = {
-										x: this.cstate.selection.x,
-										y: this.cstate.selection.y
-									};
 									this.cstate.resizing = 9;
 								
 								break;
@@ -2338,7 +2317,6 @@ function init(aArrBufAndCore) {
 						this.cstate.dragdown = null;
 					} else if (this.cstate.resizing) {
 						this.cstate.resizing = false;
-						this.cstate.resizedown = null;
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
 							this.cstate.selection.delete();
@@ -3394,7 +3372,7 @@ function init(aArrBufAndCore) {
 						)
 					)
 				),
-				React.createElement(InputNumber, {pLabel:'Length (px)', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1, pCStateSel:{'Line':'arrowLength'} })
+				React.createElement(InputNumber, {pLabel:'Size', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1, pCStateSel:{'Line':'arrowLength'} })
 				// React.createElement('div', {},
 				// 	React.createElement('label', {htmlFor:'arrow_length'},
 				// 		'Length'
@@ -4833,21 +4811,65 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 }
 
 function canvas_arrow(context, fromx, fromy, tox, toy, headlen){
-    // var headlen = 10;   // length of head in pixels
-    var angle = Math.atan2(toy-fromy,tox-fromx);
-    context.moveTo(fromx, fromy);
-    context.lineTo(tox, toy);
-    
-	// context.moveTo(tox, toy);
-	// context.lineTo(tox, toy);
+    // // var headlen = 10;   // length of head in pixels
+    // var angle = Math.atan2(toy-fromy,tox-fromx);
+    // context.moveTo(fromx, fromy);
+    // context.lineTo(tox, toy);
+    // 
+	// // context.moveTo(tox, toy);
+	// // context.lineTo(tox, toy);
+	// 
+	// // context.moveTo(tox, toy);
+    // context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    // context.moveTo(tox, toy);
+    // context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
 	
-	// context.moveTo(tox, toy);
-    context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
-    context.moveTo(tox, toy);
-    context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+	// below is based on http://stackoverflow.com/a/36805543/1828637
+	var x_center = tox;
+	var y_center = toy;
+	
+	var r = headlen;
+	
+	var angle = Math.atan2(toy-fromy,tox-fromx); // this angle calc is taken from http://stackoverflow.com/a/6333775/1828637
+
+	context.beginPath();
+	
+	// do these if you want to stroke it without a baseline
+	// angle += (1/3)*(2*Math.PI);
+	// angle += (1/3)*(2*Math.PI);
+	
+	var x = r*Math.cos(angle) + x_center;
+	var y = r*Math.sin(angle) + y_center;
+
+	context.moveTo(x, y);
+	
+	angle += (1/3)*(2*Math.PI)
+	x = r*Math.cos(angle) + x_center;
+	y = r*Math.sin(angle) + y_center;
+	
+	context.lineTo(x, y);
+	
+	angle += (1/3)*(2*Math.PI)
+	x = r*Math.cos(angle) + x_center;
+	y = r*Math.sin(angle) + y_center;
+	
+	context.lineTo(x, y);
+	
+	context.closePath();
+	
+	context.fill();
+	// context.stroke();
 }
 
-
+// Converts from degrees to radians.
+function radians(degrees) {
+  return degrees * Math.PI / 180;
+};
+ 
+// Converts from radians to degrees.
+function degrees(radians) {
+  return radians * 180 / Math.PI;
+};
 
 /////////// stackblur
 
