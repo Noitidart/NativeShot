@@ -1076,17 +1076,19 @@ function init(aArrBufAndCore) {
 							
 							ctx.strokeRect(this.x, y, w, h);
 							
-							// draw ibeam
-							var ibh = h; // ibeam height
-							var ibx;
-							if (this.index === 0) {
-								ibx = 0;
-							} else {
-								ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
+							if (gCState.typing) {
+								// draw ibeam
+								var ibh = h; // ibeam height
+								var ibx;
+								if (this.index === 0) {
+									ibx = 0;
+								} else {
+									ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
+								}
+								var ibw = 3;
+								ctx.fillStyle = 'black'; // ibeam color
+								ctx.fillRect(this.x + ibx, y, ibw, ibh);
 							}
-							var ibw = 3;
-							ctx.fillStyle = 'black'; // ibeam color
-							ctx.fillRect(this.x + ibx, y, ibw, ibh);
 						
 						break;
 					case 'Line':
@@ -2114,6 +2116,20 @@ function init(aArrBufAndCore) {
 									this.cstate.dragoffy = my - mySel.y;
 								}
 								
+								// non-isomorphic stuff needed for if selecting another text element
+								if (this.cstate.selection && this.cstate.selection.name == 'Text') {
+									if (this.cstate.selection == mySel) {
+										if (this.cstate.typing) {
+											// stop here, user is in typing mode, this should do highlighting :todo:
+											return;
+										} // else continue, as it is dragging
+									} else {
+										// else continue, as they have selected ANOTHER Text element, so let them select and drag that
+										if (this.cstate.typing) {
+											this.cstate.typing = false;
+										}
+									}
+								}
 								this.cstate.dragging = true;
 								this.cstate.selection = mySel;
 								this.cstate.valid = false; // this is needed, as if its a newly selected object, then if i dont set this, the selection border wont be drawn
@@ -2142,6 +2158,10 @@ function init(aArrBufAndCore) {
 						this.clearSelection();
 						console.log('ok removing from selection this:', this);
 						this.cstate.valid = false;
+						if (this.cstate.typing) {
+							this.cstate.typing = false;
+							return; // as i want to get them out of typing mode
+						}
 					}
 				}
 				
@@ -2179,52 +2199,54 @@ function init(aArrBufAndCore) {
 							break;
 						case 'Text-':
 							
-								if (this.cstate.typing) {
-									console.log('exiting typing, this was selection:', this.cstate.selection);
-									this.clearSelection();
-									this.cstate.typing = false;
-									this.cstate.valid = false;
-								} else {
+								// if (this.cstate.typing) {
+									// console.log('exiting typing, this was selection:', this.cstate.selection);
+									// this.clearSelection();
+									// this.cstate.typing = false;
+									// this.cstate.valid = false;
+								// } else {
 									this.cstate.selection = new this.Drawable(mx, my, null, null, 'Text');
-								}
+								// }
 							
 							break;
 						default:
 							// do nothing
 					}
 					
+					// if selection exists, then it was newly created, lets add it
 					if (this.cstate.selection) {
 						this.cstate.selection.add();
 						
-							switch (this.cstate.selection.name) {
-								case 'Marker':
-								
-										this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);
-										
-									break;
-								case 'Line':
-								case 'Pencil':
-								
-										this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
-								
-									break;
-								case 'Text':
-								
-										this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
-								
-									break;
-								case 'Rectangle':
-								case 'Oval':
-								
-										var setStateObjLine = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
-										var setStateObjFill = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
-										
-										gEditorStore.setState(overwriteObjWithObj(setStateObjLine, setStateObjFill));
-										
-									break;
-								default:
-									// no related color picker
-							}
+						// add color to history as it was just added
+						switch (this.cstate.selection.name) {
+							case 'Marker':
+							
+									this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);
+									
+								break;
+							case 'Line':
+							case 'Pencil':
+							
+									this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
+							
+								break;
+							case 'Text':
+							
+									this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
+							
+								break;
+							case 'Rectangle':
+							case 'Oval':
+							
+									var setStateObjLine = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
+									var setStateObjFill = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
+									
+									gEditorStore.setState(overwriteObjWithObj(setStateObjLine, setStateObjFill));
+									
+								break;
+							default:
+								// no related color picker
+						}
 						
 						// set the proper cstate action bool
 						switch (this.cstate.selection.name) {
@@ -2252,7 +2274,7 @@ function init(aArrBufAndCore) {
 								break;
 							case 'Text':
 								
-									this.cstate.typing = true;
+									this.cstate.typing = true; // special, because i just added it, i enter typing mode link11911111
 									this.cstate.valid = false;
 									
 								break;
@@ -2388,6 +2410,14 @@ function init(aArrBufAndCore) {
 						}
 						if (objectHasKeys(setStateObj)) {
 							this.setState(setStateObj);
+						}
+					}
+					
+					// put into typing mode
+					if (mySel.name == 'Text') {
+						if (!this.cstate.typing) {
+							this.cstate.typing = true;
+							this.cstate.valid = false;
 						}
 					}
 				}
