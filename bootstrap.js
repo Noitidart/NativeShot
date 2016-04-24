@@ -499,15 +499,16 @@ var EditorFuncs = {
 		var aHwndPtrStr = getNativeHandlePtrStr(aEditorDOMWindow);
 		colMon[iMon].hwndPtrStr = aHwndPtrStr;
 
-		if (core.os.name != 'darwin') {
-			aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
-		}
+		// if (core.os.name != 'darwin') {
+			// aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+			// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
+		// }
 		
 		aEditorDOMWindow.focus();
 		
-		if (core.os.name != 'darwin') {
-			aEditorDOMWindow.fullScreen = true;
-		}
+		// if (core.os.name != 'darwin') {
+			// aEditorDOMWindow.fullScreen = true;
+		// }
 		
 		// set window on top:
 		var aArrHwndPtr = [aHwndPtrStr];
@@ -2914,7 +2915,23 @@ function shootAllMons(aDOMWindow) {
 			// sa.AppendElement(sa_imon);
 			// sa_imon.data = i;
 			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), sa);
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
+			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
+			var x = colMon[i].x;
+			var y = colMon[i].y;
+			var w = colMon[i].w;
+			var h = colMon[i].h;
+			
+			var scaleX = colMon[i].win81ScaleX;
+			var scaleY = colMon[i].win81ScaleY;
+			if (scaleX) {
+				x = Math.floor(x / scaleX);
+				w = Math.floor(w / scaleX);
+			}
+			if (scaleY) {
+				y = Math.floor(y / scaleY);
+				h = Math.floor(h / scaleY);
+			}
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
 			colMon[i].E = {
 				DOMWindow: aEditorDOMWindow,
 				docEl: aEditorDOMWindow.document.documentElement,
