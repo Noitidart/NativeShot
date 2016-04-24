@@ -498,8 +498,8 @@ function init(aArrBufAndCore) {
 			// start - simon canvas stuff
 			this.cstate.valid = false;
 			
-			this.cstate.width = this.props.pQS.w; // same as - monToMultiMon.w(this.refs.can.width);
-			this.cstate.height = this.props.pQS.h; // same as - monToMultiMon.h(this.refs.can.height);
+			this.cstate.width = mmtm.w(this.props.pQS.w);
+			this.cstate.height = mmtm.h(this.props.pQS.h);
 			
 			this.cstate.drawables = []; // the collection of things to be drawn
 			
@@ -770,10 +770,10 @@ function init(aArrBufAndCore) {
 
 							var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 							if (!cutouts.length) {
-								ctx.fillRect(0, 0, this.w, this.h);
+								ctx.fillRect(tQS.x, tQS.y, this.w, this.h);
 							} else {
 								
-								var fullscreenRect = new Rect(0, 0, this.w, this.h);
+								var fullscreenRect = new Rect(tQS.x, tQS.y, this.w, this.h);
 								var cutoutsAsRects = [];
 								cutouts.forEach(function(cutout) {
 									var cutoutClone = gCState.rconn.makeDimsPositive(cutout, true);
@@ -1455,7 +1455,7 @@ function init(aArrBufAndCore) {
 			};
 		},
 		clear: function() {
-			this.ctx.clearRect(0, 0, this.cstate.width, this.cstate.height);
+			this.ctx.clearRect(tQS.x, tQS.y, tQS.w, tQS.h);
 		},
 		draw: function() {
 			if (this.cstate.pathing && this.cstate.pathing.length) {
@@ -1503,7 +1503,7 @@ function init(aArrBufAndCore) {
 						case 'Rectangle':
 						case 'Oval':
 								if (
-									drawable.x > this.cstate.width || drawable.y > this.cstate.height || // test top left coord // this is why we need positive coords
+									drawable.x > this.cstate.width || drawable.y > this.cstate.height || // test top left coord // this is why we need positive coords // THIS NEEDS REVISIT based on mtmm and mmtm
 									drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0
 								   ) {
 									console.error('not drawing this drawable:', drawable);
@@ -1661,7 +1661,7 @@ function init(aArrBufAndCore) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
-			console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
+			// console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				gZState.mouse = {x:mx, y:my};
 				gZState.valid = false;
