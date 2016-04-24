@@ -475,7 +475,12 @@ var EditorFuncs = {
 		}
 		for (var i=0; i<colMon.length; i++) {
 			if (i != aData.iMon) {
-				colMon[i].E.DOMWindow.postMessage(aData.postMsgObj, '*');
+				// if (aData.postMsgObj.topic == 'reactSetState') {
+					// // console.log('colMon[i].E.DOMWindow.gBrowser.contentWindow:', colMon[i].E.DOMWindow.document.body.innerHTML);
+					// colMon[i].E.DOMWindow[aData.postMsgObj.topic](aData.postMsgObj);
+				// } else {
+					colMon[i].E.DOMWindow.postMessage(aData.postMsgObj, '*');
+				// }
 			}
 		}
 	},
@@ -564,8 +569,29 @@ var EditorFuncs = {
 			fonts: gFonts,
 			editorstateStr: gEditorStateStr
 		}, '*', [colMon[iMon].screenshotArrBuf]);
+		
+		// colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
 	}
 };
+
+function nscomm(aEvent) {
+	console.log('incoming nscomm, aEvent:', aEvent);
+	aData = aEvent.detail;
+	
+	var requiredKeys = ['topic', 'iMon'];
+	for (var i=0; i<requiredKeys.length; i++) {
+		if (!(requiredKeys[i] in aData)) {
+			console.error('missing required keys in nativeshot-editor-request aData arg, aData:', aData);
+			throw new Error('missing required keys in nativeshot-editor-request aData arg');
+		}
+	}
+	
+	if (!(aData.topic in EditorFuncs)) {
+		console.error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
+		throw new Error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
+	}
+	EditorFuncs[aData.topic](aData);
+}
 //end obs stuff
 // start - about module
 var aboutFactory_instance;

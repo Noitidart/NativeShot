@@ -493,6 +493,18 @@ function init(aArrBufAndCore) {
 						},
 						iMon: tQS.iMon
 					}));
+					
+					// var myEvent = window.document.createEvent('CustomEvent');
+					// var myEventDetail = {
+						// topic: 'broadcastToOthers',
+						// postMsgObj: {
+							// topic: 'reactSetState',
+							// updatedStates: JSON.stringify(aObj)
+						// },
+						// iMon: tQS.iMon
+					// };
+					// myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+					// window.dispatchEvent(myEvent);
 				}
 				oSetState(aObj);
 			}.bind(this);
@@ -4584,7 +4596,7 @@ var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i don
 console.log('tQS:', tQS);
 var gQS = tQS;
 window.addEventListener('message', function(aWinMsgEvent) {
-	console.error('incoming window message to HTML: iMon:', tQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
+	// console.error('incoming window message to HTML: iMon:', tQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
 	var aData = aWinMsgEvent.data;
 	if (aData.topic in window) {
 		window[aData.topic](aData);
