@@ -469,7 +469,7 @@ function init(aArrBufAndCore) {
 			gColorPickerSetState.NativeShotEditor = this.setState.bind(this);
 
 			///////////
-			this.ctx = this.refs.can.getContext('2d');
+			this.ctx = new MyContext(this.refs.can.getContext('2d'));
 			this.ctx0 = this.refs.can0.getContext('2d');
 			
 			var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
@@ -483,7 +483,7 @@ function init(aArrBufAndCore) {
 				ctxDum.putImageData(screenshotImageData, 0, 0);
 				
 				this.ctx0.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
-				this.ctx.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
+				// this.ctx.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
 				
 				this.ctx0.drawImage(canDum, 0, 0);
 			} else {
@@ -519,13 +519,9 @@ function init(aArrBufAndCore) {
 			
 			// **** Options! ****
 			// now that Style is setup, i can add Drawable's
-			// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'Rectangle')).add();
-			// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(10), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
-			// (new this.Drawable(this.mtmm.x(400), this.mtmm.y(50), this.mtmm.w(100), this.mtmm.h(100), 'cutout')).add();
-			
-			// (new this.Drawable(this.mtmm.x(500), this.mtmm.y(500), null, null, 'Line', {x2:100, y2:100})).add();
 			
 			this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
+			console.log('this.cstate.dim:', this.cstate.dim);
 			
 			window.addEventListener('mousemove', this.mousemove, false);
 			window.addEventListener('mousedown', this.mousedown, false);
@@ -922,7 +918,7 @@ function init(aArrBufAndCore) {
 						
 							curStyle = {
 								lineWidth: 1,
-								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
+								setLineDash: [0, 3, 0],
 								strokeStyle: 'black'
 							};
 						
@@ -934,7 +930,7 @@ function init(aArrBufAndCore) {
 					
 							curStyle = {
 								lineWidth: 1,
-								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
+								setLineDash: [0, 3, 0],
 								strokeStyle: 'black'
 							};
 					
@@ -955,8 +951,8 @@ function init(aArrBufAndCore) {
 						
 							curStyle = {
 								strokeStyle: 'black',
-								setLineDash: [0, gCState.rconn.mtmm.w(3), 0],
-								lineWidth: gCState.rconn.mtmm.w(1)
+								setLineDash: [0, 3, 0],
+								lineWidth: 1
 							};
 						
 						break;
@@ -1451,18 +1447,20 @@ function init(aArrBufAndCore) {
 		},
 		mtmm: { // short for monToMultiMon
 			x: function(aX) {
-				return tQS.win81ScaleX ? Math.ceil(tQS.x + ((aX - tQS.x) * tQS.win81ScaleX)) : aX;
+				// return aX;
+				return tQS.win81ScaleX ? (tQS.x + ((aX - tQS.x) * tQS.win81ScaleX)) : aX;
 			},
 			y: function(aY) {
-				return tQS.win81ScaleY ? Math.ceil(tQS.y + ((aY - tQS.y) * tQS.win81ScaleY)) : aY
+				// return aY;
+				return tQS.win81ScaleY ? (tQS.y + ((aY - tQS.y) * tQS.win81ScaleY)) : aY
 			},
 			w: function(aW) {
-				// width
-				return tQS.win81ScaleX ? Math.ceil(aW * tQS.win81ScaleX) : aW;
+				// return aW;
+				return tQS.win81ScaleX ? (aW * tQS.win81ScaleX) : aW;
 			},
 			h: function(aH) {
-				// width
-				return tQS.win81ScaleY ? Math.ceil(aH * tQS.win81ScaleY) : aH;
+				// return aH;
+				return tQS.win81ScaleY ? (aH * tQS.win81ScaleY) : aH;
 			}
 		},
 		getMouse: function(e) {
@@ -1681,7 +1679,7 @@ function init(aArrBufAndCore) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
-			
+			console.log(mx, my);
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				gZState.mouse = {x:mx, y:my};
 				gZState.valid = false;
@@ -2806,11 +2804,11 @@ function init(aArrBufAndCore) {
 			
 			this.zstate.rconn = this;
 			
-			this.ctx = ReactDOM.findDOMNode(this).getContext('2d');
+			this.ctx = new MyContext(ReactDOM.findDOMNode(this).getContext('2d'));
 			this.zstate.valid = false;
 			this.zstate.mouse = {x:0, y:0};
 			this.ctx.mozImageSmoothingEnabled = false;
-			this.ctx.ImageSmoothingEnabled = false;
+			this.ctx.imageSmoothingEnabled = false;
 			
 			this.zstate.interval = setInterval(this.draw, 30);
 			
@@ -4291,8 +4289,8 @@ function init(aArrBufAndCore) {
 	var pQS = tQS; //queryStringAsJson(window.location.search.substr(1));
 	
 	// to test no scaling
-	delete pQS.win81ScaleX;
-	delete pQS.win81ScaleY;
+	// delete pQS.win81ScaleX;
+	// delete pQS.win81ScaleY;
 	
 	var pPhys = {}; // stands for pPhysical - meaning the actually used canvas width and height
 	if (pQS.win81ScaleX || pQS.win81ScaleY) {
@@ -4400,6 +4398,139 @@ function init(aArrBufAndCore) {
 		initReact();
 	}
 }
+
+var mmtm = { // short for multiMonToMon
+	x: function(aX) {
+		var nX = tQS.win81ScaleX ? (tQS.x + ((aX - tQS.x) / tQS.win81ScaleX)) : aX;
+		console.log('aX:', aX, 'nX:', nX);
+		return nX;
+	},
+	y: function(aY) {
+		return tQS.win81ScaleY ? (tQS.y + ((aY - tQS.y) / tQS.win81ScaleY)) : aY;
+	},
+	w: function(aW) {
+		return tQS.win81ScaleX ? (aW / tQS.win81ScaleX) : aW;
+	},
+	h: function(aH) {
+		return tQS.win81ScaleY ? (aH / tQS.win81ScaleY) : aH;
+	}
+};
+function MyContext(ctx) {
+
+    // Methods
+
+	this.beginPath = ctx.beginPath.bind(ctx);
+	this.closePath = ctx.closePath.bind(ctx);
+	this.stroke = ctx.stroke.bind(ctx);
+	this.fill = ctx.fill.bind(ctx);
+	this.createPattern = ctx.createPattern.bind(ctx);
+	
+	this.clearRect = function(x, y, w, h) {
+		ctx.clearRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+	};
+	
+	this.drawImage = function(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight) {
+		ctx.drawImage(image, mmtm.y(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), mmtm.x(dx), mmtm.y(dy), mmtm.w(dWidth), mmtm.h(dHeight));
+	};
+	
+	this.isPointInStroke = function(x, y) {
+		return ctx.isPointInStroke(mmtm.x(x), mmtm.y(y));
+	};
+	
+	this.arc = function(x, y, radius, startAngle, endAngle, anticlockwise) {
+		ctx.arc(mmtm.x(x), mmtm.y(y), mmtm.w(radius), startAngle, endAngle, anticlockwise);
+	};
+	
+	this.putImageData = function(imagedata, dx, dy) {
+		ctx.putImageData(imagedata, mmtm.x(dx), mmtm.y(dy));
+	};
+	
+	this.getImageData = function(x, y, w, h) {
+		return ctx.getImageData(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+	};
+	
+	this.fillText = function(text, x, y) {
+		ctx.fillText(text, mmtm.x(x), mmtm.y(y));
+	};
+	
+    this.lineTo = function(x, y) {
+		ctx.lineTo(mmtm.x(x), mmtm.y(y));
+	};
+	
+	this.moveTo = function(x, y) {
+		ctx.moveTo(mmtm.x(x), mmtm.y(y));
+	};
+	
+	this.setLineDash = function(segments) {
+		var l = segments.length;
+		for (var i=0; i<l; i++) {
+			segments[i] = mmtm.w(segments[i]);
+		}
+		ctx.setLineDash(segments);
+	};
+	
+	this.fillRect = function(x, y, w, h) {
+		ctx.fillRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+	};
+	
+	this.strokeRect = function(x, y, w, h) {
+		ctx.strokeRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+	};
+	
+	this.rect = function(x, y, w, h) {
+		ctx.rect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+	};
+	
+	this.bezierCurveTo = function(cp1x, cp1y, cp2x, cp2y, x, y) {
+		ctx.bezierCurveTo(mmtm.x(cp1x), mmtm.y(cp1y), mmtm.x(cp2x), mmtm.y(cp2y), mmtm.x(x), mmtm.y(y));
+	};
+
+	this.quadraticCurveTo = function(cpx, cpy, x, y) {
+		ctx.quadraticCurveTo(mmtm.x(cpx), mmtm.y(cpy), mmtm.x(x), mmtm.y(y));
+	};
+	
+    // Properties
+
+    Object.defineProperty(this, 'lineWidth', {
+        get: function() {return ctx.lineWidth},
+        set: function(value) {
+            // do something magic with value
+            ctx.lineWidth = mmtm.w(value);
+        }
+    });
+	
+	var fontsizePatt = /\d+px/;
+    Object.defineProperty(this, 'font', {
+        get: function() { return ctx.font },
+        set: function(value) {
+			var fontsize = fontsizePatt.exec(value)[0];
+			ctx.font = value.replace(fontsize, mmtm.w(parseInt(fontsize)) + 'px');
+		}
+    });
+	
+    Object.defineProperty(this, 'strokeStyle', {
+        get: function() { return ctx.strokeStyle },
+        set: function(value) { ctx.strokeStyle = value }
+    });
+	
+    Object.defineProperty(this, 'fillStyle', {
+        get: function() { return ctx.fillStyle },
+        set: function(value) { ctx.fillStyle = value }
+    });
+	
+    Object.defineProperty(this, 'mozImageSmoothingEnabled', {
+        get: function() { return ctx.mozImageSmoothingEnabled },
+        set: function(value) { ctx.mozImageSmoothingEnabled = value }
+    });
+	
+    Object.defineProperty(this, 'imageSmoothingEnabled', {
+        get: function() { return ctx.imageSmoothingEnabled },
+        set: function(value) { ctx.imageSmoothingEnabled = value }
+    });
+
+
+}
+
 
 // start - pre-init
 
