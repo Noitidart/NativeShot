@@ -1445,30 +1445,9 @@ function init(aArrBufAndCore) {
 				}
 			}			
 		},
-		mtmm: { // short for monToMultiMon
-			// converts clientX to proper screenX
-			x: function(aX) {
-				return tQS.win81ScaleX ? aX * tQS.win81ScaleX : aX
-				// return tQS.win81ScaleX ? (tQS.x + ((aX - tQS.x) * tQS.win81ScaleX)) : aX;
-				// return tQS.win81ScaleX ? (tQS.x + (aX * tQS.win81ScaleX)) : aX;
-			},
-			y: function(aY) {
-				return tQS.win81ScaleY ? aY * tQS.win81ScaleY : aY
-				// return tQS.win81ScaleY ? (tQS.y + ((aY - tQS.y) * tQS.win81ScaleY)) : aY
-				// return tQS.win81ScaleY ? (tQS.y + (aY * tQS.win81ScaleY)) : aY
-			},
-			w: function(aW) {
-				// return aW;
-				return tQS.win81ScaleX ? (aW * tQS.win81ScaleX) : aW;
-			},
-			h: function(aH) {
-				// return aH;
-				return tQS.win81ScaleY ? (aH * tQS.win81ScaleY) : aH;
-			}
-		},
 		getMouse: function(e) {
-			var mx = this.mtmm.x(e.clientX);
-			var my = this.mtmm.y(e.clientY);
+			var mx = mtmm.x(e.clientX);
+			var my = mtmm.y(e.clientY);
 			
 			return {
 				x: mx,
@@ -1682,7 +1661,7 @@ function init(aArrBufAndCore) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
-			console.log(mx, my);
+			console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				gZState.mouse = {x:mx, y:my};
 				gZState.valid = false;
@@ -4402,14 +4381,37 @@ function init(aArrBufAndCore) {
 	}
 }
 
-var mmtm = { // short for multiMonToMon
+
+var mtmm = { // short for monToMultiMon - this means WITH the scale and WITH the screenX screenY offset
+	// converts clientX to proper screenX
 	x: function(aX) {
-		var nX = tQS.win81ScaleX ? aX / tQS.win81ScaleX : aX;
-		console.log('aX:', aX, 'nX:', nX);
+		// return tQS.win81ScaleX ? aX * tQS.win81ScaleX : aX;
+		return tQS.x + (tQS.win81ScaleX ? aX * tQS.win81ScaleX : aX);
+	},
+	y: function(aY) {
+		// return tQS.win81ScaleY ? aY * tQS.win81ScaleY : aY;
+		return tQS.y + (tQS.win81ScaleY ? aY * tQS.win81ScaleY : aY);
+	},
+	w: function(aW) {
+		// return aW;
+		return tQS.win81ScaleX ? (aW * tQS.win81ScaleX) : aW;
+	},
+	h: function(aH) {
+		// return aH;
+		return tQS.win81ScaleY ? (aH * tQS.win81ScaleY) : aH;
+	}
+};
+
+var mmtm = { // short for multiMonToMon - this means without the scale, and without the screenX screenY offset
+	x: function(aX) {
+		// var nX = tQS.win81ScaleX ? aX / tQS.win81ScaleX : aX;
+		var nX = tQS.win81ScaleX ? (aX - tQS.x) / tQS.win81ScaleX : aX;
+		// console.log('aX:', aX, 'nX:', nX);
 		return nX;
 	},
 	y: function(aY) {
-		return tQS.win81ScaleY ? aY / tQS.win81ScaleY : aY;
+		// return tQS.win81ScaleY ? aY / tQS.win81ScaleY : aY;
+		return tQS.win81ScaleY ? (aY - tQS.y) / tQS.win81ScaleY : aY;
 	},
 	w: function(aW) {
 		return tQS.win81ScaleX ? (aW / tQS.win81ScaleX) : aW;
@@ -4433,7 +4435,7 @@ function MyContext(ctx) {
 	};
 	
 	this.drawImage = function(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight) {
-		ctx.drawImage(image, mmtm.y(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), mmtm.x(dx), mmtm.y(dy), mmtm.w(dWidth), mmtm.h(dHeight));
+		ctx.drawImage(image, mmtm.x(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), mmtm.x(dx), mmtm.y(dy), mmtm.w(dWidth), mmtm.h(dHeight));
 	};
 	
 	this.isPointInStroke = function(x, y) {
