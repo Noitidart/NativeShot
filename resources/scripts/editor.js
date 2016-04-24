@@ -426,7 +426,7 @@ function init(aArrBufAndCore) {
 		}
 	];
 	
-	
+	var gBroadcastTimeout;
 	var Editor = React.createClass({
 		displayName: 'Editor',
 		getInitialState: function() {
@@ -485,26 +485,29 @@ function init(aArrBufAndCore) {
 			var oSetState = this.setState.bind(this);
 			this.setState = function(aObj, isBroadcast) {
 				if (!isBroadcast) {
-					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
-						topic: 'broadcastToOthers',
-						postMsgObj: {
-							topic: 'reactSetState',
-							updatedStates: JSON.stringify(aObj)
-						},
-						iMon: tQS.iMon
-					}));
-					
-					// var myEvent = window.document.createEvent('CustomEvent');
-					// var myEventDetail = {
-						// topic: 'broadcastToOthers',
-						// postMsgObj: {
-							// topic: 'reactSetState',
-							// updatedStates: JSON.stringify(aObj)
-						// },
-						// iMon: tQS.iMon
-					// };
-					// myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-					// window.dispatchEvent(myEvent);
+					clearTimeout(gBroadcastTimeout);
+					gBroadcastTimeout = setTimeout(function() {
+						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+							topic: 'broadcastToOthers',
+							postMsgObj: {
+								topic: 'reactSetState',
+								updatedStates: JSON.stringify(aObj)
+							},
+							iMon: tQS.iMon
+						}));
+						
+						// var myEvent = window.document.createEvent('CustomEvent');
+						// var myEventDetail = {
+							// topic: 'broadcastToOthers',
+							// postMsgObj: {
+								// topic: 'reactSetState',
+								// updatedStates: JSON.stringify(aObj)
+							// },
+							// iMon: tQS.iMon
+						// };
+						// myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+						// window.dispatchEvent(myEvent);
+					}, 30);
 				}
 				oSetState(aObj);
 			}.bind(this);
