@@ -475,7 +475,7 @@ var EditorFuncs = {
 		}
 		for (var i=0; i<colMon.length; i++) {
 			if (i != aData.iMon) {
-				colMon[i].E.DOMWindow.postMessage();
+				colMon[i].E.DOMWindow.postMessage(aData.postMsgObj, '*');
 			}
 		}
 	},

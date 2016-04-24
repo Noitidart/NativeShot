@@ -40,9 +40,14 @@ function unload() {
 		Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
 			topic: 'updateEditorState',
 			editorstateStr: JSON.stringify(immutableEditorstate),
-			iMon: 0
+			iMon: tQS.iMon
 		}));
 	}
+}
+
+function reactSetState(aData) {
+	var updatedStates = JSON.parse(aData.updatedStates);
+	gEditorStore.setState(updatedStates, true);
 }
 
 function init(aArrBufAndCore) {
@@ -465,6 +470,20 @@ function init(aArrBufAndCore) {
 			};
 		},
 		componentDidMount: function() {
+			var oSetState = this.setState.bind(this);
+			this.setState = function(aObj, isBroadcast) {
+				if (!isBroadcast) {
+					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+						topic: 'broadcastToOthers',
+						postMsgObj: {
+							topic: 'reactSetState',
+							updatedStates: JSON.stringify(aObj)
+						},
+						iMon: tQS.iMon
+					}));
+				}
+				oSetState(aObj);
+			}.bind(this);
 			gEditorStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work - last tested in React 0.14.x
 			gColorPickerSetState.NativeShotEditor = this.setState.bind(this);
 
