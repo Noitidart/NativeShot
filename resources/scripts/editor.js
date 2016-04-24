@@ -418,8 +418,8 @@ function init(aArrBufAndCore) {
 				sGenInputNumberMousing: null, // when mousing, this is set to string of what the cursor should be
 				sGenColorPickerDropping: null, // when in drop, it is set to an object {pStateColorKey:'sPalLineColor',initColor:}
 				sGenCanMouseMoveCursor: null,
-				sGenPalDragStart: null, // is null when not dragging. when dragging it is {screenX:, screenY:}
-				sGenPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {screenX, screenY, initX, initY}
+				sGenPalDragStart: null, // is null when not dragging. when dragging it is {clientX:, clientY:}
+				sGenPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {clientX, clientY, initX, initY}
 				sGenPalTool: 'Select', // the label of the currently active tool
 				sGenPalW: 0, // width
 				sGenPalH: 0, // height
@@ -1446,13 +1446,16 @@ function init(aArrBufAndCore) {
 			}			
 		},
 		mtmm: { // short for monToMultiMon
+			// converts clientX to proper screenX
 			x: function(aX) {
-				// return aX;
-				return tQS.win81ScaleX ? (tQS.x + ((aX - tQS.x) * tQS.win81ScaleX)) : aX;
+				return tQS.win81ScaleX ? aX * tQS.win81ScaleX : aX
+				// return tQS.win81ScaleX ? (tQS.x + ((aX - tQS.x) * tQS.win81ScaleX)) : aX;
+				// return tQS.win81ScaleX ? (tQS.x + (aX * tQS.win81ScaleX)) : aX;
 			},
 			y: function(aY) {
-				// return aY;
-				return tQS.win81ScaleY ? (tQS.y + ((aY - tQS.y) * tQS.win81ScaleY)) : aY
+				return tQS.win81ScaleY ? aY * tQS.win81ScaleY : aY
+				// return tQS.win81ScaleY ? (tQS.y + ((aY - tQS.y) * tQS.win81ScaleY)) : aY
+				// return tQS.win81ScaleY ? (tQS.y + (aY * tQS.win81ScaleY)) : aY
 			},
 			w: function(aW) {
 				// return aW;
@@ -1464,8 +1467,8 @@ function init(aArrBufAndCore) {
 			}
 		},
 		getMouse: function(e) {
-			var mx = this.mtmm.x(e.screenX);
-			var my = this.mtmm.y(e.screenY);
+			var mx = this.mtmm.x(e.clientX);
+			var my = this.mtmm.y(e.clientY);
 			
 			return {
 				x: mx,
@@ -1690,14 +1693,14 @@ function init(aArrBufAndCore) {
 				gDroppingCoords[1] = my;
 			} else if (this.state.sGenPalDragStart) {
 				gEditorStore.setState({
-					sPalX: this.state.sGenPalDragStart.sPalX + (e.screenX - this.state.sGenPalDragStart.screenX),
-					sPalY: this.state.sGenPalDragStart.sPalY + (e.screenY - this.state.sGenPalDragStart.screenY)
+					sPalX: this.state.sGenPalDragStart.sPalX + (e.clientX - this.state.sGenPalDragStart.clientX),
+					sPalY: this.state.sGenPalDragStart.sPalY + (e.clientY - this.state.sGenPalDragStart.clientY)
 				});
 			} else if (this.state.sGenPalZoomViewDragStart) {
 				gEditorStore.setState({
 					sPalZoomViewCoords: {
-						x: this.state.sGenPalZoomViewDragStart.initX + (e.screenX - this.state.sGenPalZoomViewDragStart.screenX),
-						y: this.state.sGenPalZoomViewDragStart.initY + (e.screenY - this.state.sGenPalZoomViewDragStart.screenY)
+						x: this.state.sGenPalZoomViewDragStart.initX + (e.clientX - this.state.sGenPalZoomViewDragStart.clientX),
+						y: this.state.sGenPalZoomViewDragStart.initY + (e.clientY - this.state.sGenPalZoomViewDragStart.clientY)
 					}
 				});
 			} else {
@@ -2887,7 +2890,7 @@ function init(aArrBufAndCore) {
 		},
 		mousedown: function(e) {
 			gEditorStore.setState({
-				sGenPalZoomViewDragStart: {screenX:e.screenX, screenY:e.screenY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
+				sGenPalZoomViewDragStart: {clientX:e.clientX, clientY:e.clientY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
 			});
 		},
 		render: function() {
@@ -2957,7 +2960,7 @@ function init(aArrBufAndCore) {
 		displayName: 'Handle',
 		mousedown: function(e) {
 			gEditorStore.setState({
-				sGenPalDragStart: {screenX:e.screenX, screenY:e.screenY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
+				sGenPalDragStart: {clientX:e.clientX, clientY:e.clientY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
 			});
 		},
 		render: function() {
@@ -4114,7 +4117,7 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mousedown: function(e) {
-			this.downx = e.screenX;
+			this.downx = e.clientX;
 			this.downval = this.props[this.props.pStateVarName];
 			window.addEventListener('mouseup', this.mouseup, false);
 			window.addEventListener('mousemove', this.mousemove, false);
@@ -4128,13 +4131,13 @@ function init(aArrBufAndCore) {
 		},
 		mousemove: function(e) {
 			
-			var delX = e.screenX - this.downx;
+			var delX = e.clientX - this.downx;
 			
 			var delSensitivity = Math.round(delX / this.mousesens);
 			
 			var newVal = this.downval + delSensitivity;
 			
-			// console.log('downx:', this.downx, 'screenx:', e.screenX, 'delX:', delX, 'delSensitivity:', delSensitivity);
+			// console.log('downx:', this.downx, 'clientX:', e.clientX, 'delX:', delX, 'delSensitivity:', delSensitivity);
 			
 			
 			// i do this extra limit test here, as mouse move can move greatly so i might miss the minimum/maximum
@@ -4401,12 +4404,12 @@ function init(aArrBufAndCore) {
 
 var mmtm = { // short for multiMonToMon
 	x: function(aX) {
-		var nX = tQS.win81ScaleX ? (tQS.x + ((aX - tQS.x) / tQS.win81ScaleX)) : aX;
+		var nX = tQS.win81ScaleX ? aX / tQS.win81ScaleX : aX;
 		console.log('aX:', aX, 'nX:', nX);
 		return nX;
 	},
 	y: function(aY) {
-		return tQS.win81ScaleY ? (tQS.y + ((aY - tQS.y) / tQS.win81ScaleY)) : aY;
+		return tQS.win81ScaleY ? aY / tQS.win81ScaleY : aY;
 	},
 	w: function(aW) {
 		return tQS.win81ScaleX ? (aW / tQS.win81ScaleX) : aW;
@@ -4535,6 +4538,7 @@ function MyContext(ctx) {
 // start - pre-init
 
 var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i dont deal with gQS anymore.
+console.log('tQS:', tQS);
 var gQS = tQS;
 window.addEventListener('message', function(aWinMsgEvent) {
 	console.error('incoming window message to HTML: iMon:', tQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
@@ -4849,7 +4853,7 @@ function queryStringAsJson(aQueryString) {
 	asJsonStringify = asJsonStringify.replace(/&/g, '","');
 	asJsonStringify = asJsonStringify.replace(/=/g, '":"');
 	asJsonStringify = '{"' + asJsonStringify + '"}';
-	asJsonStringify = asJsonStringify.replace(/"(\d+(?:.\d+)?|true|false)"/g, function($0, $1) { return $1; });
+	asJsonStringify = asJsonStringify.replace(/"(-?\d+(?:.\d+)?|true|false)"/g, function($0, $1) { return $1; });
 	
 	return JSON.parse(asJsonStringify);
 }
