@@ -2777,6 +2777,9 @@ function init(aArrBufAndCore) {
 		},
 	});
 	
+	var gZoomViewW = mtmm.w(200); // in mon, so without scaling. so thats why i use mtmm.w // i cant use mtmm.x as that will put the screenX and screenY offset of 0, 0 equivalent
+	var gZoomViewH = mtmm.h(200);
+	
 	var ZoomView = React.createClass({
 		displayName: 'ZoomView',
 		componentDidMount: function() {
@@ -2807,8 +2810,8 @@ function init(aArrBufAndCore) {
 		draw: function() {
 			if (gCState && gCState.rconn.ctx && !this.zstate.valid) {
 				var ctx = this.ctx;
-				var width = 300; // of zoomview canvas
-				var height = 300;  // of zoomview canvas
+				var width = gZoomViewW; // of zoomview canvas
+				var height = gZoomViewH;  // of zoomview canvas
 				
 				// background
 
@@ -2874,7 +2877,7 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props - cPalProps - its all of them
-			return React.createElement('canvas', {className:'pzoomview', width:300, height:300, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px', cursor:this.props.pZoomViewCursor }, onMouseDown:this.mousedown});
+			return React.createElement('canvas', {className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px', cursor:this.props.pZoomViewCursor }, onMouseDown:this.mousedown});
 		}
 	});
 	
