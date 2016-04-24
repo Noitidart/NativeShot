@@ -656,7 +656,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var hwndStr = aArrHwndPtrStr[i];
 					var hwndPtr = ostypes.TYPE.HWND.ptr(ctypes.UInt64(hwndStr));
 					
-					// start - remove border from window
+					// start - remove border from window - http://stackoverflow.com/a/2400467/1828637
 					var GWL_STYLE = -16;
 					var WS_CAPTION = 0x00C00000;
 					var WS_THICKFRAME = 0x00040000;
