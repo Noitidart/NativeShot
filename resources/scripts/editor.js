@@ -4430,6 +4430,13 @@ function MyContext(ctx) {
 	this.fill = ctx.fill.bind(ctx);
 	this.createPattern = ctx.createPattern.bind(ctx);
 	
+	this.measureText = function(text) {
+		var om = ctx.measureText(text);
+		return {
+			width: mtmm.w(om.width)
+		};
+	};
+	
 	this.clearRect = function(x, y, w, h) {
 		ctx.clearRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
 	};
