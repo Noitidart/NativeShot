@@ -2923,6 +2923,8 @@ function shootAllMons(aDOMWindow) {
 			
 			var scaleX = colMon[i].win81ScaleX;
 			var scaleY = colMon[i].win81ScaleY;
+			// on win10, the x, y, w and h set here needs scaling, its ridiculous. but from ctypes it doesnt need scaling. so i just set the sclaed here, and whatever was off, then its fixed, the ctypes doesnt need scaling. i tested the ctypes with height width minus 1 and it was perfect ah
+			// also on windows, if i dont use SetWindowPos from ctypes, the taskbar on secondary mon keeps showing on top when i focus the nativeshot window in primary mon
 			if (scaleX) {
 				x = Math.floor(x / scaleX);
 				w = Math.floor(w / scaleX);
