@@ -566,7 +566,7 @@ function init(aArrBufAndCore) {
 			// **** Options! ****
 			// now that Style is setup, i can add Drawable's
 			
-			this.cstate.dim = new this.Drawable(null, null, null, null, 'dim');
+			this.cstate.dim = this.newDrawable(null, null, null, null, 'dim');
 			console.log('this.cstate.dim:', this.cstate.dim);
 			
 			window.addEventListener('mousemove', this.mousemove, false);
@@ -658,763 +658,757 @@ function init(aArrBufAndCore) {
 			//}
 		},
 		////// start - canvas functions
-		Drawable: function(x, y, w, h, name, aOptions={}) {
+		newDrawable: function(x, y, w, h, name, aOptions={}) {
 
+			var DRAWABLE = {};
+			
 			// set obj props
-			this.name = name;
-			//this.id = (new Date()).getTime();
+			DRAWABLE.name = name;
+			//DRAWABLE.id = (new Date()).getTime();
 			
 			// set rest
 			switch (name) {
 				case 'dim':
 					
 						// dimensions
-						this.x = 0;
-						this.y = 0;
-						this.w = gQS.w;
-						this.h = gQS.h;
+						DRAWABLE.x = 0;
+						DRAWABLE.y = 0;
+						DRAWABLE.w = gQS.w;
+						DRAWABLE.h = gQS.h;
 						
 						// styleables (are a property on ctx like ctx.fillStyle or ctx.setLineDash) if undefined, that it is populated with respect to toolbar
-						this.fillStyle = 'rgba(0, 0, 0, 0.6)';
+						DRAWABLE.fillStyle = 'rgba(0, 0, 0, 0.6)';
 					
 					break;
 				case 'Line':
 				
 						// dimensions
-						this.x = x;
-						this.y = y;
-						this.x2 = 'x2' in aOptions ? aOptions.x2 : x;
-						this.y2 = 'y2' in aOptions ? aOptions.y2 : y;
+						DRAWABLE.x = x;
+						DRAWABLE.y = y;
+						DRAWABLE.x2 = 'x2' in aOptions ? aOptions.x2 : x;
+						DRAWABLE.y2 = 'y2' in aOptions ? aOptions.y2 : y;
 						
 						// other props
-						this.arrowStart = aOptions.arrowStart || gCState.rconn.state.sPalArrowStart;
-						this.arrowEnd = aOptions.arrowEnd || gCState.rconn.state.sPalArrowEnd;
-						this.arrowLength = aOptions.arrowLength || gCState.rconn.state.sPalArrowLength;
+						DRAWABLE.arrowStart = aOptions.arrowStart || this.cstate.rconn.state.sPalArrowStart;
+						DRAWABLE.arrowEnd = aOptions.arrowEnd || this.cstate.rconn.state.sPalArrowEnd;
+						DRAWABLE.arrowLength = aOptions.arrowLength || this.cstate.rconn.state.sPalArrowLength;
 						
 						// styleables - if undefined, then it is set to the default value with respect to pal
-						this.lineWidth = aOptions.lineWidth; // lineWidth is not set, then it is undefined, and then setStyleablesDefaults will set it to the default value, which respects pal
-						this.strokeStyle = aOptions.strokeStyle;
-						this.fillStyle = this.strokeStyle; // needed for drawing arrow
-						this.setLineDash = aOptions.setLineDash;
-						this.lineJoin = aOptions.lineJoin;
+						DRAWABLE.lineWidth = aOptions.lineWidth; // lineWidth is not set, then it is undefined, and then setStyleablesDefaults will set it to the default value, which respects pal
+						DRAWABLE.strokeStyle = aOptions.strokeStyle;
+						DRAWABLE.fillStyle = DRAWABLE.strokeStyle; // needed for drawing arrow
+						DRAWABLE.setLineDash = aOptions.setLineDash;
+						DRAWABLE.lineJoin = aOptions.lineJoin;
 				
 					break;
 				case 'Pencil':
 				case 'Marker':
 				
-						// has to be drawn, i dont allow constructing this with predefiend path. as in i dont offer aOptions.path
-						this.path = [x, y];
+						// has to be drawn, i dont allow constructing DRAWABLE with predefiend path. as in i dont offer aOptions.path
+						DRAWABLE.path = [x, y];
 						
 						// styleables
-						this.lineWidth = aOptions.lineWidth;
-						this.strokeStyle = aOptions.strokeStyle;
-						this.setLineDash = aOptions.setLineDash;
-						this.lineJoin = aOptions.lineJoin;
+						DRAWABLE.lineWidth = aOptions.lineWidth;
+						DRAWABLE.strokeStyle = aOptions.strokeStyle;
+						DRAWABLE.setLineDash = aOptions.setLineDash;
+						DRAWABLE.lineJoin = aOptions.lineJoin;
 				
 					break;
 				case 'Text':
 				
 						// dimensions
-						this.x = x;
-						this.y = y;
+						DRAWABLE.x = x;
+						DRAWABLE.y = y;
 						
 						// others
-						this.chars = '';
-						this.index = 0; // the position of the ibeam
-						this.fontsize = aOptions.fontsize; // must be a integer. no 'px' but it is assumed as px and used as such throughout
-						this.fontface = aOptions.fontface;
-						this.fontbold = aOptions.fontbold;
-						this.fontitalic = aOptions.fontitalic;
-						this.linespacing = 1;
+						DRAWABLE.chars = '';
+						DRAWABLE.index = 0; // the position of the ibeam
+						DRAWABLE.fontsize = aOptions.fontsize; // must be a integer. no 'px' but it is assumed as px and used as such throughout
+						DRAWABLE.fontface = aOptions.fontface;
+						DRAWABLE.fontbold = aOptions.fontbold;
+						DRAWABLE.fontitalic = aOptions.fontitalic;
+						DRAWABLE.linespacing = 1;
 						
 						// styleables
-						this.fillStyle = aOptions.fillStyle;
-						this.textAlign = aOptions.textAlign;
-						this.font = undefined; // i need to set it to undefined otherwise setStyleablesDefaults will not set it // user should only set fontsize,fontface,fontbold,fontitalic. the .font will be calculated by setStyleablesDefaults
+						DRAWABLE.fillStyle = aOptions.fillStyle;
+						DRAWABLE.textAlign = aOptions.textAlign;
+						DRAWABLE.font = undefined; // i need to set it to undefined otherwise setStyleablesDefaults will not set it // user should only set fontsize,fontface,fontbold,fontitalic. the .font will be calculated by setStyleablesDefaults
 				
 					break;
 				case 'Gaussian':
 					
 						// dimensions
-						this.x = x;
-						this.y = y;
-						this.w = w;
-						this.h = h;
+						DRAWABLE.x = x;
+						DRAWABLE.y = y;
+						DRAWABLE.w = w;
+						DRAWABLE.h = h;
 						
 						// other
-						this.blurradius = aOptions.level || gCState.rconn.state.sPalBlurRadius
+						DRAWABLE.blurradius = aOptions.level || this.cstate.rconn.state.sPalBlurRadius
 						
 					break;
 				case 'Mosaic':
 					
 						// dimensions
-						this.x = x;
-						this.y = y;
-						this.w = w;
-						this.h = h;
+						DRAWABLE.x = x;
+						DRAWABLE.y = y;
+						DRAWABLE.w = w;
+						DRAWABLE.h = h;
 						
 						// other
-						this.blurblock = aOptions.level || gCState.rconn.state.sPalBlurBlock;
+						DRAWABLE.blurblock = aOptions.level || this.cstate.rconn.state.sPalBlurBlock;
 				
 				case 'cutout':
 					
 						// dimensions
-						this.x = x;
-						this.y = y;
-						this.w = w;
-						this.h = h;
+						DRAWABLE.x = x;
+						DRAWABLE.y = y;
+						DRAWABLE.w = w;
+						DRAWABLE.h = h;
 						
 					break;
 				case 'Rectangle':
 				case 'Oval':
 					
 						// dimensions
-						this.x = x;
-						this.y = y;
-						this.w = w;
-						this.h = h;
+						DRAWABLE.x = x;
+						DRAWABLE.y = y;
+						DRAWABLE.w = w;
+						DRAWABLE.h = h;
 						
 						// styleables
-						this.fillStyle = undefined;
-						this.strokeStyle = undefined;
-						this.lineWidth = undefined;
-						this.setLineDash = undefined;
-						this.lineJoin = undefined;
+						DRAWABLE.fillStyle = undefined;
+						DRAWABLE.strokeStyle = undefined;
+						DRAWABLE.lineWidth = undefined;
+						DRAWABLE.setLineDash = undefined;
+						DRAWABLE.lineJoin = undefined;
 					
 					break;
 				default:
-					console.error('no props specified for a drawable with name "' + this.name + '"');
-					throw new Error('no props specified for a drawable with name "' + this.name + '"');
+					console.error('no props specified for a drawable with name "' + DRAWABLE.name + '"');
+					throw new Error('no props specified for a drawable with name "' + DRAWABLE.name + '"');
 			}
 			
 			// set styleables
-			gCState.rconn.setStyleablesDefaults(this);
+			this.setStyleablesDefaults(DRAWABLE);
 			
-			this.draw = function(ctx) {
-				// returns the value i should set gCState.valid to
-				
-				if (['cutout'].indexOf(this.name) > -1) {
-					// not drawable
-					console.error('trying to draw an undrawable, this:', this);
-					return true;
-				}
-				
-				// do check if it no select should be drawn, if it has 0 dimensions:
-				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
-				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
-					console.error('width or height is 0 so not drawing');
-					return true;
-				}
-				
-				// style the ctx
-				// console.log('applying styles of this:', this);
-				gCState.rconn.applyCtxStyle(this); // whatever keys exist that are in styleables will be styled to ctx
-				
-				// draw it
-				switch (this.name) {
-					case 'dim':
-
-							var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
-							if (!cutouts.length) {
-								ctx.fillRect(tQS.x, tQS.y, this.w, this.h);
-							} else {
-								
-								var fullscreenRect = new Rect(tQS.x, tQS.y, this.w, this.h);
-								var cutoutsAsRects = [];
-								cutouts.forEach(function(cutout) {
-									var cutoutClone = gCState.rconn.makeDimsPositive(cutout, true);
-									cutoutsAsRects.push(new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h));
-								});
-								var dimRects = subtractMulti(fullscreenRect, cutoutsAsRects);
-								for (var i=0; i<dimRects.length; i++) {
-									ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
-								}
-							}
-					
-						break;
-					case 'Rectangle':
-					
-							ctx.fillRect(this.x, this.y, this.w, this.h);
-							if (this.lineWidth > 0) {
-								ctx.strokeRect(this.x, this.y, this.w, this.h);
-							}
-						
-						break;
-					case 'Oval':
-						
-							// per jsbin from here - http://stackoverflow.com/a/2173084/1828637
-							
-							var w = this.w;
-							var h = this.h;
-							var x = this.x;
-							var y = this.y;
-							
-							var kappa = .5522848,
-								ox = (w / 2) * kappa, // control point offset horizontal
-								oy = (h / 2) * kappa, // control point offset vertical
-								xe = x + w,           // x-end
-								ye = y + h,           // y-end
-								xm = x + w / 2,       // x-middle
-								ym = y + h / 2;       // y-middle
-
-							// ctx.save();
-							ctx.beginPath();
-							ctx.moveTo(x, ym);
-							ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
-							ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
-							ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
-							ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
-							
-							// ctx.quadraticCurveTo(x,y,xm,y);
-							// ctx.quadraticCurveTo(xe,y,xe,ym);
-							// ctx.quadraticCurveTo(xe,ye,xm,ye);
-							// ctx.quadraticCurveTo(x,ye,x,ym);
-
-							ctx.fill();
-							if (this.lineWidth > 0) {
-								ctx.stroke();
-							}
-						
-						break;
-					case 'Line':
-						
-							ctx.beginPath();
-							ctx.moveTo(this.x, this.y);
-							ctx.lineTo(this.x2, this.y2);
-							ctx.stroke();
-
-							if (this.arrowEnd) {
-								// end arrow
-								canvas_arrow(ctx, this.x, this.y, this.x2, this.y2, this.arrowLength);
-							}
-							
-							if (this.arrowStart) {
-								// start arrow
-								canvas_arrow(ctx, this.x2, this.y2, this.x, this.y, this.arrowLength)
-							}
-						
-						break;
-					case 'Pencil':
-					case 'Marker':
-						
-							ctx.beginPath();
-							ctx.moveTo(this.path[0], this.path[1]);
-							for (var i=2; i<this.path.length; i+=2) {
-								ctx.lineTo(this.path[i], this.path[i+1]);
-							}
-							ctx.stroke();
-						
-						break;
-					case 'Text':
-					
-							ctx.fillText(this.chars, this.x, this.y);
-					
-						break;
-					case 'Gaussian':
-						
-							var positived = gCState.rconn.makeDimsPositive(this, true);
-							
-							var level = this.blurradius; // gCState.rconn.state.sPalBlurRadius;
-							
-							// get section of screenshot
-							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
-							
-							// apply filter
-							imagedata.gaussian_blur(srcImgData, positived.w, positived.h, {
-								radius: level
-							});
-							
-							// draw it
-							ctx.putImageData(srcImgData, positived.x, positived.y);
-						
-						break;
-					case 'Mosaic':
-						
-							var positived = gCState.rconn.makeDimsPositive(this, true);
-							
-							var level = this.blurblock;
-							
-							// get section of screenshot
-							var srcImgData = gCState.rconn.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
-							
-							// apply filter
-							imagedata.pixelate(srcImgData, positived.w, positived.h, {
-								blockSize: level
-							});
-							
-							// draw it
-							ctx.putImageData(srcImgData, positived.x, positived.y);
-						
-						break;
-					default:
-						// should never get here, as would have returned earlier, as this one is not drawable
-				}
-				
-				return false;
-			};
+			return DRAWABLE;
+		},
+		dDraw: function(aDrawable) {
+			// returns the value i should set this.cstate.valid to
 			
-			this.select = function(ctx) {
-				// returns the valid value
-				
-				// console.error('doing select for drawable:', this);
-				// set styles - and determine if its selectable
-				var curStyle;
-				switch (this.name) {
-					case 'cutout':
-						
-							curStyle = {
-								lineWidth: 1,
-								setLineDash: [0, 3, 0],
-								strokeStyle: 'black'
-							};
-						
-						break;
-					case 'Rectangle':
-					case 'Oval':
-					case 'Gaussian':
-					case 'Mosaic':
-					
-							curStyle = {
-								lineWidth: 1,
-								setLineDash: [0, 3, 0],
-								strokeStyle: 'black'
-							};
-					
-						break;
-					case 'Line':
-					case 'Pencil':
-					case 'Marker':
-					
-							curStyle = {
-								strokeStyle: '#ffffff',
-								setLineDash: [],
-								lineWidth: 1,
-								fillStyle: '#000000'
-							};
-					
-						break;
-					case 'Text':
-						
-							curStyle = {
-								strokeStyle: 'black',
-								setLineDash: [0, 3, 0],
-								lineWidth: 1
-							};
-						
-						break;
-					default:
-						// not selectable
-							// dim
-						console.warn('this drawable is NOT selectable! tried to select a drawable with name:', this.name, 'drawable obj:', this);
-						return true; // so no need to invalidate
-				}
-				
-				// do check if it no select should be drawn, if it has 0 dimensions:
-				if (('w' in this && !this.w) || ('h' in this && !this.h)) {
-				// if (this.name != 'dim' && this.name != 'Line' && !this.w && !this.h) {
-					console.error('width or height is 0 so not drawing');
-					return true;
-				}
-				
-				// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
-				gCState.rconn.applyCtxStyle(curStyle);
-				
-				// draw the selection of it
-				switch (this.name) {
-					case 'cutout':
-					case 'Rectangle':
-					case 'Oval':
-					case 'Gaussian':
-					case 'Mosaic':
-					
-							ctx.strokeRect(this.x, this.y, this.w, this.h);
-							
-							// draw handles
-							var handleSize = gCState.rconn.state.sCanHandleSize;
-							var half = handleSize / 2;
-							
-							var selectionHandles = gCState.selectionHandles;
-							
-							// top left, middle, right
-							selectionHandles[0] = {
-								x: this.x-half,
-								y: this.y-half
-							};
-							
-							selectionHandles[1] = {
-								x: this.x+this.w/2-half,
-								y: this.y-half
-							};
-							
-							selectionHandles[2] = {
-								x: this.x+this.w-half,
-								y: this.y-half
-							};
-							
-							//middle left
-							selectionHandles[3] = {
-								x: this.x-half,
-								y: this.y+this.h/2-half
-							};
-							
-							//middle right
-							selectionHandles[4] = {
-								x: this.x+this.w-half,
-								y: this.y+this.h/2-half
-							};
-							
-							//bottom left, middle, right
-							selectionHandles[6] = {
-								x: this.x+this.w/2-half,
-								y: this.y+this.h-half
-							};
-							
-							selectionHandles[5] = {
-								x: this.x-half,
-								y: this.y+this.h-half
-							};
-							
-							selectionHandles[7] = {
-								x: this.x+this.w-half,
-								y: this.y+this.h-half
-							};
-							
-							ctx.fillStyle = '#000000';
-							ctx.setLineDash([]);
-							ctx.strokeStyle = '#ffffff';
-							ctx.beginPath();
-							for (i = 0; i < 8; i += 1) {
-								cur = selectionHandles[i];
-								ctx.rect(cur.x, cur.y, handleSize, handleSize);
-							};
-							
-							ctx.fill();
-							ctx.stroke();
-						
-						break;
-					case 'Text':
-						
-							// var linespacingAsPx = this.linespacing * this.size;
-							
-							var font = gCState.rconn.calcCtxFont(this);
-							
-							var x;
-							var y;
-							var h;
-							var w;
-							var fontsize = this.fontsize; // i expect it to be in px
-							if (this.chars.length) {
-								var mh = measureHeight(font, fontsize, this.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
-								// console.log('mh:', mh);
-								w = mh.width;
-								// i want to keep the baseline at this.y
-								y = mh.relativeTop < 0 ? this.y + mh.relativeTop : this.y;
-								h = mh.relativeBot >= 0 ? (this.y + mh.relativeBot) - y : this.y - y;
-							} else {
-								w = 0;
-								h = fontsize;
-								y = this.y - fontsize;
-							}
-							x = this.x;
-							
-							ctx.strokeRect(this.x, y, w, h);
-							
-							if (gCState.typing) {
-								// draw ibeam
-								var ibh = h; // ibeam height
-								var ibx;
-								if (this.index === 0) {
-									ibx = 0;
-								} else {
-									ibx = ctx.measureText(this.chars.substr(0, this.index)).width;
-								}
-								var ibw = 3;
-								ctx.fillStyle = 'black'; // ibeam color
-								ctx.fillRect(this.x + ibx, y, ibw, ibh);
-							}
-						
-						break;
-					case 'Line':
-
-							// ctx.beginPath();
-							// ctx.arc(this.x, this.y, gCState.rconn.state.sCanHandleSize, 0, 360);
-							
-							// ctx.fill();
-							// ctx.stroke();
-							
-							// ctx.beginPath();
-							// ctx.arc(this.x2, this.y2, gCState.rconn.state.sCanHandleSize, 0, 360);
-							
-							// ctx.fill();
-							// ctx.stroke();
-							
-							// draw handles
-							var handleSize = gCState.rconn.state.sCanHandleSize;
-							var half = handleSize / 2;
-							
-							var selectionHandles = gCState.selectionHandles;
-							selectionHandles.length = 2;
-							
-							selectionHandles[0] = {
-								x: this.x-half,
-								y: this.y-half
-							};
-							
-							selectionHandles[1] = {
-								x: this.x2-half,
-								y: this.y2-half
-							};
-							
-							ctx.beginPath();
-							for (i = 0; i < 2; i += 1) {
-								cur = selectionHandles[i];
-								ctx.rect(cur.x, cur.y, handleSize, handleSize);
-							};
-							ctx.fill();
-							ctx.stroke();
-						
-						break;
-					case 'Pencil':
-					case 'Marker':
-					
-							// ctx.beginPath();
-							// ctx.arc(this.path[0], this.path[1], gCState.rconn.state.sCanHandleSize, 0, 360);
-							
-							// ctx.fill();
-							// ctx.stroke();
-							
-							// ctx.beginPath();
-							// ctx.arc(this.path[this.path.length - 2], this.path[this.path.length - 1], gCState.rconn.state.sCanHandleSize, 0, 360);
-							
-							// ctx.fill();
-							// ctx.stroke();
-							// draw handles
-							var handleSize = gCState.rconn.state.sCanHandleSize;
-							var half = handleSize / 2;
-							
-							// var selectionHandles = gCState.selectionHandles;
-							// selectionHandles.length = 2;
-							
-							ctx.beginPath();
-							// for (i = 0; i < 2; i += 1) {
-								// cur = selectionHandles[i];
-								// ctx.rect(cur.x, cur.y, handleSize, handleSize);
-							// };
-							ctx.rect(this.path[0] - half, this.path[1] - half, handleSize, handleSize);
-							ctx.rect(this.path[this.path.length-2] - half, this.path[this.path.length-1] - half, handleSize, handleSize);
-							ctx.fill();
-							ctx.stroke();
-					
-						break;
-					default:
-						console.error('should never get here, as would have returned earlier, as this one is not drawable');
-				}
-				
-				return false;
-			};
+			if (['cutout'].indexOf(aDrawable.name) > -1) {
+				// not drawable
+				console.error('trying to draw an undrawable, aDrawable:', aDrawable);
+				return true;
+			}
 			
-			this.contains = function(mx, my) {
-				// returns 0 if not contained. returns 1 if contained in draggable area. returns 2 - 9 if in resizable area
-				// is uncontainable
-				if (['dim'].indexOf(this.name) > -1) {
-					console.error('tried to test contains on an uncontainable! this:', this);
-					return;
-				}
+			// do check if it no select should be drawn, if it has 0 dimensions:
+			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
+			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
+				console.error('width or height is 0 so not drawing');
+				return true;
+			}
+			
+			// style the this.ctx
+			// console.log('applying styles of aDrawable:', aDrawable);
+			this.applyCtxStyle(aDrawable); // whatever keys exist that are in styleables will be styled to this.ctx
+			
+			// draw it
+			switch (aDrawable.name) {
+				case 'dim':
+
+						var cutouts = this.cstate.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
+						if (!cutouts.length) {
+							this.ctx.fillRect(tQS.x, tQS.y, aDrawable.w, aDrawable.h);
+						} else {
+							
+							var fullscreenRect = new Rect(tQS.x, tQS.y, aDrawable.w, aDrawable.h);
+							var cutoutsAsRects = [];
+							var l = cutouts.length;
+							for (var i=0; i<l; i++) {
+								var cutout = cutouts[i];
+								var cutoutClone = this.makeDimsPositive(cutout, true);
+								cutoutsAsRects.push(new Rect(cutoutClone.x, cutoutClone.y, cutoutClone.w, cutoutClone.h));
+							}
+							var dimRects = subtractMulti(fullscreenRect, cutoutsAsRects);
+							for (var i=0; i<dimRects.length; i++) {
+								this.ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
+							}
+						}
 				
-				switch (this.name) {
-					case 'Line':
+					break;
+				case 'Rectangle':
+				
+						this.ctx.fillRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+						if (aDrawable.lineWidth > 0) {
+							this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+						}
 					
-							if (gCState.selection && gCState.selection == this) {
-								var selectionHandles = gCState.selectionHandles;
-								var handleSize = gCState.rconn.state.sCanHandleSize;
-								for (var i=0; i<2; i++) {
-									if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
-										(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
-											return i + 10;
-									}
-								}
-							}
+					break;
+				case 'Oval':
 					
-							var ctx = gCState.rconn.ctx;
-							ctx.beginPath();
-							ctx.setLineDash([]);
-							ctx.lineWidth = this.lineWidth >= 20 ? this.lineWidth : 20;
-							ctx.moveTo(this.x, this.y);
-							ctx.lineTo(this.x2, this.y2);
-							return ctx.isPointInStroke(mx, my) ? 1 : 0;
-					
-						break;
-					case 'Pencil':
-					case 'Marker':
+						// per jsbin from here - http://stackoverflow.com/a/2173084/1828637
 						
-							var ctx = gCState.rconn.ctx;
-							ctx.setLineDash([]);
-							ctx.lineWidth = this.lineWidth >= 20 ? this.lineWidth : 20;
-							ctx.beginPath();
-							ctx.moveTo(this.path[0], this.path[1]);
-							for (var i=2; i<this.path.length; i+=2) {
-								ctx.lineTo(this.path[i], this.path[i+1]);
-							}
-							return ctx.isPointInStroke(mx, my) ? 1 : 0;
+						var w = aDrawable.w;
+						var h = aDrawable.h;
+						var x = aDrawable.x;
+						var y = aDrawable.y;
 						
-						break;
-					case 'Text':
+						var kappa = .5522848,
+							ox = (w / 2) * kappa, // control point offset horizontal
+							oy = (h / 2) * kappa, // control point offset vertical
+							xe = x + w,           // x-end
+							ye = y + h,           // y-end
+							xm = x + w / 2,       // x-middle
+							ym = y + h / 2;       // y-middle
+
+						// this.ctx.save();
+						this.ctx.beginPath();
+						this.ctx.moveTo(x, ym);
+						this.ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+						this.ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+						this.ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+						this.ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+						
+						// this.ctx.quadraticCurveTo(x,y,xm,y);
+						// this.ctx.quadraticCurveTo(xe,y,xe,ym);
+						// this.ctx.quadraticCurveTo(xe,ye,xm,ye);
+						// this.ctx.quadraticCurveTo(x,ye,x,ym);
+
+						this.ctx.fill();
+						if (aDrawable.lineWidth > 0) {
+							this.ctx.stroke();
+						}
 					
-							var ctx = gCState.rconn.ctx;
-							
-							var font = gCState.rconn.calcCtxFont(this);
-							ctx.font = font;
-							
-							var x;
-							var y;
-							var h;
-							var w;
-							var fontsize = this.fontsize; // i expect it to be in px
-							if (this.chars.length) {
-								var mh = measureHeight(font, fontsize, this.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
-								// console.log('mh:', mh);
-								w = mh.width;
-								// i want to keep the baseline at this.y
-								y = mh.relativeTop < 0 ? this.y + mh.relativeTop : this.y;
-								h = mh.relativeBot >= 0 ? (this.y + mh.relativeBot) - y : this.y - y;
+					break;
+				case 'Line':
+					
+						this.ctx.beginPath();
+						this.ctx.moveTo(aDrawable.x, aDrawable.y);
+						this.ctx.lineTo(aDrawable.x2, aDrawable.y2);
+						this.ctx.stroke();
+
+						if (aDrawable.arrowEnd) {
+							// end arrow
+							canvas_arrow(this.ctx, aDrawable.x, aDrawable.y, aDrawable.x2, aDrawable.y2, aDrawable.arrowLength);
+						}
+						
+						if (aDrawable.arrowStart) {
+							// start arrow
+							canvas_arrow(this.ctx, aDrawable.x2, aDrawable.y2, aDrawable.x, aDrawable.y, aDrawable.arrowLength)
+						}
+					
+					break;
+				case 'Pencil':
+				case 'Marker':
+					
+						this.ctx.beginPath();
+						this.ctx.moveTo(aDrawable.path[0], aDrawable.path[1]);
+						for (var i=2; i<aDrawable.path.length; i+=2) {
+							this.ctx.lineTo(aDrawable.path[i], aDrawable.path[i+1]);
+						}
+						this.ctx.stroke();
+					
+					break;
+				case 'Text':
+				
+						this.ctx.fillText(aDrawable.chars, aDrawable.x, aDrawable.y);
+				
+					break;
+				case 'Gaussian':
+					
+						var positived = this.makeDimsPositive(aDrawable, true);
+						
+						var level = aDrawable.blurradius; // this.state.sPalBlurRadius;
+						
+						// get section of screenshot
+						var srcImgData = this.this.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
+						
+						// apply filter
+						imagedata.gaussian_blur(srcImgData, positived.w, positived.h, {
+							radius: level
+						});
+						
+						// draw it
+						this.ctx.putImageData(srcImgData, positived.x, positived.y);
+					
+					break;
+				case 'Mosaic':
+					
+						var positived = this.makeDimsPositive(aDrawable, true);
+						
+						var level = aDrawable.blurblock;
+						
+						// get section of screenshot
+						var srcImgData = this.this.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
+						
+						// apply filter
+						imagedata.pixelate(srcImgData, positived.w, positived.h, {
+							blockSize: level
+						});
+						
+						// draw it
+						this.ctx.putImageData(srcImgData, positived.x, positived.y);
+					
+					break;
+				default:
+					// should never get here, as would have returned earlier, as aDrawable one is not drawable
+			}
+			
+			return false;
+		},
+		dSelect: function(aDrawable) {
+			// returns the valid value
+			
+			// console.error('doing select for drawable:', aDrawable);
+			// set styles - and determine if its selectable
+			var curStyle;
+			switch (aDrawable.name) {
+				case 'cutout':
+					
+						curStyle = {
+							lineWidth: 1,
+							setLineDash: [0, 3, 0],
+							strokeStyle: 'black'
+						};
+					
+					break;
+				case 'Rectangle':
+				case 'Oval':
+				case 'Gaussian':
+				case 'Mosaic':
+				
+						curStyle = {
+							lineWidth: 1,
+							setLineDash: [0, 3, 0],
+							strokeStyle: 'black'
+						};
+				
+					break;
+				case 'Line':
+				case 'Pencil':
+				case 'Marker':
+				
+						curStyle = {
+							strokeStyle: '#ffffff',
+							setLineDash: [],
+							lineWidth: 1,
+							fillStyle: '#000000'
+						};
+				
+					break;
+				case 'Text':
+					
+						curStyle = {
+							strokeStyle: 'black',
+							setLineDash: [0, 3, 0],
+							lineWidth: 1
+						};
+					
+					break;
+				default:
+					// not selectable
+						// dim
+					console.warn('aDrawable drawable is NOT selectable! tried to select a drawable with name:', aDrawable.name, 'drawable obj:', aDrawable);
+					return true; // so no need to invalidate
+			}
+			
+			// do check if it no select should be drawn, if it has 0 dimensions:
+			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
+			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
+				console.error('width or height is 0 so not drawing');
+				return true;
+			}
+			
+			// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
+			this.applyCtxStyle(curStyle);
+			
+			// draw the selection of it
+			switch (aDrawable.name) {
+				case 'cutout':
+				case 'Rectangle':
+				case 'Oval':
+				case 'Gaussian':
+				case 'Mosaic':
+				
+						this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+						
+						// draw handles
+						var handleSize = this.state.sCanHandleSize;
+						var half = handleSize / 2;
+						
+						var selectionHandles = this.cstate.selectionHandles;
+						
+						// top left, middle, right
+						selectionHandles[0] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y-half
+						};
+						
+						selectionHandles[1] = {
+							x: aDrawable.x+aDrawable.w/2-half,
+							y: aDrawable.y-half
+						};
+						
+						selectionHandles[2] = {
+							x: aDrawable.x+aDrawable.w-half,
+							y: aDrawable.y-half
+						};
+						
+						//middle left
+						selectionHandles[3] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y+aDrawable.h/2-half
+						};
+						
+						//middle right
+						selectionHandles[4] = {
+							x: aDrawable.x+aDrawable.w-half,
+							y: aDrawable.y+aDrawable.h/2-half
+						};
+						
+						//bottom left, middle, right
+						selectionHandles[6] = {
+							x: aDrawable.x+aDrawable.w/2-half,
+							y: aDrawable.y+aDrawable.h-half
+						};
+						
+						selectionHandles[5] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y+aDrawable.h-half
+						};
+						
+						selectionHandles[7] = {
+							x: aDrawable.x+aDrawable.w-half,
+							y: aDrawable.y+aDrawable.h-half
+						};
+						
+						this.ctx.fillStyle = '#000000';
+						this.ctx.setLineDash([]);
+						this.ctx.strokeStyle = '#ffffff';
+						this.ctx.beginPath();
+						for (i = 0; i < 8; i += 1) {
+							cur = selectionHandles[i];
+							this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+						};
+						
+						this.ctx.fill();
+						this.ctx.stroke();
+					
+					break;
+				case 'Text':
+					
+						// var linespacingAsPx = aDrawable.linespacing * aDrawable.size;
+						
+						var font = this.calcCtxFont(aDrawable);
+						
+						var x;
+						var y;
+						var h;
+						var w;
+						var fontsize = aDrawable.fontsize; // i expect it to be in px
+						if (aDrawable.chars.length) {
+							var mh = measureHeight(font, fontsize, aDrawable.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
+							// console.log('mh:', mh);
+							w = mh.width;
+							// i want to keep the baseline at aDrawable.y
+							y = mh.relativeTop < 0 ? aDrawable.y + mh.relativeTop : aDrawable.y;
+							h = mh.relativeBot >= 0 ? (aDrawable.y + mh.relativeBot) - y : aDrawable.y - y;
+						} else {
+							w = 0;
+							h = fontsize;
+							y = aDrawable.y - fontsize;
+						}
+						x = aDrawable.x;
+						
+						this.ctx.strokeRect(aDrawable.x, y, w, h);
+						
+						if (this.cstate.typing) {
+							// draw ibeam
+							var ibh = h; // ibeam height
+							var ibx;
+							if (aDrawable.index === 0) {
+								ibx = 0;
 							} else {
-								w = 0;
-								h = fontsize;
-								y = this.y - fontsize;
+								ibx = this.ctx.measureText(aDrawable.chars.substr(0, aDrawable.index)).width;
 							}
-							x = this.x;
-							
-							if ((x <= mx) && (x + w >= mx) &&
-								(y <= my) && (y + h >= my)) {
-									return 1;
-							}
+							var ibw = 3;
+							this.ctx.fillStyle = 'black'; // ibeam color
+							this.ctx.fillRect(aDrawable.x + ibx, y, ibw, ibh);
+						}
 					
-						break;
-					default:
-						// cutout, Rectangle, Oval, Gaussian, Mosaic
+					break;
+				case 'Line':
+
+						// this.ctx.beginPath();
+						// this.ctx.arc(aDrawable.x, aDrawable.y, this.state.sCanHandleSize, 0, 360);
+						
+						// this.ctx.fill();
+						// this.ctx.stroke();
+						
+						// this.ctx.beginPath();
+						// this.ctx.arc(aDrawable.x2, aDrawable.y2, this.state.sCanHandleSize, 0, 360);
+						
+						// this.ctx.fill();
+						// this.ctx.stroke();
+						
+						// draw handles
+						var handleSize = this.state.sCanHandleSize;
+						var half = handleSize / 2;
+						
+						var selectionHandles = this.cstate.selectionHandles;
+						selectionHandles.length = 2;
+						
+						selectionHandles[0] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y-half
+						};
+						
+						selectionHandles[1] = {
+							x: aDrawable.x2-half,
+							y: aDrawable.y2-half
+						};
+						
+						this.ctx.beginPath();
+						for (i = 0; i < 2; i += 1) {
+							cur = selectionHandles[i];
+							this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+						};
+						this.ctx.fill();
+						this.ctx.stroke();
 					
-						// is this selected
-						if (gCState.selection && gCState.selection == this) {
-							var selectionHandles = gCState.selectionHandles;
-							var handleSize = gCState.rconn.state.sCanHandleSize;
-							for (var i=0; i<8; i++) {
+					break;
+				case 'Pencil':
+				case 'Marker':
+				
+						// this.ctx.beginPath();
+						// this.ctx.arc(aDrawable.path[0], aDrawable.path[1], this.state.sCanHandleSize, 0, 360);
+						
+						// this.ctx.fill();
+						// this.ctx.stroke();
+						
+						// this.ctx.beginPath();
+						// this.ctx.arc(aDrawable.path[aDrawable.path.length - 2], aDrawable.path[aDrawable.path.length - 1], this.state.sCanHandleSize, 0, 360);
+						
+						// this.ctx.fill();
+						// this.ctx.stroke();
+						// draw handles
+						var handleSize = this.state.sCanHandleSize;
+						var half = handleSize / 2;
+						
+						// var selectionHandles = this.cstate.selectionHandles;
+						// selectionHandles.length = 2;
+						
+						this.ctx.beginPath();
+						// for (i = 0; i < 2; i += 1) {
+							// cur = selectionHandles[i];
+							// this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+						// };
+						this.ctx.rect(aDrawable.path[0] - half, aDrawable.path[1] - half, handleSize, handleSize);
+						this.ctx.rect(aDrawable.path[aDrawable.path.length-2] - half, aDrawable.path[aDrawable.path.length-1] - half, handleSize, handleSize);
+						this.ctx.fill();
+						this.ctx.stroke();
+				
+					break;
+				default:
+					console.error('should never get here, as would have returned earlier, as aDrawable one is not drawable');
+			}
+			
+			return false;
+		},
+		dContains: function(aDrawable, mx, my) {
+			// returns 0 if not contained. returns 1 if contained in draggable area. returns 2 - 9 if in resizable area etc
+			// is uncontainable
+			if (['dim'].indexOf(aDrawable.name) > -1) {
+				console.error('tried to test contains on an uncontainable! aDrawable:', aDrawable);
+				return;
+			}
+			
+			switch (aDrawable.name) {
+				case 'Line':
+				
+						if (this.cstate.selection && this.cstate.selection == aDrawable) {
+							var selectionHandles = this.cstate.selectionHandles;
+							var handleSize = this.state.sCanHandleSize;
+							for (var i=0; i<2; i++) {
 								if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 									(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
-										return i + 2;
+										return i + 10;
 								}
 							}
-							
-							// check if mouse is on the border, if it is then do that resize
-							var borderWidth = 2;
-							
-							// top border
-							if ((this.x <= mx) && (this.x + this.w >= mx) &&
-								(this.y - borderWidth <= my) && (this.y + borderWidth >= my)) {
-									return 3;
-							}
-							
-							// left border
-							if ((this.x - borderWidth <= mx) && (this.x + borderWidth >= mx) &&
-								(this.y <= my) && (this.h + this.y >= my)) {
-									return 5;
-							}
-							
-							// right border
-							if ((this.w + this.x - borderWidth <= mx) && (this.w + this.x + borderWidth >= mx) &&
-								(this.y <= my) && (this.h + this.y >= my)) {
-									return 6;
-							}
-							
-							// bottom border
-							if ((this.x <= mx) && (this.x + this.w >= mx) &&
-								(this.h + this.y - borderWidth <= my) && (this.h + this.y + borderWidth >= my)) {
-									return 8;
-							}
 						}
-						// All we have to do is make sure the Mouse X,Y fall in the area between
-						// the shape's X and (X + Width) and its Y and (Y + Height)
-						if ((this.x <= mx) && (this.x + this.w >= mx) &&
-							(this.y <= my) && (this.y + this.h >= my)) {
+				
+						this.ctx.beginPath();
+						this.ctx.setLineDash([]);
+						this.ctx.lineWidth = aDrawable.lineWidth >= 20 ? aDrawable.lineWidth : 20;
+						this.ctx.moveTo(aDrawable.x, aDrawable.y);
+						this.ctx.lineTo(aDrawable.x2, aDrawable.y2);
+						return this.ctx.isPointInStroke(mx, my) ? 1 : 0;
+				
+					break;
+				case 'Pencil':
+				case 'Marker':
+					
+						this.ctx.setLineDash([]);
+						this.ctx.lineWidth = aDrawable.lineWidth >= 20 ? aDrawable.lineWidth : 20;
+						this.ctx.beginPath();
+						this.ctx.moveTo(aDrawable.path[0], aDrawable.path[1]);
+						for (var i=2; i<aDrawable.path.length; i+=2) {
+							this.ctx.lineTo(aDrawable.path[i], aDrawable.path[i+1]);
+						}
+						return this.ctx.isPointInStroke(mx, my) ? 1 : 0;
+					
+					break;
+				case 'Text':
+				
+						var font = this.calcCtxFont(aDrawable);
+						this.ctx.font = font;
+						
+						var x;
+						var y;
+						var h;
+						var w;
+						var fontsize = aDrawable.fontsize; // i expect it to be in px
+						if (aDrawable.chars.length) {
+							var mh = measureHeight(font, fontsize, aDrawable.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
+							// console.log('mh:', mh);
+							w = mh.width;
+							// i want to keep the baseline at aDrawable.y
+							y = mh.relativeTop < 0 ? aDrawable.y + mh.relativeTop : aDrawable.y;
+							h = mh.relativeBot >= 0 ? (aDrawable.y + mh.relativeBot) - y : aDrawable.y - y;
+						} else {
+							w = 0;
+							h = fontsize;
+							y = aDrawable.y - fontsize;
+						}
+						x = aDrawable.x;
+						
+						if ((x <= mx) && (x + w >= mx) &&
+							(y <= my) && (y + h >= my)) {
 								return 1;
 						}
-				}
-			};
-			
-			// adds it to the drawables array, meaning it should get painted
-			this.add = function() {
-				// returns new valid value
-				gCState.drawables.push(this);
 				
-				if (this.w && this.h) {
-					// this.valid = false;
-					return false;
-				} else {
-					// else the width and height are 0, no need to invalidate
-					return true;
-				}
-			};
-			
-			// removes from the drawables array
-			this.delete = function() {
-				// returns new valid value
+					break;
+				default:
+					// cutout, Rectangle, Oval, Gaussian, Mosaic
 				
-				var drawables = gCState.drawables;
-				switch (this.name) {
-					case 'dim':
-						
-							// not added to list
-						
-						break;
-					default:
-						drawables.splice(drawables.indexOf(this), 1);
-				}
-				
-				switch (this.name) {
-					case 'Line':
-					
-							if (this.x == this.x2 && this.y == this.y2) {
-								return true;
-							} else {
-								return false;
+					// is aDrawable selected
+					if (this.cstate.selection && this.cstate.selection == aDrawable) {
+						var selectionHandles = this.cstate.selectionHandles;
+						var handleSize = this.state.sCanHandleSize;
+						for (var i=0; i<8; i++) {
+							if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
+								(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
+									return i + 2;
 							}
-					
-						break;
-					case 'Pencil':
-					case 'Marker':
-					
-							if (this.path.length == 2) {
-								return true;
-							} else {
-								return false;
-							}
-					
-						break;
-					case 'Text':
-						
-							return this.chars.length ? false : true;
-						
-						break;
-					default:
-						// cutout, Rectangle, Oval, Gaussian, Mosaic
-						if (this.w && this.h) {
-							// this.valid = false;
-							return false;
-						} else {
-							// else the width and height are 0, no need to invalidate
-							return true;
 						}
-				}
-			};
-			
-			this.bringtofront = function() {
-				// brings the Drawable to the front of the z-index
-				var drawables = gCState.drawables;
-				drawables.push(drawables.splice(drawables.indexOf(this), 1)[0]);
-			};
+						
+						// check if mouse is on the border, if it is then do that resize
+						var borderWidth = 2;
+						
+						// top border
+						if ((aDrawable.x <= mx) && (aDrawable.x + aDrawable.w >= mx) &&
+							(aDrawable.y - borderWidth <= my) && (aDrawable.y + borderWidth >= my)) {
+								return 3;
+						}
+						
+						// left border
+						if ((aDrawable.x - borderWidth <= mx) && (aDrawable.x + borderWidth >= mx) &&
+							(aDrawable.y <= my) && (aDrawable.h + aDrawable.y >= my)) {
+								return 5;
+						}
+						
+						// right border
+						if ((aDrawable.w + aDrawable.x - borderWidth <= mx) && (aDrawable.w + aDrawable.x + borderWidth >= mx) &&
+							(aDrawable.y <= my) && (aDrawable.h + aDrawable.y >= my)) {
+								return 6;
+						}
+						
+						// bottom border
+						if ((aDrawable.x <= mx) && (aDrawable.x + aDrawable.w >= mx) &&
+							(aDrawable.h + aDrawable.y - borderWidth <= my) && (aDrawable.h + aDrawable.y + borderWidth >= my)) {
+								return 8;
+						}
+					}
+					// All we have to do is make sure the Mouse X,Y fall in the area between
+					// the shape's X and (X + Width) and its Y and (Y + Height)
+					if ((aDrawable.x <= mx) && (aDrawable.x + aDrawable.w >= mx) &&
+						(aDrawable.y <= my) && (aDrawable.y + aDrawable.h >= my)) {
+							return 1;
+					}
+			}
 		},
-		dContainsHandles: function(aDrawable, aCtx, aX, aY) {
-			// returns true if the handles of the drawable contain aX and aY
+		dAdd: function(aDrawable) {
+			// returns new valid value
+			this.cstate.drawables.push(aDrawable);
 			
+			if (aDrawable.w && aDrawable.h) {
+				// this.cstate.valid = false;
+				return false;
+			} else {
+				// else the width and height are 0, no need to invalidate
+				return true;
+			}
+		},
+		dDelete: function(aDrawable) {
+			// returns new valid value
+			
+			var drawables = this.cstate.drawables;
+			switch (aDrawable.name) {
+				case 'dim':
+					
+						// not added to list
+					
+					break;
+				default:
+					drawables.splice(drawables.indexOf(aDrawable), 1);
+			}
+			
+			switch (aDrawable.name) {
+				case 'Line':
+				
+						if (aDrawable.x == aDrawable.x2 && aDrawable.y == aDrawable.y2) {
+							return true;
+						} else {
+							return false;
+						}
+				
+					break;
+				case 'Pencil':
+				case 'Marker':
+				
+						if (aDrawable.path.length == 2) {
+							return true;
+						} else {
+							return false;
+						}
+				
+					break;
+				case 'Text':
+					
+						return aDrawable.chars.length ? false : true;
+					
+					break;
+				default:
+					// cutout, Rectangle, Oval, Gaussian, Mosaic
+					if (aDrawable.w && aDrawable.h) {
+						// aDrawable.valid = false;
+						return false;
+					} else {
+						// else the width and height are 0, no need to invalidate
+						return true;
+					}
+			}
+		},
+		dBringToFront: function(aDrawable) {
+			// brings the Drawable to the front of the z-index
+			var drawables = this.cstate.drawables;
+			// var l = drawables.length;
+			// for (var i=0; i<l; i++) {
+			// 	if (drawables[i].id == aDrawable.id)
+			// }
+			drawables.push(drawables.splice(drawables.indexOf(aDrawable), 1)[0]);
 		},
 		dDeleteAll: function(aDrawableNamesArr) {
 			// does .delete() for all that are found with the name
@@ -1425,7 +1419,7 @@ function init(aArrBufAndCore) {
 				var drawable = drawables[i];
 				if (aDrawableNamesArr) {
 					if (aDrawableNamesArr.indexOf(drawable.name) > -1) {
-						if (!drawable.delete()) {
+						if (!this.dDelete(drawable)) {
 							valid = false;
 						}
 						if (this.cstate.selection && this.cstate.selection == drawable) {
@@ -1433,7 +1427,7 @@ function init(aArrBufAndCore) {
 						}
 					}
 				} else {
-					if (!drawable.delete()) {
+					if (!this.dDelete(drawable)) {
 						valid = false;
 					}
 					if (this.cstate.selection && this.cstate.selection == drawable) {
@@ -1561,14 +1555,14 @@ function init(aArrBufAndCore) {
 					}
 					*/
 					
-					drawable.draw(ctx);
+					this.dDraw(drawable);
 				}
 				// console.log('done drawing drawable');
 
 				// draw selection
 				if(this.cstate.selection != null) {
 					// console.log('ok this.cstate.selection:', this.cstate.selection);
-					this.cstate.selection.select(this.ctx);
+					this.dSelect(this.cstate.selection);
 					// if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
 						// console.log('ok selecting');
 						// this.cstate.selection.select(this.ctx);
@@ -1578,7 +1572,7 @@ function init(aArrBufAndCore) {
 				// ** Add stuff you want drawn on top all the time here **
 
 				// draw the dim
-				this.cstate.dim.draw(ctx);
+				this.dDraw(this.cstate.dim);
 				
 				this.cstate.valid = true;
 				if (gZState) { gZState.valid = false; }
@@ -1633,21 +1627,21 @@ function init(aArrBufAndCore) {
 			
 			// specials			
 			var fontablesDefaults = {
-				fontitalic: gCState.rconn.state.sPalFontItalic,
-				fontbold: gCState.rconn.state.sPalFontBold,
-				fontunderline: gCState.rconn.state.sPalFontUnderline,
-				fontface: gCState.rconn.state.sPalFontFace,
-				fontsize: gCState.rconn.state.sPalFontSize
+				fontitalic: this.state.sPalFontItalic,
+				fontbold: this.state.sPalFontBold,
+				fontunderline: this.state.sPalFontUnderline,
+				fontface: this.state.sPalFontFace,
+				fontsize: this.state.sPalFontSize
 			};
 			
 			var styleables = {
-				lineWidth: gCState.rconn.state.sPalLineWidth,
-				fillStyle: colorStrToCssRgba(gCState.rconn.state.sPalFillColor, gCState.rconn.state.sPalFillAlpha),
+				lineWidth: this.state.sPalLineWidth,
+				fillStyle: colorStrToCssRgba(gCState.rconn.state.sPalFillColor, this.state.sPalFillAlpha),
 				textAlign: 'left',
 				lineJoin: 'butt',
 				font: this.calcCtxFont(fontablesDefaults),
 				setLineDash: [],
-				strokeStyle: aDrawable.name == 'Marker' ? colorStrToCssRgba(gCState.rconn.state.sPalMarkerColor, gCState.rconn.state.sPalMarkerAlpha) : colorStrToCssRgba(gCState.rconn.state.sPalLineColor, gCState.rconn.state.sPalLineAlpha)
+				strokeStyle: aDrawable.name == 'Marker' ? colorStrToCssRgba(this.state.sPalMarkerColor, this.state.sPalMarkerAlpha) : colorStrToCssRgba(this.state.sPalLineColor, this.state.sPalLineAlpha)
 			};
 			
 			if (aDrawable.name == 'Line') { // non-isomorphic but i gotta
@@ -1898,7 +1892,7 @@ function init(aArrBufAndCore) {
 						var isContained;
 						for (var i=l; i>-1; i--) {
 							var drawable = drawables[i];
-							isContained = drawable.contains(mx, my);
+							isContained = this.dContains(drawable, mx, my);
 							if (isContained) {
 								// console.error('yes drawable contains:', drawable);
 								break;
@@ -2107,12 +2101,12 @@ function init(aArrBufAndCore) {
 					// console.log('iterating drawables:', drawables);
 					var l = drawables.length;
 					for(var i=l-1; i>=0; i--) {
-						var isContained = drawables[i].contains(mx, my);
+						var isContained = this.dContains(drawables[i], mx, my);
 						if (isContained) {
 							console.log('ok you clicked in this drawable:', drawables[i]);
 							var mySel = drawables[i];
 							
-							mySel.bringtofront();
+							this.dBringToFront(mySel);
 							
 							if (isContained === 1) {
 								// introduced for line dragging
@@ -2205,10 +2199,10 @@ function init(aArrBufAndCore) {
 						
 								if (!e.shiftKey) {
 									// remove all previous cutouts
-									gCState.rconn.dDeleteAll(['cutout']);
+									this.dDeleteAll(['cutout']);
 								}
 								
-								this.cstate.selection = new this.Drawable(mx, my, 0, 0, 'cutout');
+								this.cstate.selection = this.newDrawable(mx, my, 0, 0, 'cutout');
 							
 							break;
 						case 'Shapes-Rectangle':
@@ -2216,18 +2210,18 @@ function init(aArrBufAndCore) {
 						case 'Blur-Gaussian':
 						case 'Blur-Mosaic':
 							
-								this.cstate.selection = new this.Drawable(mx, my, 0, 0, this.state.sPalSeldSubs[this.state.sGenPalTool]);
+								this.cstate.selection = this.newDrawable(mx, my, 0, 0, this.state.sPalSeldSubs[this.state.sGenPalTool]);
 							
 							break;
 						case 'Line-':
 						
-								this.cstate.selection = new this.Drawable(mx, my, null, null, 'Line');
+								this.cstate.selection = this.newDrawable(mx, my, null, null, 'Line');
 						
 							break;
 						case 'Freedraw-Pencil':
 						case 'Freedraw-Marker':
 						
-								this.cstate.selection = new this.Drawable(mx, my, null, null, this.state.sPalSeldSubs[this.state.sGenPalTool]);
+								this.cstate.selection = this.newDrawable(mx, my, null, null, this.state.sPalSeldSubs[this.state.sGenPalTool]);
 						
 							break;
 						case 'Text-':
@@ -2238,7 +2232,7 @@ function init(aArrBufAndCore) {
 									// this.cstate.typing = false;
 									// this.cstate.valid = false;
 								// } else {
-									this.cstate.selection = new this.Drawable(mx, my, null, null, 'Text');
+									this.cstate.selection = this.newDrawable(mx, my, null, null, 'Text');
 								// }
 							
 							break;
@@ -2248,7 +2242,7 @@ function init(aArrBufAndCore) {
 					
 					// if selection exists, then it was newly created, lets add it
 					if (this.cstate.selection) {
-						this.cstate.selection.add();
+						this.dAdd(this.cstate.selection);
 						
 						// add color to history as it was just added
 						switch (this.cstate.selection.name) {
@@ -2377,7 +2371,7 @@ function init(aArrBufAndCore) {
 					if (mySel.name == 'cutout') {
 						return;
 					}
-					var isContained = mySel.contains(mx, my); // dim is not selectable so this will not trigger for it. it will be false. but for cutout it will. and we want to ignore cutout
+					var isContained = this.dContains(mySel, mx, my); // dim is not selectable so this will not trigger for it. it will be false. but for cutout it will. and we want to ignore cutout
 					if (isContained) {
 						var propToStateDict = {
 							lineWidth: 'sPalLineWidth',
@@ -2481,7 +2475,7 @@ function init(aArrBufAndCore) {
 						this.cstate.resizing = false;
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
-							this.cstate.selection.delete();
+							this.dDelete(this.cstate.selection);
 							this.clearSelection();
 						} else {
 							this.makeDimsPositive(this.cstate.selection); // no need to set valid=false
@@ -2490,7 +2484,7 @@ function init(aArrBufAndCore) {
 						this.cstate.lining = false;
 						if (this.cstate.selection.x == this.cstate.selection.x2 && this.cstate.selection.y == this.cstate.selection.y2) {
 							// 0 size
-							this.cstate.selection.delete();
+							this.dDelete(this.cstate.selection);
 							this.clearSelection();
 							// need to set valid=false because otherwise the big handle thing is left over
 							this.cstate.valid = false;
@@ -2499,7 +2493,7 @@ function init(aArrBufAndCore) {
 						this.cstate.pathing = null;
 						if (this.cstate.selection.path.length == 2) {
 							// only two points, meaning just where they moused down
-							this.cstate.selection.delete();
+							this.dDelete(this.cstate.selection);
 							this.clearSelection();
 							// :todo: consider: need to set valid=false because otherwise the big handle thing is left over
 							this.cstate.valid = false;
@@ -2527,7 +2521,7 @@ function init(aArrBufAndCore) {
 											if (this.cstate.selection.name == 'Text' && this.cstate.typing) {
 												// dont delete it as they are just deleting text
 											} else {
-												var rez_valid = this.cstate.selection.delete();
+												var rez_valid = this.dDelete(this.cstate.selection);
 												this.clearSelection();
 												this.cstate.valid = rez_valid;
 											}
