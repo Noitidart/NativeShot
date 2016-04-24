@@ -656,8 +656,40 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var hwndStr = aArrHwndPtrStr[i];
 					var hwndPtr = ostypes.TYPE.HWND.ptr(ctypes.UInt64(hwndStr));
 					
-					//var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
-					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, 0/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
+					// start - remove border from window
+					var GWL_STYLE = -16;
+					var WS_CAPTION = 0x00C00000;
+					var WS_THICKFRAME = 0x00040000;
+					var WS_MINIMIZE = 0x20000000;
+					var WS_MAXIMIZE = 0x01000000;
+					var WS_SYSMENU = 0x00080000;
+					
+					var lStyle = ostypes.API('GetWindowLongPtr')(hwndPtr, GWL_STYLE);
+					console.log('lStyle:', lStyle);
+					lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
+					
+					var rez_setLong = ostypes.API('SetWindowLongPtr')(hwndPtr, GWL_STYLE, lStyle);
+					console.log('rez_setLong:', rez_setLong);
+					
+					// var GWL_EXSTYLE = -20;
+					// var WS_EX_DLGMODALFRAME = 0x00000001;
+					// var WS_EX_CLIENTEDGE = 0x00000200;
+					// var WS_EX_STATICEDGE = 0x00020000;
+					
+					// var lExStyle = ostypes.API('GetWindowLongPtr')(hwndPtr, GWL_EXSTYLE);
+					// console.log('lExStyle:', lExStyle);
+					// lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
+					
+					// var rez_setLong = ostypes.API('SetWindowLongPtr')(hwndPtr, GWL_EXSTYLE, lExStyle);
+					// console.log('rez_setLong:', rez_setLong);
+					
+					
+					var SWP_FRAMECHANGED = 0x0020;
+					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, SWP_FRAMECHANGED/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
+					// end try to remove that border
+					
+					// var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, 0/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
+					// var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
 				}
 				console.log('will force focus now');
 				var rez_winForceFocus = winForceForegroundWindow(hwndPtr); // use the last hwndPtr, i just need to focus one of my canvas windows // so if user hits esc it will work, otherwise the keyboard focus is in the other app even though my canvas window is top most
