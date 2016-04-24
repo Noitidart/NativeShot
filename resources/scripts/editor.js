@@ -2581,9 +2581,9 @@ function init(aArrBufAndCore) {
 				if (e.altKey) {
 					// resize
 					if ('w' in mySel) {
-						var resizeBy = 1; // pixels to move by
+						var resizeBy = mtmm.w(1); // pixels to move by // :todo: detect if its a resize in h then use mtmm.h
 						if (e.shiftKey) {
-							resizeBy = 10;
+							resizeBy = mtmm.w(10); // :todo: detect if its a resize in h then use mtmm.h
 						}
 						var newW = mySel.w;
 						var newH = mySel.h;
@@ -2631,9 +2631,9 @@ function init(aArrBufAndCore) {
 					}
 				} else {
 					// move
-					var moveBy = 1; // pixels to move by
+					var moveBy = mtmm.w(1); // cant use mtmm.x because otehrwise that will move it with offset // pixels to move by // :todo: detect if its a move in y then use mtmm.y
 					if (e.shiftKey) {
-						moveBy = 10;
+						moveBy = mtmm.w(10); // :todo: detect if its a move in y then use mtmm.y
 					}
 
 					var moveDirX = 0;
