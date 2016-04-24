@@ -26,7 +26,7 @@ var gCtxMeasureHeight;
 function unload() {
 	// if iMon == 0
 	// set the new state object from react to file
-	if (gQS.iMon === 0) {
+	// if (gQS.iMon === 0) {
 		console.error('sending state object:', gCState.rconn.state);
 		var immutableEditorstate = JSON.parse(JSON.stringify(gCState.rconn.state));
 		for (var p in immutableEditorstate) {
@@ -42,7 +42,19 @@ function unload() {
 			editorstateStr: JSON.stringify(immutableEditorstate),
 			iMon: tQS.iMon
 		}));
-	}
+	// }
+	Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+		topic: 'broadcastToOthers',
+		postMsgObj: {
+			topic: 'removeUnloadAndClose'
+		},
+		iMon: tQS.iMon
+	}));
+}
+
+function removeUnloadAndClose() {
+	window.removeEventListener('unload', unload, false);
+	window.close();
 }
 
 function reactSetState(aData) {

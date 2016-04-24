@@ -479,6 +479,9 @@ var EditorFuncs = {
 			}
 		}
 	},
+	closeAllEditors: function() {
+		
+	},
 	updateEditorState: function(aData) {
 		gEditorStateStr = aData.editorstateStr;
 		console.log('set gEditorStateStr to:', gEditorStateStr);
