@@ -13,6 +13,7 @@ var core = {
 	}
 };
 
+var gSetStateObj;
 var gEditorStore = {};
 var gCanStore = {};
 var gCState;
@@ -67,7 +68,7 @@ function reactSetState(aData) {
 }
 
 function canSetState(aData) {
-	console.log('in canSetState, aData:', aData);
+	// console.log('in canSetState, aData:', aData);
 	var newCanState = JSON.parse(aData.cstate);
 	for (var p in newCanState) {
 		// if (p == 'valid') {
@@ -500,8 +501,36 @@ function init(aArrBufAndCore) {
 		},
 		componentDidMount: function() {
 			var oSetState = this.setState.bind(this);
-			this.setState = function(aObj, isBroadcast) {
-				if (!isBroadcast) {
+			var needsBroadcast = false;
+			this.setState = function(aObj, isBroadcast, fromDraw) {
+				var shouldBroadcast;
+				if (!fromDraw && aObj.setStateFromMouseMove) {
+						if (!gSetStateObj) {
+							gSetStateObj = aObj;
+						} else {
+							overwriteObjWithObj(gSetStateObj, aObj);
+						}
+						if (!isBroadcast && !needsBroadcast) {
+							needsBroadcast = true;
+						}
+						return;
+				} else if (!fromDraw && !aObj.setStateFromMouseMove && gSetStateObj) {
+						if (gSetStateObj) {
+							gSetStateObj = null;
+						}
+						overwriteObjWithObj(gSetStateObj, aObj)
+						delete aObj.setStateFromMouseMove;
+						shouldBroadcast = !isBroadcast && needsBroadcast
+				} else if (fromDraw) {
+					aObj = gSetStateObj;
+					gSetStateObj = null;
+					shouldBroadcast = !isBroadcast && needsBroadcast
+					delete aObj.setStateFromMouseMove;
+				} else {
+					shouldBroadcast = !isBroadcast;
+				}
+				if (shouldBroadcast) {
+					needsBroadcast = false;
 					// clearTimeout(gBroadcastTimeout);
 					// gBroadcastTimeout = setTimeout(function() {
 						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
@@ -1517,6 +1546,9 @@ function init(aArrBufAndCore) {
 			this.ctx.clearRect(tQS.x, tQS.y, tQS.w, tQS.h);
 		},
 		draw: function() {
+			if (gSetStateObj) {
+				this.setState(null, null, true);
+			}
 			if (this.cstate.pathing && this.cstate.pathing.length) {
 				this.cstate.selection.path = this.cstate.selection.path.concat(this.cstate.pathing.splice(0, 2));
 			}
@@ -1596,15 +1628,11 @@ function init(aArrBufAndCore) {
 				this.cstate.valid = true; // do not use gCanStore.setCanState here
 				if (gZState) { gZState.valid = false; }
 				
-				if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
-					// maybe set width height here? to test
-					gWidthRef.value = Math.abs(this.cstate.selection.w);
-					gHeightRef.value = Math.abs(this.cstate.selection.h);
-					// gEditorStore.setState({
-						// sGenPalW: Math.abs(this.cstate.selection.w),
-						// sGenPalH: Math.abs(this.cstate.selection.h)
-					// })
-				}
+				// alt method to link38378777577
+				// if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
+					// gWidthRef.value = Math.abs(this.cstate.selection.w);
+					// gHeightRef.value = Math.abs(this.cstate.selection.h);
+				// }
 			}
 		},
 		calcCtxFont: function(aDrawable) {
@@ -1757,7 +1785,8 @@ function init(aArrBufAndCore) {
 			} else if (this.state.sGenPalDragStart) {
 				gEditorStore.setState({
 					sPalX: this.state.sGenPalDragStart.sPalX + (e.clientX - this.state.sGenPalDragStart.clientX),
-					sPalY: this.state.sGenPalDragStart.sPalY + (e.clientY - this.state.sGenPalDragStart.clientY)
+					sPalY: this.state.sGenPalDragStart.sPalY + (e.clientY - this.state.sGenPalDragStart.clientY),
+					setStateFromMouseMove: true
 				});
 			} else if (this.state.sGenPalZoomViewDragStart) {
 				gEditorStore.setState({
@@ -1864,10 +1893,12 @@ function init(aArrBufAndCore) {
 							console.error('should never get here');
 					}
 					
-					// gEditorStore.setState({
-						// sGenPalW: Math.abs(this.cstate.selection.w),
-						// sGenPalH: Math.abs(this.cstate.selection.h)
-					// })
+					// link38378777577
+					gEditorStore.setState({
+						sGenPalW: Math.abs(this.cstate.selection.w),
+						sGenPalH: Math.abs(this.cstate.selection.h),
+						setStateFromMouseMove: true
+					});
 					gCanStore.setCanState(false);
 				} else if (this.cstate.lining) {
 					if (this.cstate.lining == 10) {
@@ -4167,6 +4198,10 @@ function init(aArrBufAndCore) {
 				var newStateObj = {};
 				newStateObj[this.props.pStateVarName] = newSetValue;
 				
+				if (this.sGenInputNumberMousing) {
+					newStateObj.setStateFromMouseMove = true;
+				}
+				
 				gEditorStore.setState(newStateObj);
 				
 				if (this.props.pCStateSel) {
@@ -4311,21 +4346,21 @@ function init(aArrBufAndCore) {
 		},
 		componentDidMount: function() {
 			this.lastDomElValue = this.props[this.props.pStateVarName];
-			if (this.props.pLabel == 'Width') {
-				console.error('mounted width');
-				gWidthRef = this.refs.input;
-			} else if (this.props.pLabel == 'Height') {
-				console.error('mounted height');
-				gHeightRef = this.refs.input;
-			}
+			// if (this.props.pLabel == 'Width') {
+				// console.error('mounted width');
+				// gWidthRef = this.refs.input;
+			// } else if (this.props.pLabel == 'Height') {
+				// console.error('mounted height');
+				// gHeightRef = this.refs.input;
+			// }
 		},
-		componentWillUnmount: function() {
-			if (this.props.pLabel == 'Width') {
-				gWidthRef = null;
-			} else if (this.props.pLabel == 'Height') {
-				gHeightRef = null;
-			}
-		},
+		// componentWillUnmount: function() {
+			// if (this.props.pLabel == 'Width') {
+				// gWidthRef = null;
+			// } else if (this.props.pLabel == 'Height') {
+				// gHeightRef = null;
+			// }
+		// },
 		componentDidUpdate: function(prevProps) {
 			// console.log('did update, prevProps:', prevProps);
 			var newPropVal = this.props[this.props.pStateVarName];
