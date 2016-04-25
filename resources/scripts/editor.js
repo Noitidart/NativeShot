@@ -14,6 +14,7 @@ var core = {
 };
 
 var gEditorStore = {};
+var gCanStore = {};
 var gCState;
 var gZState;
 var gColorPickerSetState = {NativeShotEditor:null};
@@ -27,8 +28,8 @@ function unload() {
 	// if iMon == 0
 	// set the new state object from react to file
 	// if (gQS.iMon === 0) {
-		console.error('sending state object:', gCState.rconn.state);
-		var immutableEditorstate = JSON.parse(JSON.stringify(gCState.rconn.state));
+		console.error('sending state object:', gCanStore.rconn.state);
+		var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
 		for (var p in immutableEditorstate) {
 			if (p.indexOf('sGen') !== 0) {
 				var newP = 'p' + p.substr(1); // change first char
@@ -60,6 +61,12 @@ function removeUnloadAndClose() {
 function reactSetState(aData) {
 	var updatedStates = JSON.parse(aData.updatedStates);
 	gEditorStore.setState(updatedStates, true);
+}
+
+function canSetState(aData) {
+	console.log('in canSetState, aData:', aData);
+	gCState = JSON.parse(aData.cstate);
+	gCanStore.setCanState(false, true);
 }
 
 function init(aArrBufAndCore) {
@@ -513,7 +520,9 @@ function init(aArrBufAndCore) {
 			}.bind(this);
 			gEditorStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work - last tested in React 0.14.x
 			gColorPickerSetState.NativeShotEditor = this.setState.bind(this);
-
+			
+			gCanStore.setCanState = this.setCanState;
+			
 			///////////
 			this.ctx = new MyContext(this.refs.can.getContext('2d'));
 			this.ctx0 = this.refs.can0.getContext('2d');
@@ -539,13 +548,13 @@ function init(aArrBufAndCore) {
 			this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
 			gCState = this.cstate;
 			
-			this.cstate.rconn = this; // connectio to the react component
+			gCanStore.rconn = this; // connectio to the react component
 			
 			// start - simon canvas stuff
 			this.cstate.valid = false;
 			
-			this.cstate.width = mmtm.w(this.props.pQS.w);
-			this.cstate.height = mmtm.h(this.props.pQS.h);
+			// this.cstate.width = mmtm.w(this.props.pQS.w);
+			// this.cstate.height = mmtm.h(this.props.pQS.h);
 			
 			this.cstate.drawables = []; // the collection of things to be drawn
 			
@@ -576,7 +585,7 @@ function init(aArrBufAndCore) {
 			window.addEventListener('keydown', this.keydown, false);
 			window.addEventListener('dblclick', this.dblclick, false);
 			
-			this.cstate.interval = setInterval(this.draw, this.props.pCanInterval);
+			gCanStore.interval = setInterval(this.draw, this.props.pCanInterval);
 			// start - simon canvas stuff
 			///////////
 			
@@ -645,7 +654,7 @@ function init(aArrBufAndCore) {
 					}
 				}
 				
-				this.cstate.valid = canValid;
+				gCanStore.setCanState(canValid);
 			}
 			//if (this.state.sPalMultiDepresses['Zoom View'] != prevState.sPalMultiDepresses['Zoom View']) {
 			//	if (this.state.sPalMultiDepresses['Zoom View']) {
@@ -671,10 +680,10 @@ function init(aArrBufAndCore) {
 				case 'dim':
 					
 						// dimensions
-						DRAWABLE.x = 0;
-						DRAWABLE.y = 0;
-						DRAWABLE.w = gQS.w;
-						DRAWABLE.h = gQS.h;
+						// DRAWABLE.x = 0;
+						// DRAWABLE.y = 0;
+						// DRAWABLE.w = 100;
+						// DRAWABLE.h = 100;
 						
 						// styleables (are a property on ctx like ctx.fillStyle or ctx.setLineDash) if undefined, that it is populated with respect to toolbar
 						DRAWABLE.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -689,9 +698,9 @@ function init(aArrBufAndCore) {
 						DRAWABLE.y2 = 'y2' in aOptions ? aOptions.y2 : y;
 						
 						// other props
-						DRAWABLE.arrowStart = aOptions.arrowStart || this.cstate.rconn.state.sPalArrowStart;
-						DRAWABLE.arrowEnd = aOptions.arrowEnd || this.cstate.rconn.state.sPalArrowEnd;
-						DRAWABLE.arrowLength = aOptions.arrowLength || this.cstate.rconn.state.sPalArrowLength;
+						DRAWABLE.arrowStart = aOptions.arrowStart || this.state.sPalArrowStart;
+						DRAWABLE.arrowEnd = aOptions.arrowEnd || this.state.sPalArrowEnd;
+						DRAWABLE.arrowLength = aOptions.arrowLength || this.state.sPalArrowLength;
 						
 						// styleables - if undefined, then it is set to the default value with respect to pal
 						DRAWABLE.lineWidth = aOptions.lineWidth; // lineWidth is not set, then it is undefined, and then setStyleablesDefaults will set it to the default value, which respects pal
@@ -744,7 +753,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.h = h;
 						
 						// other
-						DRAWABLE.blurradius = aOptions.level || this.cstate.rconn.state.sPalBlurRadius
+						DRAWABLE.blurradius = aOptions.level || this.state.sPalBlurRadius
 						
 					break;
 				case 'Mosaic':
@@ -756,7 +765,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.h = h;
 						
 						// other
-						DRAWABLE.blurblock = aOptions.level || this.cstate.rconn.state.sPalBlurBlock;
+						DRAWABLE.blurblock = aOptions.level || this.state.sPalBlurBlock;
 				
 				case 'cutout':
 					
@@ -806,7 +815,7 @@ function init(aArrBufAndCore) {
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
 			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
-				console.error('width or height is 0 so not drawing');
+				console.error('width or height is 0 so not drawing, aDrawable:', aDrawable);
 				return true;
 			}
 			
@@ -820,10 +829,10 @@ function init(aArrBufAndCore) {
 
 						var cutouts = this.cstate.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 						if (!cutouts.length) {
-							this.ctx.fillRect(tQS.x, tQS.y, aDrawable.w, aDrawable.h);
+							this.ctx.fillRect(tQS.x, tQS.y, tQS.w, tQS.h);
 						} else {
 							
-							var fullscreenRect = new Rect(tQS.x, tQS.y, aDrawable.w, aDrawable.h);
+							var fullscreenRect = new Rect(tQS.x, tQS.y, tQS.w, tQS.h);
 							var cutoutsAsRects = [];
 							var l = cutouts.length;
 							for (var i=0; i<l; i++) {
@@ -1574,7 +1583,7 @@ function init(aArrBufAndCore) {
 				// draw the dim
 				this.dDraw(this.cstate.dim);
 				
-				this.cstate.valid = true;
+				this.cstate.valid = true; // do not use gCanStore.setCanState here
 				if (gZState) { gZState.valid = false; }
 			}
 		},
@@ -1622,6 +1631,21 @@ function init(aArrBufAndCore) {
 				return undefined; // so setStyleablesDefaults will then set it to the default
 			}
 		},
+		setCanState: function(isValid, isBroadcast) {
+			if (!isValid) {
+				if (!isBroadcast) {
+					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+						topic: 'broadcastToOthers',
+						postMsgObj: {
+							topic: 'canSetState',
+							cstate: JSON.stringify(this.cstate)
+						},
+						iMon: tQS.iMon
+					}));
+				}
+				this.cstate.valid = false;
+			}
+		},
 		setStyleablesDefaults: function(aDrawable) {
 			// the styles and the value is their default value
 			
@@ -1636,7 +1660,7 @@ function init(aArrBufAndCore) {
 			
 			var styleables = {
 				lineWidth: this.state.sPalLineWidth,
-				fillStyle: colorStrToCssRgba(gCState.rconn.state.sPalFillColor, this.state.sPalFillAlpha),
+				fillStyle: colorStrToCssRgba(gCanStore.rconn.state.sPalFillColor, this.state.sPalFillAlpha),
 				textAlign: 'left',
 				lineJoin: 'butt',
 				font: this.calcCtxFont(fontablesDefaults),
@@ -1762,7 +1786,7 @@ function init(aArrBufAndCore) {
 						default:
 							console.error('deverror: no drag mechnaism defined');
 					}
-					this.cstate.valid = false; // Something's dragging so we must redraw
+					gCanStore.setCanState(false); // Something's dragging so we must redraw
 				} else if (this.cstate.resizing) {
 					var oldx = this.cstate.selection.x;
 					var oldy = this.cstate.selection.y;
@@ -1824,7 +1848,7 @@ function init(aArrBufAndCore) {
 						sGenPalW: Math.abs(this.cstate.selection.w),
 						sGenPalH: Math.abs(this.cstate.selection.h)
 					})
-					this.cstate.valid = false;
+					gCanStore.setCanState(false);
 				} else if (this.cstate.lining) {
 					if (this.cstate.lining == 10) {
 						// lining start
@@ -1835,11 +1859,11 @@ function init(aArrBufAndCore) {
 						this.cstate.selection.x2 = mx;
 						this.cstate.selection.y2 = my;
 					}
-					this.cstate.valid = false;
+					gCanStore.setCanState(false);
 				} else if (this.cstate.pathing) {
 					this.cstate.pathing[0] = mx;
 					this.cstate.pathing[1] = my;
-					this.cstate.valid = false;
+					gCanStore.setCanState(false);
 				}
 				// else if (this.cstate.typing) {
 					// do nothing
@@ -2159,7 +2183,7 @@ function init(aArrBufAndCore) {
 								}
 								this.cstate.dragging = true;
 								this.cstate.selection = mySel;
-								this.cstate.valid = false; // this is needed, as if its a newly selected object, then if i dont set this, the selection border wont be drawn
+								gCanStore.setCanState(false); // this is needed, as if its a newly selected object, then if i dont set this, the selection border wont be drawn
 								
 								if ('w' in this.cstate.selection) {
 									this.setState({
@@ -2182,12 +2206,14 @@ function init(aArrBufAndCore) {
 					}
 					
 					if (this.cstate.selection) {
+						console.log('ok removing from selection this:', this.cstate.selection);
 						this.clearSelection();
-						console.log('ok removing from selection this:', this);
-						this.cstate.valid = false;
 						if (this.cstate.typing) {
-							this.cstate.typing = false;
+							this.cstate.typing = false; // this was below setCanState // testing if i put up here if its ok
+							gCanStore.setCanState(false);
 							return; // as i want to get them out of typing mode
+						} else {
+							gCanStore.setCanState(false);
 						}
 					}
 				}
@@ -2289,20 +2315,20 @@ function init(aArrBufAndCore) {
 							case 'Line':
 								
 									this.cstate.lining = 11;
-									this.cstate.valid = false; // as i have to draw the selection point
+									gCanStore.setCanState(false); // as i have to draw the selection point
 								
 								break;
 							case 'Pencil':
 							case 'Marker':
 								
 									this.cstate.pathing = [];
-									this.cstate.valid = false; // :todo: consider: as i have to draw the selection point
+									gCanStore.setCanState(false); // :todo: consider: as i have to draw the selection point
 								
 								break;
 							case 'Text':
 								
 									this.cstate.typing = true; // special, because i just added it, i enter typing mode link11911111
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 									
 								break;
 							default:
@@ -2444,7 +2470,7 @@ function init(aArrBufAndCore) {
 					if (mySel.name == 'Text') {
 						if (!this.cstate.typing) {
 							this.cstate.typing = true;
-							this.cstate.valid = false;
+							gCanStore.setCanState(false);
 						}
 					}
 				}
@@ -2487,7 +2513,7 @@ function init(aArrBufAndCore) {
 							this.dDelete(this.cstate.selection);
 							this.clearSelection();
 							// need to set valid=false because otherwise the big handle thing is left over
-							this.cstate.valid = false;
+							gCanStore.setCanState(false);
 						}
 					} else if (this.cstate.pathing) {
 						this.cstate.pathing = null;
@@ -2496,7 +2522,7 @@ function init(aArrBufAndCore) {
 							this.dDelete(this.cstate.selection);
 							this.clearSelection();
 							// :todo: consider: need to set valid=false because otherwise the big handle thing is left over
-							this.cstate.valid = false;
+							gCanStore.setCanState(false);
 						}
 					} else if (this.cstate.typing) {
 						// do nothing special
@@ -2523,7 +2549,7 @@ function init(aArrBufAndCore) {
 											} else {
 												var rez_valid = this.dDelete(this.cstate.selection);
 												this.clearSelection();
-												this.cstate.valid = rez_valid;
+												gCanStore.setCanState(rez_valid);
 											}
 										}
 						//			break;
@@ -2559,7 +2585,7 @@ function init(aArrBufAndCore) {
 				if (e.key.length == 1) {
 					mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
 					mySel.index++;
-					this.cstate.valid = false;
+					gCanStore.setCanState(false);
 				} else {
 					switch (e.key) {
 						case 'Backspace':
@@ -2567,7 +2593,7 @@ function init(aArrBufAndCore) {
 								if (mySel.index > 0) {
 									mySel.index--;
 									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 								}
 							
 							break;
@@ -2575,7 +2601,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index < mySel.chars.length) {
 									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 								}
 							
 							break;
@@ -2583,7 +2609,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index > 0) {
 									mySel.index--;
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 								}
 							
 							break;
@@ -2591,7 +2617,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index < mySel.chars.length) {
 									mySel.index++;
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 								}
 							
 							break;
@@ -2599,7 +2625,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index > 0) {
 									mySel.index = 0;
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 								}
 							
 							break;
@@ -2607,7 +2633,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index < mySel.chars.length) {
 									mySel.index = mySel.chars.length;
-									this.cstate.valid = false;
+									gCanStore.setCanState(false);
 								}
 							
 							break;
@@ -2662,7 +2688,7 @@ function init(aArrBufAndCore) {
 							newValid = false;
 						}
 						if (!newValid) {
-							gCState.valid = false;
+							gCanStore.setCanState(newValid);
 							gEditorStore.setState({
 								sGenPalW: newW,
 								sGenPalH: newH
@@ -2729,7 +2755,7 @@ function init(aArrBufAndCore) {
 						mySel.y += moveByY;
 					}
 					
-					gCState.valid = false;
+					gCanStore.setCanState(false);
 				}
 			}
 		},
@@ -2848,7 +2874,7 @@ function init(aArrBufAndCore) {
 			gZState = null; // so even if bgpat image loads, it will error as it cant set it here as it will be null
 		},
 		draw: function() {
-			if (gCState && gCState.rconn.ctx && !this.zstate.valid) {
+			if (gCState && gCanStore.rconn.ctx && !this.zstate.valid) {
 				var ctx = this.ctx;
 				var width = gZoomViewW; // of zoomview canvas
 				var height = gZoomViewH;  // of zoomview canvas
@@ -2878,8 +2904,8 @@ function init(aArrBufAndCore) {
 				var sWidth = width * (1 / zoomLevel);
 				var sHeight = dHeight * (1 / zoomLevel);
 				
-				ctx.drawImage(gCState.rconn.refs.can0, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
-				ctx.drawImage(gCState.rconn.refs.can, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
+				ctx.drawImage(gCanStore.rconn.refs.can0, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
+				ctx.drawImage(gCanStore.rconn.refs.can, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
 				
 				// draw grid
 				ctx.strokeStyle = '#4A90E2';
@@ -3027,18 +3053,16 @@ function init(aArrBufAndCore) {
 											delete gCState.selection.blurblock;
 											var propVar = gCState.selection.name == 'Gaussian' ? 'blurradius' : 'blurblock';
 											var stateVar = gCState.selection.name == 'Gaussian' ? 'sPalBlurRadius' : 'sPalBlurBlock';
-											gCState.selection[propVar] = gCState.rconn.state[stateVar];
+											gCState.selection[propVar] = gCanStore.rconn.state[stateVar];
 											newValid = false;
 										}
 										var propVar = gCState.selection.name == 'Gaussian' ? 'blurradius' : 'blurblock';
 										var stateVar = gCState.selection.name == 'Gaussian' ? 'sPalBlurRadius' : 'sPalBlurBlock';
-										if (gCState.selection[propVar] !== gCState.rconn.state[stateVar]) {
-											gCState.selection[propVar] = gCState.rconn.state[stateVar];
+										if (gCState.selection[propVar] !== gCanStore.rconn.state[stateVar]) {
+											gCState.selection[propVar] = gCanStore.rconn.state[stateVar];
 											newValid = false;
 										}
-										if (!newValid) {
-											gCState.valid = false;
-										}
+										gCanStore.setCanState(newValid);
 									
 									break;
 								default:
@@ -3072,8 +3096,8 @@ function init(aArrBufAndCore) {
 								newValid = false;
 							}
 							if (!newValid) {
-								gCState.selection.font = gCState.rconn.calcCtxFont(gCState.selection);
-								gCState.valid = false;
+								gCState.selection.font = gCanStore.rconn.calcCtxFont(gCState.selection);
+								gCanStore.setCanState(newValid);
 							}
 						}
 					
@@ -3093,15 +3117,13 @@ function init(aArrBufAndCore) {
 							for (var p in propToStateDict) {
 								if (p in mySel) {
 									var stateVar = propToStateDict[p];
-									if (gCState.rconn.state[stateVar] !== mySel[p]) {
-										mySel[p] = gCState.rconn.state[stateVar];
+									if (gCanStore.rconn.state[stateVar] !== mySel[p]) {
+										mySel[p] = gCanStore.rconn.state[stateVar];
 										boolHasNew = true;
 									}
 								}
 							}
-							if (boolHasNew) {
-								gCState.valid = false;
-							}
+							gCanStore.setCanState(!boolHasNew);
 						}
 					
 					break;
@@ -3115,8 +3137,8 @@ function init(aArrBufAndCore) {
 								case 'Pencil':
 									
 										gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sPalLineColor, this.props.sPalLineAlpha);
-										gCState.rconn.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
-										gCState.valid = false;
+										gCanStore.rconn.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
+										gCanStore.setCanState(false);
 									
 									break;
 								default:
@@ -3134,8 +3156,8 @@ function init(aArrBufAndCore) {
 								case 'Text':
 									
 										gCState.selection.fillStyle = colorStrToCssRgba(this.props.sPalFillColor, this.props.sPalFillAlpha);
-										gCState.rconn.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
-										gCState.valid = false;
+										gCanStore.rconn.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
+										gCanStore.setCanState(false);
 									
 									break;
 								default:
@@ -3151,8 +3173,8 @@ function init(aArrBufAndCore) {
 								case 'Marker':
 									
 										gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
-										gCState.rconn.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);										
-										gCState.valid = false;
+										gCanStore.rconn.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);										
+										gCanStore.setCanState(false);
 									
 									break;
 								default:
@@ -3185,18 +3207,18 @@ function init(aArrBufAndCore) {
 						// 	valid = false;
 						// }
 						// if (gCanState.selection) {
-						// 	gCState.rconn.clearSelection();
+						// 	gCanStore.rconn.clearSelection();
 						// 	valid = false;
 						// }
 						// gCanState.valid = valid;
-						gCState.valid = gCState.rconn.dDeleteAll(['cutout']);
+						gCanStore.setCanState(gCanStore.rconn.dDeleteAll(['cutout']));
 						
 					break;
 				case 'Shapes':
 				
 						if (gCState.selection) {
-							gCState.rconn.clearSelection();
-							gCState.valid = false;
+							gCanStore.rconn.clearSelection();
+							gCanStore.setCanState(false);
 						}
 					
 					break;
@@ -3462,8 +3484,8 @@ function init(aArrBufAndCore) {
 				}
 				// sPalFontSize is handled by InputNumber
 				if (!newValid) {
-					gCState.selection.font = gCState.rconn.calcCtxFont(gCState.selection);
-					gCState.valid = newValid;
+					gCState.selection.font = gCanStore.rconn.calcCtxFont(gCState.selection);
+					gCanStore.setCanState(newValid);
 				} // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
 			}
 			if (prevProps.sPalFontFace != this.props.sPalFontFace) {
@@ -3548,9 +3570,7 @@ function init(aArrBufAndCore) {
 					newValid = false;
 				}
 				// sPalArrowLength is handled by InputNumber
-				if (!newValid) {
-					gCState.valid = newValid;
-				} // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
+				gCanStore.setCanState(newValid); // else if its true based on these tests, i dont want to set it to true. because maybe someone somewhere else set it to true
 			}
 			if (prevProps.sPalArrowStart != this.props.sPalArrowStart) {
 				this.refs.checkstart.checked = this.props.sPalArrowStart;
@@ -3620,7 +3640,7 @@ function init(aArrBufAndCore) {
 							case 'Text':
 								
 									gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
-									gCState.valid = false;
+									gCanStore.setCanState(false);
 								
 								break;
 							default:
@@ -3638,7 +3658,7 @@ function init(aArrBufAndCore) {
 									if (gCState.selection.name == 'Line') { // as fillStyle for line is set equal to that of its strokeStyle
 										gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 									}
-									gCState.valid = false;
+									gCanStore.setCanState(false);
 								
 								break;
 							default:
@@ -3650,7 +3670,7 @@ function init(aArrBufAndCore) {
 							case 'Marker':
 								
 									gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
-									gCState.valid = false;
+									gCanStore.setCanState(false);
 								
 								break;
 							default:
@@ -3829,24 +3849,24 @@ function init(aArrBufAndCore) {
 				switch (gCState.selection.name) {
 					case 'Marker':
 					
-							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalMarkerColorHist', true);
+							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalMarkerColorHist', true);
 							
 						break;
 					case 'Line':
 					case 'Pencil':
 					
-							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
+							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
 					
 						break;
 					case 'Text':
 					
-							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
+							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
 					
 						break;
 					case 'Rectangle':
 					case 'Oval':
 					
-							addColorSetStateObj = gCState.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
+							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
 							
 						break;
 					default:
@@ -4129,9 +4149,9 @@ function init(aArrBufAndCore) {
 					if (gCState && gCState.selection && drawablePropToUpdate) {
 						gCState.selection[drawablePropToUpdate] = newSetValue;
 						if (drawablePropToUpdate.indexOf('font') === 0) {
-							gCState.selection.font = gCState.rconn.calcCtxFont(gCState.selection);
+							gCState.selection.font = gCanStore.rconn.calcCtxFont(gCState.selection);
 						}
-						gCState.valid = false; // so new blur level gets applied
+						gCanStore.setCanState(false); // so new blur level gets applied
 					}
 				}
 				
@@ -4147,6 +4167,8 @@ function init(aArrBufAndCore) {
 			gEditorStore.setState({
 				sGenInputNumberMousing: this.cursor
 			});
+			
+			
 			
 			this.sGenInputNumberMousing = this.cursor; // keep track locally otherwise ill need to have whoever uses InputNumber pass in sGenInputNumberMousing as a prop
 			
