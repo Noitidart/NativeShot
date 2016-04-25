@@ -468,8 +468,8 @@ function init(aArrBufAndCore) {
 				sPalSize: this.props.pPalSize,
 				sPalSeldSubs: this.props.pPalSeldSubs, // object holding the active sub for each tool label. so key is tool label. value is label of selected sab
 				sPalMultiDepresses: this.props.pPalMultiDepresses,
-				sPalX: 5, // :todo: get this from prefs
-				sPalY: 75, // :todo: get this from prefs
+				sPalX: this.props.pPalX,
+				sPalY: this.props.pPalY,
 
 				sPalLineColor: this.props.pPalLineColor,
 				sPalLineAlpha: this.props.pPalLineAlpha,
@@ -1793,7 +1793,8 @@ function init(aArrBufAndCore) {
 					sPalZoomViewCoords: {
 						x: this.state.sGenPalZoomViewDragStart.initX + (e.clientX - this.state.sGenPalZoomViewDragStart.clientX),
 						y: this.state.sGenPalZoomViewDragStart.initY + (e.clientY - this.state.sGenPalZoomViewDragStart.clientY)
-					}
+					},
+					setStateFromMouseMove: true
 				});
 			} else {
 				var toolsub = this.state.sGenPalTool + '-' + (this.state.sPalSeldSubs[this.state.sGenPalTool] || '');
@@ -2755,7 +2756,7 @@ function init(aArrBufAndCore) {
 					// move
 					var moveBy = mtmm.w(1); // cant use mtmm.x because otehrwise that will move it with offset // pixels to move by // :todo: detect if its a move in y then use mtmm.y
 					if (e.shiftKey) {
-						moveBy = mtmm.w(10); // :todo: detect if its a move in y then use mtmm.y
+						moveBy = mtmm.w(10); // :todo: detect if its a move in y then use mtmm.h
 					}
 
 					var moveDirX = 0;
@@ -3572,7 +3573,6 @@ function init(aArrBufAndCore) {
 					aFamily
 				);
 			});
-			// :todo: list all the fonts on the system
 			
 			return React.createElement('div', {className:'ptexttools'},
 				React.createElement('div', {className:'ptexttools-row'},
