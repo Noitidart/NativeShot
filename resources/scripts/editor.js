@@ -3258,17 +3258,19 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Clear Selection':
 						
-						// var valid = true;
-						// if (gCanState.cutouts.length) {
-						// 	gCanState.cutouts.length = 0;
-						// 	valid = false;
-						// }
-						// if (gCanState.selection) {
-						// 	gCanStore.rconn.clearSelection();
-						// 	valid = false;
-						// }
-						// gCanState.valid = valid;
 						gCanStore.setCanState(gCanStore.rconn.dDeleteAll(['cutout']));
+						
+					break;
+				case 'Fullscreen':
+
+						gCanStore.rconn.dDeleteAll(['cutout']);
+						gCState.selection = gCanStore.rconn.newDrawable(tQS.x, tQS.y, tQS.w, tQS.h, 'cutout');
+						gCanStore.rconn.dAdd(gCState.selection);
+						gCanStore.setCanState(false); // as i for sure added a new cutout
+						gEditorStore.setState({
+							sGenPalW: tQS.w,
+							sGenPalH: tQS.h
+						});
 						
 					break;
 				case 'Shapes':
