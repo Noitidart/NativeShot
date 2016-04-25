@@ -3515,8 +3515,8 @@ function init(aArrBufAndCore) {
 			//		sPalHeight
 			
 			return React.createElement('div', {className:'pdimtools'},
-				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', 'Rectangle':'w', 'Oval':'w'} }),
-				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', 'Rectangle':'h', 'Oval':'h'} })
+				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', 'Rectangle':'w', 'Oval':'w'}, pCrement:mtmm.w(1) }),
+				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', 'Rectangle':'h', 'Oval':'h'}, pCrement:mtmm.h(1) })
 			)
 		}
 	});
@@ -4150,7 +4150,6 @@ function init(aArrBufAndCore) {
 		keydown: function(e) {
 			var newVal;
 			
-			var crement = this.props.pCrement || 1;
 			switch (e.key) {
 				case 'ArrowUp':
 				
@@ -4239,7 +4238,7 @@ function init(aArrBufAndCore) {
 			
 			var delSensitivity = Math.round(delX / this.mousesens);
 			
-			var newVal = this.downval + delSensitivity;
+			var newVal = this.downval + (delSensitivity * this.crement);
 			
 			// console.log('downx:', this.downx, 'clientX:', e.clientX, 'delX:', delX, 'delSensitivity:', delSensitivity);
 			
