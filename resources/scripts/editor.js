@@ -125,9 +125,14 @@ function init(aArrBufAndCore) {
 			justClick: true,
 			sub: [
 				{
-					special: 'Monitors' // allow single monitor selecting or multiple
+					label: 'monitors'
 				}
 			]
+			// sub: [
+			// 	{
+			// 		special: 'Monitors' // allow single monitor selecting or multiple
+			// 	}
+			// ]
 		},
 		{
 			label: 'Window Wand',
@@ -443,7 +448,7 @@ function init(aArrBufAndCore) {
 			hotkey: 'Esc'
 		}
 	];
-	
+
 	var gBroadcastTimeout;
 	var Editor = React.createClass({
 		displayName: 'Editor',
@@ -3089,7 +3094,7 @@ function init(aArrBufAndCore) {
 	var gChangingSubToolTo;
 	var Button = React.createClass({
 		displayName: 'Button',
-		click: function() {
+		click: function(e) {
 			switch (this.props.pButton.label) {
 				case 'Blur':
 					
@@ -3263,14 +3268,19 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Fullscreen':
 
-						gCanStore.rconn.dDeleteAll(['cutout']);
-						gCState.selection = gCanStore.rconn.newDrawable(tQS.x, tQS.y, tQS.w, tQS.h, 'cutout');
-						gCanStore.rconn.dAdd(gCState.selection);
+						if (!e.shiftKey) {
+							gCanStore.rconn.dDeleteAll(['cutout']);
+						}
+						var cCutout = gCanStore.rconn.newDrawable(tQS.x, tQS.y, tQS.w, tQS.h, 'cutout');
+						gCanStore.rconn.dAdd(cCutout);
+						if (this.props.sGenPalTool == 'Select') {
+							gCState.selection = cCutout;
+							gEditorStore.setState({
+								sGenPalW: tQS.w,
+								sGenPalH: tQS.h
+							});
+						}
 						gCanStore.setCanState(false); // as i for sure added a new cutout
-						gEditorStore.setState({
-							sGenPalW: tQS.w,
-							sGenPalH: tQS.h
-						});
 						
 					break;
 				case 'Shapes':
@@ -3369,15 +3379,27 @@ function init(aArrBufAndCore) {
 				cButtonIcon = this.props.pButton.icon;
 			}
 			
+			// determine if Fullscreen button should have a submenu
+			var isFullscreenButtonAndFullscreenHasSubmenu;
+			if (this.props.pButton.label == 'Fullscreen' && tQS.allMonDim.length > 1) {
+				isFullscreenButtonAndFullscreenHasSubmenu = true;
+			}
+			
+			// determine submenu
+			var cSubmenu;
+			if (this.props.pButton.sub || isFullscreenButtonAndFullscreenHasSubmenu) {
+				cSubmenu = React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
+					this.props.pButton.label
+				);
+			}
+			
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
 					React.createElement('span', {},
 						this.props.pButton.label
 					)
 				),
-				!this.props.pButton.sub ? undefined : React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
-					this.props.pButton.label
-				),
+				cSubmenu,
 				cButtonIcon
 			);
 		}
@@ -3386,6 +3408,39 @@ function init(aArrBufAndCore) {
 	var SubButton = React.createClass({
 		click: function(e) {
 			var dontStopPropagation = false;
+			
+			if (this.props.pButton.label == 'Fullscreen') {
+				// alert(this.props.pSubButton.label);
+				if (!e.shiftKey) {
+					gCanStore.rconn.dDeleteAll(['cutout']);
+				}
+				var cCutout;
+				var cSubLabel = this.props.pSubButton.label;
+				var allMonDim = tQS.allMonDim;
+				if (this.props.pSubButton.label == 'All Monitors') {					
+					var allmonRect = new Rect(0, 0, 0, 0);
+					var imonRects = [];
+					var l = allMonDim.length;
+					for (var i=0; i<l; i++) {
+						var cMon = allMonDim[i];
+						allmonRect = allmonRect.union(new Rect(cMon.x, cMon.y, cMon.w, cMon.h));
+					}
+					console.log('allmonRect:', allmonRect);
+					cCutout = gCanStore.rconn.newDrawable(allmonRect.x, allmonRect.y, allmonRect.width, allmonRect.height, 'cutout');
+				} else {
+					var iMon = this.props.pSubButton.icontext - 1;
+					cCutout = gCanStore.rconn.newDrawable(allMonDim[iMon].x, allMonDim[iMon].y, allMonDim[iMon].w, allMonDim[iMon].h, 'cutout');
+				}
+				gCanStore.rconn.dAdd(cCutout);
+				if (this.props.sGenPalTool == 'Select') {
+					gCState.selection = cCutout;
+					gEditorStore.setState({
+						sGenPalW: tQS.w,
+						sGenPalH: tQS.h
+					});
+				}
+				gCanStore.setCanState(false); // as i for sure added a new cutout
+			}
 			
 			if (this.props.sGenPalTool == 'Blur') {
 				dontStopPropagation = true;
@@ -3427,6 +3482,10 @@ function init(aArrBufAndCore) {
 				className:'pbutton',
 				onClick: this.click
 			};
+			
+			if (this.props.pSubButton.icontext) {
+				cProps['data-icontext'] = this.props.pSubButton.icontext;
+			}
 			
 			if (this.props.pSubButton.special) {
 				if (this.props.pSubButton.special in Specials) { // temp as all specials not yet defined
@@ -4013,8 +4072,44 @@ function init(aArrBufAndCore) {
 			//		sPalMarkerColor
 			
 			var cChildren = [];
-			for (var i=0; i<this.props.pSub.length; i++) {
-				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
+			
+			// iterate through this.props.pSub
+			if (this.props.pButton.label == 'Fullscreen') {	
+				// this.props.pSub is undefined if "Fullscreen"
+				
+				var allMonDim = tQS.allMonDim;
+				var l = allMonDim.length;
+				// if (l > 2) { // no need for this l2 > 1 check, as if it wasnt, then it would have never got to React.createElement(Submenu for "Fullscreen"
+				
+					// all monitors subbutton
+					cChildren.push(React.createElement(SubButton, overwriteObjWithObj({
+						pSubButton: {
+							label: 'All Monitors',
+							icon: 'A',
+							unfixable: true
+						}
+					}, this.props)));
+					
+					// individual monitor subbuttons
+					for (var i=0; i<l; i++) {
+						if (i !== tQS.iMon) {
+							cChildren.push(React.createElement(SubButton, overwriteObjWithObj({
+								pSubButton: {
+									label: 'Monitor ' + (i + 1),
+									icon: '\ue80e',
+									icontext: (i + 1),
+									unfixable: true
+								}
+							}, this.props)));
+						}
+					}
+				// } else {
+					// return undefined;
+				// }
+			} else {
+				for (var i=0; i<this.props.pSub.length; i++) {
+					cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
+				}
 			}
 			
 			return React.createElement('div', {className:'psub'},
@@ -4494,7 +4589,10 @@ function init(aArrBufAndCore) {
 			pPalFontUnderline: undefined,
 			
 			pCanHandleSize: 19,
-			pPalSeldSubs: palSeldSubs
+			pPalSeldSubs: palSeldSubs,
+			
+			pPalX: 5,
+			pPalY: 50
 		};
 	} else {
 		editorstate = JSON.parse(editorstateStr);
@@ -4692,6 +4790,8 @@ function MyContext(ctx) {
 // start - pre-init
 
 var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i dont deal with gQS anymore.
+tQS.allMonDim = JSON.parse(decodeURIComponent(tQS.allMonDimStr));
+delete tQS.allMonDimStr;
 console.log('tQS:', tQS);
 var gQS = tQS;
 window.addEventListener('message', function(aWinMsgEvent) {

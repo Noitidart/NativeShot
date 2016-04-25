@@ -71,6 +71,26 @@ body {
 	align-items: center;
 	justify-content: center;
 }
+/* state:icontext */
+.pbutton[data-icontext] {
+	/* font-size: 1em !important; */
+}
+.pbutton[data-icontext]::after {
+	content: attr(data-icontext);
+	font-family: Arial;
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	/* background-color: red; */
+	top: 0;
+	left: 0;
+	
+	color: rgb(208, 2, 27); /*rgb(74, 144, 226);*/
+	font-size: 2em;
+}
 /* state:pressed */
 .pbutton:active,
 .pbutton.pbutton-pressed {

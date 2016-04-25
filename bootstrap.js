@@ -2938,6 +2938,18 @@ function shootAllMons(aDOMWindow) {
 		// end notification bar stuff
 		
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
+		var allMonDim = []; // pushed in order of iMon
+		for (var i=0; i<colMon.length; i++) {
+			allMonDim.push({
+				x: colMon[i].x,
+				y: colMon[i].y,
+				w: colMon[i].w,
+				h: colMon[i].h
+				// win81ScaleX: colMon[i].win81ScaleX,
+				// win81ScaleY: colMon[i].win81ScaleY
+			});
+		}
+		var allMonDimStr = JSON.stringify(allMonDim);
 		for (var i=0; i<colMon.length; i++) {
 			// var sa = Cc['@mozilla.org/supports-array;1'].createInstance(Ci.nsISupportsArray);
 			// var sa_imon = Cc['@mozilla.org/supports-PRUint8;1'].createInstance(Ci.nsISupportsPRUint8);
@@ -2962,7 +2974,7 @@ function shootAllMons(aDOMWindow) {
 				y = Math.floor(y / scaleY);
 				h = Math.floor(h / scaleY);
 			}
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i, allMonDimStr:allMonDimStr}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=' + 2 + ',height=' + 2 + ',screenX=' + 2 + ',screenY=' + 2, null);
 			// so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
 			colMon[i].E = {
