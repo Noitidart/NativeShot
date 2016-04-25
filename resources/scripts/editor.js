@@ -65,7 +65,14 @@ function reactSetState(aData) {
 
 function canSetState(aData) {
 	console.log('in canSetState, aData:', aData);
-	gCState = JSON.parse(aData.cstate);
+	var newCanState = JSON.parse(aData.cstate);
+	for (var p in newCanState) {
+		// if (p == 'valid') {
+			// continue;
+		// }
+		gCState[p] = newCanState[p];
+	}
+	// gCState = JSON.parse(aData.cstate);
 	gCanStore.setCanState(false, true);
 }
 
@@ -2310,7 +2317,8 @@ function init(aArrBufAndCore) {
 							case 'Mosaic':
 								
 									this.cstate.resizing = 9;
-								
+									gCanStore.setCanState(false); // to update on mouse down? for updating other windows?
+									
 								break;
 							case 'Line':
 								
@@ -2497,6 +2505,7 @@ function init(aArrBufAndCore) {
 						this.cstate.dragoffx = null;
 						this.cstate.dragoffy = null;
 						this.cstate.dragdown = null;
+						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.resizing) {
 						this.cstate.resizing = false;
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
@@ -2506,6 +2515,7 @@ function init(aArrBufAndCore) {
 						} else {
 							this.makeDimsPositive(this.cstate.selection); // no need to set valid=false
 						}
+						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.lining) {
 						this.cstate.lining = false;
 						if (this.cstate.selection.x == this.cstate.selection.x2 && this.cstate.selection.y == this.cstate.selection.y2) {
@@ -2515,6 +2525,7 @@ function init(aArrBufAndCore) {
 							// need to set valid=false because otherwise the big handle thing is left over
 							gCanStore.setCanState(false);
 						}
+						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.pathing) {
 						this.cstate.pathing = null;
 						if (this.cstate.selection.path.length == 2) {
@@ -2524,6 +2535,7 @@ function init(aArrBufAndCore) {
 							// :todo: consider: need to set valid=false because otherwise the big handle thing is left over
 							gCanStore.setCanState(false);
 						}
+						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.typing) {
 						// do nothing special
 					}
