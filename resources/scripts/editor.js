@@ -123,11 +123,7 @@ function init(aArrBufAndCore) {
 			hotkey: 'F', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			// alt+F for all monitors
 			justClick: true,
-			sub: [
-				{
-					label: 'monitors'
-				}
-			]
+			// this sub is specially added
 			// sub: [
 			// 	{
 			// 		special: 'Monitors' // allow single monitor selecting or multiple
