@@ -1851,10 +1851,10 @@ function init(aArrBufAndCore) {
 							console.error('should never get here');
 					}
 					
-					gEditorStore.setState({
-						sGenPalW: Math.abs(this.cstate.selection.w),
-						sGenPalH: Math.abs(this.cstate.selection.h)
-					})
+					// gEditorStore.setState({
+					// 	sGenPalW: Math.abs(this.cstate.selection.w),
+					// 	sGenPalH: Math.abs(this.cstate.selection.h)
+					// })
 					gCanStore.setCanState(false);
 				} else if (this.cstate.lining) {
 					if (this.cstate.lining == 10) {
