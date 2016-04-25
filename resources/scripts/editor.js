@@ -24,6 +24,9 @@ var gDroppingCoords = [0,0];
 var gDroppingMixCtx;
 var gCanMeasureHeight;
 var gCtxMeasureHeight;
+var gWidthRef;
+var gHeightRef;
+
 function unload() {
 	// if iMon == 0
 	// set the new state object from react to file
@@ -499,8 +502,8 @@ function init(aArrBufAndCore) {
 			var oSetState = this.setState.bind(this);
 			this.setState = function(aObj, isBroadcast) {
 				if (!isBroadcast) {
-					clearTimeout(gBroadcastTimeout);
-					gBroadcastTimeout = setTimeout(function() {
+					// clearTimeout(gBroadcastTimeout);
+					// gBroadcastTimeout = setTimeout(function() {
 						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
 							topic: 'broadcastToOthers',
 							postMsgObj: {
@@ -521,7 +524,7 @@ function init(aArrBufAndCore) {
 						// };
 						// myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
 						// window.dispatchEvent(myEvent);
-					}, 30);
+					// }, 30);
 				}
 				oSetState(aObj);
 			}.bind(this);
@@ -1592,6 +1595,12 @@ function init(aArrBufAndCore) {
 				
 				this.cstate.valid = true; // do not use gCanStore.setCanState here
 				if (gZState) { gZState.valid = false; }
+				
+				if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
+					// maybe set width height here? to test
+					gWidthRef.value = Math.abs(this.cstate.selection.w);
+					gHeightRef.value = Math.abs(this.cstate.selection.h);
+				}
 			}
 		},
 		calcCtxFont: function(aDrawable) {
@@ -4298,6 +4307,20 @@ function init(aArrBufAndCore) {
 		},
 		componentDidMount: function() {
 			this.lastDomElValue = this.props[this.props.pStateVarName];
+			if (this.props.pLabel == 'Width') {
+				console.error('mounted width');
+				gWidthRef = this.refs.input;
+			} else if (this.props.pLabel == 'Height') {
+				console.error('mounted height');
+				gHeightRef = this.refs.input;
+			}
+		},
+		componentWillUnmount: function() {
+			if (this.props.pLabel == 'Width') {
+				gWidthRef = null;
+			} else if (this.props.pLabel == 'Height') {
+				gHeightRef = null;
+			}
 		},
 		componentDidUpdate: function(prevProps) {
 			// console.log('did update, prevProps:', prevProps);
