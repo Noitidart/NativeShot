@@ -1600,6 +1600,10 @@ function init(aArrBufAndCore) {
 					// maybe set width height here? to test
 					gWidthRef.value = Math.abs(this.cstate.selection.w);
 					gHeightRef.value = Math.abs(this.cstate.selection.h);
+					// gEditorStore.setState({
+						// sGenPalW: Math.abs(this.cstate.selection.w),
+						// sGenPalH: Math.abs(this.cstate.selection.h)
+					// })
 				}
 			}
 		},
@@ -1861,8 +1865,8 @@ function init(aArrBufAndCore) {
 					}
 					
 					// gEditorStore.setState({
-					// 	sGenPalW: Math.abs(this.cstate.selection.w),
-					// 	sGenPalH: Math.abs(this.cstate.selection.h)
+						// sGenPalW: Math.abs(this.cstate.selection.w),
+						// sGenPalH: Math.abs(this.cstate.selection.h)
 					// })
 					gCanStore.setCanState(false);
 				} else if (this.cstate.lining) {
