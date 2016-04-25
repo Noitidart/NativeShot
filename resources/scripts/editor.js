@@ -3393,10 +3393,15 @@ function init(aArrBufAndCore) {
 				var sPalSeldSubs = cloneObject(this.props.sPalSeldSubs);
 				sPalSeldSubs[this.props.pButton.label] = this.props.pSubButton.label;
 			
-				gEditorStore.setState({
-					sGenPalTool: this.props.pButton.label,
+				var setStateObj = {
 					sPalSeldSubs: sPalSeldSubs
-				});
+				};
+				
+				if (!this.props.pButton.justClick) {
+					setStateObj.sGenPalTool = this.props.pButton.label;
+				}
+			
+				gEditorStore.setState(setStateObj);
 			}
 			
 			if (!dontStopPropagation) {
