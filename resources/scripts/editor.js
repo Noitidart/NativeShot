@@ -1228,12 +1228,25 @@ function init(aArrBufAndCore) {
 						var level = aDrawable.blurradius; // this.state.sPalBlurRadius;
 						
 						// get section of screenshot
-						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h));
-						
-						// apply filter
-						imagedata.gaussian_blur(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), { // no need for rouning as mmtm gets back without the scale
-							radius: level
-						});
+						var srcCtx;
+						var srcImgData;
+						if (gCanStore.oscalectx1_draw) {
+							srcCtx = this.oscalectx0;
+							srcImgData = srcCtx.getImageData(positived.x, positived.y, positived.w, positived.h);
+							
+							// apply filter
+							imagedata.gaussian_blur(srcImgData, positived.w, positived.h, {
+								radius: level
+							});
+						} else {
+							srcCtx = this.ctx0;
+							srcImgData = srcCtx.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
+							
+							// apply filter
+							imagedata.gaussian_blur(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), { // no need for rouning as mmtm gets back without the scale
+								radius: level
+							});
+						}
 						
 						// draw it
 						this.ctx.putImageData(srcImgData, positived.x, positived.y);
@@ -1246,7 +1259,15 @@ function init(aArrBufAndCore) {
 						var level = aDrawable.blurblock;
 						
 						// get section of screenshot
-						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
+						var srcCtx;
+						var srcImgData;
+						if (gCanStore.oscalectx1_draw) {
+							srcCtx = this.oscalectx0;
+							srcImgData = srcCtx.getImageData(positived.x, positived.y, positived.w, positived.h);
+						} else {
+							srcCtx = this.ctx0;
+							srcImgData = srcCtx.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
+						}
 						
 						// apply filter
 						imagedata.pixelate(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), {
