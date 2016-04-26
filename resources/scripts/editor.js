@@ -124,7 +124,9 @@ function initCompositeForAction(aAction, aSub) {
 					}
 				}
 			}
-				
+			
+			console.log('need to request from:', JSON.parse(JSON.stringify(gCompositesArr)));
+			
 			// send requests to all the monitors
 			for (var i=0; i<l; i++) {
 				var cEntry = gCompositesArr[i];
@@ -220,6 +222,7 @@ function fullfillCompositeRequest(aData) {
 	for (var i=0; i<l; i++) {
 		var cEntry = compositesArr[i];
 		if (cEntry.id === cId) {
+			console.log('id match on cEntry:', cEntry);
 			cEntry.data[cMon].arrbuf = cArrBuf;
 		}
 	}
@@ -281,7 +284,7 @@ function fullfillCompositeRequest(aData) {
 				var h = Math.round(subcutout.h);
 				
 				var subImagedata = new ImageData(new Uint8ClampedArray(cSubData.arrbuf), w, h);
-				ctx.putImageData(subImagedata, 0, 0);
+				ctx.putImageData(subImagedata, subcutout.x - compositeRect.x, subcutout.y - compositeRect.y);
 			}
 		}
 		

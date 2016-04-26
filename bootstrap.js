@@ -587,7 +587,7 @@ var EditorFuncs = {
 
 function nscomm(aEvent) {
 	console.log('incoming nscomm, aEvent:', aEvent);
-	aData = aEvent.detail;
+	var aData = aEvent.detail;
 	
 	var requiredKeys = ['topic', 'iMon'];
 	for (var i=0; i<requiredKeys.length; i++) {
