@@ -975,7 +975,7 @@ function init(aArrBufAndCore) {
 						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h));
 						
 						// apply filter
-						imagedata.gaussian_blur(srcImgData, positived.w, positived.h, {
+						imagedata.gaussian_blur(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), { // no need for rouning as mmtm gets back without the scale
 							radius: level
 						});
 						
@@ -990,11 +990,10 @@ function init(aArrBufAndCore) {
 						var level = aDrawable.blurblock;
 						
 						// get section of screenshot
-						// console.log('positived.x:', positived.x, 'mmtm.x:', mmtm.x(positived.x), 'positived:', positived);
-						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h));
+						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
 						
 						// apply filter
-						imagedata.pixelate(srcImgData, positived.w, positived.h, {
+						imagedata.pixelate(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), {
 							blockSize: level
 						});
 						
