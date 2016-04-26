@@ -223,7 +223,7 @@ function init(aArrBufAndCore) {
 					options: ['Word Break / Ellipsis']
 				}
 			],
-			options: ['BlurTools']
+			options: ['BlurTools', 'DimensionTools']
 		},
 		{
 			special: 'Divider'
@@ -972,7 +972,7 @@ function init(aArrBufAndCore) {
 						var level = aDrawable.blurradius; // this.state.sPalBlurRadius;
 						
 						// get section of screenshot
-						var srcImgData = this.this.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
+						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h));
 						
 						// apply filter
 						imagedata.gaussian_blur(srcImgData, positived.w, positived.h, {
@@ -990,7 +990,8 @@ function init(aArrBufAndCore) {
 						var level = aDrawable.blurblock;
 						
 						// get section of screenshot
-						var srcImgData = this.this.ctx0.getImageData(positived.x, positived.y, positived.w, positived.h);
+						// console.log('positived.x:', positived.x, 'mmtm.x:', mmtm.x(positived.x), 'positived:', positived);
+						var srcImgData = this.ctx0.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h));
 						
 						// apply filter
 						imagedata.pixelate(srcImgData, positived.w, positived.h, {
@@ -3578,8 +3579,8 @@ function init(aArrBufAndCore) {
 			//		sPalHeight
 			
 			return React.createElement('div', {className:'pdimtools'},
-				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', 'Rectangle':'w', 'Oval':'w'}, pCrement:mtmm.w(1) }),
-				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', 'Rectangle':'h', 'Oval':'h'}, pCrement:mtmm.h(1) })
+				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', 'Rectangle':'w', 'Oval':'w', 'Gaussian':'w', 'Mosaic':'w'}, pCrement:mtmm.w(1) }),
+				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', 'Rectangle':'h', 'Oval':'h', 'Gaussian':'w', 'Mosaic':'w'}, pCrement:mtmm.h(1) })
 			)
 		}
 	});
@@ -4621,35 +4622,27 @@ function init(aArrBufAndCore) {
 }
 
 
-var mtmm = { // short for monToMultiMon - this means WITH the scale and WITH the screenX screenY offset
+var mtmm = { // short for monToMultiMon - multimon means WITH the scale and WITH the screenX screenY offset
 	// converts clientX to proper screenX
 	x: function(aX) {
-		// return tQS.win81ScaleX ? aX * tQS.win81ScaleX : aX;
 		return tQS.x + (tQS.win81ScaleX ? aX * tQS.win81ScaleX : aX);
 	},
 	y: function(aY) {
-		// return tQS.win81ScaleY ? aY * tQS.win81ScaleY : aY;
 		return tQS.y + (tQS.win81ScaleY ? aY * tQS.win81ScaleY : aY);
 	},
 	w: function(aW) {
-		// return aW;
 		return tQS.win81ScaleX ? (aW * tQS.win81ScaleX) : aW;
 	},
 	h: function(aH) {
-		// return aH;
 		return tQS.win81ScaleY ? (aH * tQS.win81ScaleY) : aH;
 	}
 };
 
-var mmtm = { // short for multiMonToMon - this means without the scale, and without the screenX screenY offset
+var mmtm = { // short for multiMonToMon - mon means without the scale, and without the screenX screenY offset
 	x: function(aX) {
-		// var nX = tQS.win81ScaleX ? aX / tQS.win81ScaleX : aX;
-		var nX = tQS.win81ScaleX ? (aX - tQS.x) / tQS.win81ScaleX : aX;
-		// console.log('aX:', aX, 'nX:', nX);
-		return nX;
+		return tQS.win81ScaleX ? (aX - tQS.x) / tQS.win81ScaleX : aX;
 	},
 	y: function(aY) {
-		// return tQS.win81ScaleY ? aY / tQS.win81ScaleY : aY;
 		return tQS.win81ScaleY ? (aY - tQS.y) / tQS.win81ScaleY : aY;
 	},
 	w: function(aW) {

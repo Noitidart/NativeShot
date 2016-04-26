@@ -5,7 +5,7 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 const PromiseWorker = Cu.import('resource://gre/modules/PromiseWorker.jsm').BasePromiseWorker;
 Cu.import('resource:///modules/CustomizableUI.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
-Cu.import('resource://gre/modules/Geometry.jsm');
+// Cu.import('resource://gre/modules/Geometry.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
@@ -484,9 +484,6 @@ var EditorFuncs = {
 			}
 		}
 	},
-	closeAllEditors: function() {
-		
-	},
 	updateEditorState: function(aData) {
 		gEditorStateStr = aData.editorstateStr;
 		console.log('set gEditorStateStr to:', gEditorStateStr);
@@ -674,117 +671,7 @@ var colMon; // rename of collMonInfos
 	}
 }
 */
-var gIMonMouseDownedIn;
 
-var gETopLeftMostX;
-var gETopLeftMostY;
-
-var gESelected = false;
-var gESelecting = false; // users is drawing rect
-var gEMoving = false; // user is moving rect
-var gEResizing = false; // user is moving rect
-var gEOrigSelectedRect = new Rect(0, 0, 0, 0);
-var gEMDX = null; // mouse down x
-var gEMDY = null; // mouse down y
-var gESelectedRect = new Rect(0, 0, 0, 0);
-
-const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
-const gDefLineDash = [3, 3];
-const gDefStrokeStyle = '#fff';
-const gDefAltLineDash = [0, 3, 0];
-const gDefAltStrokeStyle = '#000';
-const gDefLineWidth = '1';
-var gDefResizePtSize = 7;
-const gDefResizePtStyle = '#000';
-
-var gEMenuDomJson;
-var gEMenuArrRefs = {
-	select_fullscreen: null
-};
-function get_gEMenuDomJson() {
-	if (!gEMenuDomJson) {
-		gEMenuDomJson =
-			['xul:popupset', {},
-				['xul:menupopup', {id: 'myMenu1'},
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-quick']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-quick') }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-browse']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-browse') }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_copy']), oncommand:function(e){ gEditor.uploadOauthDataUrl(e, 'copy') }}],
-					['xul:menuitem', {id:'print_menuitem', label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_print']), oncommand:function(e){ gEditor.uploadOauthDataUrl(e, 'print') }}],
-					['xul:menu', {label:'Upload to Cloud Drive'}, // :l10n:
-						['xul:menupopup', {},
-							// ['xul:menuitem', {label:'Amazon Cloud Drive'}],
-							// ['xul:menuitem', {label:'Box'}],
-							// ['xul:menuitem', {label:'Copy by Barracuda Networks'}],
-							['xul:menuitem', {label:'Dropbox', oncommand:function(e){ gEditor.uploadOauth(e, 'dropbox') }}], // :l10n:
-							['xul:menuitem', {label:'Google Drive', oncommand:function(e){ gEditor.uploadOauth(e, 'gdrive') }}] // :l10n:
-							// ['xul:menuitem', {label:'MEGA'}],
-							// ['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
-						]
-					],
-					['xul:menu', {label:'Upload to Image Host'}, // :10n:
-						['xul:menupopup', {},
-							// ['xul:menuitem', {label:'Flickr'}],
-							// ['xul:menuitem', {label:'Image Shack'}],
-							['xul:menuitem', {label:'Imgur', oncommand:function(e){ gEditor.uploadOauth(e, 'imgur') }}] // :10n:
-							// ['xul:menuitem', {label:'Photobucket'}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_upload-img-host-anon'])},
-						['xul:menupopup', {},
-							/*['xul:menuitem', {label:'FreeImageHosting.net'}],*/
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_imgur']), oncommand:function(e){ gEditor.uploadOauth(e, 'imguranon') }}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_share-to-social'])},
-						['xul:menupopup', {},
-							/*['xul:menuitem', {label:'Facebook'}],*/
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_twitter']), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_search-reverse'])},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_tineye']), oncommand:function(e){ gEditor.uploadOauth(e, 'tineye') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_google-images']), oncommand:function(e){ gEditor.uploadOauth(e, 'google-images') }}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocr'])},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_gocr']), oncommand:function(e){ gEditor.ocr(e, 'gocr') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocrad']), oncommand:function(e){ gEditor.ocr(e, 'ocrad') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_tesseract']), oncommand:function(e){ gEditor.ocr(e, 'tesseract') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocr-all']), oncommand:function(e){ gEditor.ocr(e, 'all') }}]
-						]
-					],
-					['xul:menuseparator', {}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-clear']), oncommand:function(e){ gEditor.clearSelection(e) }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-last']), oncommand:function(e){ gEditor.repeatLastSelection(e) }, id:'repeatLastSelection'}],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-fullscreen'])},
-						gEMenuArrRefs.select_fullscreen
-					],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-window']), oncommand:function(e){ gEditor.selectWindow(e) }}],
-					/*
-					['xul:menu', {label:'Select Window'},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
-							['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
-								['xul:menupopup', {},
-									['xul:menuitem', {label:'Window 1'}],
-									['xul:menuitem', {label:'Window 2'}],
-									['xul:menuitem', {label:'Window 3'}]
-								]
-							],
-							['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
-						]
-					]
-					*/
-					['xul:menuseparator', {}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_close']), oncommand:function() { gEditor.closeOutEditor({shiftKey:false}) }}]
-				]
-			];
-	}
-	
-	return gEMenuDomJson;
-}
 // start - observer handlers
 var gColReuploadTimers = {};
 var gLastReuploadTimerId = 0;
@@ -1714,7 +1601,7 @@ var gEditor = {
 			// this.canComp.style.position = 'fixed'; // :debug:
 
 
-			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
+			this.ctxComp.putImageData(colMon[i].screenshotArrBuf, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
 			
 			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
 			
@@ -2903,6 +2790,9 @@ function shootAllMons(aDOMWindow) {
 	
 	gEditor.gBrowserDOMWindow = aDOMWindow;
 	gESelected = false;
+	
+	var allMonDim = []; // pushed in order of iMon
+	
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime(); // in other words, this is time of screenshot of this session
 		
@@ -2938,18 +2828,10 @@ function shootAllMons(aDOMWindow) {
 		// end notification bar stuff
 		
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
-		var allMonDim = []; // pushed in order of iMon
-		for (var i=0; i<colMon.length; i++) {
-			allMonDim.push({
-				x: colMon[i].x,
-				y: colMon[i].y,
-				w: colMon[i].w,
-				h: colMon[i].h
-				// win81ScaleX: colMon[i].win81ScaleX,
-				// win81ScaleY: colMon[i].win81ScaleY
-			});
-		}
+
 		var allMonDimStr = JSON.stringify(allMonDim);
+
+		
 		for (var i=0; i<colMon.length; i++) {
 			// var sa = Cc['@mozilla.org/supports-array;1'].createInstance(Ci.nsISupportsArray);
 			// var sa_imon = Cc['@mozilla.org/supports-PRUint8;1'].createInstance(Ci.nsISupportsPRUint8);
@@ -2978,9 +2860,9 @@ function shootAllMons(aDOMWindow) {
 			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=' + 2 + ',height=' + 2 + ',screenX=' + 2 + ',screenY=' + 2, null);
 			// so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
 			colMon[i].E = {
-				DOMWindow: aEditorDOMWindow,
-				docEl: aEditorDOMWindow.document.documentElement,
-				doc: aEditorDOMWindow.document,
+				DOMWindow: aEditorDOMWindow
+				// docEl: aEditorDOMWindow.document.documentElement,
+				// doc: aEditorDOMWindow.document,
 			};
 		}
 	};
@@ -2991,47 +2873,23 @@ function shootAllMons(aDOMWindow) {
 
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
-
+			
+			console.log('colMon from worker:', colMon);
+			
+			for (var i=0; i<colMon.length; i++) {
+				allMonDim.push({
+					x: colMon[i].x,
+					y: colMon[i].y,
+					w: colMon[i].w,
+					h: colMon[i].h
+					// win81ScaleX: colMon[i].win81ScaleX,
+					// win81ScaleY: colMon[i].win81ScaleY
+				});
+			}
+			
 			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 				gPostPrintRemovalFunc();
-			}
-			
-			// set gETopLeftMostX and gETopLeftMostY
-			for (var i=0; i<colMon.length; i++) {
-				console.log('colMon', i, colMon[i]);
-				// colMon[i].screenshot = new aDOMWindow.ImageData(new aDOMWindow.Uint8ClampedArray(colMon[i].screenshot), colMon[i].w, colMon[i].h);
-				colMon[i].screenshotArrBuf = colMon[i].screenshot;
-				delete colMon[i].screenshot;
-				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
-				if (i == 0) {
-					gETopLeftMostX = colMon[i].x;
-					gETopLeftMostY = colMon[i].y;
-				} else {
-					if (colMon[i].x < gETopLeftMostX) {
-						gETopLeftMostX = colMon[i].x;
-					}
-					if (colMon[i].y < gETopLeftMostY) {
-						gETopLeftMostY = colMon[i].y;
-					}
-				}
-			}
-			
-			// update monitor menu domJson
-			/*
-			if (!gEMenuArrRefs.select_fullscreen || gEMenuArrRefs.select_fullscreen.length != 2 + colMon.length) {
-				gEMenuArrRefs.select_fullscreen = 
-					['xul:menupopup', {},
-						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-current-mon']), oncommand:gEditor.selectMonitor.bind(null, -1)}],
-						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-all-mon']), oncommand:gEditor.selectMonitor.bind(null, -2)}]
-					]
-				;
-				for (var i=0; i<colMon.length; i++) {
-					gEMenuArrRefs.select_fullscreen.push(
-						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-mon-n'], [i+1]), oncommand:gEditor.selectMonitor.bind(null, i)}]
-					);
-				}
-			}
-			*/
+			}			
 			
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot

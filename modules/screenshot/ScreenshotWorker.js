@@ -1310,8 +1310,8 @@ function shootAllMons() {
 					swapBandRinUint8(monShotUint8);
 
 					
-					collMonInfos[s].screenshot = monShotBuf;
-					aScreenshotBuffersToTransfer.push(collMonInfos[s].screenshot);
+					collMonInfos[s].screenshotArrBuf = monShotBuf;
+					aScreenshotBuffersToTransfer.push(collMonInfos[s].screenshotArrBuf);
 					
 					// release memory of screenshot stuff
 					//delete collMonInfos[s].otherInfo;
@@ -1548,8 +1548,8 @@ function shootAllMons() {
 					var monUseW = collMonInfos[i].w;
 					var monUseH = collMonInfos[i].h;
 
-					collMonInfos[i].screenshot = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
-					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
+					collMonInfos[i].screenshotArrBuf = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
+					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshotArrBuf);
 				}
 
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
@@ -1882,8 +1882,8 @@ function shootAllMons() {
 					var monUseH = collMonInfos[i].h;
 
 
-					collMonInfos[i].screenshot = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x - minScreenX, collMonInfos[i].y - minScreenY);
-					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshot);
+					collMonInfos[i].screenshotArrBuf = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x - minScreenX, collMonInfos[i].y - minScreenY);
+					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshotArrBuf);
 				}
 
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
