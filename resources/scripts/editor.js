@@ -139,9 +139,9 @@ function initCompositeForAction(aAction, aSub) {
 						id: cEntry.id
 					};
 					if (p == tQS.iMon) {
-						setTimeout(function() {
-							requestCompositeData(requestLoad);
-						}, false);
+						setTimeout(function(aReqLoad) {
+							requestCompositeData(aReqLoad);
+						}.bind(null, requestLoad), false);
 					} else {
 						requestLoad.topic = 'requestCompositeData';
 						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
@@ -224,17 +224,20 @@ function fullfillCompositeRequest(aData) {
 		if (cEntry.id === cId) {
 			console.log('id match on cEntry:', cEntry);
 			cEntry.data[cMon].arrbuf = cArrBuf;
+			break;
 		}
 	}
 	
 	// check if all requests were fullfilled - meaning if any "null arrbuf" entires in data
 	var allRequestsFullfilled = true;
+	commArrLoop:
 	for (var i=0; i<l; i++) {
 		var cEntry = compositesArr[i];
 		for (var p in cEntry.data) { // p is iMon
 			if (!cEntry.data[p].arrbuf) {
+				console.log('arrbuf for cutout id "' + cEntry.id + '" and monitor "' + p + '" not yet delivered, compositesArr:', compositesArr);
 				allRequestsFullfilled = false;
-				break;
+				break commArrLoop;
 			}
 		}
 	}
