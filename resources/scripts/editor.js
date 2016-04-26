@@ -1226,16 +1226,16 @@ function init(aArrBufAndCore) {
 						var positived = this.makeDimsPositive(aDrawable, true);
 						
 						var level = aDrawable.blurradius; // this.state.sPalBlurRadius;
-						
+
 						// get section of screenshot
 						var srcCtx;
 						var srcImgData;
 						if (gCanStore.oscalectx1_draw) {
-							srcCtx = this.oscalectx0;
-							srcImgData = srcCtx.getImageData(positived.x, positived.y, positived.w, positived.h);
+							srcCtx = this.oscalectx0; // this one is not an instance of MyContext
+							srcImgData = srcCtx.getImageData(Math.round(positived.x - tQS.x), Math.round(positived.y - tQS.y), Math.round(positived.w), Math.round(positived.w));
 							
 							// apply filter
-							imagedata.gaussian_blur(srcImgData, positived.w, positived.h, {
+							imagedata.gaussian_blur(srcImgData, Math.round(positived.w), Math.round(positived.h), {
 								radius: level
 							});
 						} else {
@@ -1243,11 +1243,11 @@ function init(aArrBufAndCore) {
 							srcImgData = srcCtx.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
 							
 							// apply filter
-							imagedata.gaussian_blur(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), { // no need for rouning as mmtm gets back without the scale
-								radius: level
+							imagedata.gaussian_blur(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), { // // no need for rounding as mmtm gets back without the scale
+								radius: Math.round(mmtm.w(level))
 							});
 						}
-						
+
 						// draw it
 						this.ctx.putImageData(srcImgData, positived.x, positived.y);
 					
@@ -1262,18 +1262,23 @@ function init(aArrBufAndCore) {
 						var srcCtx;
 						var srcImgData;
 						if (gCanStore.oscalectx1_draw) {
-							srcCtx = this.oscalectx0;
-							srcImgData = srcCtx.getImageData(positived.x, positived.y, positived.w, positived.h);
+							srcCtx = this.oscalectx0; // this one is not an instance of MyContext so i need to subtract tQS.# myself and round
+							srcImgData = srcCtx.getImageData(Math.round(positived.x - tQS.x), Math.round(positived.y - tQS.y), Math.round(positived.w), Math.round(positived.w));
+							
+							// apply filter
+							imagedata.pixelate(srcImgData, Math.round(positived.w), Math.round(positived.h), {
+								blockSize: level
+							});
 						} else {
 							srcCtx = this.ctx0;
 							srcImgData = srcCtx.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
+							
+							// apply filter
+							imagedata.pixelate(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), {
+								blockSize: Math.round(mmtm.w(level))
+							});
 						}
-						
-						// apply filter
-						imagedata.pixelate(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), {
-							blockSize: level
-						});
-						
+
 						// draw it
 						this.ctx.putImageData(srcImgData, positived.x, positived.y);
 					
@@ -5168,6 +5173,10 @@ function MyContext(ctx) {
 var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i dont deal with gQS anymore.
 tQS.allMonDim = JSON.parse(decodeURIComponent(tQS.allMonDimStr));
 delete tQS.allMonDimStr;
+
+// delete tQS.win81ScaleX;
+// delete tQS.win81ScaleY;
+
 console.log('tQS:', tQS);
 var gQS = tQS;
 window.addEventListener('message', function(aWinMsgEvent) {
