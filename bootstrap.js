@@ -484,6 +484,20 @@ var EditorFuncs = {
 			}
 		}
 	},
+	broadcastToSpecfic: function() {
+		// aData requires the key postMsgObj and toMon (which is target iMon)
+		
+		if (!aData.postMsgObj) {
+			console.error('aData missing "postMsgObj" key');
+			throw new Error('aData missing "postMsgObj" key');
+		}
+		if (!aData.toMon) {
+			console.error('aData missing "toMon" key');
+			throw new Error('aData missing "toMon" key');
+		}
+		// no need to parseInt(aData.toMon) because it is already a number due to aData being JSON.parse ed
+		colMon[aData.toMon].E.DOMWindow.postMessage(aData.postMsgObj, '*');
+	},
 	updateEditorState: function(aData) {
 		gEditorStateStr = aData.editorstateStr;
 		console.log('set gEditorStateStr to:', gEditorStateStr);
@@ -567,7 +581,7 @@ var EditorFuncs = {
 			editorstateStr: gEditorStateStr
 		}, '*', [colMon[iMon].screenshotArrBuf]);
 		
-		// colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
+		colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
 	}
 };
 

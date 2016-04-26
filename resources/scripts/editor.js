@@ -87,6 +87,193 @@ function zcanInvalidate(aData) {
 	}
 }
 
+function initCompositeForAction(aAction, aSub) {
+	if (!gCompositesArr) {
+		var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
+		if (!cutouts.length) {
+			alert('no selection made!');
+		} else {
+			
+			var cutoutsAsRects = [];
+			var l = cutouts.length;
+
+			// figure out which monitors to request from - and bulid gCompositesArr
+			gCompositesArr = [];
+			for (var i=0; i<l; i++) {
+				var cCutout = cutouts[i];
+				var cEntry = {
+					cutout: cCutout,
+					id: i,
+					data: {} // need to set which monitors need to provide this data, and then request those monitors to send it
+				};
+				
+				gCompositesArr.push(cEntry);
+				
+				// figure out here which monitors to request from
+				var allMonDim = tQS.allMonDim;
+				var cCutoutRect = new Rect(cCutout.x, cCutout.y, cCutout.w, cCutout.h);
+				for (var j=0; j<allMonDim.length; j++) {
+					var iMon = j;
+					var cRectMon = new Rect(allMonDim[j].x, allMonDim[j].y, allMonDim[j].w, allMonDim[j].h);
+					var cCommonRect = cRectMon.intersect(cCutoutRect);
+					if (!cCommonRect.isEmpty()) { // if its empty, then that means no intersection
+						cEntry.data[iMon] = {
+							arrbuf: null,
+							subcutout: {x:cCommonRect.x, y:cCommonRect.y, w:cCommonRect.width, h:cCommonRect.height}
+						}
+					}
+				}
+			}
+				
+			// send requests to all the monitors
+			for (var i=0; i<l; i++) {
+				var cEntry = gCompositesArr[i];
+				var cData = cEntry.data;
+				
+				for (var p in cData) { // p is iMon
+					var requestLoad = {
+						requestingMon: tQS.iMon,
+						toMon: p, // as p is target iMon
+						subcutout: cData[p].subcutout,
+						id: cEntry.id
+					};
+					if (p == tQS.iMon) {
+						setTimeout(function() {
+							requestCompositeData(requestLoad);
+						}, false);
+					} else {
+						requestLoad.topic = 'requestCompositeData';
+						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+							topic: 'broadcastToSpecific',
+							postMsgObj: requestLoad,
+							iMon: tQS.iMon
+						}));
+					}
+				}
+			}
+			
+		}
+	} else {
+		alert('action is in progress');
+	}
+}
+
+function requestCompositeData(aData) {
+	// emites a fullfillCompositeRequest to requestingMon
+	console.log('incoming requestCompositeData, aData:', aData);
+	var subcutout = aData.subcutout;
+	var subImagedata = gCanStore.rconn.oscalectx.getImageData(mmtm.x(subcutout.x), mmtm.y(subcutout.y), mmtm.w(subcutout.w), mmtm.h(subcutout.h));
+	var requestingMon = aData.requestingMon;
+	var cutoutid = aData.id;
+	
+	// send it back to requesting monitor
+	var fullfillLoad = {
+		id: cutoutid,
+		arrBuf: subImagedata.data.buffer,
+		fromMon: tQS.iMon
+	};
+	if (requestingMon == tQS.iMon) {
+		fullfillCompositeRequest(fullfillLoad);
+	} else {
+		fullfillLoad.topic = 'fullfillCompositeRequest';
+		var myEvent = window.document.createEvent('CustomEvent');
+		var myEventDetail = {
+			topic: 'broadcastToSpecific',
+			postMsgObj: fullfillLoad,
+			iMon: tQS.iMon
+		};
+		myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+		window.dispatchEvent(myEvent);
+	}
+	
+}
+
+var gCompositesArr; // array // each element is an object // when an array, other actions are not allowed
+/*
+{
+	cutout: aCutout
+	id: generated id for the cutout
+	data: {
+		__iMon__: null // when request fullfilled the null goes to {arrbuf: ArrayBuffer, subcutout:{x,y,w,h}}
+	}
+}
+*/
+function fullfillCompositeRequest(aData) {
+	console.log('incoming fullfillCompositeRequest, aData:', aData);
+	
+	var cId = aData.id;
+	var cMon = aData.fromMon;
+	var cArrBuf = aData.arrBuf;
+	
+	var compositesArr = gCompositesArr;
+	
+	var l = compositesArr.length;
+	for (var i=0; i<l; i++) {
+		var cEntry = compositesArr[i];
+		if (cEntry.id === cId) {
+			cEntry.data[cMon].arrbuf = cArrBuf;
+		}
+	}
+	
+	// check if all requests were fullfilled - meaning if any "null arrbuf" entires in data
+	var allRequestsFullfilled = true;
+	for (var i=0; i<l; i++) {
+		var cEntry = compositesArr[i];
+		for (var p in cEntry.data) { // p is iMon
+			if (!cEntry.data[p].arrbuf) {
+				allRequestsFullfilled = false;
+				break;
+			}
+		}
+	}
+	
+	if (allRequestsFullfilled) {
+		gCompositesArr = undefined;
+		
+		// create composited rect
+		var compositeRect;
+		for (var i=0; i<l; i++) {
+			var cEntry = compositesArr[i];
+			var cCutout = cEntry.cutout;
+			
+			// var cutoutClone = this.makeDimsPositive(cCutout, true); // is already positive, so no need here
+			
+			var cRect = new Rect(cCutout.x, cCutout.y, cCutout.w, cCutout.h);
+			
+			
+			if (!compositeRect) {
+				compositeRect = cRect;
+			} else {
+				compositeRect = compositeRect.union(cRect);
+			}
+		}
+			
+		
+		var can = document.createElement('canvas');
+		var ctx = can.getContext('2d');
+		can.width = mmtm.w(compositeRect.width);
+		can.height = mmtm.h(compositeRect.height);
+		
+		// put all the image datas in the right spot on this ctx
+		for (var i=0; i<l; i++) {
+			var cEntry = compositesArr[i];
+			var cData = cEntry.data;
+			for (var p in cData) {
+				var cSubData = cData[p];
+				var subImagedata = new ImageData(new Uint8ClampedArray(cSubData.arrbuf), mmtm.w(cSubData.subcutout.w), mmtm.h(cSubData.subcutout.h));
+				ctx.putImageData(subImagedata, 0, 0);
+			}
+		}
+		
+		// debug - put this canvas on the document
+		can.style.position = 'absolute';
+		can.style.zIndex = '9999';
+		can.style.top = 0;
+		can.style.left = 0;
+		document.body.appendChild(can);
+	}
+}
+
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
 	
@@ -572,24 +759,27 @@ function init(aArrBufAndCore) {
 			
 			///////////
 			this.ctx = new MyContext(this.refs.can.getContext('2d'));
-			this.ctx0 = this.refs.can0.getContext('2d');
+			this.ctx0 = this.refs.can0.getContext('2d');			
 			
 			var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
 			
 			if (this.props.pQS.win81ScaleX || this.props.pQS.win81ScaleY) {
 				var canDum = document.createElement('canvas');
-				canDum.setAttribute('width', this.props.pQS.w);
-				canDum.setAttribute('height', this.props.pQS.h);
+				canDum.setAttribute('width', tQS.w);
+				canDum.setAttribute('height', tQS.h);
 				
 				var ctxDum = canDum.getContext('2d');
 				ctxDum.putImageData(screenshotImageData, 0, 0);
 				
-				this.ctx0.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
-				// this.ctx.scale(1/this.props.pQS.win81ScaleX, 1/this.props.pQS.win81ScaleY);
+				this.ctx0.scale(1/tQS.win81ScaleX, 1/tQS.win81ScaleY);
+				// this.ctx.scale(1/tQS.win81ScaleX, 1/tQS.win81ScaleY);
 				
 				this.ctx0.drawImage(canDum, 0, 0);
+				
+				this.oscalectx = ctxDum;
 			} else {
 				this.ctx0.putImageData(screenshotImageData, 0, 0);
+				this.oscalectx = this.ctx0;
 			}
 			
 			this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
@@ -3047,6 +3237,7 @@ function init(aArrBufAndCore) {
 				
 				// dom visibility
 				var shouldBeVisible = false;
+				console.log('offsets:', this.zstate.offsets, 'mouse:', this.zstate.mouse);
 				if ((tQS.x <= this.zstate.mouse.x) && (tQS.x + tQS.w >= this.zstate.mouse.x) &&
 					(tQS.y <= this.zstate.mouse.y) && (tQS.y + tQS.h >= this.zstate.mouse.y)) {
 						shouldBeVisible = true;
@@ -3157,6 +3348,19 @@ function init(aArrBufAndCore) {
 		displayName: 'Button',
 		click: function(e) {
 			switch (this.props.pButton.label) {
+				// start - actions
+				case 'Save':
+				case 'Copy':
+				case 'Print':
+				case 'Upload to Cloud':
+				case 'Share to Social Media':
+				case 'Similar Image Search':
+				case 'Text Recognition':
+				
+						initCompositeForAction(this.props.pButton.label, this.props.sPalSeldSubs[this.props.pButton.label]);
+				
+					break;
+				// end - actions
 				case 'Blur':
 					
 						if (gCState && gCState.selection) {
