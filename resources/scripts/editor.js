@@ -162,7 +162,15 @@ function requestCompositeData(aData) {
 	// emites a fullfillCompositeRequest to requestingMon
 	console.log('incoming requestCompositeData, aData:', aData);
 	var subcutout = aData.subcutout;
-	var subImagedata = gCanStore.rconn.oscalectx.getImageData(mmtm.x(subcutout.x), mmtm.y(subcutout.y), mmtm.w(subcutout.w), mmtm.h(subcutout.h));
+	console.log('getImageData with subcutout:', subcutout);
+	// link1818111116
+	var x = Math.round(subcutout.x - tQS.x);
+	var y = Math.round(subcutout.y - tQS.y);
+	var w = Math.round(subcutout.w);
+	var h = Math.round(subcutout.h);
+	console.log('sub:', subcutout.x, subcutout.y, subcutout.w, subcutout.h);
+	console.log('get:', x, y, w, h);
+	var subImagedata = gCanStore.rconn.oscalectx.getImageData(x, y, w, h);
 	var requestingMon = aData.requestingMon;
 	var cutoutid = aData.id;
 	
@@ -251,16 +259,27 @@ function fullfillCompositeRequest(aData) {
 		
 		var can = document.createElement('canvas');
 		var ctx = can.getContext('2d');
-		can.width = mmtm.w(compositeRect.width);
-		can.height = mmtm.h(compositeRect.height);
+		// can.width = mmtm.w(compositeRect.width);
+		// can.height = mmtm.h(compositeRect.height);
+		can.width = compositeRect.width;
+		can.height = compositeRect.height;
 		
 		// put all the image datas in the right spot on this ctx
+		var allMonDim = tQS.allMonDim;
 		for (var i=0; i<l; i++) {
 			var cEntry = compositesArr[i];
 			var cData = cEntry.data;
 			for (var p in cData) {
-				var cSubData = cData[p];
-				var subImagedata = new ImageData(new Uint8ClampedArray(cSubData.arrbuf), mmtm.w(cSubData.subcutout.w), mmtm.h(cSubData.subcutout.h));
+				var iMon = p;
+				var cSubData = cData[iMon];
+				var subcutout = cSubData.subcutout;
+				// link1818111116
+				var x = Math.round(subcutout.x - allMonDim[iMon].x);
+				var y = Math.round(subcutout.y - allMonDim[iMon].y);
+				var w = Math.round(subcutout.w);
+				var h = Math.round(subcutout.h);
+				
+				var subImagedata = new ImageData(new Uint8ClampedArray(cSubData.arrbuf), w, h);
 				ctx.putImageData(subImagedata, 0, 0);
 			}
 		}
