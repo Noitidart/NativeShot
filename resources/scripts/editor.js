@@ -172,14 +172,26 @@ function requestCompositeData(aData) {
 	var h = Math.round(subcutout.h);
 	console.log('sub:', subcutout.x, subcutout.y, subcutout.w, subcutout.h);
 	console.log('get:', x, y, w, h);
-	var subImagedata = gCanStore.rconn.oscalectx.getImageData(x, y, w, h);
+	var subImagedata = gCanStore.rconn.oscalectx0.getImageData(x, y, w, h);
 	var requestingMon = aData.requestingMon;
 	var cutoutid = aData.id;
+	
+	var subDrawctx;
+	var subDrawdata;
+	subDrawctx = gCanStore.rconn.oscalectx1;
+	
+	subDrawctx.clearRect(tQS.x, tQS.y, tQS.w, tQS.h);
+	subDrawctx.putImageData(subImagedata, subcutout.x, subcutout.y);
+	
+	gCanStore.oscalectx1_draw = true;
+	gCanStore.rconn.draw();
+	
+	subDrawdata = subDrawctx.getImageData(subcutout.x, subcutout.y, subcutout.w, subcutout.h);
 	
 	// send it back to requesting monitor
 	var fullfillLoad = {
 		id: cutoutid,
-		arrBuf: subImagedata.data.buffer,
+		arrBuf: subDrawdata.data.buffer,
 		fromMon: tQS.iMon
 	};
 	if (requestingMon == tQS.iMon) {
@@ -297,6 +309,17 @@ function fullfillCompositeRequest(aData) {
 		can.style.top = 0;
 		can.style.left = 0;
 		document.body.appendChild(can);
+		
+		// gCanStore.rconn.oscalecan1.style.position = 'absolute';
+		// gCanStore.rconn.oscalecan1.style.zIndex = '99999';
+		// gCanStore.rconn.oscalecan1.style.top = 0;
+		// gCanStore.rconn.oscalecan1.style.left = 0;
+		// document.body.appendChild(gCanStore.rconn.oscalecan1);
+		
+		setTimeout(function() {
+			document.body.removeChild(can);
+			// document.body.removeChild(gCanStore.rconn.oscalecan1);
+		}, 5000);
 	}
 }
 
@@ -802,11 +825,20 @@ function init(aArrBufAndCore) {
 				
 				this.ctx0.drawImage(canDum, 0, 0);
 				
-				this.oscalectx = ctxDum;
+				this.oscalectx0 = ctxDum;
 			} else {
 				this.ctx0.putImageData(screenshotImageData, 0, 0);
-				this.oscalectx = this.ctx0;
+				this.oscalectx0 = this.ctx0;
 			}
+			
+			// for drawing composite
+			var canDimDum = document.createElement('canvas');
+			var ctxDimDum = canDimDum.getContext('2d');
+			canDimDum.setAttribute('width', tQS.w);
+			canDimDum.setAttribute('height', tQS.h);
+			this.oscalecan1 = canDimDum;
+			this.oscalectx1 = new MyContext(ctxDimDum);
+			this.oscalectx1.setScaleOff();
 			
 			this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
 			gCState = this.cstate;
@@ -815,6 +847,7 @@ function init(aArrBufAndCore) {
 			
 			// start - simon canvas stuff
 			this.cstate.valid = false;
+			gCanStore.oscalectx1_draw = false;
 			
 			// this.cstate.width = mmtm.w(this.props.pQS.w);
 			// this.cstate.height = mmtm.h(this.props.pQS.h);
@@ -1796,10 +1829,17 @@ function init(aArrBufAndCore) {
 				
 			}
 			
-			if(!this.cstate.valid) {
+			if(!this.cstate.valid || gCanStore.oscalectx1_draw) {
+				
+				if (gCanStore.oscalectx1_draw) {
+					this.actualCtx = this.ctx;
+					this.ctx = this.oscalectx1;
+				}
 				
 				var ctx = this.ctx;
-				this.clear();
+				if (!gCanStore.oscalectx1_draw) {
+					this.clear();
+				}
 				
 				// draw all drawables
 				var drawables = this.cstate.drawables;
@@ -1834,18 +1874,26 @@ function init(aArrBufAndCore) {
 				}
 				// console.log('done drawing drawable');
 
-				// draw selection
-				if(this.cstate.selection != null) {
-					// console.log('ok this.cstate.selection:', this.cstate.selection);
-					this.dSelect(this.cstate.selection);
-					// if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
-						// console.log('ok selecting');
-						// this.cstate.selection.select(this.ctx);
-					// }
+				if (!gCanStore.oscalectx1_draw) {
+					// draw selection
+					if(this.cstate.selection != null) {
+						// console.log('ok this.cstate.selection:', this.cstate.selection);
+						this.dSelect(this.cstate.selection);
+						// if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
+							// console.log('ok selecting');
+							// this.cstate.selection.select(this.ctx);
+						// }
+					}
 				}
 
 				// ** Add stuff you want drawn on top all the time here **
 
+				if (gCanStore.oscalectx1_draw) {
+					gCanStore.oscalectx1_draw = false;
+					this.ctx = this.actualCtx;
+					return;
+				}
+				
 				// draw the dim
 				this.dDraw(this.cstate.dim);
 				
@@ -4946,8 +4994,32 @@ var mmtm = { // short for multiMonToMon - mon means without the scale, and witho
 		return tQS.win81ScaleY ? (aH / tQS.win81ScaleY) : aH;
 	}
 };
+
+var mmtmNOSCALE = {
+	x: function(aX) {
+		return Math.round(aX - tQS.x);
+	},
+	y: function(aY) {
+		return Math.round(aY - tQS.y);
+	},
+	w: function(aW) {
+		return Math.round(aW);
+	},
+	h: function(aH) {
+		return Math.round(aH);
+	}
+};
 function MyContext(ctx) {
 
+	this.MMIFIED = true;
+	this.setScaleOff = function() {
+		this.conv = mmtmNOSCALE;
+	}
+	this.setScaleOn = function() {
+		this.conv = mmtm;
+	}
+	this.conv = mmtm;
+	
     // Methods
 
 	this.beginPath = ctx.beginPath.bind(ctx);
@@ -4964,67 +5036,67 @@ function MyContext(ctx) {
 	};
 	
 	this.clearRect = function(x, y, w, h) {
-		ctx.clearRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+		ctx.clearRect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
 	
 	this.drawImage = function(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight) {
-		ctx.drawImage(image, mmtm.x(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), mmtm.x(dx), mmtm.y(dy), mmtm.w(dWidth), mmtm.h(dHeight));
+		ctx.drawImage(image, this.conv.x(sx), this.conv.y(sy), this.conv.w(sWidth), this.conv.h(sHeight), this.conv.x(dx), this.conv.y(dy), this.conv.w(dWidth), this.conv.h(dHeight));
 	};
 	
 	this.isPointInStroke = function(x, y) {
-		return ctx.isPointInStroke(mmtm.x(x), mmtm.y(y));
+		return ctx.isPointInStroke(this.conv.x(x), this.conv.y(y));
 	};
 	
 	this.arc = function(x, y, radius, startAngle, endAngle, anticlockwise) {
-		ctx.arc(mmtm.x(x), mmtm.y(y), mmtm.w(radius), startAngle, endAngle, anticlockwise);
+		ctx.arc(this.conv.x(x), this.conv.y(y), this.conv.w(radius), startAngle, endAngle, anticlockwise);
 	};
 	
 	this.putImageData = function(imagedata, dx, dy) {
-		ctx.putImageData(imagedata, mmtm.x(dx), mmtm.y(dy));
+		ctx.putImageData(imagedata, this.conv.x(dx), this.conv.y(dy));
 	};
 	
 	this.getImageData = function(x, y, w, h) {
-		return ctx.getImageData(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+		return ctx.getImageData(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
 	
 	this.fillText = function(text, x, y) {
-		ctx.fillText(text, mmtm.x(x), mmtm.y(y));
+		ctx.fillText(text, this.conv.x(x), this.conv.y(y));
 	};
 	
     this.lineTo = function(x, y) {
-		ctx.lineTo(mmtm.x(x), mmtm.y(y));
+		ctx.lineTo(this.conv.x(x), this.conv.y(y));
 	};
 	
 	this.moveTo = function(x, y) {
-		ctx.moveTo(mmtm.x(x), mmtm.y(y));
+		ctx.moveTo(this.conv.x(x), this.conv.y(y));
 	};
 	
 	this.setLineDash = function(segments) {
 		var l = segments.length;
 		for (var i=0; i<l; i++) {
-			segments[i] = mmtm.w(segments[i]);
+			segments[i] = this.conv.w(segments[i]);
 		}
 		ctx.setLineDash(segments);
 	};
 	
 	this.fillRect = function(x, y, w, h) {
-		ctx.fillRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+		ctx.fillRect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
 	
 	this.strokeRect = function(x, y, w, h) {
-		ctx.strokeRect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+		ctx.strokeRect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
 	
 	this.rect = function(x, y, w, h) {
-		ctx.rect(mmtm.x(x), mmtm.y(y), mmtm.w(w), mmtm.h(h));
+		ctx.rect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
 	
 	this.bezierCurveTo = function(cp1x, cp1y, cp2x, cp2y, x, y) {
-		ctx.bezierCurveTo(mmtm.x(cp1x), mmtm.y(cp1y), mmtm.x(cp2x), mmtm.y(cp2y), mmtm.x(x), mmtm.y(y));
+		ctx.bezierCurveTo(this.conv.x(cp1x), this.conv.y(cp1y), this.conv.x(cp2x), this.conv.y(cp2y), this.conv.x(x), this.conv.y(y));
 	};
 
 	this.quadraticCurveTo = function(cpx, cpy, x, y) {
-		ctx.quadraticCurveTo(mmtm.x(cpx), mmtm.y(cpy), mmtm.x(x), mmtm.y(y));
+		ctx.quadraticCurveTo(this.conv.x(cpx), this.conv.y(cpy), this.conv.x(x), this.conv.y(y));
 	};
 	
     // Properties
@@ -5033,7 +5105,7 @@ function MyContext(ctx) {
         get: function() {return ctx.lineWidth},
         set: function(value) {
             // do something magic with value
-            ctx.lineWidth = mmtm.w(value);
+			ctx.lineWidth = this.conv.w(value);
         }
     });
 	
@@ -5042,7 +5114,7 @@ function MyContext(ctx) {
         get: function() { return ctx.font },
         set: function(value) {
 			var fontsize = fontsizePatt.exec(value)[0];
-			ctx.font = value.replace(fontsize, mmtm.w(parseInt(fontsize)) + 'px');
+			ctx.font = value.replace(fontsize, this.conv.w(parseInt(fontsize)) + 'px');
 		}
     });
 	
