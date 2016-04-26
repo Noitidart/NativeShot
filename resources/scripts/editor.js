@@ -2913,7 +2913,7 @@ function init(aArrBufAndCore) {
 			
 			this.zstate.rconn = this;
 			
-			this.ctx = new MyContext(ReactDOM.findDOMNode(this).getContext('2d'));
+			this.ctx = ReactDOM.findDOMNode(this).getContext('2d');
 			this.zstate.valid = false;
 			this.zstate.mouse = {x:0, y:0};
 			this.ctx.mozImageSmoothingEnabled = false;
@@ -2962,8 +2962,8 @@ function init(aArrBufAndCore) {
 				var sWidth = width * (1 / zoomLevel);
 				var sHeight = dHeight * (1 / zoomLevel);
 				
-				ctx.drawImage(gCanStore.rconn.refs.can0, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
-				ctx.drawImage(gCanStore.rconn.refs.can, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
+				ctx.drawImage(gCanStore.rconn.refs.can0, mmtm.x(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), 0, 0, dWidth, dHeight);
+				ctx.drawImage(gCanStore.rconn.refs.can, mmtm.x(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), 0, 0, dWidth, dHeight);
 				
 				// draw grid
 				ctx.strokeStyle = '#4A90E2';
@@ -2981,10 +2981,10 @@ function init(aArrBufAndCore) {
 				ctx.stroke();
 				
 				// write text
-				ctx.font = '24px serif';
+				ctx.font = '24px Arial';
 				ctx.textAlign = 'left';
 				ctx.fillStyle = '#000';
-				ctx.fillText(this.zstate.mouse.x + ', ' + this.zstate.mouse.y, 5, height - 5);
+				ctx.fillText((this.zstate.mouse.x - tQS.x) + ', ' + (this.zstate.mouse.y - tQS.y), 5, height - 5);
 				
 				var zoomPercent = Math.round(zoomLevel * 100) + '%';
 				ctx.textAlign = 'right';
