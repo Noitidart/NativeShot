@@ -484,14 +484,14 @@ var EditorFuncs = {
 			}
 		}
 	},
-	broadcastToSpecfic: function() {
+	broadcastToSpecific: function(aData) {
 		// aData requires the key postMsgObj and toMon (which is target iMon)
-		
+		console.log('incoming broadcastToSpecific, aData:', aData);
 		if (!aData.postMsgObj) {
 			console.error('aData missing "postMsgObj" key');
 			throw new Error('aData missing "postMsgObj" key');
 		}
-		if (!aData.toMon) {
+		if (!('toMon' in aData)) { // because toMon is a number
 			console.error('aData missing "toMon" key');
 			throw new Error('aData missing "toMon" key');
 		}

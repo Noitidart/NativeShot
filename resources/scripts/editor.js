@@ -133,7 +133,6 @@ function initCompositeForAction(aAction, aSub) {
 				for (var p in cData) { // p is iMon
 					var requestLoad = {
 						requestingMon: tQS.iMon,
-						toMon: p, // as p is target iMon
 						subcutout: cData[p].subcutout,
 						id: cEntry.id
 					};
@@ -146,6 +145,7 @@ function initCompositeForAction(aAction, aSub) {
 						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
 							topic: 'broadcastToSpecific',
 							postMsgObj: requestLoad,
+							toMon: p, // as p is target iMon
 							iMon: tQS.iMon
 						}));
 					}
@@ -188,6 +188,7 @@ function requestCompositeData(aData) {
 		var myEventDetail = {
 			topic: 'broadcastToSpecific',
 			postMsgObj: fullfillLoad,
+			toMon: requestingMon,
 			iMon: tQS.iMon
 		};
 		myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
