@@ -80,6 +80,13 @@ function canSetState(aData) {
 	gCanStore.setCanState(false, true);
 }
 
+function zcanInvalidate(aData) {
+	if (gZState) {
+		gZState.mouse = aData.mouse;
+		gZState.setInvalid(true);
+	}
+}
+
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
 	
@@ -1627,7 +1634,7 @@ function init(aArrBufAndCore) {
 				this.dDraw(this.cstate.dim);
 				
 				this.cstate.valid = true; // do not use gCanStore.setCanState here
-				if (gZState) { gZState.valid = false; }
+				if (gZState) { gZState.setInvalid(); }
 				
 				// alt method to link38378777577
 				// if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
@@ -1766,7 +1773,7 @@ function init(aArrBufAndCore) {
 					gEditorStore.setState({
 						sPalZoomViewLevel: nLevel
 					});
-					gZState.valid = false;
+					gZState.setInvalid();
 				}
 			}
 		},
@@ -1777,7 +1784,7 @@ function init(aArrBufAndCore) {
 			// console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				gZState.mouse = {x:mx, y:my};
-				gZState.valid = false;
+				gZState.setInvalid();
 			}
 			
 			if (this.state.sGenColorPickerDropping) {
@@ -2914,11 +2921,34 @@ function init(aArrBufAndCore) {
 			this.zstate.rconn = this;
 			
 			this.ctx = ReactDOM.findDOMNode(this).getContext('2d');
+			this.zstate.visible = false;
 			this.zstate.valid = false;
 			this.zstate.mouse = {x:0, y:0};
 			this.ctx.mozImageSmoothingEnabled = false;
 			this.ctx.imageSmoothingEnabled = false;
 			
+			this.zstate.setInvalid = function(isBroadcast) {
+				if (!isBroadcast) {
+					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+						topic: 'broadcastToOthers',
+						postMsgObj: {
+							topic: 'zcanInvalidate',
+							mouse: this.zstate.mouse
+						},
+						iMon: tQS.iMon
+					}));
+				}
+				this.zstate.valid = false;
+			}.bind(this);
+			
+			this.zstate.offsets = {
+				x: this.refs.view.offsetLeft,
+				y: this.refs.view.offsetTop,
+				w: gZoomViewW + 10, //this.refs.view.offsetWidth, // + 10 for the 5px border on each side
+				h: gZoomViewH + 10, //this.refs.view.offsetHeight,
+				desc: 'botlef' // toplef, toprit, botrit
+			};
+			// console.log('viewOffsets:', this.zstate.offsets);
 			this.zstate.interval = setInterval(this.draw, 30);
 			
 			var bgimg = new Image();
@@ -2992,16 +3022,51 @@ function init(aArrBufAndCore) {
 				
 				// mark valid
 				this.zstate.valid = true;
+				
+				// dom positioning
+				var cX = mmtm.x(this.zstate.mouse.x);
+				var cY = mmtm.y(this.zstate.mouse.y);
+				var pad = 50;
+				var padX = mtmm.w(pad);
+				var padY = mtmm.h(pad);
+				if ((this.zstate.offsets.x - padX <= cX) && (this.zstate.offsets.x + this.zstate.offsets.w + padX >= cX) &&
+					(this.zstate.offsets.y - padY <= cY) && (this.zstate.offsets.y + this.zstate.offsets.h + padY >= cY)) {
+						if (this.zstate.offsets.desc == 'botlef') {
+							this.zstate.offsets.desc = 'botrit';
+							this.refs.view.style.right = '5%';
+							this.refs.view.style.left = '';
+						} else {
+							this.zstate.offsets.desc = 'botlef';
+							this.refs.view.style.left = '5%';
+							this.refs.view.style.right = '';
+						}
+						this.zstate.offsets.x = this.refs.view.offsetLeft;
+						this.zstate.offsets.y = this.refs.view.offsetTop;
+						// console.log('this.zstate.offsets:', this.zstate.offsets);
+				}
+				
+				// dom visibility
+				var shouldBeVisible = false;
+				if ((tQS.x <= this.zstate.mouse.x) && (tQS.x + tQS.w >= this.zstate.mouse.x) &&
+					(tQS.y <= this.zstate.mouse.y) && (tQS.y + tQS.h >= this.zstate.mouse.y)) {
+						shouldBeVisible = true;
+				}
+				// console.log('shouldBeVisible', tQS.iMon, shouldBeVisible, 'this.zstate.visible:', this.zstate.visible);
+				if (this.zstate.visible != shouldBeVisible) {
+					this.zstate.visible = shouldBeVisible;
+					this.refs.view.style.display = shouldBeVisible ? '' : 'none';
+				}
 			}
 		},
-		mousedown: function(e) {
-			gEditorStore.setState({
-				sGenPalZoomViewDragStart: {clientX:e.clientX, clientY:e.clientY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
-			});
-		},
+		// mousedown: function(e) {
+		// 	gEditorStore.setState({
+		// 		sGenPalZoomViewDragStart: {clientX:e.clientX, clientY:e.clientY, initX:this.props.sPalZoomViewCoords.x, initY:this.props.sPalZoomViewCoords.y}
+		// 	});
+		// },
 		render: function() {
 			// props - cPalProps - its all of them
-			return React.createElement('canvas', {className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px', cursor:this.props.pZoomViewCursor }, onMouseDown:this.mousedown});
+			// return React.createElement('canvas', {className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px', cursor:this.props.pZoomViewCursor }, onMouseDown:this.mousedown});
+			return React.createElement('canvas', {ref:'view', className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{display:'none', bottom:'5%', left: '5%', cursor:this.props.pZoomViewCursor } });
 		}
 	});
 	
