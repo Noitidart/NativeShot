@@ -3621,11 +3621,7 @@ function init(aArrBufAndCore) {
 				case 'Similar Image Search':
 				case 'Text Recognition':
 				
-					var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
-					if (gChangingSubToolTo) {
-						cSubTool = gChangingSubToolTo;
-						gChangingSubToolTo = null;
-					}
+					var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.pButton.label];
 					initCompositeForAction(this.props.pButton.label, cSubTool);
 				
 					break;
@@ -3637,11 +3633,7 @@ function init(aArrBufAndCore) {
 								case 'Gaussian':
 								case 'Mosaic':
 									
-										var cSubTool = this.props.sPalSeldSubs[this.props.sGenPalTool];
-										if (gChangingSubToolTo) {
-											cSubTool = gChangingSubToolTo;
-											gChangingSubToolTo = null;
-										}
+										var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.sGenPalTool];
 										var newValid = true;
 										if (gCState.selection.name != cSubTool) {
 											gCState.selection.name = cSubTool;
@@ -3848,6 +3840,10 @@ function init(aArrBufAndCore) {
 					sGenCanMouseMoveCursor: null
 				});
 			}
+
+			if (gChangingSubToolTo) { // make sure to not return above
+				gChangingSubToolTo = null;
+			}
 		},
 		render: function() {
 			// props
@@ -3980,10 +3976,10 @@ function init(aArrBufAndCore) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
 			} else if (this.props.pButton.label == 'Blur') {
-				if ('Blur' == this.props.sGenPalTool) {
+				// if ('Blur' == this.props.sGenPalTool) {
 					dontStopPropagation = true;
 					gChangingSubToolTo = this.props.pSubButton.label;
-				}
+				// }
 			}
 			
 			if (!this.props.pSubButton.unfixable) {

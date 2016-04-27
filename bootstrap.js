@@ -4034,7 +4034,7 @@ function autocloseBar(aSessionId) {
 	if (cBarData.shown) {
 		gAutocloseBar[aSessionId] = {
 			timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer),
-			timeLeft: 16, // sec, is really 10, because i timeLeft-- at start of notify
+			timeLeft: 26, // sec, is really 25, because i timeLeft-- at start of notify
 			callback: {
 				notify: function() {
 					if (AB.Callbacks[cBarData.ABRef.aId]) {
