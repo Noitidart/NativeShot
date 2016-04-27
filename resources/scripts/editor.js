@@ -208,15 +208,12 @@ function requestCompositeData(aData) {
 		fullfillCompositeRequest(fullfillLoad);
 	} else {
 		fullfillLoad.topic = 'fullfillCompositeRequest';
-		var myEvent = window.document.createEvent('CustomEvent');
-		var myEventDetail = {
+		triggerNSCommEvent({
 			topic: 'broadcastToSpecific',
 			postMsgObj: fullfillLoad,
 			toMon: requestingMon,
 			iMon: tQS.iMon
-		};
-		myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-		window.dispatchEvent(myEvent);
+		});
 	}
 	
 }
@@ -386,62 +383,68 @@ function fullfillCompositeRequest(aData) {
 					}
 			
 				break;
+			case 'Share to Social Media':
 			case 'Text Recognition':
 				
 					oauthServiceName = sub.toLowerCase();
 				
 				break;
 			default:
-				console.error('no bootstrap action specified');
+				console.error('no bootstrap action specified, action:', action, 'sub:', sub);
+				return;
 		}
 		
-		var dataurlActions = ['Copy', 'Print'];
-		var plainarrbufActions = ['Text Recognition'];
-		// var pngarrbufActions = // everything else
-		if (dataurlActions.indexOf(action) > -1) {
-			var myEvent = document.createEvent('CustomEvent');
-			var myEventDetail = {
+
+		if (sub == 'Twitter') {
+			
+			triggerNSCommEvent({
+				topic: 'callInBootstrap',
+				method: 'shareToTwitter',
+				argsArr: [can.toDataURL('image/png', '')],
+				iMon: tQS.iMon
+			});
+			
+		} else if (['Copy', 'Print'].indexOf(action) > -1) {
+			
+			// data url actions
+			triggerNSCommEvent({
 				topic: 'callInBootstrap',
 				method: 'uploadOauthDataUrl',
 				argsArr: [oauthServiceName, can.toDataURL('image/png', '')],
 				iMon: tQS.iMon
-			};
-			myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-			window.dispatchEvent(myEvent);
-		} else if (plainarrbufActions.indexOf(action) > -1) {
-			var myEvent = document.createEvent('CustomEvent');
-			var myEventDetail = {
+			});
+			
+		} else if (['Text Recognition'].indexOf(action) > -1) {
+			
+			// plain array buffer actions
+			triggerNSCommEvent({
 				topic: 'callInBootstrap',
 				method: 'doOcr',
 				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height],
 				iMon: tQS.iMon
-			};
-			myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-			window.dispatchEvent(myEvent);
+			});
+			
 		} else {
-			// png arrbuf action
+			
+			// png arrbuf actions
 			(can.toBlobHD || can.toBlob).call(can, function(b) {				
 				// var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 				var r = new FileReader();
 				r.onloadend = function() {
         
-					var myEvent = document.createEvent('CustomEvent');
-					var myEventDetail = {
+					triggerNSCommEvent({
 						topic: 'callInBootstrap',
 						method: 'uploadOauth',
 						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
 						iMon: tQS.iMon
-					};
-					myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-					window.dispatchEvent(myEvent);
+					});
 					
 				};
 				r.readAsArrayBuffer(b);
 				
 			}, 'image/png');
+			
 		}
-		
-
 		
 		// debug - put this canvas on the document
 		can.style.position = 'absolute';
@@ -461,6 +464,18 @@ function fullfillCompositeRequest(aData) {
 			// document.body.removeChild(gCanStore.rconn.oscalecan1);
 		}, 5000);
 	}
+}
+
+function triggerNSCommEvent(myEventDetail) {
+	var myEvent = document.createEvent('CustomEvent');
+	// var myEventDetail = {
+	// 	topic: 'callInBootstrap',
+	// 	method: 'uploadOauth',
+	// 	argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
+	// 	iMon: tQS.iMon
+	// };
+	myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+	window.dispatchEvent(myEvent);
 }
 
 function init(aArrBufAndCore) {
@@ -930,17 +945,14 @@ function init(aArrBufAndCore) {
 							iMon: tQS.iMon
 						}));
 						
-						// var myEvent = window.document.createEvent('CustomEvent');
-						// var myEventDetail = {
+						// triggerNSCommEvent{
 							// topic: 'broadcastToOthers',
 							// postMsgObj: {
 								// topic: 'reactSetState',
 								// updatedStates: JSON.stringify(aObj)
 							// },
 							// iMon: tQS.iMon
-						// };
-						// myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-						// window.dispatchEvent(myEvent);
+						// });
 					// }, 30);
 				}
 				oSetState(aObj);
@@ -3958,13 +3970,14 @@ function init(aArrBufAndCore) {
 				gCanStore.setCanState(false); // as i for sure added a new cutout
 			}
 			
-			if ('Blur' == this.props.sGenPalTool) {
+			if (['Save', 'Upload to Cloud', 'Share to Social Media', 'Similar Image Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
-			}
-			if (['Blur', 'Save', 'Upload to Cloud', 'Share to Social Media', 'Similar Image Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
-				dontStopPropagation = true;
-				gChangingSubToolTo = this.props.pSubButton.label;
+			} else if (this.props.pButton.label == 'Blur') {
+				if ('Blur' == this.props.sGenPalTool) {
+					dontStopPropagation = true;
+					gChangingSubToolTo = this.props.pSubButton.label;
+				}
 			}
 			
 			if (!this.props.pSubButton.unfixable) {

@@ -1024,7 +1024,7 @@ const fsComServer = {
 							}
 							if (!untweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
-								myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+								myServices.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener);
 
 							}
 							
@@ -1068,14 +1068,14 @@ const fsComServer = {
 	},
 	twitterInitFS: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
-		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {aTopic:'serverCommand_clientInit', serverId:fsComServer.serverId, userAckId:userAckId, core:core})
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id + '_twitter', {aTopic:'serverCommand_clientInit', serverId:fsComServer.serverId, userAckId:userAckId, core:core})
 	},
 	twitterSendDataToAttach: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
 	},
 	twitter_focusContentWindow: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
-		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id + '_twitter', {
 			aTopic: 'serverCommand_focusContentWindow',
 			serverId: fsComServer.serverId,
 			userAckId: refUAPEntry.userAckId
@@ -1095,7 +1095,7 @@ const fsComServer = {
 					// send command to client to attached
 					refUAPEntry.FSReadyToAttach = false;
 
-					refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
+					refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id + '_twitter', {
 						aTopic: 'serverCommand_attachImgToTweet',
 						serverId: fsComServer.serverId,
 						imgId: imgId,
@@ -1346,10 +1346,6 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 };
 //// end - button interaction with gEditor system AB system FHR system and OAuth system
 var gEditor = {
-	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
-	canComp: null, // holds canvas element
-	ctxComp: null, // holds ctx element
-	compDOMWindow: null, // i use colMon[i].DOMWindow for this
 	gBrowserDOMWindow: null, // used for clipboard context
 	sessionId: null,
 	printPrevWins: null, // holds array of windows waiting to get focus on close of gEditor
@@ -1359,10 +1355,10 @@ var gEditor = {
 
 		
 		colMon = null;
-		this.lastCompositedRect = null;
+		gEditor.lastCompositedRect = null;
 		// this.canComp = null;
 		// this.compDOMWindow = null;
-		this.gBrowserDOMWindow = null;
+		gEditor.gBrowserDOMWindow = null;
 		
 		// gIMonMouseDownedIn = null;
 
@@ -1379,24 +1375,13 @@ var gEditor = {
 
 		// gESelectedRect = new Rect(0, 0, 0, 0);
 		
-		this.pendingWinSelect = false;
-		this.winArr = null;
+		gEditor.pendingWinSelect = false;
+		gEditor.winArr = null;
 		
-		this.sessionId = null;
+		gEditor.sessionId = null;
 		
-		this.printPrevWins = null;
-		this.forceFocus = null;
-	},
-	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
-
-		}
-	},
-	removeEventListener: function(keyNameInColMonE, evName, func, aBool) {
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E[keyNameInColMonE].removeEventListener(evName, func, aBool);
-		}
+		gEditor.printPrevWins = null;
+		gEditor.forceFocus = null;
 	},
 	saveAsLastSelection: function() {
 		// for use with repeatLastSelection
@@ -1432,100 +1417,6 @@ var gEditor = {
 				gEditor.restorePreSelectionStyles();
 			}
 		}
-	},
-	moveSelection: function(dX, dY, by10) {
-		if (!gESelected) {
-			// console.log('no selection');
-			return;
-		}
-		
-		if (by10) {
-			dX *= 10;
-			dY *= 10;
-		}
-		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		var gESelectedWidth = gESelectedRect.width;
-		var gESelectedHeight = gESelectedRect.height;
-		
-		gESelectedRect.translate(dX, dY);
-		
-		gESelectedRect.width = gESelectedWidth;
-		gESelectedRect.height = gESelectedHeight;
-		
-		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
-	},
-	resizeSelection: function(dW, dH, by10) {
-		// can never resize to 0
-		if (!gESelected) {
-			// console.log('no selection');
-			return;
-		}
-		
-		if (by10) {
-			dW *= 10;
-			dH *= 10;
-		}
-		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		var gESelectedWidth = gESelectedRect.width;
-		var gESelectedHeight = gESelectedRect.height;
-		
-		if (gESelectedWidth + dW > 0) {
-			gESelectedRect.width += dW;
-		}
-		if (gESelectedHeight + dH > 0) {
-			gESelectedRect.height += dH;
-		}
-		
-		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
-	},
-	clearSelection: function(e) {
-		if (!gESelected) {
-			throw new Error('no selection to clear!');
-		}
-		
-		gCanDim.execFunc('save');
-		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		gCanDim.execFunc('restore');
-		
-		gESelected = false;
-		gESelectedRect.setRect(0, 0, 0, 0);
-	},
-	selectMonitor: function(iMon, e) {
-		// iMon -1 for current monitor
-		// iMon -2 for all monitors
-		gEditor.setSelectionStyles();
-		switch (iMon) {
-			case -2:
-			
-
-					for (var i=0; i<colMon.length; i++) {
-						gESelectedRect = gESelectedRect.union(colMon[i].rect);
-					}
-					gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
-					
-				break;
-			case -1:
-					iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-
-					// intionally no break here so iMon is set to current monitor and it goes on to the default selection part
-			default:
-					try {
-						gEditor.clearSelection(e);
-					} catch(ignore) {}
-					gESelectedRect = colMon[iMon].rect.clone();
-					colMon[iMon].E.ctxDim.clearRect(0, 0, colMon[iMon].w, colMon[iMon].h);
-		}
-		gESelected = true;
-		gEditor.restorePreSelectionStyles();
 	},
 	selectWindow: function(e) {
 		
@@ -1568,177 +1459,30 @@ var gEditor = {
 		gCanDim.execStyle('cursor', 'pointer');
 		
 	},
-	compositeSelection: function() {
-		// creates a canvas holding a composite of the current selection
-
-		if (!gESelected) {
-			throw new Error('no selection to composite!');
-		}
-		
-		if (this.lastCompositedRect && this.lastCompositedRect.equals(gESelectedRect)) {
-
-			return;
-		}
-		
-		this.lastCompositedRect = gESelectedRect.clone();
-		this.saveAsLastSelection();
-		
-		// create a canvas
-		// i use colMon[0] for the composite canvas
-		if (!this.compDOMWindow) {
-			// need to initalize it
-			this.compDOMWindow = colMon[0].E.DOMWindow;
-			this.canComp = this.compDOMWindow.document.createElementNS(NS_HTML, 'canvas');
-			this.ctxComp = this.canComp.getContext('2d');
-		}
-		
-		this.canComp.width = this.lastCompositedRect.width;
-		this.canComp.height = this.lastCompositedRect.height;
-		
-		// do the base file for areas where there is no image (in case of multi mon selection where there is gaps)
-		// this.ctxComp.fillStyle = 'rgba(0, 0, 0, 0)';
-		// this.ctxComp.fillRect(0, 0, this.lastCompositedRect.width, this.lastCompositedRect.height);
-		
-		for (var i=0; i<colMon.length; i++) {			
-			// start - mod of copied block link6587436215
-			// check if intersection
-			var rectIntersecting = colMon[i].rect.intersect(this.lastCompositedRect);
-			if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
-				// does not intersect, continue to next monitor
-
-				continue;
-			} else {
-
-				// convert screen xy of rect to layer xy
-				rectIntersecting.left -= colMon[i].x;
-				rectIntersecting.top -= colMon[i].y;
-
-				// adjust width and height, needed for multi monitor selection correction
-				rectIntersecting.right -= colMon[i].x;
-				rectIntersecting.bottom -= colMon[i].y;
-			}
-			// end - mod of copied block link6587436215
-			
-			// this.canComp.style.position = 'fixed'; // :debug:
-
-
-			this.ctxComp.putImageData(colMon[i].screenshotArrBuf, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
-			
-			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
-			
-
-		}
-	},
-	closeOutEditor: function(e) {
-		// if e.shiftKey then it doesnt do anything, else it closes it out and cleans up (in future maybe possibility to cache? maybe... so in this case would just hide window, but im thinking no dont do this)
-
-		if (e.shiftKey) {
-
-		} else {
-			for (var p in NBs.crossWin) {
-				if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
-					NBs.insertGlobalToWin(p, 'all');
-				}
-			}
-			if (gEditor.wasFirefoxWinFocused || gEditor.forceFocus) {
-				gEditor.gBrowserDOMWindow.focus();
-			}
-			if (gEditor.printPrevWins) {
-				for (var i=0; i<gEditor.printPrevWins.length; i++) {
-					gEditor.printPrevWins[i].focus();
-				}
-			}
-			colMon[0].E.DOMWindow.close();
-		}
-	},
-	borderSelection: function() {
-		// must have called setSelectionStyles before calling border selection
-		if (!gESelected) {
-			// console.log('no selection');
-			return;
-		}
-		
-		if (gESelectedRect.width == 0 && gESelectedRect.height == 0) {
-			return;
-		}
-		
-		// draw dashed border
-		gCanDim.execFunc('beginPath');
-		gCanDim.execFunc('translate', [0.5, 0.5]);
-		gCanDim.execFunc('rect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3}); // draw invisible rect for stroke
-		gCanDim.execFunc('stroke');
-		
-		// gCanDim.execProp('strokeStyle', gDefAltStrokeStyle);
-		// gCanDim.execFunc('setLineDash', [gDefAltLineDash]);
-		// gCanDim.execFunc('stroke');
-		gCanDim.execFunc('translate', [-0.5, -0.5]);
-		
-		// draw resize points/strokeStyle
-		gCanDim.execFunc('beginPath');
-		gCanDim.execProp('fillStyle', gDefResizePtStyle);
-		gCanDim.execFunc('setLineDash', [[0]]);
-		
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top center
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top right
-		                  
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // middle left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // middle right
-		                  
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom center
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2)  + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom right
-		
-		gCanDim.execFunc('fill');
-		gCanDim.execFunc('translate', [0.5, 0.5]);
-		gCanDim.execFunc('stroke');
-		gCanDim.execFunc('translate', [-0.5, -0.5]);
-		
-		gCanDim.execFunc('beginPath');
-		gCanDim.execFunc('setLineDash', [gDefLineDash]); // restore line dash style for next line dash
-		gCanDim.execProp('fillStyle', gDefDimFillStyle); // set back to default dim fill color
-		
-	},
-	setSelectionStyles: function() {
-		// // clear out any drawings existing here
-		// gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
-		// gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
-		
-		// save what ever previous styles user applied
-		gCanDim.execFunc('save');
-		
-		// set "in selection" styles
-		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
-		gCanDim.execFunc('setLineDash', [gDefLineDash]);
-		gCanDim.execProp('strokeStyle', gDefStrokeStyle);
-		gCanDim.execProp('lineWidth', gDefLineWidth);
-	},
-	restorePreSelectionStyles: function() {
-		gEditor.borderSelection();
-		gCanDim.execFunc('restore');
-	},
-	shareToTwitter: function(e) {
+	shareToTwitter: function(aDataUrl) {
 		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
 		
-		this.compositeSelection();
+		// this.compositeSelection();
 		
 		var refUAP = userAckPending;
 		
 		//var refUAPEntry = getUAPEntry_byGEditorSessionId(this.sessionId);
+
 		var refUAPEntry;
 		for (var i=0; i<refUAP.length; i++) {
-			if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDatasCount < 4) {
+			console.log('refUAP[i].gEditorSessionId:', refUAP[i].gEditorSessionId);
+			if (refUAP[i].gEditorSessionId == gEditor.sessionId && refUAP[i].imgDatasCount < 4) {
 				refUAPEntry = refUAP[i];
 			}
 		}
 		
-		var cImgDataUri = this.canComp.toDataURL('image/png', '');
+		var cImgDataUri = aDataUrl;
 		
 		var crossWinId = gEditor.sessionId + '-twitter'; // note: make every crossWinId start with gEditor.sessionId
 		
 		if (!refUAPEntry) {
 			if (!fsComServer.twitterListenerRegistered) {
-				myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+				myServices.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
 				fsComServer.twitterListenerRegistered = true;
 			}
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
@@ -1815,8 +1559,8 @@ var gEditor = {
 		
 		fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(refUAPEntry.userAckId);
 		
-		this.forceFocus = true; // as user needs browser focus so they can tweet it
-		this.closeOutEditor(e);
+		gEditor.forceFocus = true; // as user needs browser focus so they can tweet it
+		// this.closeOutEditor(e);
 	},
 	ocr: function(serviceTypeStr, aArrBuf, aWidth, aHeight) {
 		// serviceTypeStr valid values
@@ -1968,6 +1712,7 @@ var gEditor = {
 var uploadOauthDataUrl = gEditor.uploadOauthDataUrl;
 var uploadOauth = gEditor.uploadOauth;
 var doOcr = gEditor.ocr;
+var shareToTwitter = gEditor.shareToTwitter;
 
 function createNewBtnStore(aSessionId, aService) {
 	var cBtn = gEditorABData_Bar[aSessionId].addBtn();
@@ -2084,10 +1829,10 @@ function printForBtnId(aBtnId) {
 		// Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager).screenForRect(1,1,1,1).GetAvailRect(sDims.x, sDims.y, sDims.w, sDims.h);
 
 		var aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
-		if (this.printPrevWins) {
-			this.printPrevWins.push(aPrintPrevWin);
+		if (gEditor.printPrevWins) {
+			gEditor.printPrevWins.push(aPrintPrevWin);
 		} else {
-			this.printPrevWins = [aPrintPrevWin];
+			gEditor.printPrevWins = [aPrintPrevWin];
 		}
 		aPrintPrevWin.addEventListener('load', function() {
 			aPrintPrevWin.removeEventListener('load', arguments.callee, false);
@@ -2149,7 +1894,7 @@ function copyForBtnId(aBtnId) {
 	var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
 	wrapped.data = container.value;
 	
-	var trans = Transferable(this.gBrowserDOMWindow);
+	var trans = Transferable(gEditor.gBrowserDOMWindow);
 
 	trans.addDataFlavor(channel.contentType);
 	
@@ -2728,6 +2473,22 @@ function gEUnload() {
 		delete gEditorABData_Bar[gEditor.sessionId];
 	}
 	
+	// check if need to show twitter notification bars
+	for (var p in NBs.crossWin) {
+		if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
+			NBs.insertGlobalToWin(p, 'all');
+		}
+	}
+	if (gEditor.wasFirefoxWinFocused || gEditor.forceFocus) {
+		gEditor.gBrowserDOMWindow.focus();
+	}
+	if (gEditor.printPrevWins) {
+		for (var i=0; i<gEditor.printPrevWins.length; i++) {
+			gEditor.printPrevWins[i].focus();
+		}
+	}
+	// colMon[0].E.DOMWindow.close();
+	
 	gEditor.cleanUp();
 }
 
@@ -2941,7 +2702,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				if (!fsComServer.twitterListenerRegistered) {
-					myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+					myServices.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
 					fsComServer.twitterListenerRegistered = true;
 				}
 				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
@@ -4607,7 +4368,7 @@ function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
 	
 	try {
-		myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
+		myServices.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
 	} catch (ignore) {}
 	
 	CustomizableUI.destroyWidget('cui_nativeshot');

@@ -5,7 +5,7 @@ const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constru
 // Globals
 var core = {
 	addon: {
-		id: 'NativeShot@jetpack',
+		id: 'NativeShot@jetpack' + '_twitter',
 		path: {
 			content_accessible: 'chrome://nativeshot-accessible/content/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/'
@@ -226,6 +226,8 @@ function init(aCore, aUserAckId, aServerId) {
 	userAckId = aUserAckId;
 	serverId = aServerId;
 	core = aCore;
+	
+	core.addon.id = core.addon.id + '_twitter';
 	
 	FSInited = true;
 	
@@ -507,7 +509,7 @@ var timeStartedAttach;
 function waitForAttachToFinish() {
 	// keeps checking the preview account, if it goes up then it has attached
 	
-	var nowCountPreview = tweetDialogDialog.querySelectorAll('.previews .preview').length;
+	var nowCountPreview = tweetDialogDialog.querySelectorAll('img[src^=blob').length;
 	console.log('nowCountPreview:', nowCountPreview);
 	if (nowCountPreview == countPreview + 1) {
 		// :todo: add event listener on click of the x of the preview, on delete, send msg to parent saying deleted, also delete from imgIdsAttached_andPreviewIndex
