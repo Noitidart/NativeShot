@@ -55,6 +55,11 @@ function unload() {
 		},
 		iMon: tQS.iMon
 	}));
+	Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+		topic: 'callInBootstrap',
+		method: 'gEUnload',
+		iMon: tQS.iMon
+	}));
 }
 
 function removeUnloadAndClose() {
@@ -87,8 +92,12 @@ function zcanInvalidate(aData) {
 	}
 }
 
+var gAction;
+var gSub;
 function initCompositeForAction(aAction, aSub) {
 	if (!gCompositesArr) {
+		gAction = aAction;
+		gSub = aSub;
 		var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 		if (!cutouts.length) {
 			alert('no selection made!');
@@ -256,6 +265,10 @@ function fullfillCompositeRequest(aData) {
 	
 	if (allRequestsFullfilled) {
 		gCompositesArr = undefined;
+		var action = gAction;
+		var sub = gSub;
+		gAction = undefined;
+		gSub = undefined;
 		
 		// create composited rect
 		var compositeRect;
@@ -302,6 +315,65 @@ function fullfillCompositeRequest(aData) {
 				ctx.putImageData(subImagedata, subcutout.x - compositeRect.x, subcutout.y - compositeRect.y);
 			}
 		}
+		
+		// send data to bootstrap
+		var dataurlActions = ['Copy', 'Print'];
+		
+		// determeint oauthServiceName
+		var oauthServiceName;
+		
+		switch (action) {
+			case 'Copy':
+			case 'Print':
+					
+					oauthServiceName = action.toLowerCase();
+					
+				break;
+			case 'Save':
+				
+					oauthServiceName = 'save-' + sub.toLowerCase();
+				
+				break;
+			default:
+				console.error('no bootstrap action specified');
+		}
+		
+		var dataurl;
+		if (dataurlActions.indexOf(action) > -1) {
+			dataurl = can.toDataURL('image/png', '');
+			var myEvent = document.createEvent('CustomEvent');
+			var myEventDetail = {
+				topic: 'callInBootstrap',
+				method: 'uploadOauthDataUrl',
+				argsArr: [oauthServiceName, dataurl],
+				iMon: tQS.iMon
+			};
+			myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+			window.dispatchEvent(myEvent);
+		} else {
+			// png arrbuf action
+			(can.toBlobHD || can.toBlob).call(can, function(b) {				
+				// var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
+				var r = new FileReader();
+				r.onloadend = function() {
+
+					var myEvent = document.createEvent('CustomEvent');
+					var myEventDetail = {
+						topic: 'callInBootstrap',
+						method: 'uploadOauth',
+						argsArr: [oauthServiceName, r.result, can.width, can.height],
+						iMon: tQS.iMon
+					};
+					myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+					window.dispatchEvent(myEvent);
+					
+				};
+				r.readAsArrayBuffer(b);
+				
+			}, 'image/png');
+		}
+		
+
 		
 		// debug - put this canvas on the document
 		can.style.position = 'absolute';
@@ -630,6 +702,10 @@ function init(aArrBufAndCore) {
 			justClick: true,
 			icon: 'S',
 			sub: [
+				{
+					label: 'All',
+					icon: 'S'
+				},
 				{
 					label: 'Tesseract',
 					icon: 'S'
@@ -3457,7 +3533,12 @@ function init(aArrBufAndCore) {
 				case 'Similar Image Search':
 				case 'Text Recognition':
 				
-						initCompositeForAction(this.props.pButton.label, this.props.sPalSeldSubs[this.props.pButton.label]);
+					var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
+					if (gChangingSubToolTo) {
+						cSubTool = gChangingSubToolTo;
+						gChangingSubToolTo = null;
+					}
+					initCompositeForAction(this.props.pButton.label, cSubTool);
 				
 					break;
 				// end - actions
@@ -3807,10 +3888,15 @@ function init(aArrBufAndCore) {
 				gCanStore.setCanState(false); // as i for sure added a new cutout
 			}
 			
-			if (this.props.sGenPalTool == 'Blur') {
+			if ('Blur' == this.props.sGenPalTool) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
 			}
+			if (['Blur', 'Save', 'Upload to Cloud', 'Share to Social Media', 'Similar Image Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
+				dontStopPropagation = true;
+				gChangingSubToolTo = this.props.pSubButton.label;
+			}
+			
 			if (!this.props.pSubButton.unfixable) {
 				var sPalSeldSubs = cloneObject(this.props.sPalSeldSubs);
 				sPalSeldSubs[this.props.pButton.label] = this.props.pSubButton.label;

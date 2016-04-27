@@ -465,6 +465,13 @@ var observers = {
 	}
 };
 var EditorFuncs = {
+	callInBootstrap: function(aData) {
+		if (aData.argsArr) {
+			BOOTSTRAP[aData.method].apply(null, aData.argsArr)
+		} else {
+			BOOTSTRAP[aData.method]();
+		}
+	},
 	broadcastToOthers: function(aData) {
 		// aData requires the key postMsgObj
 		// broadcasts to all other aEditorDOMWindow except for aData.iMon
@@ -1353,24 +1360,24 @@ var gEditor = {
 		
 		colMon = null;
 		this.lastCompositedRect = null;
-		this.canComp = null;
-		this.compDOMWindow = null;
+		// this.canComp = null;
+		// this.compDOMWindow = null;
 		this.gBrowserDOMWindow = null;
 		
-		gIMonMouseDownedIn = null;
+		// gIMonMouseDownedIn = null;
 
-		gETopLeftMostX = null;
-		gETopLeftMostY = null;
+		// gETopLeftMostX = null;
+		// gETopLeftMostY = null;
 
-		gESelected = false;
-		gESelecting = false; // users is drawing rect
-		gEMoving = false; // user is moving rect
-		gEResizing = false;
-		gEOrigSelectedRect.setRect(0, 0, 0, 0);
-		gEMDX = null; // mouse down x
-		gEMDY = null; // mouse down y
+		// gESelected = false;
+		// gESelecting = false; // users is drawing rect
+		// gEMoving = false; // user is moving rect
+		// gEResizing = false;
+		// gEOrigSelectedRect.setRect(0, 0, 0, 0);
+		// gEMDX = null; // mouse down x
+		// gEMDY = null; // mouse down y
 
-		gESelectedRect = new Rect(0, 0, 0, 0);
+		// gESelectedRect = new Rect(0, 0, 0, 0);
 		
 		this.pendingWinSelect = false;
 		this.winArr = null;
@@ -1915,26 +1922,26 @@ var gEditor = {
 			addEntryToLog(serviceTypeStr);
 		}
 	},
-	uploadOauthDataUrl: function(e, aOAuthService) {
+	uploadOauthDataUrl: function(aOAuthService, aDataUrl) {
 		// print
 		// copy
 		
-		this.compositeSelection();
+		// this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
 		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
 		
-		cBtn.data.dataurl = this.canComp.toDataURL('image/png', '');
+		cBtn.data.dataurl = aDataUrl; // this.canComp.toDataURL('image/png', '');
 
-		gEditor.closeOutEditor(e);
+		// gEditor.closeOutEditor(e); // noit 042616 to restore this as needed
 		
 		addEntryToLog(aOAuthService);
 		
 		doServiceForBtnId(cBtn.btnId, aOAuthService);
 	},
-	uploadOauth: function(e, aOAuthService) {
+	uploadOauth: function(aOAuthService, aArrBuf, aWidth, aHeight) {
 		// aOAuthService - string
 			// dropbox
 			// gdrive
@@ -1942,38 +1949,24 @@ var gEditor = {
 			// imguranon
 			// etc see link64098756794556
 			
-		this.compositeSelection();
+		// gEditor.closeOutEditor(e); // noit 042616 i have to bring this back as i need it for twitter // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
 		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
 		
-		// var cDataUrl = this.canComp.toDataURL('image/png', '');
-		// var cBlob;
-		// var cArrBuf;
-		var cWidth = gEditor.canComp.width;
-		var cHeight = gEditor.canComp.height;
-		
-		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-			// cBlob = b;
-			
-			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
-			r.onloadend = function() {
-				// cArrBuf = r.result;
-				cBtn.data.arrbuf = r.result; // link947444544
-				cBtn.data.width = cWidth;
-				cBtn.data.height = cHeight;
+		cBtn.data.arrbuf = aArrBuf; // link947444544
+		cBtn.data.width = aWidth;
+		cBtn.data.height = aHeight;
 				
-				doServiceForBtnId(cBtn.btnId, aOAuthService);
-			};
-			r.readAsArrayBuffer(b);
-			
-		}, 'image/png');
+		doServiceForBtnId(cBtn.btnId, aOAuthService);
 
 	}
 };
+
+var uploadOauthDataUrl = gEditor.uploadOauthDataUrl;
+var uploadOauth = gEditor.uploadOauth;
 
 function createNewBtnStore(aSessionId, aService) {
 	var cBtn = gEditorABData_Bar[aSessionId].addBtn();
@@ -2700,17 +2693,7 @@ function gEMouseDown(e) {
 	// return false;
 }
 
-function gEUnload(e) {
-
-	var iMon = parseInt(e.currentTarget.location.search.substr('?iMon='.length));
-
-
-	
-	// close all other windows
-	for (var i=0; i<colMon.length; i++) {
-		colMon[i].E.DOMWindow.removeEventListener('unload', gEUnload, false);
-		colMon[i].E.DOMWindow.close();
-	}
+function gEUnload() {
 	
 	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
 	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
