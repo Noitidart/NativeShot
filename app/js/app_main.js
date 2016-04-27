@@ -524,7 +524,9 @@ var ServiceSummary = React.createClass({
 		
 		return React.createElement('div', {className:'skill-block' + (this.props.pHasAssociatedImgs ? '' : ' rem-all'), onClick:(this.props.pHasAssociatedImgs ? this.clickApplyFilter : undefined)},
 			// core.addon.l10n.app_main['category_' + this.props.serviceName], // see comment on next line for why i dont do this line
-			this.props.pServiceTitle, // i dont do the core.addon.l10n access here because at start i push all the services and sort them alpha based on the value from localization
+			React.createElement('span', null, 
+				this.props.pServiceTitle // i dont do the core.addon.l10n access here because at start i push all the services and sort them alpha based on the value from localization
+			),
 			this.props.pHasAssociatedImgs ? undefined : React.createElement('div', {className:'rem-all-after', onClick:this.clickRemoveAllLogEntries}),
 			React.createElement('div', {className:'skill-line', 'data-nativeshot-category':this.props.pServiceName},
 				React.createElement('h5', {className:'timer'},

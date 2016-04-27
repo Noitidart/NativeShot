@@ -181,7 +181,7 @@ function requestCompositeData(aData) {
 	var h = Math.round(subcutout.h);
 	console.log('sub:', subcutout.x, subcutout.y, subcutout.w, subcutout.h);
 	console.log('get:', x, y, w, h);
-	var subImagedata = gCanStore.rconn.oscalectx0.getImageData(x, y, w, h);
+	// var subImagedata = gCanStore.rconn.oscalectx0.getImageData(x, y, w, h);
 	var requestingMon = aData.requestingMon;
 	var cutoutid = aData.id;
 	
@@ -190,7 +190,8 @@ function requestCompositeData(aData) {
 	subDrawctx = gCanStore.rconn.oscalectx1;
 	
 	subDrawctx.clearRect(tQS.x, tQS.y, tQS.w, tQS.h);
-	subDrawctx.putImageData(subImagedata, subcutout.x, subcutout.y);
+	// subDrawctx.putImageData(subImagedata, subcutout.x, subcutout.y);
+	subDrawctx.drawImage(gCanStore.rconn.oscalecan0, subcutout.x, subcutout.y, subcutout.w, subcutout.h, subcutout.x, subcutout.y, subcutout.w, subcutout.h);
 	
 	gCanStore.oscalectx1_draw = true;
 	gCanStore.rconn.draw();
@@ -317,7 +318,7 @@ function fullfillCompositeRequest(aData) {
 		}
 		
 		// send data to bootstrap
-		var dataurlActions = ['Copy', 'Print'];
+		
 		
 		// determeint oauthServiceName
 		var oauthServiceName;
@@ -334,18 +335,85 @@ function fullfillCompositeRequest(aData) {
 					oauthServiceName = 'save-' + sub.toLowerCase();
 				
 				break;
+			case 'Upload to Cloud':
+			
+					switch (sub) {
+						case 'Imgur Anonymous':
+						
+								oauthServiceName = 'imguranon';
+						
+							break;
+						case 'Imgur':
+						
+								oauthServiceName = 'imgur';
+						
+							break;
+						case 'Google Drive':
+						
+								oauthServiceName = 'gdrive';
+						
+							break;
+						case 'Dropbox':
+						
+								oauthServiceName = 'dropbox';
+						
+							break;
+						default:
+							console.error('should never get here unrecognized sub:', sub);
+					}
+			
+				break;
+			case 'Similar Image Search':
+			
+					switch (sub) {
+						case 'Tineye':
+						
+								oauthServiceName = 'tineye';
+						
+							break;
+						case 'Google':
+						
+								oauthServiceName = 'google-images';
+						
+							break;
+						case 'Bing':
+						
+								oauthServiceName = 'bingimages';
+						
+							break;
+						default:
+							console.error('should never get here unrecognized sub:', sub);
+					}
+			
+				break;
+			case 'Text Recognition':
+				
+					oauthServiceName = sub.toLowerCase();
+				
+				break;
 			default:
 				console.error('no bootstrap action specified');
 		}
 		
-		var dataurl;
+		var dataurlActions = ['Copy', 'Print'];
+		var plainarrbufActions = ['Text Recognition'];
+		// var pngarrbufActions = // everything else
 		if (dataurlActions.indexOf(action) > -1) {
-			dataurl = can.toDataURL('image/png', '');
 			var myEvent = document.createEvent('CustomEvent');
 			var myEventDetail = {
 				topic: 'callInBootstrap',
 				method: 'uploadOauthDataUrl',
-				argsArr: [oauthServiceName, dataurl],
+				argsArr: [oauthServiceName, can.toDataURL('image/png', '')],
+				iMon: tQS.iMon
+			};
+			myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
+			window.dispatchEvent(myEvent);
+		} else if (plainarrbufActions.indexOf(action) > -1) {
+			var myEvent = document.createEvent('CustomEvent');
+			var myEventDetail = {
+				topic: 'callInBootstrap',
+				method: 'doOcr',
+				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height],
 				iMon: tQS.iMon
 			};
 			myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
@@ -356,12 +424,12 @@ function fullfillCompositeRequest(aData) {
 				// var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 				var r = new FileReader();
 				r.onloadend = function() {
-
+        
 					var myEvent = document.createEvent('CustomEvent');
 					var myEventDetail = {
 						topic: 'callInBootstrap',
 						method: 'uploadOauth',
-						argsArr: [oauthServiceName, r.result, can.width, can.height],
+						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
 						iMon: tQS.iMon
 					};
 					myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
@@ -901,9 +969,11 @@ function init(aArrBufAndCore) {
 				
 				this.ctx0.drawImage(canDum, 0, 0);
 				
+				this.oscalecan0 = canDum;
 				this.oscalectx0 = ctxDum;
 			} else {
 				this.ctx0.putImageData(screenshotImageData, 0, 0);
+				this.oscalecan0 = this.refs.can0;
 				this.oscalectx0 = this.ctx0;
 			}
 			

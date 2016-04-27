@@ -1818,7 +1818,7 @@ var gEditor = {
 		this.forceFocus = true; // as user needs browser focus so they can tweet it
 		this.closeOutEditor(e);
 	},
-	ocr: function(e, serviceTypeStr) {
+	ocr: function(serviceTypeStr, aArrBuf, aWidth, aHeight) {
 		// serviceTypeStr valid values
 		//	gocr
 		//	ocrad
@@ -1827,11 +1827,11 @@ var gEditor = {
 
 
 		
-		this.compositeSelection();
+		// this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
-		var cWidth = gEditor.canComp.width;
-		var cHeight = gEditor.canComp.height;
+		// var cWidth = gEditor.canComp.width;
+		// var cHeight = gEditor.canComp.height;
 			
 		var serviceTypeFunc = {
 			gocr: function(aByteArr, dontTransfer) {
@@ -1839,37 +1839,37 @@ var gEditor = {
 					bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
 				}
 				
-				return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
+				return GOCRWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
 			},
 			ocrad: function(aByteArr, dontTransfer) {
 				if (!bootstrap.OCRADWorker) {
 					bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
 				}
 				
-				return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
+				return OCRADWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
 			},
 			tesseract: function(aByteArr, dontTransfer) {
 				if (!bootstrap.TesseractWorker) {
 					bootstrap.TesseractWorker = new PromiseWorker(core.addon.path.content + 'modules/tesseract/TesseractWorker.js');
 				}
 				
-				return TesseractWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
+				return TesseractWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
 			}
 		};
 		
-		var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
-		console.log('cImgData:', cImgData);
-		gEditor.closeOutEditor(e);
+		// var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
+		// console.log('cImgData:', cImgData);
+		// gEditor.closeOutEditor(e);
 		
 		var promiseAllArr_ocr = [];
 		var allArr_serviceTypeStr = [];
 		if (serviceTypeStr == 'all') {
 			for (var p in serviceTypeFunc) {
-				promiseAllArr_ocr.push(serviceTypeFunc[p](cImgData.data.buffer, true));
+				promiseAllArr_ocr.push(serviceTypeFunc[p](aArrBuf, true));
 				allArr_serviceTypeStr.push(p);
 			}
 		} else {
-			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](cImgData.data.buffer));
+			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](aArrBuf));
 			allArr_serviceTypeStr.push(serviceTypeStr);
 		}
 		
@@ -1877,7 +1877,7 @@ var gEditor = {
 		promiseAll_ocr.then(
 			function(aTxtArr) {
 				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
-				cImgData = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
+				aArrBuf = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
 				var alertStrArr = [];
 				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
 					if (allArr_serviceTypeStr.length > 1) {
@@ -1967,6 +1967,7 @@ var gEditor = {
 
 var uploadOauthDataUrl = gEditor.uploadOauthDataUrl;
 var uploadOauth = gEditor.uploadOauth;
+var doOcr = gEditor.ocr;
 
 function createNewBtnStore(aSessionId, aService) {
 	var cBtn = gEditorABData_Bar[aSessionId].addBtn();
@@ -2003,6 +2004,7 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 			break;
 		case 'tineye':
 		case 'google-images':
+		// case 'bingimages':
 			
 				cMethodForService = 'reverseSearchImgArrBufForBtnId';
 			
@@ -2204,21 +2206,40 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 	
 	cBtnStore.data.tabWk = Cu.getWeakReference(tab);
 
+	var retryMenu = [
+		{
+			cTxt: 'Retry',
+			cClick: 'retry'
+		}
+	];
+	
+	if (cBtnStore.meta.service != 'tineye') {
+		retryMenu.push({
+			cTxt: 'Retry with Tineye',
+			cClick: 'retry',
+			menudata: 'tineye'
+		});
+	}
+	if (cBtnStore.meta.service != 'google-images') {
+		retryMenu.push({
+			cTxt: 'Retry with Google Images',
+			cClick: 'retry',
+			menudata: 'google-images'
+		});
+	}
+	// if (cBtnStore.meta.service != 'bingimages') {
+		// retryMenu.push({
+			// cTxt: 'Retry with Bing Images',
+			// cClick: 'retry',
+			// menudata: 'bingimages'
+		// });
+	// }
+	
 	MainWorkerMainThreadFuncs.updateAttnBar(aBtnId, {
 		bTxt: 'Focus Tab', // :l10n:
 		bClick: 'focus_tab',
 		bType: 'menu-button',
-		bMenu: [
-			{
-				cTxt: 'Retry',
-				cClick: 'retry'
-			},
-			{
-				cTxt: 'Retry with ' + (cBtnStore.meta.service == 'tineye' ? 'Google Images' : 'Tineye'),
-				cClick: 'retry',
-				menudata: (cBtnStore.meta.service == 'tineye' ? 'google-images' : 'tineye')
-			}
-		]
+		bMenu: retryMenu
 	});
 }
 
