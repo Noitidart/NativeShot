@@ -372,7 +372,7 @@ function do_clientNotify_FSReadyToAttach(aJustAttachedImgId) {
 	if (aJustAttachedImgId) {
 		sendAsyncJson.justAttachedImgId = aJustAttachedImgId;
 	}
-	content.alert('sending message to ' + core.addon.id);
+	// content.alert('sending message to ' + core.addon.id);
 	sendAsyncMessage(core.addon.id, sendAsyncJson);
 }
 
