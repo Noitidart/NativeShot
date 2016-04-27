@@ -372,6 +372,7 @@ function do_clientNotify_FSReadyToAttach(aJustAttachedImgId) {
 	if (aJustAttachedImgId) {
 		sendAsyncJson.justAttachedImgId = aJustAttachedImgId;
 	}
+	content.alert('sending message to ' + core.addon.id);
 	sendAsyncMessage(core.addon.id, sendAsyncJson);
 }
 
@@ -488,7 +489,7 @@ function attachSentImgData() {
 		throw new Error('wtf input box not found!! should nevr get here unless twitter updated their site and changed the id');
 	}
 	
-	countPreview = tweetDialogDialog.querySelectorAll('.previews .preview').length;
+	countPreview = tweetDialogDialog.querySelectorAll('img[src^=blob]').length;
 	console.log('countPreview:', countPreview);
 
 	
@@ -509,7 +510,7 @@ var timeStartedAttach;
 function waitForAttachToFinish() {
 	// keeps checking the preview account, if it goes up then it has attached
 	
-	var nowCountPreview = tweetDialogDialog.querySelectorAll('img[src^=blob').length;
+	var nowCountPreview = tweetDialogDialog.querySelectorAll('img[src^=blob]').length;
 	console.log('nowCountPreview:', nowCountPreview);
 	if (nowCountPreview == countPreview + 1) {
 		// :todo: add event listener on click of the x of the preview, on delete, send msg to parent saying deleted, also delete from imgIdsAttached_andPreviewIndex
