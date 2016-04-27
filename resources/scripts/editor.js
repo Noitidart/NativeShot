@@ -1794,7 +1794,7 @@ function init(aArrBufAndCore) {
 						}
 						
 						// check if mouse is on the border, if it is then do that resize
-						var borderWidth = 2;
+						var borderWidth = 10;
 						
 						// top border
 						if ((aDrawable.x <= mx) && (aDrawable.x + aDrawable.w >= mx) &&
@@ -2332,9 +2332,9 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.w = mx - oldx;
 							this.cstate.selection.h = my - oldy;
 							
-							if (e.shiftKey) {
-								this.cstate.selection.h = this.cstate.selection.w;
-							}
+							// if (e.shiftKey) {
+								// this.cstate.selection.h = this.cstate.selection.w;
+							// }
 							break;
 						case 10:
 							// lining start
@@ -2534,6 +2534,8 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mousedown: function(e) {
+			if (e.button != 0) { return }
+
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
@@ -2986,6 +2988,8 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mouseup: function(e) {
+			if (e.button != 0) { return }
+			
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
@@ -3579,6 +3583,8 @@ function init(aArrBufAndCore) {
 		// user can drag around the palette with this
 		displayName: 'Handle',
 		mousedown: function(e) {
+			if (e.button != 0) { return }
+			
 			gEditorStore.setState({
 				sGenPalDragStart: {clientX:e.clientX, clientY:e.clientY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
 			});
@@ -4854,6 +4860,8 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mousedown: function(e) {
+			if (e.button != 0) { return }
+			
 			this.downx = e.clientX;
 			this.downval = this.props[this.props.pStateVarName];
 			window.addEventListener('mouseup', this.mouseup, false);
@@ -4910,6 +4918,8 @@ function init(aArrBufAndCore) {
 			
 		},
 		mouseup: function() {
+			if (e.button != 0) { return }
+			
 			window.removeEventListener('mouseup', this.mouseup, false);
 			window.removeEventListener('mousemove', this.mousemove, false);
 			gEditorStore.setState({
