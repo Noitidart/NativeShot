@@ -4,9 +4,8 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 const PromiseWorker = Cu.import('resource://gre/modules/PromiseWorker.jsm').BasePromiseWorker;
 Cu.import('resource:///modules/CustomizableUI.jsm');
-Cu.import('resource://gre/modules/ctypes.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
-Cu.import('resource://gre/modules/Geometry.jsm');
+// Cu.import('resource://gre/modules/Geometry.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
@@ -61,6 +60,9 @@ const TWITTER_URL = 'https://twitter.com/';
 const TWITTER_IMG_SUFFIX = ':large';
 
 var OSStuff = {};
+
+var gFonts;
+var gEditorStateStr;
 
 // Lazy Imports
 const myServices = {};
@@ -428,18 +430,186 @@ function extendCore() {
 
 //start obs stuff
 var observers = {
-	'nativeshot-editor-loaded': { // this trick detects actual load of iframe from bootstrap scope
+	'nativeshot-editor-request': {
 		observe: function (aSubject, aTopic, aData) {
-			obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData);
+			// aData JSON.stringify in must be in format:
+			/*
+				{
+					topic: 'func to call in bootstrap',
+					iMon: 'the iMon of the calling editor window',
+					// whatever else
+				}
+			*/
+			aData = JSON.parse(aData);
+			
+			var requiredKeys = ['topic', 'iMon'];
+			for (var i=0; i<requiredKeys.length; i++) {
+				if (!(requiredKeys[i] in aData)) {
+					console.error('missing required keys in nativeshot-editor-request aData arg, aData:', aData);
+					throw new Error('missing required keys in nativeshot-editor-request aData arg');
+				}
+			}
+			
+			if (!(aData.topic in EditorFuncs)) {
+				console.error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
+				throw new Error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
+			}
+			EditorFuncs[aData.topic](aData);
 		},
 		reg: function () {
-			Services.obs.addObserver(observers['nativeshot-editor-loaded'], core.addon.id + '_nativeshot-editor-loaded', false);
+			Services.obs.addObserver(observers['nativeshot-editor-request'], core.addon.id + '_nativeshot-editor-request', false);
 		},
 		unreg: function () {
-			Services.obs.removeObserver(observers['nativeshot-editor-loaded'], core.addon.id + '_nativeshot-editor-loaded');
+			Services.obs.removeObserver(observers['nativeshot-editor-request'], core.addon.id + '_nativeshot-editor-request');
 		}
 	}
 };
+var EditorFuncs = {
+	callInBootstrap: function(aData) {
+		if (aData.argsArr) {
+			BOOTSTRAP[aData.method].apply(null, aData.argsArr)
+		} else {
+			BOOTSTRAP[aData.method]();
+		}
+	},
+	broadcastToOthers: function(aData) {
+		// aData requires the key postMsgObj
+		// broadcasts to all other aEditorDOMWindow except for aData.iMon
+		
+		if (!aData.postMsgObj) {
+			console.error('aData missing "postMsgObj" key');
+			throw new Error('aData missing "postMsgObj" key');
+		}
+		for (var i=0; i<colMon.length; i++) {
+			if (i != aData.iMon) {
+				// if (aData.postMsgObj.topic == 'reactSetState') {
+					// // console.log('colMon[i].E.DOMWindow.gBrowser.contentWindow:', colMon[i].E.DOMWindow.document.body.innerHTML);
+					// colMon[i].E.DOMWindow[aData.postMsgObj.topic](aData.postMsgObj);
+				// } else {
+					colMon[i].E.DOMWindow.postMessage(aData.postMsgObj, '*');
+				// }
+			}
+		}
+	},
+	broadcastToSpecific: function(aData) {
+		// aData requires the key postMsgObj and toMon (which is target iMon)
+		console.log('incoming broadcastToSpecific, aData:', aData);
+		if (!aData.postMsgObj) {
+			console.error('aData missing "postMsgObj" key');
+			throw new Error('aData missing "postMsgObj" key');
+		}
+		if (!('toMon' in aData)) { // because toMon is a number
+			console.error('aData missing "toMon" key');
+			throw new Error('aData missing "toMon" key');
+		}
+		// no need to parseInt(aData.toMon) because it is already a number due to aData being JSON.parse ed
+		colMon[aData.toMon].E.DOMWindow.postMessage(aData.postMsgObj, '*');
+	},
+	updateEditorState: function(aData) {
+		gEditorStateStr = aData.editorstateStr;
+		console.log('set gEditorStateStr to:', gEditorStateStr);
+		var promise_updateEditorstate = MainWorker.post('updateEditorState', [gEditorStateStr]);
+	},
+	init: function(aData) {
+		// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
+		// also transfer the screenshot data to the window
+		
+		var iMon = aData.iMon; // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
+		
+		var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
+		
+		if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
+			throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
+		}
+
+		var aHwndPtrStr = getNativeHandlePtrStr(aEditorDOMWindow);
+		colMon[iMon].hwndPtrStr = aHwndPtrStr;
+
+		// if (core.os.name != 'darwin') {
+			// aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+			// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
+		// }
+		
+		aEditorDOMWindow.focus();
+		
+		// if (core.os.name != 'darwin') {
+			// aEditorDOMWindow.fullScreen = true;
+		// }
+		
+		// set window on top:
+		var aArrHwndPtr = [aHwndPtrStr];
+		var aArrHwndPtrOsParams = {};
+		aArrHwndPtrOsParams[aHwndPtrStr] = {
+			left: colMon[iMon].x,
+			top: colMon[iMon].y,
+			right: colMon[iMon].x + colMon[iMon].w,
+			bottom: colMon[iMon].y + colMon[iMon].h,
+			width: colMon[iMon].w,
+			height: colMon[iMon].h
+		};
+		
+		// if (core.os.name != 'darwinAAAA') {
+		var promise_setWinAlwaysTop = ScreenshotWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
+		promise_setWinAlwaysTop.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_setWinAlwaysTop - ', aVal, core.os.name);
+				if (core.os.name == 'darwin') {
+					initOstypes();
+					// link98476884
+					OSStuff.NSMainMenuWindowLevel = aVal;
+					
+					var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);							
+					var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
+
+					var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
+					console.log('rez_setLevel:', rez_setLevel.toString());
+					
+					var newSize = ostypes.TYPE.NSSize(colMon[iMon].w, colMon[iMon].h);
+					var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
+					console.log('rez_setContentSize:', rez_setContentSize.toString());
+					
+					aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
+				}
+			},
+			genericReject.bind(null, 'promise_setWinAlwaysTop', 0)
+		).catch(genericCatch.bind(null, 'promise_setWinAlwaysTop', 0));
+		
+		if (!gFonts) {
+				var fontsEnumerator = Cc['@mozilla.org/gfx/fontenumerator;1'].getService(Ci.nsIFontEnumerator);
+				gFonts = fontsEnumerator.EnumerateAllFonts({});
+		}
+		
+		colMon[aData.iMon].E.DOMWindow.postMessage({
+			from: 'bootstrap',
+			topic: 'init',
+			screenshotArrBuf: colMon[iMon].screenshotArrBuf,
+			core: core,
+			fonts: gFonts,
+			editorstateStr: gEditorStateStr
+		}, '*', [colMon[iMon].screenshotArrBuf]);
+		
+		colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
+	}
+};
+
+function nscomm(aEvent) {
+	console.log('incoming nscomm, aEvent:', aEvent);
+	var aData = aEvent.detail;
+	
+	var requiredKeys = ['topic', 'iMon'];
+	for (var i=0; i<requiredKeys.length; i++) {
+		if (!(requiredKeys[i] in aData)) {
+			console.error('missing required keys in nativeshot-editor-request aData arg, aData:', aData);
+			throw new Error('missing required keys in nativeshot-editor-request aData arg');
+		}
+	}
+	
+	if (!(aData.topic in EditorFuncs)) {
+		console.error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
+		throw new Error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
+	}
+	EditorFuncs[aData.topic](aData);
+}
 //end obs stuff
 // start - about module
 var aboutFactory_instance;
@@ -522,117 +692,7 @@ var colMon; // rename of collMonInfos
 	}
 }
 */
-var gIMonMouseDownedIn;
 
-var gETopLeftMostX;
-var gETopLeftMostY;
-
-var gESelected = false;
-var gESelecting = false; // users is drawing rect
-var gEMoving = false; // user is moving rect
-var gEResizing = false; // user is moving rect
-var gEOrigSelectedRect = new Rect(0, 0, 0, 0);
-var gEMDX = null; // mouse down x
-var gEMDY = null; // mouse down y
-var gESelectedRect = new Rect(0, 0, 0, 0);
-
-const gDefDimFillStyle = 'rgba(0, 0, 0, 0.6)';
-const gDefLineDash = [3, 3];
-const gDefStrokeStyle = '#fff';
-const gDefAltLineDash = [0, 3, 0];
-const gDefAltStrokeStyle = '#000';
-const gDefLineWidth = '1';
-var gDefResizePtSize = 7;
-const gDefResizePtStyle = '#000';
-
-var gEMenuDomJson;
-var gEMenuArrRefs = {
-	select_fullscreen: null
-};
-function get_gEMenuDomJson() {
-	if (!gEMenuDomJson) {
-		gEMenuDomJson =
-			['xul:popupset', {},
-				['xul:menupopup', {id: 'myMenu1'},
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-quick']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-quick') }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_save-file-browse']), oncommand:function(e){ gEditor.uploadOauth(e, 'save-browse') }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_copy']), oncommand:function(e){ gEditor.uploadOauthDataUrl(e, 'copy') }}],
-					['xul:menuitem', {id:'print_menuitem', label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_print']), oncommand:function(e){ gEditor.uploadOauthDataUrl(e, 'print') }}],
-					['xul:menu', {label:'Upload to Cloud Drive'}, // :l10n:
-						['xul:menupopup', {},
-							// ['xul:menuitem', {label:'Amazon Cloud Drive'}],
-							// ['xul:menuitem', {label:'Box'}],
-							// ['xul:menuitem', {label:'Copy by Barracuda Networks'}],
-							['xul:menuitem', {label:'Dropbox', oncommand:function(e){ gEditor.uploadOauth(e, 'dropbox') }}], // :l10n:
-							['xul:menuitem', {label:'Google Drive', oncommand:function(e){ gEditor.uploadOauth(e, 'gdrive') }}] // :l10n:
-							// ['xul:menuitem', {label:'MEGA'}],
-							// ['xul:menuitem', {label:'OneDrive (aka SkyDrive)'}]
-						]
-					],
-					['xul:menu', {label:'Upload to Image Host'}, // :10n:
-						['xul:menupopup', {},
-							// ['xul:menuitem', {label:'Flickr'}],
-							// ['xul:menuitem', {label:'Image Shack'}],
-							['xul:menuitem', {label:'Imgur', oncommand:function(e){ gEditor.uploadOauth(e, 'imgur') }}] // :10n:
-							// ['xul:menuitem', {label:'Photobucket'}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_upload-img-host-anon'])},
-						['xul:menupopup', {},
-							/*['xul:menuitem', {label:'FreeImageHosting.net'}],*/
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_imgur']), oncommand:function(e){ gEditor.uploadOauth(e, 'imguranon') }}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_share-to-social'])},
-						['xul:menupopup', {},
-							/*['xul:menuitem', {label:'Facebook'}],*/
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_twitter']), oncommand:function(e){ gEditor.shareToTwitter(e) }}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_search-reverse'])},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_tineye']), oncommand:function(e){ gEditor.uploadOauth(e, 'tineye') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_google-images']), oncommand:function(e){ gEditor.uploadOauth(e, 'google-images') }}]
-						]
-					],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocr'])},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_gocr']), oncommand:function(e){ gEditor.ocr(e, 'gocr') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocrad']), oncommand:function(e){ gEditor.ocr(e, 'ocrad') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_tesseract']), oncommand:function(e){ gEditor.ocr(e, 'tesseract') }}],
-							['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_ocr-all']), oncommand:function(e){ gEditor.ocr(e, 'all') }}]
-						]
-					],
-					['xul:menuseparator', {}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-clear']), oncommand:function(e){ gEditor.clearSelection(e) }}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-last']), oncommand:function(e){ gEditor.repeatLastSelection(e) }, id:'repeatLastSelection'}],
-					['xul:menu', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-fullscreen'])},
-						gEMenuArrRefs.select_fullscreen
-					],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-window']), oncommand:function(e){ gEditor.selectWindow(e) }}],
-					/*
-					['xul:menu', {label:'Select Window'},
-						['xul:menupopup', {},
-							['xul:menuitem', {label:'Running App 1', onclick:'alert(\'seletion around window 1\')'}],
-							['xul:menu', {label:'Running App 2', onclick:'alert(\'seletion around window 1\')'},
-								['xul:menupopup', {},
-									['xul:menuitem', {label:'Window 1'}],
-									['xul:menuitem', {label:'Window 2'}],
-									['xul:menuitem', {label:'Window 3'}]
-								]
-							],
-							['xul:menuitem', {label:'Running App 3', onclick:'alert(\'seletion around window 1\')'}]
-						]
-					]
-					*/
-					['xul:menuseparator', {}],
-					['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_close']), oncommand:function() { gEditor.closeOutEditor({shiftKey:false}) }}]
-				]
-			];
-	}
-	
-	return gEMenuDomJson;
-}
 // start - observer handlers
 var gColReuploadTimers = {};
 var gLastReuploadTimerId = 0;
@@ -964,7 +1024,7 @@ const fsComServer = {
 							}
 							if (!untweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
-								myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener);
+								myServices.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener);
 
 							}
 							
@@ -1008,14 +1068,14 @@ const fsComServer = {
 	},
 	twitterInitFS: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
-		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {aTopic:'serverCommand_clientInit', serverId:fsComServer.serverId, userAckId:userAckId, core:core})
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id + '_twitter', {aTopic:'serverCommand_clientInit', serverId:fsComServer.serverId, userAckId:userAckId, core:core})
 	},
 	twitterSendDataToAttach: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
 	},
 	twitter_focusContentWindow: function(userAckId) {
 		var refUAPEntry = getUAPEntry_byUserAckId(userAckId);
-		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
+		refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id + '_twitter', {
 			aTopic: 'serverCommand_focusContentWindow',
 			serverId: fsComServer.serverId,
 			userAckId: refUAPEntry.userAckId
@@ -1035,7 +1095,7 @@ const fsComServer = {
 					// send command to client to attached
 					refUAPEntry.FSReadyToAttach = false;
 
-					refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id, {
+					refUAPEntry.tab.get().linkedBrowser.messageManager.sendAsyncMessage(core.addon.id + '_twitter', {
 						aTopic: 'serverCommand_attachImgToTweet',
 						serverId: fsComServer.serverId,
 						imgId: imgId,
@@ -1286,10 +1346,6 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 };
 //// end - button interaction with gEditor system AB system FHR system and OAuth system
 var gEditor = {
-	lastCompositedRect: null, // holds rect of selection (`gESelectedRect`) that it last composited for
-	canComp: null, // holds canvas element
-	ctxComp: null, // holds ctx element
-	compDOMWindow: null, // i use colMon[i].DOMWindow for this
 	gBrowserDOMWindow: null, // used for clipboard context
 	sessionId: null,
 	printPrevWins: null, // holds array of windows waiting to get focus on close of gEditor
@@ -1299,44 +1355,33 @@ var gEditor = {
 
 		
 		colMon = null;
-		this.lastCompositedRect = null;
-		this.canComp = null;
-		this.compDOMWindow = null;
-		this.gBrowserDOMWindow = null;
+		gEditor.lastCompositedRect = null;
+		// this.canComp = null;
+		// this.compDOMWindow = null;
+		gEditor.gBrowserDOMWindow = null;
 		
-		gIMonMouseDownedIn = null;
+		// gIMonMouseDownedIn = null;
 
-		gETopLeftMostX = null;
-		gETopLeftMostY = null;
+		// gETopLeftMostX = null;
+		// gETopLeftMostY = null;
 
-		gESelected = false;
-		gESelecting = false; // users is drawing rect
-		gEMoving = false; // user is moving rect
-		gEResizing = false;
-		gEOrigSelectedRect.setRect(0, 0, 0, 0);
-		gEMDX = null; // mouse down x
-		gEMDY = null; // mouse down y
+		// gESelected = false;
+		// gESelecting = false; // users is drawing rect
+		// gEMoving = false; // user is moving rect
+		// gEResizing = false;
+		// gEOrigSelectedRect.setRect(0, 0, 0, 0);
+		// gEMDX = null; // mouse down x
+		// gEMDY = null; // mouse down y
 
-		gESelectedRect = new Rect(0, 0, 0, 0);
+		// gESelectedRect = new Rect(0, 0, 0, 0);
 		
-		this.pendingWinSelect = false;
-		this.winArr = null;
+		gEditor.pendingWinSelect = false;
+		gEditor.winArr = null;
 		
-		this.sessionId = null;
+		gEditor.sessionId = null;
 		
-		this.printPrevWins = null;
-		this.forceFocus = null;
-	},
-	addEventListener: function(keyNameInColMonE, evName, func, aBool) {
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E[keyNameInColMonE].addEventListener(evName, func, aBool);
-
-		}
-	},
-	removeEventListener: function(keyNameInColMonE, evName, func, aBool) {
-		for (var i=0; i<colMon.length; i++) {
-			colMon[i].E[keyNameInColMonE].removeEventListener(evName, func, aBool);
-		}
+		gEditor.printPrevWins = null;
+		gEditor.forceFocus = null;
 	},
 	saveAsLastSelection: function() {
 		// for use with repeatLastSelection
@@ -1372,100 +1417,6 @@ var gEditor = {
 				gEditor.restorePreSelectionStyles();
 			}
 		}
-	},
-	moveSelection: function(dX, dY, by10) {
-		if (!gESelected) {
-			// console.log('no selection');
-			return;
-		}
-		
-		if (by10) {
-			dX *= 10;
-			dY *= 10;
-		}
-		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		var gESelectedWidth = gESelectedRect.width;
-		var gESelectedHeight = gESelectedRect.height;
-		
-		gESelectedRect.translate(dX, dY);
-		
-		gESelectedRect.width = gESelectedWidth;
-		gESelectedRect.height = gESelectedHeight;
-		
-		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
-	},
-	resizeSelection: function(dW, dH, by10) {
-		// can never resize to 0
-		if (!gESelected) {
-			// console.log('no selection');
-			return;
-		}
-		
-		if (by10) {
-			dW *= 10;
-			dH *= 10;
-		}
-		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		var gESelectedWidth = gESelectedRect.width;
-		var gESelectedHeight = gESelectedRect.height;
-		
-		if (gESelectedWidth + dW > 0) {
-			gESelectedRect.width += dW;
-		}
-		if (gESelectedHeight + dH > 0) {
-			gESelectedRect.height += dH;
-		}
-		
-		gCanDim.execFunc('clearRect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3});
-	},
-	clearSelection: function(e) {
-		if (!gESelected) {
-			throw new Error('no selection to clear!');
-		}
-		
-		gCanDim.execFunc('save');
-		
-		gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']); // clear out previous cutout
-		
-		gCanDim.execFunc('restore');
-		
-		gESelected = false;
-		gESelectedRect.setRect(0, 0, 0, 0);
-	},
-	selectMonitor: function(iMon, e) {
-		// iMon -1 for current monitor
-		// iMon -2 for all monitors
-		gEditor.setSelectionStyles();
-		switch (iMon) {
-			case -2:
-			
-
-					for (var i=0; i<colMon.length; i++) {
-						gESelectedRect = gESelectedRect.union(colMon[i].rect);
-					}
-					gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
-					
-				break;
-			case -1:
-					iMon = parseInt(e.view.location.search.substr('?iMon='.length));
-
-					// intionally no break here so iMon is set to current monitor and it goes on to the default selection part
-			default:
-					try {
-						gEditor.clearSelection(e);
-					} catch(ignore) {}
-					gESelectedRect = colMon[iMon].rect.clone();
-					colMon[iMon].E.ctxDim.clearRect(0, 0, colMon[iMon].w, colMon[iMon].h);
-		}
-		gESelected = true;
-		gEditor.restorePreSelectionStyles();
 	},
 	selectWindow: function(e) {
 		
@@ -1508,177 +1459,30 @@ var gEditor = {
 		gCanDim.execStyle('cursor', 'pointer');
 		
 	},
-	compositeSelection: function() {
-		// creates a canvas holding a composite of the current selection
-
-		if (!gESelected) {
-			throw new Error('no selection to composite!');
-		}
-		
-		if (this.lastCompositedRect && this.lastCompositedRect.equals(gESelectedRect)) {
-
-			return;
-		}
-		
-		this.lastCompositedRect = gESelectedRect.clone();
-		this.saveAsLastSelection();
-		
-		// create a canvas
-		// i use colMon[0] for the composite canvas
-		if (!this.compDOMWindow) {
-			// need to initalize it
-			this.compDOMWindow = colMon[0].E.DOMWindow;
-			this.canComp = this.compDOMWindow.document.createElementNS(NS_HTML, 'canvas');
-			this.ctxComp = this.canComp.getContext('2d');
-		}
-		
-		this.canComp.width = this.lastCompositedRect.width;
-		this.canComp.height = this.lastCompositedRect.height;
-		
-		// do the base file for areas where there is no image (in case of multi mon selection where there is gaps)
-		// this.ctxComp.fillStyle = 'rgba(0, 0, 0, 0)';
-		// this.ctxComp.fillRect(0, 0, this.lastCompositedRect.width, this.lastCompositedRect.height);
-		
-		for (var i=0; i<colMon.length; i++) {			
-			// start - mod of copied block link6587436215
-			// check if intersection
-			var rectIntersecting = colMon[i].rect.intersect(this.lastCompositedRect);
-			if (rectIntersecting.left == rectIntersecting.right || rectIntersecting.top == rectIntersecting.bottom) { // if width OR height are 0 it means no intersection between the two rect's
-				// does not intersect, continue to next monitor
-
-				continue;
-			} else {
-
-				// convert screen xy of rect to layer xy
-				rectIntersecting.left -= colMon[i].x;
-				rectIntersecting.top -= colMon[i].y;
-
-				// adjust width and height, needed for multi monitor selection correction
-				rectIntersecting.right -= colMon[i].x;
-				rectIntersecting.bottom -= colMon[i].y;
-			}
-			// end - mod of copied block link6587436215
-			
-			// this.canComp.style.position = 'fixed'; // :debug:
-
-
-			this.ctxComp.putImageData(colMon[i].screenshot, colMon[i].x - this.lastCompositedRect.left, colMon[i].y - this.lastCompositedRect.top, rectIntersecting.left, rectIntersecting.top, rectIntersecting.width, rectIntersecting.height);
-			
-			//this.compDOMWindow.document.documentElement.querySelector('stack').appendChild(this.canComp); // :debug:
-			
-
-		}
-	},
-	closeOutEditor: function(e) {
-		// if e.shiftKey then it doesnt do anything, else it closes it out and cleans up (in future maybe possibility to cache? maybe... so in this case would just hide window, but im thinking no dont do this)
-
-		if (e.shiftKey) {
-
-		} else {
-			for (var p in NBs.crossWin) {
-				if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
-					NBs.insertGlobalToWin(p, 'all');
-				}
-			}
-			if (gEditor.wasFirefoxWinFocused || gEditor.forceFocus) {
-				gEditor.gBrowserDOMWindow.focus();
-			}
-			if (gEditor.printPrevWins) {
-				for (var i=0; i<gEditor.printPrevWins.length; i++) {
-					gEditor.printPrevWins[i].focus();
-				}
-			}
-			colMon[0].E.DOMWindow.close();
-		}
-	},
-	borderSelection: function() {
-		// must have called setSelectionStyles before calling border selection
-		if (!gESelected) {
-			// console.log('no selection');
-			return;
-		}
-		
-		if (gESelectedRect.width == 0 && gESelectedRect.height == 0) {
-			return;
-		}
-		
-		// draw dashed border
-		gCanDim.execFunc('beginPath');
-		gCanDim.execFunc('translate', [0.5, 0.5]);
-		gCanDim.execFunc('rect', [gESelectedRect.left, gESelectedRect.top, gESelectedRect.width, gESelectedRect.height], {x:0,y:1,w:2,h:3}); // draw invisible rect for stroke
-		gCanDim.execFunc('stroke');
-		
-		// gCanDim.execProp('strokeStyle', gDefAltStrokeStyle);
-		// gCanDim.execFunc('setLineDash', [gDefAltLineDash]);
-		// gCanDim.execFunc('stroke');
-		gCanDim.execFunc('translate', [-0.5, -0.5]);
-		
-		// draw resize points/strokeStyle
-		gCanDim.execFunc('beginPath');
-		gCanDim.execProp('fillStyle', gDefResizePtStyle);
-		gCanDim.execFunc('setLineDash', [[0]]);
-		
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top center
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), gESelectedRect.top - gDefResizePtSize / 2, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // top right
-		                  
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // middle left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2) + (gESelectedRect.height / 2), gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // middle right
-		                  
-		gCanDim.execFunc('rect', [gESelectedRect.left - gDefResizePtSize / 2, (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom left
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width / 2), (gESelectedRect.top - gDefResizePtSize / 2) + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom center
-		gCanDim.execFunc('rect', [(gESelectedRect.left - gDefResizePtSize / 2) + (gESelectedRect.width), (gESelectedRect.top - gDefResizePtSize / 2)  + gESelectedRect.height, gDefResizePtSize, gDefResizePtSize], {x:0,y:1,w:2,h:3}); // bottom right
-		
-		gCanDim.execFunc('fill');
-		gCanDim.execFunc('translate', [0.5, 0.5]);
-		gCanDim.execFunc('stroke');
-		gCanDim.execFunc('translate', [-0.5, -0.5]);
-		
-		gCanDim.execFunc('beginPath');
-		gCanDim.execFunc('setLineDash', [gDefLineDash]); // restore line dash style for next line dash
-		gCanDim.execProp('fillStyle', gDefDimFillStyle); // set back to default dim fill color
-		
-	},
-	setSelectionStyles: function() {
-		// // clear out any drawings existing here
-		// gCanDim.execFunc('clearRect', [0, 0, '{{W}}', '{{H}}']);
-		// gCanDim.execFunc('fillRect', [0, 0, '{{W}}', '{{H}}']);
-		
-		// save what ever previous styles user applied
-		gCanDim.execFunc('save');
-		
-		// set "in selection" styles
-		gCanDim.execProp('fillStyle', gDefDimFillStyle); // get default dim fill color
-		gCanDim.execFunc('setLineDash', [gDefLineDash]);
-		gCanDim.execProp('strokeStyle', gDefStrokeStyle);
-		gCanDim.execProp('lineWidth', gDefLineWidth);
-	},
-	restorePreSelectionStyles: function() {
-		gEditor.borderSelection();
-		gCanDim.execFunc('restore');
-	},
-	shareToTwitter: function(e) {
+	shareToTwitter: function(aDataUrl) {
 		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
 		
-		this.compositeSelection();
+		// this.compositeSelection();
 		
 		var refUAP = userAckPending;
 		
 		//var refUAPEntry = getUAPEntry_byGEditorSessionId(this.sessionId);
+
 		var refUAPEntry;
 		for (var i=0; i<refUAP.length; i++) {
-			if (refUAP[i].gEditorSessionId == this.sessionId && refUAP[i].imgDatasCount < 4) {
+			console.log('refUAP[i].gEditorSessionId:', refUAP[i].gEditorSessionId);
+			if (refUAP[i].gEditorSessionId == gEditor.sessionId && refUAP[i].imgDatasCount < 4) {
 				refUAPEntry = refUAP[i];
 			}
 		}
 		
-		var cImgDataUri = this.canComp.toDataURL('image/png', '');
+		var cImgDataUri = aDataUrl;
 		
 		var crossWinId = gEditor.sessionId + '-twitter'; // note: make every crossWinId start with gEditor.sessionId
 		
 		if (!refUAPEntry) {
 			if (!fsComServer.twitterListenerRegistered) {
-				myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+				myServices.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
 				fsComServer.twitterListenerRegistered = true;
 			}
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
@@ -1755,10 +1559,10 @@ var gEditor = {
 		
 		fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(refUAPEntry.userAckId);
 		
-		this.forceFocus = true; // as user needs browser focus so they can tweet it
-		this.closeOutEditor(e);
+		gEditor.forceFocus = true; // as user needs browser focus so they can tweet it
+		// this.closeOutEditor(e);
 	},
-	ocr: function(e, serviceTypeStr) {
+	ocr: function(serviceTypeStr, aArrBuf, aWidth, aHeight) {
 		// serviceTypeStr valid values
 		//	gocr
 		//	ocrad
@@ -1767,11 +1571,11 @@ var gEditor = {
 
 
 		
-		this.compositeSelection();
+		// this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
-		var cWidth = gEditor.canComp.width;
-		var cHeight = gEditor.canComp.height;
+		// var cWidth = gEditor.canComp.width;
+		// var cHeight = gEditor.canComp.height;
 			
 		var serviceTypeFunc = {
 			gocr: function(aByteArr, dontTransfer) {
@@ -1779,37 +1583,37 @@ var gEditor = {
 					bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
 				}
 				
-				return GOCRWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
+				return GOCRWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
 			},
 			ocrad: function(aByteArr, dontTransfer) {
 				if (!bootstrap.OCRADWorker) {
 					bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
 				}
 				
-				return OCRADWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
+				return OCRADWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
 			},
 			tesseract: function(aByteArr, dontTransfer) {
 				if (!bootstrap.TesseractWorker) {
 					bootstrap.TesseractWorker = new PromiseWorker(core.addon.path.content + 'modules/tesseract/TesseractWorker.js');
 				}
 				
-				return TesseractWorker.post('readByteArr', [aByteArr, cWidth, cHeight], null, dontTransfer ? undefined : [aByteArr]);
+				return TesseractWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
 			}
 		};
 		
-		var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
-		console.log('cImgData:', cImgData);
-		gEditor.closeOutEditor(e);
+		// var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
+		// console.log('cImgData:', cImgData);
+		// gEditor.closeOutEditor(e);
 		
 		var promiseAllArr_ocr = [];
 		var allArr_serviceTypeStr = [];
 		if (serviceTypeStr == 'all') {
 			for (var p in serviceTypeFunc) {
-				promiseAllArr_ocr.push(serviceTypeFunc[p](cImgData.data.buffer, true));
+				promiseAllArr_ocr.push(serviceTypeFunc[p](aArrBuf, true));
 				allArr_serviceTypeStr.push(p);
 			}
 		} else {
-			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](cImgData.data.buffer));
+			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](aArrBuf));
 			allArr_serviceTypeStr.push(serviceTypeStr);
 		}
 		
@@ -1817,7 +1621,7 @@ var gEditor = {
 		promiseAll_ocr.then(
 			function(aTxtArr) {
 				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
-				cImgData = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
+				aArrBuf = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
 				var alertStrArr = [];
 				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
 					if (allArr_serviceTypeStr.length > 1) {
@@ -1862,26 +1666,26 @@ var gEditor = {
 			addEntryToLog(serviceTypeStr);
 		}
 	},
-	uploadOauthDataUrl: function(e, aOAuthService) {
+	uploadOauthDataUrl: function(aOAuthService, aDataUrl) {
 		// print
 		// copy
 		
-		this.compositeSelection();
+		// this.compositeSelection();
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
 		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
 		
-		cBtn.data.dataurl = this.canComp.toDataURL('image/png', '');
+		cBtn.data.dataurl = aDataUrl; // this.canComp.toDataURL('image/png', '');
 
-		gEditor.closeOutEditor(e);
+		// gEditor.closeOutEditor(e); // noit 042616 to restore this as needed
 		
 		addEntryToLog(aOAuthService);
 		
 		doServiceForBtnId(cBtn.btnId, aOAuthService);
 	},
-	uploadOauth: function(e, aOAuthService) {
+	uploadOauth: function(aOAuthService, aArrBuf, aWidth, aHeight) {
 		// aOAuthService - string
 			// dropbox
 			// gdrive
@@ -1889,38 +1693,26 @@ var gEditor = {
 			// imguranon
 			// etc see link64098756794556
 			
-		this.compositeSelection();
+		// gEditor.closeOutEditor(e); // noit 042616 i have to bring this back as i need it for twitter // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
 		
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
 		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
 		
-		// var cDataUrl = this.canComp.toDataURL('image/png', '');
-		// var cBlob;
-		// var cArrBuf;
-		var cWidth = gEditor.canComp.width;
-		var cHeight = gEditor.canComp.height;
-		
-		(gEditor.canComp.toBlobHD || gEditor.canComp.toBlob).call(gEditor.canComp, function(b) {
-			gEditor.closeOutEditor(e); // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-			// cBlob = b;
-			
-			var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
-			r.onloadend = function() {
-				// cArrBuf = r.result;
-				cBtn.data.arrbuf = r.result; // link947444544
-				cBtn.data.width = cWidth;
-				cBtn.data.height = cHeight;
+		cBtn.data.arrbuf = aArrBuf; // link947444544
+		cBtn.data.width = aWidth;
+		cBtn.data.height = aHeight;
 				
-				doServiceForBtnId(cBtn.btnId, aOAuthService);
-			};
-			r.readAsArrayBuffer(b);
-			
-		}, 'image/png');
+		doServiceForBtnId(cBtn.btnId, aOAuthService);
 
 	}
 };
+
+var uploadOauthDataUrl = gEditor.uploadOauthDataUrl;
+var uploadOauth = gEditor.uploadOauth;
+var doOcr = gEditor.ocr;
+var shareToTwitter = gEditor.shareToTwitter;
 
 function createNewBtnStore(aSessionId, aService) {
 	var cBtn = gEditorABData_Bar[aSessionId].addBtn();
@@ -1957,6 +1749,7 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 			break;
 		case 'tineye':
 		case 'google-images':
+		// case 'bingimages':
 			
 				cMethodForService = 'reverseSearchImgArrBufForBtnId';
 			
@@ -2036,10 +1829,10 @@ function printForBtnId(aBtnId) {
 		// Cc['@mozilla.org/gfx/screenmanager;1'].getService(Ci.nsIScreenManager).screenForRect(1,1,1,1).GetAvailRect(sDims.x, sDims.y, sDims.w, sDims.h);
 
 		var aPrintPrevWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
-		if (this.printPrevWins) {
-			this.printPrevWins.push(aPrintPrevWin);
+		if (gEditor.printPrevWins) {
+			gEditor.printPrevWins.push(aPrintPrevWin);
 		} else {
-			this.printPrevWins = [aPrintPrevWin];
+			gEditor.printPrevWins = [aPrintPrevWin];
 		}
 		aPrintPrevWin.addEventListener('load', function() {
 			aPrintPrevWin.removeEventListener('load', arguments.callee, false);
@@ -2101,7 +1894,7 @@ function copyForBtnId(aBtnId) {
 	var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
 	wrapped.data = container.value;
 	
-	var trans = Transferable(this.gBrowserDOMWindow);
+	var trans = Transferable(gEditor.gBrowserDOMWindow);
 
 	trans.addDataFlavor(channel.contentType);
 	
@@ -2158,21 +1951,40 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 	
 	cBtnStore.data.tabWk = Cu.getWeakReference(tab);
 
+	var retryMenu = [
+		{
+			cTxt: 'Retry',
+			cClick: 'retry'
+		}
+	];
+	
+	if (cBtnStore.meta.service != 'tineye') {
+		retryMenu.push({
+			cTxt: 'Retry with Tineye',
+			cClick: 'retry',
+			menudata: 'tineye'
+		});
+	}
+	if (cBtnStore.meta.service != 'google-images') {
+		retryMenu.push({
+			cTxt: 'Retry with Google Images',
+			cClick: 'retry',
+			menudata: 'google-images'
+		});
+	}
+	// if (cBtnStore.meta.service != 'bingimages') {
+		// retryMenu.push({
+			// cTxt: 'Retry with Bing Images',
+			// cClick: 'retry',
+			// menudata: 'bingimages'
+		// });
+	// }
+	
 	MainWorkerMainThreadFuncs.updateAttnBar(aBtnId, {
 		bTxt: 'Focus Tab', // :l10n:
 		bClick: 'focus_tab',
 		bType: 'menu-button',
-		bMenu: [
-			{
-				cTxt: 'Retry',
-				cClick: 'retry'
-			},
-			{
-				cTxt: 'Retry with ' + (cBtnStore.meta.service == 'tineye' ? 'Google Images' : 'Tineye'),
-				cClick: 'retry',
-				menudata: (cBtnStore.meta.service == 'tineye' ? 'google-images' : 'tineye')
-			}
-		]
+		bMenu: retryMenu
 	});
 }
 
@@ -2647,17 +2459,7 @@ function gEMouseDown(e) {
 	// return false;
 }
 
-function gEUnload(e) {
-
-	var iMon = parseInt(e.currentTarget.location.search.substr('?iMon='.length));
-
-
-	
-	// close all other windows
-	for (var i=0; i<colMon.length; i++) {
-		colMon[i].E.DOMWindow.removeEventListener('unload', gEUnload, false);
-		colMon[i].E.DOMWindow.close();
-	}
+function gEUnload() {
 	
 	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
 	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
@@ -2670,6 +2472,22 @@ function gEUnload(e) {
 		console.log('no need to show, delete it');
 		delete gEditorABData_Bar[gEditor.sessionId];
 	}
+	
+	// check if need to show twitter notification bars
+	for (var p in NBs.crossWin) {
+		if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
+			NBs.insertGlobalToWin(p, 'all');
+		}
+	}
+	if (gEditor.wasFirefoxWinFocused || gEditor.forceFocus) {
+		gEditor.gBrowserDOMWindow.focus();
+	}
+	if (gEditor.printPrevWins) {
+		for (var i=0; i<gEditor.printPrevWins.length; i++) {
+			gEditor.printPrevWins[i].focus();
+		}
+	}
+	// colMon[0].E.DOMWindow.close();
 	
 	gEditor.cleanUp();
 }
@@ -2744,255 +2562,16 @@ function gEPopupShowing(e) {
 	
 }
 // end - canvas functions to act across all canvases
-function obsHandler_nativeshotEditorLoaded(aSubject, aTopic, aData) {
-	
-	var iMon = aData; //parseInt(aEditorDOMWindow.location.search.substr('?iMon='.length)); // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-	
-	var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
-	
-	if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
-		throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
-	}
 
-	var aHwndPtrStr = getNativeHandlePtrStr(aEditorDOMWindow);
-	colMon[iMon].hwndPtrStr = aHwndPtrStr;
-
-	if (core.os.name != 'darwin') {
-		aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
-	}
-	
-	aEditorDOMWindow.focus();
-	// if (core.os.name != 'darwin' && core.os.name != 'winnt') {
-	if (core.os.name != 'darwin') {
-		aEditorDOMWindow.fullScreen = true;
-	}
-	// if (core.os.name == 'winnt') {
-		// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
-	// }
-	
-	// set window on top:
-	var aArrHwndPtr = [aHwndPtrStr];
-	var aArrHwndPtrOsParams = {};
-	aArrHwndPtrOsParams[aHwndPtrStr] = {
-		left: colMon[iMon].x,
-		top: colMon[iMon].y,
-		right: colMon[iMon].x + colMon[iMon].w,
-		bottom: colMon[iMon].y + colMon[iMon].h,
-		width: colMon[iMon].w,
-		height: colMon[iMon].h
-	};
-	
-	// if (core.os.name != 'darwinAAAA') {
-		var promise_setWinAlwaysTop = ScreenshotWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
-		promise_setWinAlwaysTop.then(
-			function(aVal) {
-
-				// start - do stuff here - promise_setWinAlwaysTop
-				if (core.os.name == 'darwin') {
-					initOstypes();
-					// link98476884
-					OSStuff.NSMainMenuWindowLevel = aVal;
-					
-					var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);							
-					var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
-
-					// var rez_orderFront = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('orderFrontRegardless'));
-
-					
-						var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
-						console.log('rez_setLevel:', rez_setLevel.toString());
-						
-						var newSize = ostypes.TYPE.NSSize(colMon[iMon].w, colMon[iMon].h);
-						var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
-						console.log('rez_setContentSize:', rez_setContentSize.toString());
-						
-						aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
-						
-
-					/*
-					aEditorDOMWindow.setTimeout(function() {
-							var aSavePanel = ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSSavePanel'), ostypes.HELPER.sel('savePanel'));
-							
-							// var rez_setFloatingPanel = ostypes.API('objc_msgSend')(aSavePanel, ostypes.HELPER.sel('setFloatingPanel:'), ostypes.CONST.YES);
-
-							
-							var rezFloatingPanel = ostypes.API('objc_msgSend')(aSavePanel, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(3));
-
-							var rez_savepanel = ostypes.API('objc_msgSend')(aSavePanel, ostypes.HELPER.sel('runModal'));
-
-					}, 2000);
-					*/
-					
-				}
-				// end - do stuff here - promise_setWinAlwaysTop
-			},
-			function(aReason) {
-				var rejObj = {name:'promise_setWinAlwaysTop', aReason:aReason};
-
-				//deferred_createProfile.reject(rejObj);
-			}
-		).catch(
-			function(aCaught) {
-				var rejObj = {name:'promise_setWinAlwaysTop', aCaught:aCaught};
-
-				//deferred_createProfile.reject(rejObj);
-			}
-		);
-	// } else {
-		/*
-		// main thread ctypes
-		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(function() {
-			initOstypes();
-			// var NSWindow = ostypes.TYPE.NSWindow(ctypes.UInt64(aHwndPtrStr));
-			// // var rez_setLevel = ostypes.API('objc_msgSend')(NSWindow, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(24)); // long as its NSInteger // 5 for kCGFloatingWindowLevel which is NSFloatingWindowLevel
-
-			// var rez_orderFront = ostypes.API('objc_msgSend')(NSWindow, ostypes.HELPER.sel('orderFrontRegardless'));
-
-			var NSWindowString = getNativeHandlePtrStr(Services.wm.getMostRecentWindow('navigator:browser'));
-
-			var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);
-
-										
-			var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
-			var rez_orderFront = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('orderFront:'), ostypes.TYPE.NSInteger(3));
-
-		}, 5000);
-		*/
-	// }
-	
-	// setting up the dom base, moved it to above the "os specific special stuff" because some os's might need to modify this (like win81)
-	var w = colMon[iMon].w;
-	var h = colMon[iMon].h;
-	
-	var json = 
-	[
-		'xul:stack', {id:'contOfCans'},
-				['html:canvas', {draggable:'false',id:'canBase',width:w,height:h,style:'display:-moz-box;background:#000 url(' + core.addon.path.images + 'canvas_bg.png) repeat fixed top left;'}],
-				['html:canvas', {draggable:'false',id:'canDim',width:w,height:h,style:'display:-moz-box;cursor:crosshair;'}]
-	];
-	
-	// os specific special stuff
-	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
-		case 'winnt':
-				
-				if (colMon[iMon].win81ScaleX || colMon[iMon].win81ScaleY) { // 122315 - this is no longer just win81, this is also if on // priror to 122315 - win81+ has multi monitor dpi issue while firefox bug 890156 persists // http://stackoverflow.com/a/31500103/1828637 // https://bugzilla.mozilla.org/show_bug.cgi?id=890156
-					var win81ScaleX = colMon[iMon].win81ScaleX;
-					var win81ScaleY = colMon[iMon].win81ScaleY;
-					if (win81ScaleX || win81ScaleY) {
-						json.push(['html:canvas', {id:'canDum',style:'display:none;',width:w,height:h}]);
-						w = Math.ceil(w / win81ScaleX);
-						h = Math.ceil(h / win81ScaleY);
-
-						
-						json[2][1].width = w;
-						json[2][1].height = h;
-						json[2][1].style += 'position:fixed;';
-						
-						json[3][1].width = w;
-						json[3][1].height = h;
-						json[3][1].style += 'position:fixed;';
-						
-
-					}				
-				}
-			
-			break;
-		case 'darwin':
-			
-				// aEditorDOMWindow.setTimeout(function() {
-				// 	//aEditorDOMWindow.focus(); // doesnt work to make take full
-				// 	//aEditorDOMWindow.moveBy(0, -10); // doesnt work to make take full
-				// 	aEditorDOMWindow.resizeBy(0, 0) // makes it take full. as fullScreen just makes it hide the special ui and resize to as if special ui was there, this makes it resize now that they are gone. no animation takes place on chromeless window, excellent
-				// }, 10);
-			
-			break;
-		default:
-			// nothing special
-	}
-	
-	// start - postStuff
-	// aEditorDOMWindow.setTimeout(function() {
-	// insert canvases and menu	
-	var doc = aEditorDOMWindow.document;
-	var elRef = {};
-	doc.documentElement.appendChild(jsonToDOM(json, doc, elRef));
-	
-	var ctxBase = elRef.canBase.getContext('2d');
-	var ctxDim = elRef.canDim.getContext('2d');
-	
-	// set global E. props
-	colMon[iMon].E.canBase = elRef.canBase;
-	colMon[iMon].E.canDim = elRef.canDim;
-	colMon[iMon].E.ctxBase = ctxBase;
-	colMon[iMon].E.ctxDim = ctxDim;
-	
-
-	if (win81ScaleX || win81ScaleY) {
-		// rescaled for Win81 DPI non aware bug
-
-		var ctxDum = elRef.canDum.getContext('2d');
-		ctxDum.putImageData(colMon[iMon].screenshot, 0, 0);
-		ctxBase.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
-		ctxBase.drawImage(elRef.canDum, 0, 0);
-		elRef.canDum.parentNode.removeChild(elRef.canDum);
-		//ctxDim.clearRect(elRef.canDim.width, elRef.canDim.height);
-		//ctxBase.scale(1/colMon[iMon].win81ScaleX,1/colMon[iMon].win81ScaleY);
-		
-		ctxDim.scale(1/colMon[iMon].win81ScaleX, 1/colMon[iMon].win81ScaleY);
-	} else {
-		ctxBase.putImageData(colMon[iMon].screenshot, 0, 0);
-	}
-	
-	ctxDim.fillStyle = gDefDimFillStyle;
-	ctxDim.fillRect(0, 0, colMon[iMon].w, colMon[iMon].h);
-
-	var menuElRef = {};
-
-	doc.documentElement.appendChild(jsonToDOM(get_gEMenuDomJson(), doc, menuElRef));
-
-	doc.documentElement.setAttribute('context', 'myMenu1');
-	menuElRef.myMenu1.addEventListener('popupshowing', gEPopupShowing, false);
-	menuElRef.myMenu1.addEventListener('popuphiding', gEPopupHiding, false);
-	// set up up event listeners
-	
-	aEditorDOMWindow.addEventListener('unload', gEUnload, false);
-	aEditorDOMWindow.addEventListener('mousedown', gEMouseDown, false);
-	aEditorDOMWindow.addEventListener('mouseup', gEMouseUp, false);
-	aEditorDOMWindow.addEventListener('keyup', gEKeyUp, false);
-	aEditorDOMWindow.addEventListener('keydown', gEKeyDown, false);
-	
-	// special per os stuff
-	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
-		case 'winnt':
-		case 'winmo':
-		case 'wince':
-				
-				// make window always on top
-				
-			break;
-		case 'gtk':
-
-				// make window always on top
-				
-			break;
-		
-		case 'darwin':
-				
-				// make window always on top
-			
-			break;
-		default:
-
-	}
-	// }, 1000);
-	// end - postStuff
-}
 // end - observer handlers
 
 function shootAllMons(aDOMWindow) {
 	
 	gEditor.gBrowserDOMWindow = aDOMWindow;
 	gESelected = false;
+	
+	var allMonDim = []; // pushed in order of iMon
+	
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime(); // in other words, this is time of screenshot of this session
 		
@@ -3028,14 +2607,42 @@ function shootAllMons(aDOMWindow) {
 		// end notification bar stuff
 		
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
-		for (var i=0; i<colMon.length; i++) {
-			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
-			colMon[i].E = {
-				DOMWindow: aEditorDOMWindow,
-				docEl: aEditorDOMWindow.document.documentElement,
-				doc: aEditorDOMWindow.document,
-			};
 
+		var allMonDimStr = JSON.stringify(allMonDim);
+
+		
+		for (var i=0; i<colMon.length; i++) {
+			// var sa = Cc['@mozilla.org/supports-array;1'].createInstance(Ci.nsISupportsArray);
+			// var sa_imon = Cc['@mozilla.org/supports-PRUint8;1'].createInstance(Ci.nsISupportsPRUint8);
+			// sa.AppendElement(sa_imon);
+			// sa_imon.data = i;
+			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'panel.xul?iMon=' + i, '_blank', 'chrome,alwaysRaised,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), sa);
+			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=1,height=2,screenX=' + (core.os.name == 'darwin' ? (colMon[i].x + 1) : 1) + ',screenY=' + (core.os.name == 'darwin' ? (colMon[i].y + 1) : 1), null); // so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
+			var x = colMon[i].x;
+			var y = colMon[i].y;
+			var w = colMon[i].w;
+			var h = colMon[i].h;
+			
+			var scaleX = colMon[i].win81ScaleX;
+			var scaleY = colMon[i].win81ScaleY;
+			// on win10, the x, y, w and h set here needs scaling, its ridiculous. but from ctypes it doesnt need scaling. so i just set the sclaed here, and whatever was off, then its fixed, the ctypes doesnt need scaling. i tested the ctypes with height width minus 1 and it was perfect ah
+			// also on windows, if i dont use SetWindowPos from ctypes, the taskbar on secondary mon keeps showing on top when i focus the nativeshot window in primary mon
+			if (scaleX) {
+				x = Math.floor(x / scaleX);
+				w = Math.floor(w / scaleX);
+			}
+			if (scaleY) {
+				y = Math.floor(y / scaleY);
+				h = Math.floor(h / scaleY);
+			}
+			var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i, allMonDimStr:allMonDimStr}, colMon[i])), '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			// var aEditorDOMWindow = Services.ww.openWindow(null, core.addon.path.content + 'resources/pages/editor.xhtml?' + jsonAsQueryString(spliceObj({iMon:i}, colMon[i])), '_blank', 'chrome,alwaysRaised,titlebar=0,width=' + 2 + ',height=' + 2 + ',screenX=' + 2 + ',screenY=' + 2, null);
+			// so for ubuntu i recall i had to set to 1x1 otherwise the resizeTo or something wouldnt work // now on osx if i set to 1x1 it opens up full available screen size, so i had to do 1x2 (and no matter what, resizeTo or By is not working on osx, if i try to 200x200 it goes straight to full avail rect, so im using ctypes on osx, i thought it might be i setLevel: first though but i tested it and its not true, it just wont work, that may be why resizeTo/By isnt working) // on mac because i size it first then moveTo, i think i have to move it to that window first, because otherwise it will be constrained to whatever monitor size i sized it on (i did + 1 just because i had issues with 0 0 on ubuntu so im thinking its safer)
+			colMon[i].E = {
+				DOMWindow: aEditorDOMWindow
+				// docEl: aEditorDOMWindow.document.documentElement,
+				// doc: aEditorDOMWindow.document,
+			};
 		}
 	};
 	
@@ -3045,43 +2652,23 @@ function shootAllMons(aDOMWindow) {
 
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
-
+			
+			console.log('colMon from worker:', colMon);
+			
+			for (var i=0; i<colMon.length; i++) {
+				allMonDim.push({
+					x: colMon[i].x,
+					y: colMon[i].y,
+					w: colMon[i].w,
+					h: colMon[i].h
+					// win81ScaleX: colMon[i].win81ScaleX,
+					// win81ScaleY: colMon[i].win81ScaleY
+				});
+			}
+			
 			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 				gPostPrintRemovalFunc();
-			}
-			
-			// set gETopLeftMostX and gETopLeftMostY
-			for (var i=0; i<colMon.length; i++) {
-				colMon[i].screenshot = new aDOMWindow.ImageData(new aDOMWindow.Uint8ClampedArray(colMon[i].screenshot), colMon[i].w, colMon[i].h);
-				colMon[i].rect = new Rect(colMon[i].x, colMon[i].y, colMon[i].w, colMon[i].h);
-				if (i == 0) {
-					gETopLeftMostX = colMon[i].x;
-					gETopLeftMostY = colMon[i].y;
-				} else {
-					if (colMon[i].x < gETopLeftMostX) {
-						gETopLeftMostX = colMon[i].x;
-					}
-					if (colMon[i].y < gETopLeftMostY) {
-						gETopLeftMostY = colMon[i].y;
-					}
-				}
-			}
-			
-			// update monitor menu domJson
-			
-			if (!gEMenuArrRefs.select_fullscreen || gEMenuArrRefs.select_fullscreen.length != 2 + colMon.length) {
-				gEMenuArrRefs.select_fullscreen = 
-					['xul:menupopup', {},
-						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-current-mon']), oncommand:gEditor.selectMonitor.bind(null, -1)}],
-						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-all-mon']), oncommand:gEditor.selectMonitor.bind(null, -2)}]
-					]
-				;
-				for (var i=0; i<colMon.length; i++) {
-					gEMenuArrRefs.select_fullscreen.push(
-						['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['editor-menu_select-mon-n'], [i+1]), oncommand:gEditor.selectMonitor.bind(null, i)}]
-					);
-				}
-			}
+			}			
 			
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot
@@ -3115,7 +2702,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				if (!fsComServer.twitterListenerRegistered) {
-					myServices.mm.addMessageListener(core.addon.id, fsComServer.twitterClientMessageListener, true);
+					myServices.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
 					fsComServer.twitterListenerRegistered = true;
 				}
 				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
@@ -4112,6 +3699,8 @@ var HotkeyWorkerMainThreadFuncs = {
 
 function initOstypes() {
 	if (typeof ostypes == 'undefined') {
+		Cu.import('resource://gre/modules/ctypes.jsm');
+		
 		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/cutils.jsm', BOOTSTRAP); // need to load cutils first as ostypes_mac uses it for HollowStructure
 		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ctypes_math.jsm', BOOTSTRAP);
 		switch (core.os.mname) {
@@ -4158,11 +3747,18 @@ function initHotkey() {
 			
 				initOstypes();
 				
+				OSStuff.hotkeyLastTriggered = 0;
+				
 				OSStuff.hotkeyCallback = ostypes.TYPE.EventHandlerUPP(function(nextHandler, theEvent, userDataPtr) {
 					// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
 					console.log('wooohoo ah!! called hotkey!');
-					HotkeyWorkerMainThreadFuncs.takeShot();
-					return 1; // must be of type ostypes.TYPE.OSStatus
+					var hotkeyNowTriggered = (new Date()).getTime();
+					if (hotkeyNowTriggered - OSStuff.hotkeyLastTriggered > 1000) {
+						OSStuff.hotkeyLastTriggered = hotkeyNowTriggered;
+						HotkeyWorkerMainThreadFuncs.takeShot();
+					}
+					else { console.warn('will not takeShot as 1sec has not yet elapsed since last triggering hotkey'); }
+					return 0; // must be of type ostypes.TYPE.OSStatus
 				});
 				
 				var eventType = ostypes.TYPE.EventTypeSpec();
@@ -4226,6 +3822,7 @@ function uninitHotkey() {
 					
 					delete OSStuff.hotkeyCallback;
 					delete OSStuff.gMyHotKeyRef;
+					delete OSStuff.hotkeyLastTriggered;
 				}
 			
 			break;
@@ -4437,7 +4034,7 @@ function autocloseBar(aSessionId) {
 	if (cBarData.shown) {
 		gAutocloseBar[aSessionId] = {
 			timer: Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer),
-			timeLeft: 16, // sec, is really 10, because i timeLeft-- at start of notify
+			timeLeft: 26, // sec, is really 25, because i timeLeft-- at start of notify
 			callback: {
 				notify: function() {
 					if (AB.Callbacks[cBarData.ABRef.aId]) {
@@ -4683,6 +4280,8 @@ function startup(aData, aReason) {
 	var do_afterWorkerInit = function(aInitedCore) {
 		
 		core = aInitedCore;
+		gEditorStateStr = core.editorstateStr;
+		delete core.editorstateStr;
 		
 		CustomizableUI.createWidget({
 			id: 'cui_nativeshot',
@@ -4769,7 +4368,7 @@ function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
 	
 	try {
-		myServices.mm.removeMessageListener(core.addon.id, fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
+		myServices.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
 	} catch (ignore) {}
 	
 	CustomizableUI.destroyWidget('cui_nativeshot');
@@ -5780,5 +5379,41 @@ function xpcomSetTimeout(aNsiTimer, aDelayTimerMS, aTimerCallback) {
 			aTimerCallback();
 		}
 	}, aDelayTimerMS, Ci.nsITimer.TYPE_ONE_SHOT);
+}
+
+function jsonAsQueryString(aJson) {
+	// only bool, int, string are sent, all others are skipped
+	var qs = [];
+	for (var p in aJson) {
+		if (['number', 'boolean', 'string'].indexOf(typeof(aJson[p])) > -1) {
+			qs.push(p + '=' + aJson[p]);
+		}
+	}
+	return qs.join('&');
+}
+
+function spliceObj(obj1, obj2) {
+	/**
+	 * By reference. Adds all of obj2 keys to obj1. Overwriting any old values in obj1.
+	 * Was previously called `usurpObjWithObj`
+	 * @param obj1
+	 * @param obj2
+	 * @returns obj1
+	 */
+	for (var attrname in obj2) { obj1[attrname] = obj2[attrname]; }
+	return obj1;
+}
+function overwriteObjWithObj(obj1, obj2){
+	/**
+	 * No by reference. Creates a new object. With all the keys/values from obj2. Adds in the keys/values that are in obj1 that were not in obj2.
+	 * @param obj1
+	 * @param obj2
+	 * @returns obj3 a new object based on obj1 and obj2
+	 */
+
+    var obj3 = {};
+    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+    return obj3;
 }
 // end - common helper functions

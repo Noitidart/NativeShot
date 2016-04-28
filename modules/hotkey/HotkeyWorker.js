@@ -443,9 +443,8 @@ function checkEventLoop() {
 									OSStuff.hotkeyLastTriggered = hotkeyNowTriggered;
 									console.warn('taking shot');
 									self.postMessage(['takeShot']);
-								} else {
-									console.warn('will not takeShot as 1sec has not yet elapsed since last triggering hotkey');
 								}
+								else { console.warn('will not takeShot as 1sec has not yet elapsed since last triggering hotkey'); }
 								break;
 							}
 						}
