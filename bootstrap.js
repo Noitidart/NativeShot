@@ -534,6 +534,9 @@ var EditorFuncs = {
 			var ix = indexOfSelInG(cSel);
 			if (ix > 0) {
 				selToMake = gUsedSelections[ix - 1];
+			} else if (ix == -1) {
+				// select the most recent one
+				selToMake = gUsedSelections[gUsedSelections.length - 1];
 			} // else if 0, then no previous selection obviously
 		} else {
 			// select the most recent one

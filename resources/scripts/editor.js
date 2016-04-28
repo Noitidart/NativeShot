@@ -5121,11 +5121,11 @@ function init(aArrBufAndCore) {
 			// console.log('did update, prevProps:', prevProps);
 			var newPropVal = this.props[this.props.pStateVarName];
 			if (newPropVal != this.lastDomElValue) {
-				if (prevProps.value != newPropVal) {
+				// if (prevProps.value != newPropVal) {
 					this.refs.input.value = newPropVal;
-					// console.log('ok updated input to', newPropVal);
+					console.log('ok updated input to', newPropVal, 'pLabel:', this.props.pLabel);
 					this.lastDomElValue = newPropVal;
-				}
+				// }
 			}
 			// else { console.log('no need to update input value as it matches lastDomElValue'); }
 		},
