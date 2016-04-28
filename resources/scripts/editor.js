@@ -5209,19 +5209,25 @@ function init(aArrBufAndCore) {
 	
 	// make sure pPalX and pPalY are on a monitor. if that monitor is no longer here, then use the defaults, which is near 0,0 which is on primary monitor which is always there
 	var pPalCoordsOnVisibleMon = false;
-	var pPalX = mmtm.x(editorstate.pPalX);
-	var pPalY = mmtm.y(editorstate.pPalY);
+	var pPalX = editorstate.pPalX; // i dont do mmtm here or on `var pPalY` because pal position is relative to 0,0
+	var pPalY = editorstate.pPalY;
+	// console.log('pPal:', pPalX, ', ', pPalY, 'from prespective of primary monitor meaning 0,0. this iMon:', tQS.iMon);
 	var allMonDim = tQS.allMonDim;
 	var l = allMonDim.length;
 	for (var i=0; i<l; i++) {
 		var cMonDim = allMonDim[i];
 		if (pPalX >= cMonDim.x && pPalX <= cMonDim.x + cMonDim.w &&
 			pPalY >= cMonDim.y && pPalY <= cMonDim.y + cMonDim.h) {
+				// setTimeout(function() {
+					// alert('yes pal is on visible mon of iMon: ' + i);
+					// console.log('yes pal is on vis mon of iMon:', i, cMonDim);
+				// }, 1000);
 				pPalCoordsOnVisibleMon = true;
 				break;
 		}
 	}
 	if (!pPalCoordsOnVisibleMon) {
+		// console.log('pPal coords not on any visible monitor, here are all the dimensions:', allMonDim);
 		editorstate.pPalX = 5; // link239285555
 		editorstate.pPalY = 50; // link239285555
 	}

@@ -24,7 +24,7 @@ body {
 /* start - palette */
 /* state:innate */
 #palette {
-	position: absolute;
+	position: fixed;
 	z-index: 4;
 }
 /* end - palette */
