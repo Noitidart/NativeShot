@@ -1,0 +1,579 @@
+body {
+	margin: 0; /* as there is a default margin on body for some reason in firefox */
+	font-family: arial;
+	-moz-user-select: none;
+	overflow: hidden;
+}
+
+#canBase {
+	position: fixed;
+	top: 0;
+	left: 0;
+	background: #000 url(chrome://nativeshot/content/resources/images/canvas_bg.png) repeat fixed top left;
+	z-index: 1;
+}
+
+#canDim {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 2;
+}
+
+
+/* start - palette */
+/* state:innate */
+#palette {
+	position: absolute;
+	z-index: 4;
+}
+/* end - palette */
+
+/* start - psubwrap */
+/* state:innate */
+.psubwrap {
+	/*font-size: 48px;*/ /*so on intial set by react, it doesnt transition*/
+	transition: font-size 200ms;
+	text-align: center;
+	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
+	border: 1px solid #aaaaaa;
+	display: flex;
+	flex-direction: row;
+	
+	color:rgba(78, 77, 75, 0.9);
+	text-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+	
+	cursor: default;
+}
+/* end - psubwrap */
+
+/* start - pbutton */
+/* state:innate */
+.pbutton {
+	height: 2em;
+	width: 2em;
+	margin: 0 auto;
+	background: linear-gradient(to bottom, #f0f1f2 0%,#e4e5e6 100%);
+	border: 1px solid #ccc;
+	position: relative;
+	font-family: verdana, fontello;
+	font-style: normal;
+	font-weight: normal;
+}
+/* state:hover_not_pressed */
+.pbutton:hover {
+	background: linear-gradient(to bottom, #f7f8f9 0%, #f3f4f5 100%);
+	border: 1px solid #ddd;
+}
+/* state:nosubsel */
+.pbutton:not([data-subsel]) {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+/* state:icontext */
+.pbutton[data-icontext] {
+	/* font-size: 1em !important; */
+}
+.pbutton[data-icontext]::after {
+	content: attr(data-icontext);
+	font-family: Arial;
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	/* background-color: red; */
+	top: 0;
+	left: 0;
+	
+	color: rgb(208, 2, 27); /*rgb(74, 144, 226);*/
+	font-size: 2em;
+}
+/* state:pressed */
+.pbutton:active,
+.pbutton.pbutton-pressed {
+	background: linear-gradient(to bottom, #d0d1d2 0%,#c4c5c6 100%);
+	border: 1px solid #bbb;
+}
+/* end - pbutton */
+
+/* start - pbutton_selected_sub */
+/* state:innate */
+.pbutton[data-subsel]::after {
+	content: attr(data-subsel);
+	display: block;
+	position: absolute;
+	width: 100%;
+	left: 0;
+	font-size: .7em;
+	bottom: 0;
+}
+/* end - pbutton_after */
+
+/* start - paccessibility */
+/* state:innate */
+.paccessibility {
+	display: flex;
+	flex-direction: column;
+	font-size: .5em;
+}
+/* end - paccessibility */
+
+/* start - paccessibility_children */
+/* state:innate */
+.paccessibility .pbutton {
+	height: 2em;
+	width: 2em;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+/* end - paccessibility */
+
+/* start - phandle */
+/* state:innate */
+.phandle {
+	padding: 0 1px;
+	width: auto;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: move;
+}
+/* end - phandle */
+
+/* start - phandle-visual */
+/* state:innate */
+.phandle-visual {
+	height: 100%;
+	border: 1px solid #ccc;
+	box-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+	margin-left: 1px;
+}
+.phandle-visual:first-of-type {
+	margin-left: 0;
+}
+/* end - phandle-visual */
+
+/* start - plabel */
+/* state:innate */
+.plabel {
+	position: absolute;
+	pointer-events: none;
+	opacity: 0;
+	font-size: 0.5em;
+	top: 0;
+	white-space: nowrap;
+	z-index: -1;
+	width: 100%;
+	/* doing this in the .plabel > span now because the span is the one exceeding boundaries due to the diplay flex so this background does not extend beyond boundaries
+	background-color: #aaa;
+	border-radius: 5px;
+	*/
+	left: 0;
+	transition: top 200ms, opacity 200ms;
+	text-shadow: none;
+	display: flex; /* this with justify-content is needed as text-align center doesnt let it exceed the boundaries */
+	justify-content: center;
+	
+	padding: 0px;
+	margin: 0;
+}
+/* start:pbutton_hover */
+.pbutton:hover .plabel {
+	/* transform: translate(0, -2em); */
+	top: -2.3em; /*calc(-1.5em - 0.6em - 0.2em) ::: -.5em will put it at top as font-size is .5em &&&& "- 0.6em" because padding on the `.plabel span` is 0.3px AND -0.2em is just good measure*/
+	opacity: 1;
+}
+/* start:minfontsize */
+.minfontsize .plabel {
+	font-size: 12px;
+}
+/* end - plabel */
+
+/*start - plabel > span - this is what extends beyond the boundaries of the plabel, as plabel width is 100% so i get center to line up with the icons below it */
+.plabel span {
+	font-family: arial;
+	background-color: #ddd;
+	border-radius: 5px;
+	padding: 0.3em;
+	margin: 0;
+	font-weight: bold;
+}
+/*end - plabel > span */
+
+/* start - psub */
+/* state:innate */
+.psub {
+	position: absolute;
+	opacity: 0;
+	transition: top 200ms, opacity 200ms;
+	top: 90%;
+	
+	background-color: rgba(240, 241, 242, 0.6);
+	border: 1px solid rgba(170, 170, 170, 0.3);
+	border-radius: 3px;
+	box-shadow: 0 0.05em 0.1em 2px rgba(0, 0, 0, 0.3);
+	padding: 0.1em;
+	
+	pointer-events: none;
+}
+/* start:pbutton_hover */
+.pbutton:active .psub, /* so ColorPicker stays open during sInputNumberMousing */
+.pbutton.eyedropper .psub, /* so when using eyedropper ColorPicker stays open */
+.pbutton:hover .psub {
+	top: calc(100% + 5px);
+	opacity: 1;
+	pointer-events: auto;
+}
+.pbutton::before { /* purpose of this is so when users mouses over the gap between the pbutton and the psub, it doesnt cause hover off, causing close */
+	content: '';
+	display: block;
+	height: 5px;
+	background-color: transparent;
+	position: absolute;
+	width: 100%;
+	bottom: -5px;
+}
+/* end - psub */
+
+/*start - psub_pbutton*/
+.psub .pbutton {
+	font-size: .8em;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: row;
+}
+/*end - psub_pbutton*/
+
+/* start - pdivider */
+/* state:innate */
+.pdivider {
+	border: 1px solid #4c4b49;
+}
+/* end - pdivider */
+
+/* GROUP:colorpicker */
+.colorpicker {
+	background: linear-gradient(to bottom, #f0f1f2 0%,#f4f5f6 100%);
+	width: 200px;
+	border-radius: 1px;
+	position: relative;
+	font-size: 12px;
+	font-family: arial;
+	text-shadow: none;
+	padding: 3px;
+}
+.colorpicker-inner {
+	position: relative;
+}
+
+.colorpicker-board {
+	position: relative;
+	box-shadow: 0 0 2px #808080 inset;
+	cursor: crosshair;
+	height: 150px;
+	border-radius: 2px;
+}
+.colorpicker-board-color,
+.colorpicker-board-white,
+.colorpicker-board-black {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border-radius: 2px;
+}
+.colorpicker-board-color {
+	background-color: rgb(70, 136, 143);
+}
+.colorpicker-board-white {
+	background: linear-gradient(to right, #fff 0%, rgba(255,255,255,0) 100%);
+}
+.colorpicker-board-black {
+	background: linear-gradient(to bottom, transparent 0%, #000 100%);
+}
+.colorpicker-board::before {
+	/* cursor */
+	content: '';
+	position: absolute;
+	width: 4px;
+	height: 4px;
+	box-shadow: 0px 0px 0px 1.5px rgb(255, 255, 255), 0px 0px 1px 1px rgba(0, 0, 0, 0.3) inset, 0px 0px 1px 2px rgba(0, 0, 0, 0.4);
+	border-radius: 50%;
+	transform: translate(-2px, -2px);
+	top: 20%;
+	left: 20%;
+	z-index: 1;
+}
+
+
+.colorpicker-sliders {
+	display: flex;
+	flex-direction: row;
+	position: relative;
+	align-items: center;
+	height: 30px;
+}
+.colorpicker-sliders-wrap {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+	justify-content: space-between;
+	height: 100%;
+}
+.colorpicker-sliders-wrap div {
+	height: 12px;
+	box-shadow: 0 0 2px #808080 inset;
+	border-radius: 2px;
+}
+.colorpicker-slider-rainbow {
+	background: linear-gradient(to right, #ff0000 0%, #ff9900 10%, #cdff00 20%, #35ff00 30%, #00ff66 40%, #00fffd 50%, #0066ff 60%, #3200ff 70%, #cd00ff 80%, #ff0099 90%, #ff0000 100%);
+	position: relative;
+	cursor: pointer;
+}
+.colorpicker-slider-alpha {
+	background-image: linear-gradient(to right, rgba(70, 136, 143, 0), rgb(70, 136, 143)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-repeat: no-repeat, repeat;
+	background-position: right, top left;
+	position: relative;
+	cursor: pointer;
+}
+.colorpicker-slider-thingy {
+	content: '';
+	position: absolute;
+	box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.6);
+	background: rgb(255, 255, 255) none repeat scroll 0% 0%;
+	height: 100%;
+	width: 8px;
+	border-radius: 1px;
+	cursor: ew-resize;
+}
+.colorpicker-sliders-wrap.colorpicker-slider-preview {
+	flex-grow: 0;
+	/*
+	background-image: url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-color: rgba(10, 22, 240, 0.5);
+	background-repeat: repeat;
+	*/
+	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-repeat: no-repeat, repeat;
+	background-position: right, top left;
+	
+	width: 30px; /* should be 100%, which is 30px right now */
+	box-shadow: 0 0 2px #808080 inset;
+	border-radius: 2px;
+}
+
+
+.colorpicker-codes {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+.colorpicker-codes .inputnumber {
+	margin: auto;
+}
+.colorpicker-codes .inputnumber input {
+	width: 2em;
+	text-align: center;
+	margin: auto;
+}
+.colorpicker-codes-hex input {
+	width: 4em;
+	text-transform: uppercase;
+	font-size: 12px;
+	text-align: center;
+}
+.colorpicker-codes div {
+	display: flex;
+	flex-direction: column-reverse;
+	justify-content: center;
+	align-items: center;
+}
+.colorpicker-codes label {
+	width: 100%;
+}
+
+.colorpicker-choices {
+	border-bottom: 1px solid #ccc;
+	margin-bottom: 3px;
+	display: flex;
+	flex-direction: row;
+}
+.colorpicker-choices-wrap {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: start;
+	flex-grow: 1;
+}
+.colorpicker-choices-opt {
+	display: inline-block;
+	box-shadow: 0px 0px 0px 1px rgba(0, 0, 0, 0.15) inset;
+	width: 16px;
+	height: 16px;
+	margin-right: 4px;
+	cursor: pointer;
+}
+
+.colorpicker-choices-wrap.colorpicker-choices-dropper {
+	flex-grow: 0;
+	font-family: fontello;
+	font-style: normal;
+	font-weight: normal;
+	font-size: 18px;
+	align-items: center;
+	width: 40px;
+	cursor: pointer;
+}
+/* GROUP:colorpicker */
+
+/* start - zoom_view */
+/* state:innate */
+.pzoomview {
+	border: 5px solid #ccc;
+	border-radius: 1px;
+	position: absolute;
+	z-index: 3;
+	cursor: move;
+}
+/* end - zoom_view */
+
+/* start - option_tools */
+/* state:innate */
+.pblurlevel,
+.plinetools,
+.pdimtools,
+.ptexttools,
+.parrowtools {
+	font-size: 0.5em;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 6px;
+}
+.minfontsize .pblurlevel,
+.minfontsize .plinetools,
+.minfontsize .pdimtools,
+.minfontsize .ptexttools,
+.minfontsize .parrowtools {
+	font-size: 12px;
+}
+.inputnumber {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	margin-top: 5px;
+}
+.inputnumber input {
+	width: 3em;
+	margin: 0 3px;
+	font-size: inherit;
+}
+/* end - option_tools */
+
+/* start - ptexttools area */
+/* state:innate */
+.ptexttools {
+	font-size: 12px;
+}
+.ptexttools-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+.ptexttools .pbutton {
+	font-family: Times New Roman;
+	position: static;
+}
+.ptexttools-bold {
+	font-weight: bold;
+	margin: 5px 4px 0 1px;
+}
+.ptexttools-italic {
+	font-style: italic;
+	margin: 5px 1px 0 0;
+}
+.pdimtools .inputnumber label {
+	white-space: nowrap;
+}
+.ptexttools .inputnumber input {
+	font-size: auto;
+}
+.ptexttools .inputnumber {
+	margin-top: 5px;
+}
+.ptexttools select {
+	font-size: 1em;
+	margin: 0 3px;
+}
+/* end - ptexttools area */
+
+/* start - dimensions tools area */
+.pdimtools {
+	font-size: 0.5em;
+}
+.minfontsize .pdimtools {
+	font-size: 12px;
+}
+.pdimtools .inputnumber {
+	width: 100%;
+	justify-content: space-between;
+}
+.pdimtools .inputnumber input {
+	
+	width: 4em;
+	margin: 0 4px;
+}
+.minfontsize .pdimtools .inputnumber input {
+	font-size: 12px;
+}
+/* end - dimensions tools area */
+
+/* start - arrow tools area */
+.parrowtools-checks {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.parrowtools-checks div {
+	padding: 0 5px;
+}
+.parrowtools label {
+	white-space: nowrap;
+}
+/* end - arrow tools area */
+
+/* start - inputnumber-label */
+/* state:innate */
+.inputnumber-label {
+	cursor: ew-resize;
+}
+/* end - inputnumber-label */
+
+/* start - other_stuff */
+.pbutton-icon-color {
+	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-repeat: no-repeat, repeat;
+	background-position: right, top left;
+	width: 1em;
+	height: 1em;
+	box-shadow: 2px 2px 3px rgba(0,0,0,0.2), 0 0 2px #808080 inset;
+	border: 0.07em solid rgba(78, 77, 75, 0.9);
+	border-radius: 2px;
+}
+@font-face {
+	font-family: 'fontello';
+	src: url('chrome://nativeshot/content/resources/styles/fonts/font/fontello.woff') format('woff');
+	font-weight: normal;
+	font-style: normal;
+}
+/* end - other_stuff */
