@@ -589,6 +589,57 @@ var EditorFuncs = {
 		}, '*', [colMon[iMon].screenshotArrBuf]);
 		
 		colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
+		
+		// check to see if all monitors inited, if they have been, the fetch all win
+		var allWinInited = true;
+		var l = colMon.length;
+		for (var i=0; i<l; i++) {
+			if (!colMon[i].hwndPtrStr) {
+				allWinInited = false;
+				break;
+			}
+		}
+		if (allWinInited) {
+			var promise_fetchWin = ScreenshotWorker.post('getAllWin', [{
+				getPid: true,
+				getBounds: true,
+				getTitle: true,
+				filterVisible: true
+			}]);
+			promise_fetchWin.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_fetchWin - ', aVal);
+					// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
+					
+					// build hwndPtrStr arr for nativeshot_canvas windows
+					var hwndPtrStrArr = [];
+					for (var i=0; i<colMon.length; i++) {
+						hwndPtrStrArr.push(colMon[i].hwndPtrStr);
+					}
+					
+					// remove nativeshot_canvas windows
+					for (var i=0; i<aVal.length; i++) {
+						if (aVal[i].title == 'nativeshot_canvas' || hwndPtrStrArr.indexOf(aVal[i].hwndPtrStr) > -1) {
+							// need to do the hwndPtrStr check as on windows, sometimes the page isnt loaded yet, so the title of the window isnt there yet
+							// aVal.splice(i, 1);
+							aVal[i].left = -10000;
+							aVal[i].right = -10000;
+							aVal[i].width = 0;
+							aVal[i].NATIVESHOT_CANVAS = true;
+							// i--;
+						}
+					}
+					
+					for (var i=0; i<colMon.length; i++) {
+						colMon[i].E.DOMWindow.postMessage({
+							topic: 'receiveWinArr',
+							winArr: aVal
+						}, '*');
+					}
+				},
+				genericReject.bind(null, 'promise_fetchWin', 0)
+			).catch(genericCatch.bind(null, 'promise_fetchWin', 0));
+		}
 	}
 };
 
@@ -1252,55 +1303,11 @@ var gEditor = {
 		colMon = null;
 
 		gEditor.gBrowserDOMWindow = null;
-		
-		gEditor.pendingWinSelect = false;
-		gEditor.winArr = null;
-		
+				
 		gEditor.sessionId = null;
 		
 		gEditor.printPrevWins = null;
 		gEditor.forceFocus = null;
-	},
-	selectWindow: function(e) {
-		
-		try {
-			gEditor.clearSelection(e);
-		} catch(ignore) {}
-		
-		if (!gEditor.winArr) {
-
-			var promise_fetchWin = ScreenshotWorker.post('getAllWin', [{
-				getPid: true,
-				getBounds: true,
-				getTitle: true,
-				filterVisible: true
-			}])
-			promise_fetchWin.then(
-				function(aVal) {
-
-					// start - do stuff here - promise_fetchWin
-
-					gEditor.winArr = aVal;
-					// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
-					// end - do stuff here - promise_fetchWin
-				},
-				function(aReason) {
-					var rejObj = {name:'promise_fetchWin', aReason:aReason};
-
-					// deferred_createProfile.reject(rejObj);
-				}
-			).catch(
-				function(aCaught) {
-					var rejObj = {name:'promise_fetchWin', aCaught:aCaught};
-
-					// deferred_createProfile.reject(rejObj);
-				}
-			);
-		}
-		
-		gEditor.pendingWinSelect = true;
-		gCanDim.execStyle('cursor', 'pointer');
-		
 	},
 	shareToTwitter: function(aDataUrl) {
 		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
@@ -1970,7 +1977,7 @@ function shootAllMons(aDOMWindow) {
 			
 			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 				gPostPrintRemovalFunc();
-			}			
+			}
 			
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot

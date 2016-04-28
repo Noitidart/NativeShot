@@ -27,6 +27,7 @@ var gCanMeasureHeight;
 var gCtxMeasureHeight;
 var gWidthRef;
 var gHeightRef;
+var gWinArr;
 
 function unload() {
 	// if iMon == 0
@@ -3054,6 +3055,57 @@ function init(aArrBufAndCore) {
 						// do nothing special
 					}
 				// }
+				
+				if (e.target == this.refs.can) {
+					if (this.state.sGenPalTool == 'Window Wand') {
+						var x = mtmm.x(e.clientX); 
+						var y = mtmm.y(e.clientY);
+						// alert('look for window at coords: ' + x + ', ' + y);
+						
+						// discontinued the first_nativeshot_canvas_found method because it seems on Windows, even though i execute fetchAllWin after last window is opened, sometimes it runs and completes before these windows become visible
+						
+						// var first_nativeshot_canvas_found = false;
+						var l = gWinArr.length;
+						// console.log('now going through l:', l, 'gWinArr:', gWinArr);
+						for (var i=0; i<l; i++) {
+							var cwin = gWinArr[i];
+							// if (cwin.title == 'nativeshot_canvas') {
+								// first_nativeshot_canvas_found = true;
+								// continue;
+							// }
+							
+							// if (!first_nativeshot_canvas_found) {
+								// continue; // find nativeshot_canvas first then start paying attention to windows, as context menu is above, on osx also the cursor gets a window and its element 0
+							// }
+							
+							if (x >= cwin.left && x <= cwin.right && y >= cwin.top && y <= cwin.bottom) {
+
+
+								if (!e.shiftKey) {
+									gCanStore.rconn.dDeleteAll(['cutout']);
+								}
+								var cCutout = gCanStore.rconn.newDrawable(cwin.left, cwin.top, cwin.width, cwin.height, 'cutout');
+								gCanStore.rconn.dAdd(cCutout);
+								// if (this.props.sGenPalTool == 'Select') {
+								// 	gCState.selection = cCutout;
+								// 	gEditorStore.setState({
+								// 		sGenPalW: tQS.w,
+								// 		sGenPalH: tQS.h
+								// 	});
+								// }
+								gCanStore.setCanState(false); // as i for sure added a new cutout
+								
+								
+								break;
+							}
+							// else { console.log(x, ',', y, 'not in win:', cwin); }
+						}
+						
+						// if (!cCutout) {
+							// alert('didnt click window');
+						// }
+					}
+				}
 			}
 			
 			
@@ -3818,12 +3870,16 @@ function init(aArrBufAndCore) {
 						gCanStore.setCanState(false); // as i for sure added a new cutout
 						
 					break;
+				case 'Window Wand':
+					
+						if (gWinArr) {
+							
+						}
+					
+					break;
 				case 'Shapes':
 				
-						if (gCState.selection) {
-							gCanStore.rconn.clearSelection();
-							gCanStore.setCanState(false);
-						}
+						
 					
 					break;
 				default:
@@ -3848,6 +3904,10 @@ function init(aArrBufAndCore) {
 					sGenPalTool: this.props.pButton.label,
 					sGenCanMouseMoveCursor: null
 				});
+				// if (gCState.selection) {
+				// 	gCanStore.rconn.clearSelection();
+				// 	gCanStore.setCanState(false);
+				// }
 			}
 
 			if (gChangingSubToolTo) { // make sure to not return above
@@ -5392,6 +5452,12 @@ window.addEventListener('message', function(aWinMsgEvent) {
 		throw new Error('unknown topic received: ' + aData.topic);
 	}
 }, false);
+
+function receiveWinArr(aData) {
+	// for window wand
+	gWinArr = aData.winArr;
+	console.log('got gWinArr:', gWinArr);
+}
 
 // link9999191911111
 Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
