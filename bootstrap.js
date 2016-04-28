@@ -429,6 +429,44 @@ function extendCore() {
 }
 
 //start obs stuff
+// start - last selection stuff
+var gUsedSelections = []; // array of arrays. each child is [subcutout1, subcutout2, ...]
+function indexOfSelInG(aSel) {
+	// aSel is an array of subcutouts
+	// will return the index it is found in gUsedSelections
+	// -1 if not found
+	
+	var l = gUsedSelections.length;
+	
+	if (!l) {
+		return -1;
+	} else {
+		
+		for (var i=l-1; i>=0; i--) {
+			var tSel = gUsedSelections[i]; // testSelection
+			var l2 = tSel.length;
+			if (l2 === aSel.length) {
+				var tSelMatches = true;
+				for (var j=0; j<l2; j++) {
+					var tSubcutout = tSel[j];
+					var cSubcutout = aSel[j];
+					console.log('comparing', 'tSel:', tSel, 'aSel:', aSel);
+					if (tSubcutout.x !== cSubcutout.x || tSubcutout.y !== cSubcutout.y || tSubcutout.w !== cSubcutout.w || tSubcutout.h !== cSubcutout.h) {
+						// tSel does not match aSel
+						tSelMatches = false;
+						break;
+					}
+				}
+				if (tSelMatches) {
+					return i;
+				}
+			}
+		}
+		
+		return -1; // not found
+	}
+}
+// break - last selection stuff
 var observers = {
 	'nativeshot-editor-request': {
 		observe: function (aSubject, aTopic, aData) {
@@ -465,6 +503,52 @@ var observers = {
 	}
 };
 var EditorFuncs = {
+	// resume - last selection stuff
+	addSelectionToHistory: function(aData) {
+		// aData.cutoutsArr is an array of cutouts
+		console.log('incoming addSelectionToHistory:', aData);
+		var cSel = aData.cutoutsArr;
+		var ix = indexOfSelInG(cSel);
+		if (ix == -1) {
+			gUsedSelections.push(aData.cutoutsArr)
+		} else {
+			// it was found in history, so lets move this to the most recent selection made
+			// most recent selection is the last most element in gUsedSelections array
+			gUsedSelections.push(gUsedSelections.splice(ix, 1)[0]);
+		}
+		console.log('added sel, now gUsedSelections:', gUsedSelections);
+	},
+	selectPreviousSelection: function(aData) {
+		// aData.curSelection is an array of the currently selected cutouts
+
+		if (!gUsedSelections.length) {
+			return;
+		}
+		
+		var cSel = aData.cutoutsArr; // cutouts of the current selection
+		
+		// figure out the selection to make
+		var selToMake;
+		if (cSel) {
+			// check to see if this sel is in the history, and select the one before this one
+			var ix = indexOfSelInG(cSel);
+			if (ix > 0) {
+				selToMake = gUsedSelections[ix - 1];
+			} // else if 0, then no previous selection obviously
+		} else {
+			// select the most recent one
+			selToMake = gUsedSelections[gUsedSelections.length - 1];
+		}
+
+		// send message to make the selection
+		if (selToMake) {
+			colMon[aData.iMon].E.DOMWindow.postMessage({
+				topic: 'makeSelection',
+				cutoutsArr: selToMake
+			}, '*');
+		}
+	},
+	// end - last selection stuff
 	callInBootstrap: function(aData) {
 		if (aData.argsArr) {
 			BOOTSTRAP[aData.method].apply(null, aData.argsArr)

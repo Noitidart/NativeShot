@@ -164,6 +164,12 @@ function initCompositeForAction(aAction, aSub) {
 				}
 			}
 			
+			Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+				topic: 'addSelectionToHistory',
+				cutoutsArr: cutouts,
+				iMon: tQS.iMon
+			}));			
+			
 		}
 	} else {
 		alert('action is in progress');
@@ -439,6 +445,8 @@ function fullfillCompositeRequest(aData) {
 						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
 						iMon: tQS.iMon
 					});
+		
+					// window.close();
 					
 				};
 				r.readAsArrayBuffer(b);
@@ -448,11 +456,11 @@ function fullfillCompositeRequest(aData) {
 		}
 		
 		// debug - put this canvas on the document
-		can.style.position = 'absolute';
-		can.style.zIndex = '9999';
-		can.style.top = 0;
-		can.style.left = 0;
-		document.body.appendChild(can);
+		// can.style.position = 'absolute';
+		// can.style.zIndex = '9999';
+		// can.style.top = 0;
+		// can.style.left = 0;
+		// document.body.appendChild(can);
 		
 		// gCanStore.rconn.oscalecan1.style.position = 'absolute';
 		// gCanStore.rconn.oscalecan1.style.zIndex = '99999';
@@ -460,11 +468,22 @@ function fullfillCompositeRequest(aData) {
 		// gCanStore.rconn.oscalecan1.style.left = 0;
 		// document.body.appendChild(gCanStore.rconn.oscalecan1);
 		
-		setTimeout(function() {
-			document.body.removeChild(can);
-			// document.body.removeChild(gCanStore.rconn.oscalecan1);
-		}, 5000);
+		// setTimeout(function() {
+			// document.body.removeChild(can);
+			// // document.body.removeChild(gCanStore.rconn.oscalecan1);
+		// }, 5000);
 	}
+}
+
+function makeSelection(aData) {
+	// aData.cutoutsArr is an array of cutout objects
+	console.log('incoming makeSelection, aData:', aData);
+	gCanStore.rconn.dDeleteAll(['cutout']);
+	for (var i=0; i<aData.cutoutsArr.length; i++) {
+		gCState.drawables.push(aData.cutoutsArr[i]);
+	}
+	gCState.selection = null;
+	gCanStore.setCanState(false);
 }
 
 function triggerNSCommEvent(myEventDetail) {
@@ -4049,6 +4068,15 @@ function init(aArrBufAndCore) {
 					dontStopPropagation = true;
 					gChangingSubToolTo = this.props.pSubButton.label;
 				// }
+			}
+			
+			if (this.props.pSubButton.label == 'Last Selection') {
+				var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
+				Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+					topic: 'selectPreviousSelection',
+					cutoutsArr: cutouts.length ? cutouts : null,
+					iMon: tQS.iMon
+				}));
 			}
 			
 			if (!this.props.pSubButton.unfixable) {
