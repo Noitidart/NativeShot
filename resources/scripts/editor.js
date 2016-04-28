@@ -2239,9 +2239,18 @@ function init(aArrBufAndCore) {
 				gDroppingCoords[0] = mx;
 				gDroppingCoords[1] = my;
 			} else if (this.state.sGenPalDragStart) {
+				var sPalX = this.state.sGenPalDragStart.sPalX;
+				var sPalY = this.state.sGenPalDragStart.sPalY;
+				
+				var win81ScaleX = this.state.sGenPalDragStart.monDim.win81ScaleX || 1;
+				var win81ScaleY = this.state.sGenPalDragStart.monDim.win81ScaleY || 1;
+
+				sPalX += win81ScaleX * (e.clientX - this.state.sGenPalDragStart.clientX);
+				sPalY += win81ScaleY * (e.clientY - this.state.sGenPalDragStart.clientY);
+				
 				gEditorStore.setState({
-					sPalX: this.state.sGenPalDragStart.sPalX + (e.clientX - this.state.sGenPalDragStart.clientX),
-					sPalY: this.state.sGenPalDragStart.sPalY + (e.clientY - this.state.sGenPalDragStart.clientY),
+					sPalX: sPalX,
+					sPalY: sPalY,
 					setStateFromMouseMove: true
 				});
 			} else if (this.state.sGenPalZoomViewDragStart) {
@@ -3295,12 +3304,12 @@ function init(aArrBufAndCore) {
 				ref: 'can',
 				style: {}
 			};
-			
+		
 			var cPalPalProps = {
 				id:'palette',
 				style: {
-					left: this.state.sPalX + 'px',
-					top: this.state.sPalY + 'px'
+					left: mmtm.x(this.state.sPalX) + 'px',
+					top: mmtm.y(this.state.sPalY) + 'px'
 				},
 				ref: 'pal'
 			};
@@ -3586,7 +3595,7 @@ function init(aArrBufAndCore) {
 			if (e.button != 0) { return }
 			
 			gEditorStore.setState({
-				sGenPalDragStart: {clientX:e.clientX, clientY:e.clientY, sPalX:this.props.sPalX, sPalY:this.props.sPalY}
+				sGenPalDragStart: {clientX:e.clientX, clientY:e.clientY, sPalX:this.props.sPalX, sPalY:this.props.sPalY, monDim:{win81ScaleX:tQS.win81ScaleX, win81ScaleY:tQS.win81ScaleY} }
 			});
 		},
 		render: function() {
@@ -5131,12 +5140,32 @@ function init(aArrBufAndCore) {
 			pCanHandleSize: 19,
 			pPalSeldSubs: palSeldSubs,
 			
-			pPalX: 5,
-			pPalY: 50
+			pPalX: 5, // link239285555
+			pPalY: 50 // link239285555
 		};
 	} else {
 		editorstate = JSON.parse(editorstateStr);
 	}
+	
+	// make sure pPalX and pPalY are on a monitor. if that monitor is no longer here, then use the defaults, which is near 0,0 which is on primary monitor which is always there
+	var pPalCoordsOnVisibleMon = false;
+	var pPalX = mmtm.x(editorstate.pPalX);
+	var pPalY = mmtm.y(editorstate.pPalY);
+	var allMonDim = tQS.allMonDim;
+	var l = allMonDim.length;
+	for (var i=0; i<l; i++) {
+		var cMonDim = allMonDim[i];
+		if (pPalX >= cMonDim.x && pPalX <= cMonDim.x + cMonDim.w &&
+			pPalY >= cMonDim.y && pPalY <= cMonDim.y + cMonDim.h) {
+				pPalCoordsOnVisibleMon = true;
+				break;
+		}
+	}
+	if (!pPalCoordsOnVisibleMon) {
+		editorstate.pPalX = 5; // link239285555
+		editorstate.pPalY = 50; // link239285555
+	}
+	
 	var initProps = editorstate;
 	console.log('initProps:', initProps);
 	initProps.pQS = pQS;
