@@ -2361,9 +2361,9 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.w = mx - oldx;
 							this.cstate.selection.h = my - oldy;
 							
-							// if (e.shiftKey) {
-								// this.cstate.selection.h = this.cstate.selection.w;
-							// }
+							if (e.altKey) {
+								this.cstate.selection.h = this.cstate.selection.w;
+							}
 							break;
 						case 10:
 							// lining start
@@ -3889,16 +3889,31 @@ function init(aArrBufAndCore) {
 						gCanStore.setCanState(false); // as i for sure added a new cutout
 						
 					break;
-				case 'Window Wand':
-					
-						if (gWinArr) {
-							
-						}
-					
-					break;
 				case 'Shapes':
 				
-						
+						if (gCState && gCState.selection) {
+							switch (gCState.selection.name) {
+								case 'Rectangle':
+								case 'Oval':
+									
+										var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.sGenPalTool];
+										var newValid = true;
+										if (gCState.selection.name != cSubTool) {
+											gCState.selection.name = cSubTool;
+											newValid = false;
+										}
+										
+										if (gCState.selection.lineWidth !== gCanStore.rconn.state.sPalLineWidth) {
+											gCState.selection.lineWidth = gCanStore.rconn.state.sPalLineWidth;
+											newValid = false;
+										}
+										gCanStore.setCanState(newValid);
+									
+									break;
+								default:
+									// this selection is not affected
+							}
+						}
 					
 					break;
 				default:
@@ -4068,6 +4083,9 @@ function init(aArrBufAndCore) {
 					dontStopPropagation = true;
 					gChangingSubToolTo = this.props.pSubButton.label;
 				// }
+			} else if (this.props.pButton.label == 'Shapes') {
+				dontStopPropagation = true;
+				gChangingSubToolTo = this.props.pSubButton.label;
 			}
 			
 			if (this.props.pSubButton.label == 'Last Selection') {
@@ -5010,7 +5028,7 @@ function init(aArrBufAndCore) {
 			}
 			
 		},
-		mouseup: function() {
+		mouseup: function(e) {
 			if (e.button != 0) { return }
 			
 			window.removeEventListener('mouseup', this.mouseup, false);
