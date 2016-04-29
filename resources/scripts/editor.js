@@ -5492,6 +5492,11 @@ var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i don
 tQS.allMonDim = JSON.parse(decodeURIComponent(tQS.allMonDimStr));
 delete tQS.allMonDimStr;
 
+if (!('win81ScaleX' in tQS)) {
+	tQS.win81ScaleX = 1;
+	tQS.win81ScaleY = 1;
+}
+
 // delete tQS.win81ScaleX;
 // delete tQS.win81ScaleY;
 
