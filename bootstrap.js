@@ -5661,8 +5661,8 @@ function FHR() {
 				this.frame.setAttribute('remote', 'true');
 			// }
 			this.frame.setAttribute('type', 'content');
-			// this.frame.setAttribute('style', 'height:100px;border:2px solid steelblue;');
-			this.frame.setAttribute('style', 'height:0;border:0;');
+			this.frame.setAttribute('style', 'height:200px;border:2px solid steelblue;');
+			// this.frame.setAttribute('style', 'height:0;border:0;');
 			
 			aDocument.documentElement.appendChild(this.frame);
 			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);			
