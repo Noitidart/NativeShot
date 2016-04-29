@@ -388,7 +388,7 @@ function pageLoaded(e) {
 		var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 		var docuri = webnav.document.documentURI;
 		
-		if (docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') == -1) { // because i used http://127.0.0.1/nativeshot it will fail load on allow as well, so i have to detect that here
+		if (docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') == -1) { // because i used http://127.0.0.1/nativeshot it will fail load on allow as well, so i have to detect that here // see link324335445454448
 			// failed loading
 			loadPage_finalizer(
 				{
@@ -508,11 +508,18 @@ var callbackSet = {
 				var docuri = webnav.document.documentURI;
 				console.log('docuri:', docuri);
 				
-				if (docuri.indexOf('about:') === 0) {
-					console.log('aContentWindow.location.href:', aContentWindow.location.href);
-					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
-					
-					var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+				var lochref = aContentWindow.location.href;
+				var lochash = aContentWindow.location.hash;
+				console.log('aContentWindow.location.href:', lochref);
+				console.log('aContentWindow.location.hash:', lochash);
+				
+				// docuri if localhost is not setup:
+					// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/nativeshot%3Fstate%3D1461945377084%23access_token%3Dd9c614034b86b92acde49b137ec3d990f20e24e4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3Dd816c4f1c4c869a61a62f54d30001390cde9461b%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
+				// docuri if localhost is set up is same as lochref:
+					// http://127.0.0.1/nativeshot?state=1461945377084#access_token=d9c614034b86b92acde49b137ec3d990f20e24e4&expires_in=2419200&token_type=bearer&refresh_token=d816c4f1c4c869a61a62f54d30001390cde9461b&account_username=Noitidart&account_id=12688375
+				
+				if ((docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') > -1) || lochref.indexOf('127.0.0.1/nativeshot') > -1) {
+					var receivedParamsFullStr = lochash[0] == '#' ? lochash.substr(1) : lochash;
 					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
 					
 					var receivedParamsKeyVal = {};
@@ -642,11 +649,19 @@ var callbackSet = {
 				var docuri = webnav.document.documentURI;
 				console.log('docuri:', docuri);
 				
-				if (docuri.indexOf('about:') === 0) {
-					console.log('aContentWindow.location.href:', aContentWindow.location.href);
-					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
+				var lochref = aContentWindow.location.href;
+				var lochash = aContentWindow.location.hash;
+				console.log('aContentWindow.location.href:', lochref);
+				console.log('aContentWindow.location.hash:', lochash);
+				
+				// docuri if localhost is not setup:
+					// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/nativeshot%3Fstate%3D1461945377084%23access_token%3Dd9c614034b86b92acde49b137ec3d990f20e24e4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3Dd816c4f1c4c869a61a62f54d30001390cde9461b%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
+				// docuri if localhost is set up is same as lochref:
+					// http://127.0.0.1/nativeshot?state=1461945377084#access_token=d9c614034b86b92acde49b137ec3d990f20e24e4&expires_in=2419200&token_type=bearer&refresh_token=d816c4f1c4c869a61a62f54d30001390cde9461b&account_username=Noitidart&account_id=12688375
+				
+				if ((docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') > -1) || lochref.indexOf('127.0.0.1/nativeshot') > -1) {
 					
-					var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+					var receivedParamsFullStr = lochash[0] == '#' ? lochash.substr(1) : lochash;
 					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
 					
 					var receivedParamsKeyVal = {};
@@ -725,11 +740,19 @@ var callbackSet = {
 				var docuri = webnav.document.documentURI;
 				console.log('docuri:', docuri);
 				
-				if (docuri.indexOf('about:') === 0) {
-					console.log('aContentWindow.location.href:', aContentWindow.location.href);
-					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
-					
-					var receivedParamsFullStr = aContentWindow.location.hash[0] == '#' ? aContentWindow.location.hash.substr(1) : aContentWindow.location.hash;
+				var lochref = aContentWindow.location.href;
+				var lochash = aContentWindow.location.hash;
+				console.log('aContentWindow.location.href:', lochref);
+				console.log('aContentWindow.location.hash:', lochash);
+				
+				// docuri if localhost is not setup:
+					// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/nativeshot%3Fstate%3D1461945377084%23access_token%3Dd9c614034b86b92acde49b137ec3d990f20e24e4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3Dd816c4f1c4c869a61a62f54d30001390cde9461b%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
+				// docuri if localhost is set up is same as lochref:
+					// http://127.0.0.1/nativeshot?state=1461945377084#access_token=d9c614034b86b92acde49b137ec3d990f20e24e4&expires_in=2419200&token_type=bearer&refresh_token=d816c4f1c4c869a61a62f54d30001390cde9461b&account_username=Noitidart&account_id=12688375
+				
+				if ((docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') > -1) || lochref.indexOf('127.0.0.1/nativeshot') > -1) {
+
+					var receivedParamsFullStr = lochash[0] == '#' ? lochash.substr(1) : lochash;
 					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
 					
 					var receivedParamsKeyVal = {};
@@ -767,9 +790,10 @@ var callbackSet = {
 	//// 
 }
 
+// link324335445454448
 callbackSet.authorizeApp_dropbox.push(callbackSet.allow_dropbox[0]);
 callbackSet.authorizeApp_gdrive.push(callbackSet.allow_gdrive[0]);
-callbackSet.authorizeApp_imgur.push(callbackSet.allow_imgur[0]); // because going to authorizeApp_imgur goes directly as if allow_imgur if user had previously (non-locally) allowed it (so meaning on their servers) i add in the allow_imgur block to the above, without duplicating copy paste
+callbackSet.authorizeApp_imgur.push(callbackSet.allow_imgur[0]); // because going to authorizeApp_imgur goes directly as if allow_imgur if user had previously (non-locally) allowed it (so meaning on their servers) i add in the allow_imgur block to the above, without duplicating copy paste // link324335445454448
 
 var clickSet = {
 
