@@ -2062,6 +2062,14 @@ function init(aArrBufAndCore) {
 			if (dropping && gDroppingCoords.length) {
 				var dy = gDroppingCoords.pop();
 				var dx = gDroppingCoords.pop();
+				
+				if (!gDroppingMixCtx) {
+					var mixcan = document.createElement('canvas');
+					mixcan.width = 1;
+					mixcan.height = 1;
+					gDroppingMixCtx = mixcan.getContext('2d');
+				}
+				
 				gDroppingMixCtx.drawImage(this.refs.can0, mmtm.x(dx), mmtm.y(dy), 1, 1, 0, 0, 1, 1);
 				gDroppingMixCtx.drawImage(this.refs.can, mmtm.x(dx), mmtm.y(dy), 1, 1, 0, 0, 1, 1);
 				var mixedRGBA = gDroppingMixCtx.getImageData(0, 0, 1, 1).data;
@@ -4700,12 +4708,7 @@ function init(aArrBufAndCore) {
 			
 			gColorPickerSetState[this.props.pSetStateName](overwriteObjWithObj(setStateObj, addColorSetStateObj));
 		},
-		dropperClick: function() {
-			var mixcan = document.createElement('canvas');
-			mixcan.width = 1;
-			mixcan.height = 1;
-			gDroppingMixCtx = mixcan.getContext('2d');
-			
+		dropperClick: function() {			
 			gColorPickerSetState[this.props.pSetStateName]({
 				sGenColorPickerDropping: {
 					initColor: this.props.sColor, // the original color before picking. so if user hits Esc i cancel the dropping and restore this color
