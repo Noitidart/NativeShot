@@ -94,7 +94,7 @@ function canSetState(aData) {
 	}
 	// gCState = JSON.parse(aData.cstate);
 	
-	gCanStore.setCanState(false, true);
+	// gCanStore.setCanState(false, true);
 }
 
 function zcanInvalidate(aData) {
@@ -1837,7 +1837,6 @@ function init(aArrBufAndCore) {
 				
 					// is aDrawable selected
 					if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
-						console.log('yes sel and its self, selectionHandles:', this.cstate.selectionHandles);
 						var selectionHandles = this.cstate.selectionHandles;
 						var handleSize = this.state.sCanHandleSize;
 						for (var i=0; i<8; i++) {
@@ -2202,6 +2201,7 @@ function init(aArrBufAndCore) {
 		},
 		setCanState: function(isValid, dontBroadcast) {
 			if (!isValid) {
+				this.cstate.valid = false;
 				if (!dontBroadcast) {
 					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
 						topic: 'broadcastToOthers',
@@ -2212,7 +2212,6 @@ function init(aArrBufAndCore) {
 						iMon: tQS.iMon
 					}));
 				}
-				this.cstate.valid = false;
 			}
 		},
 		setStyleablesDefaults: function(aDrawable) {
@@ -2371,7 +2370,7 @@ function init(aArrBufAndCore) {
 				} else if (this.cstate.resizing) {
 					var oldx = this.cstate.selection.x;
 					var oldy = this.cstate.selection.y;
-					
+					console.log('this.cstate.resizing:', this.cstate.resizing);
 					switch(this.cstate.resizing) {
 						case 2:
 							this.cstate.selection.x = mx;
@@ -2500,7 +2499,7 @@ function init(aArrBufAndCore) {
 						for (var i=l; i>-1; i--) {
 							var drawable = drawables[i];
 							isContained = this.dContains(drawable, mx, my);
-							console.log('isContained:', isContained, 'drawable:', drawable)
+							// console.log('isContained:', isContained, 'drawable:', drawable)
 							if (isContained) {
 								// console.error('yes drawable contains:', drawable);
 								break;
@@ -3090,7 +3089,8 @@ function init(aArrBufAndCore) {
 						this.cstate.dragdown = null;
 						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.resizing) {
-						this.cstate.resizing = false;
+						this.cstate.resizing = 0;
+						console.log('due to mouseup, resizing set to 0 to stop');
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
 							this.dDelete(this.cstate.selection);
