@@ -76,6 +76,16 @@ function reactSetState(aData) {
 function canSetState(aData) {
 	// console.log('in canSetState, aData:', aData);
 	var newCanState = JSON.parse(aData.cstate);
+	
+	if (newCanState.selection) {
+		if (!newCanState.drawables) {
+			console.error('if canSetState includes selection it MUST include drawables with it as well');
+			throw new Error('if canSetState includes selection it MUST include drawables with it as well');
+			// because the reference needs to be same as i affect this.selection.PROPERTY as if it were the object in the drawable
+		}
+		newCanState.selection = newCanState.drawables[gCanStore.rconn.dIndexOf(newCanState.selection, newCanState.drawables)];
+	}
+	
 	for (var p in newCanState) {
 		// if (p == 'valid') {
 			// continue;
@@ -83,6 +93,7 @@ function canSetState(aData) {
 		gCState[p] = newCanState[p];
 	}
 	// gCState = JSON.parse(aData.cstate);
+	
 	gCanStore.setCanState(false, true);
 }
 
@@ -95,10 +106,12 @@ function zcanInvalidate(aData) {
 
 var gAction;
 var gSub;
-function initCompositeForAction(aAction, aSub) {
+var gBoolClose;
+function initCompositeForAction(aAction, aSub, boolClose) {
 	if (!gCompositesArr) {
 		gAction = aAction;
 		gSub = aSub;
+		gBoolClose = boolClose;
 		var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 		if (!cutouts.length) {
 			alert('no selection made!');
@@ -272,8 +285,10 @@ function fullfillCompositeRequest(aData) {
 		gCompositesArr = undefined;
 		var action = gAction;
 		var sub = gSub;
+		var boolclose = gBoolClose;
 		gAction = undefined;
 		gSub = undefined;
+		gBoolClose = undefined;
 		
 		// create composited rect
 		var compositeRect;
@@ -401,7 +416,14 @@ function fullfillCompositeRequest(aData) {
 				return;
 		}
 		
-
+		
+		var postAction = function() {
+			if (boolclose) {
+				window.close();
+			}
+		};
+		
+		// the various actions
 		if (sub == 'Twitter') {
 			
 			triggerNSCommEvent({
@@ -410,6 +432,8 @@ function fullfillCompositeRequest(aData) {
 				argsArr: [can.toDataURL('image/png', '')],
 				iMon: tQS.iMon
 			});
+			
+			postAction();
 			
 		} else if (['Copy', 'Print'].indexOf(action) > -1) {
 			
@@ -421,6 +445,8 @@ function fullfillCompositeRequest(aData) {
 				iMon: tQS.iMon
 			});
 			
+			postAction();
+			
 		} else if (['Text Recognition'].indexOf(action) > -1) {
 			
 			// plain array buffer actions
@@ -430,6 +456,8 @@ function fullfillCompositeRequest(aData) {
 				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height],
 				iMon: tQS.iMon
 			});
+			
+			postAction();
 			
 		} else {
 			
@@ -446,7 +474,7 @@ function fullfillCompositeRequest(aData) {
 						iMon: tQS.iMon
 					});
 		
-					// window.close();
+					postAction();
 					
 				};
 				r.readAsArrayBuffer(b);
@@ -1021,6 +1049,8 @@ function init(aArrBufAndCore) {
 			this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
 			gCState = this.cstate;
 			
+			gCState.nextid = 0; // next id for drawable
+			
 			gCanStore.rconn = this; // connectio to the react component
 			
 			// start - simon canvas stuff
@@ -1033,7 +1063,7 @@ function init(aArrBufAndCore) {
 			this.cstate.drawables = []; // the collection of things to be drawn
 			
 			this.cstate.dragging = false; // Keep track of when we are dragging
-			this.cstate.resizing = false; // when mouses down with a tool that can draw
+			this.cstate.resizing = 0; // when mouses down with a tool that can draw
 			this.cstate.lining = false; // when picking new end points for a line
 			this.cstate.pathing = null; // when drawing with pencil or marker // it is set to a an array of 2 points when not null
 			this.cstate.typing = false;
@@ -1149,7 +1179,8 @@ function init(aArrBufAndCore) {
 			
 			// set obj props
 			DRAWABLE.name = name;
-			//DRAWABLE.id = (new Date()).getTime();
+			DRAWABLE.id = this.cstate.nextid;
+			this.cstate.nextid++;
 			
 			// set rest
 			switch (name) {
@@ -1739,7 +1770,7 @@ function init(aArrBufAndCore) {
 			switch (aDrawable.name) {
 				case 'Line':
 				
-						if (this.cstate.selection && this.cstate.selection == aDrawable) {
+						if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 							var selectionHandles = this.cstate.selectionHandles;
 							var handleSize = this.state.sCanHandleSize;
 							for (var i=0; i<2; i++) {
@@ -1805,7 +1836,8 @@ function init(aArrBufAndCore) {
 					// cutout, Rectangle, Oval, Gaussian, Mosaic
 				
 					// is aDrawable selected
-					if (this.cstate.selection && this.cstate.selection == aDrawable) {
+					if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
+						console.log('yes sel and its self, selectionHandles:', this.cstate.selectionHandles);
 						var selectionHandles = this.cstate.selectionHandles;
 						var handleSize = this.state.sCanHandleSize;
 						for (var i=0; i<8; i++) {
@@ -1873,7 +1905,7 @@ function init(aArrBufAndCore) {
 					
 					break;
 				default:
-					drawables.splice(drawables.indexOf(aDrawable), 1);
+					drawables.splice(this.dIndexOf(aDrawable), 1);
 			}
 			
 			switch (aDrawable.name) {
@@ -1915,11 +1947,22 @@ function init(aArrBufAndCore) {
 		dBringToFront: function(aDrawable) {
 			// brings the Drawable to the front of the z-index
 			var drawables = this.cstate.drawables;
-			// var l = drawables.length;
-			// for (var i=0; i<l; i++) {
-			// 	if (drawables[i].id == aDrawable.id)
-			// }
-			drawables.push(drawables.splice(drawables.indexOf(aDrawable), 1)[0]);
+			drawables.push(drawables.splice(this.dIndexOf(aDrawable), 1)[0]);
+		},
+		dIndexOf: function(aDrawable, aDrawablesArr) {
+			var drawables;
+			if (aDrawablesArr) {
+				drawables = aDrawablesArr;
+			} else {
+				drawables = this.cstate.drawables;
+			}
+			var l = drawables.length;
+			for (var i=0; i<l; i++) {
+				if (drawables[i].id == aDrawable.id) {
+					return i;
+				}
+			}
+			return -1;
 		},
 		dDeleteAll: function(aDrawableNamesArr) {
 			// does .delete() for all that are found with the name
@@ -2020,8 +2063,8 @@ function init(aArrBufAndCore) {
 			if (dropping && gDroppingCoords.length) {
 				var dy = gDroppingCoords.pop();
 				var dx = gDroppingCoords.pop();
-				gDroppingMixCtx.drawImage(this.refs.can0, dx, dy, 1, 1, 0, 0, 1, 1);
-				gDroppingMixCtx.drawImage(this.refs.can, dx, dy, 1, 1, 0, 0, 1, 1);
+				gDroppingMixCtx.drawImage(this.refs.can0, mmtm.x(dx), mmtm.y(dy), 1, 1, 0, 0, 1, 1);
+				gDroppingMixCtx.drawImage(this.refs.can, mmtm.x(dx), mmtm.y(dy), 1, 1, 0, 0, 1, 1);
 				var mixedRGBA = gDroppingMixCtx.getImageData(0, 0, 1, 1).data;
 				var newDropperObj = {};
 				newDropperObj[dropping.pStateColorKey] = 'rgb(' + mixedRGBA[0] + ', ' + mixedRGBA[1] + ', ' + mixedRGBA[2] + ')'; // rgbToHex(true, mixedRGBA[0], mixedRGBA[0], mixedRGBA[2]);
@@ -2248,6 +2291,7 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mousemove: function(e) {
+			// console.log('mousemove on mon:', tQS.iMon);
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
@@ -2456,6 +2500,7 @@ function init(aArrBufAndCore) {
 						for (var i=l; i>-1; i--) {
 							var drawable = drawables[i];
 							isContained = this.dContains(drawable, mx, my);
+							console.log('isContained:', isContained, 'drawable:', drawable)
 							if (isContained) {
 								// console.error('yes drawable contains:', drawable);
 								break;
@@ -3020,6 +3065,8 @@ function init(aArrBufAndCore) {
 		},
 		mouseup: function(e) {
 			if (e.button != 0) { return }
+			
+			console.log('mouseup in imon:', tQS.iMon);
 			
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
@@ -3704,7 +3751,7 @@ function init(aArrBufAndCore) {
 				case 'Text Recognition':
 				
 					var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.pButton.label];
-					initCompositeForAction(this.props.pButton.label, cSubTool);
+					initCompositeForAction(this.props.pButton.label, cSubTool, !e.shiftKey);
 				
 					break;
 				// end - actions
