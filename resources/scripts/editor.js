@@ -952,7 +952,7 @@ function init(aArrBufAndCore) {
 		},
 		componentDidMount: function() {
 			var oSetState = this.setState.bind(this);
-			var needsBroadcast = false;
+			// var needsBroadcast = false;
 			this.setState = function(aObj, isBroadcast, fromDraw) {
 				var shouldBroadcast;
 				if (!fromDraw && aObj.setStateFromMouseMove) {
@@ -961,31 +961,34 @@ function init(aArrBufAndCore) {
 						} else {
 							spliceObj(gSetStateObj, aObj);
 						}
-						if (!isBroadcast && !needsBroadcast) {
-							needsBroadcast = true; // as this is a local global
-						}
+						// currently, whenever i set setStateFromMouseMove, i dont have a isBroadcast false, so no need for this
+						// if (!isBroadcast && !needsBroadcast) {
+							// needsBroadcast = true; // as this is a local global
+						// }
 						return;
 				} else if (!fromDraw && !aObj.setStateFromMouseMove) {
 						if (gSetStateObj) {
-							spliceObj(aObj, gSetStateObj);
+							spliceObj(gSetStateObj, aObj);
+							aObj = gSetStateObj;
 							gSetStateObj = null;
 							delete aObj.setStateFromMouseMove;
 						}
-						if (!isBroadcast && !needsBroadcast) {
-							needsBroadcast = true; // as this is a local global
-						}
+						// shouldBroadcast = !isBroadcast && needsBroadcast
+						shouldBroadcast = !isBroadcast;
 				} else if (fromDraw) {
 					aObj = gSetStateObj;
 					gSetStateObj = null;
 					delete aObj.setStateFromMouseMove;
-					shouldBroadcast = !isBroadcast && needsBroadcast;
+					// shouldBroadcast = !isBroadcast && needsBroadcast;
+					// shouldBroadcast = !isBroadcast; // useless really, as when fromDraw the broadcast param is never specified
+					shouldBroadcast = true;
 				} else {
 					console.error('should never ever get here!!');
 					throw new Error('should never ever get here!!');
 					shouldBroadcast = !isBroadcast;
 				}
 				if (shouldBroadcast) {
-					needsBroadcast = false;
+					// needsBroadcast = false;
 					// clearTimeout(gBroadcastTimeout);
 					// gBroadcastTimeout = setTimeout(function() {
 						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
