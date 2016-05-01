@@ -64,12 +64,10 @@ function init(objCore) {
 		}
 	}
 
-	// if (core.os.toolkit == 'gtk2') {
-		// core.os.name = 'gtk';
-	// }
+	core.os.mname = core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name;
 	
 	// I import ostypes_*.jsm in init as they may use things like core.os.isWinXp etc
-	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
@@ -110,6 +108,34 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
+self.onclose = function() {
+	console.error('starting self.onclose');
+	
+	switch (core.os.mname) {
+		case 'winnt':
+		case 'winmo':
+		case 'wince':
+				
+				// 
+				
+			break
+		case 'gtk':
+		
+				// ostypes.HELPER.ifOpenedXCBConnClose();
+				
+			break;
+		case 'darwin':
+			 
+				// 
+			 
+			break;
+		default:
+			// nothing special
+	}
+	
+	console.error('ok completed the self.onclose stuff');
+}
+
 function getAllWin(aOptions) {
 	// returns an array of objects a list of all the windows in z order front to back:
 	/*
@@ -1450,6 +1476,30 @@ function shootAllMons() {
 				
 
 				*/
+				
+				// todo: become xcb based
+				////// var setup = ostypes.API('xcb_get_setup')(ostypes.HELPER.cachedXCBConn);
+				////// console.log('setup:', setup.contents);
+				////// 
+				////// var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
+				////// 
+				////// var screensCnt = screens.rem;
+				////// console.log('screensCnt:', screensCnt);
+				////// 
+				////// for (var i=0; i<screensCnt; i++) {
+				////// 	console.log('screen[' + i + ']:', screens);
+				////// 	console.log('screen[' + i + '].data:', screens.data.contents);
+                ////// 
+				////// 	collMonInfos.push({
+				////// 		x: parseInt(cutils.jscGetDeepest(xrrci.contents.x)),
+				////// 		y: parseInt(cutils.jscGetDeepest(xrrci.contents.y)),
+				////// 		w: parseInt(cutils.jscGetDeepest(screens.data.contents.width_in_pixels)),
+				////// 		h: parseInt(cutils.jscGetDeepest(screens.data.contents.height_in_pixels)),
+				////// 		screenshot: null // for x11, i take the big canvas and protion to each mon
+				////// 	});
+				////// 	
+				////// 	ostypes.API('xcb_screen_next')(screens.address());
+				////// }
 				
 				// XRRScreenResources *xrrr = XRRGetScreenResources(d, w);
 				var xrrr = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
