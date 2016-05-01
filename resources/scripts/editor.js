@@ -959,25 +959,29 @@ function init(aArrBufAndCore) {
 						if (!gSetStateObj) {
 							gSetStateObj = aObj;
 						} else {
-							overwriteObjWithObj(gSetStateObj, aObj);
+							spliceObj(gSetStateObj, aObj);
 						}
 						if (!isBroadcast && !needsBroadcast) {
-							needsBroadcast = true;
+							needsBroadcast = true; // as this is a local global
 						}
 						return;
-				} else if (!fromDraw && !aObj.setStateFromMouseMove && gSetStateObj) {
+				} else if (!fromDraw && !aObj.setStateFromMouseMove) {
 						if (gSetStateObj) {
+							spliceObj(aObj, gSetStateObj);
 							gSetStateObj = null;
+							delete aObj.setStateFromMouseMove;
 						}
-						overwriteObjWithObj(gSetStateObj, aObj)
-						delete aObj.setStateFromMouseMove;
-						shouldBroadcast = !isBroadcast && needsBroadcast
+						if (!isBroadcast && !needsBroadcast) {
+							needsBroadcast = true; // as this is a local global
+						}
 				} else if (fromDraw) {
 					aObj = gSetStateObj;
 					gSetStateObj = null;
-					shouldBroadcast = !isBroadcast && needsBroadcast
 					delete aObj.setStateFromMouseMove;
+					shouldBroadcast = !isBroadcast && needsBroadcast;
 				} else {
+					console.error('should never ever get here!!');
+					throw new Error('should never ever get here!!');
 					shouldBroadcast = !isBroadcast;
 				}
 				if (shouldBroadcast) {
@@ -1050,7 +1054,7 @@ function init(aArrBufAndCore) {
 			gCState = this.cstate;
 			
 			gCState.nextid = 0; // next id for drawable
-			
+
 			gCanStore.rconn = this; // connectio to the react component
 			
 			// start - simon canvas stuff
@@ -1075,6 +1079,8 @@ function init(aArrBufAndCore) {
 			
 			this.cstate.downx = 0; // when the user mouses down on canvas
 			this.cstate.downy = 0; // when the user mouses down on canvas
+			
+			this.cstate.downedInMon = -1;
 			
 			// **** Options! ****
 			// now that Style is setup, i can add Drawable's
@@ -2319,6 +2325,11 @@ function init(aArrBufAndCore) {
 		},
 		mousemove: function(e) {
 			// console.log('mousemove on mon:', tQS.iMon);
+			if (this.cstate.downedInMon > -1 && tQS.iMon !== this.cstate.downedInMon) {
+				console.warn('ignoring mousemove as it is not in monitor downed in');
+				return;
+			}
+			
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
@@ -2398,7 +2409,7 @@ function init(aArrBufAndCore) {
 				} else if (this.cstate.resizing) {
 					var oldx = this.cstate.selection.x;
 					var oldy = this.cstate.selection.y;
-					console.log('this.cstate.resizing:', this.cstate.resizing);
+					console.log('this.cstate.resizing:', this.cstate.resizing, tQS.iMon);
 					switch(this.cstate.resizing) {
 						case 2:
 							this.cstate.selection.x = mx;
@@ -2646,6 +2657,7 @@ function init(aArrBufAndCore) {
 			this.cstate.downx = mx;
 			this.cstate.downy = my;
 			
+			this.cstate.downedInMon = tQS.iMon;
 			if (e.target == this.refs.can) {
 				
 				var dropping = this.state.sGenColorPickerDropping;
@@ -3094,6 +3106,7 @@ function init(aArrBufAndCore) {
 			if (e.button != 0) { return }
 			
 			console.log('mouseup in imon:', tQS.iMon);
+			this.cstate.downedInMon = -1;
 			
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
@@ -3118,7 +3131,7 @@ function init(aArrBufAndCore) {
 						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.resizing) {
 						this.cstate.resizing = 0;
-						console.log('due to mouseup, resizing set to 0 to stop');
+						console.error('due to mouseup, resizing set to 0 to stop', tQS.iMon);
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
 							this.dDelete(this.cstate.selection);
@@ -5595,7 +5608,7 @@ function receiveWinArr(aData) {
 }
 
 // link9999191911111
-Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({ // this sometimes triggers `uncaught exception: out of memory editor.js:5611:1`
 	topic: 'init',
 	iMon: tQS.iMon
 }));
