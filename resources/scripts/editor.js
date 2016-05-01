@@ -1097,8 +1097,9 @@ function init(aArrBufAndCore) {
 			window.addEventListener('wheel', this.wheel, false);
 		},
 		componentDidUpdate: function(prevProps, prevState) {
+			var canValid = true;
+			
 			if (this.cstate && this.cstate.valid) {
-				var canValid = true;
 				
 				if (this.cstate.selection) {
 					// if changed stuff affects canvas
@@ -1157,11 +1158,27 @@ function init(aArrBufAndCore) {
 						}
 					}
 				}
-				if (!canValid) {
-					alert('doing can update no broadcast');
-				}
-				gCanStore.setCanState(canValid, true); // dont broadcast this one, as the setting of the react state will trigger componentUpdate there, which will trigger this set can state
 			}
+			
+			// if pal tool changed, clear selection
+			if (this.cstate && prevState.sGenPalTool && this.cstate.selection && prevState.sGenPalTool != this.state.sGenPalTool) {
+				// clear selection
+				var validPostClear = this.clearSelection();
+				if (!validPostClear && canValid) {
+					canValid = validPostClear;
+				}
+			}
+			
+			// if pal tool sub tool changes, and dropping was in progress, then cancel the dropping
+			if (prevState.sGenPalTool != this.state.sGenPalTool || prevState.sPalSeldSubs[prevState.sGenPalTool] != this.state.sPalSeldSubs[prevState.sGenPalTool]) {
+				this.cancelDropping();
+			}
+			
+			// clean up when dropper is canceled
+			if (prevState.sGenColorPickerDropping && !this.state.sGenColorPickerDropping) {
+				gDroppingMixCtx = null;
+			}
+			
 			//if (this.state.sPalMultiDepresses['Zoom View'] != prevState.sPalMultiDepresses['Zoom View']) {
 			//	if (this.state.sPalMultiDepresses['Zoom View']) {
 			//		alert('adding wheel');
@@ -1171,6 +1188,9 @@ function init(aArrBufAndCore) {
 			//		window.removeEventListener('wheel', this.wheel, false);
 			//	}
 			//}
+			
+			// update canvas if it is in need of it
+			gCanStore.setCanState(canValid, true); // dont broadcast this one, as the setting of the react state will trigger componentUpdate there, which will trigger this set can state
 		},
 		////// start - canvas functions
 		newDrawable: function(x, y, w, h, name, aOptions={}) {
@@ -3215,14 +3235,8 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Escape':
 						
-						var dropping = this.state.sGenColorPickerDropping;
-						if (dropping) {
-							var cancelDroppingObj = {};
-							cancelDroppingObj[dropping.pStateColorKey] = dropping.initColor;
-							cancelDroppingObj.sGenColorPickerDropping = null;
-							gEditorStore.setState(cancelDroppingObj);							
-							gDroppingMixCtx = null;
-							
+						var canceledDropping = this.cancelDropping();
+						if (canceledDropping) {
 							return; // so we dont close the window
 						}
 						
@@ -3231,6 +3245,18 @@ function init(aArrBufAndCore) {
 					break;
 				default:
 					// do nothing
+			}
+		},
+		cancelDropping: function() {
+			// returns true if canceled
+			var dropping = this.state.sGenColorPickerDropping;
+			if (dropping) {
+				var cancelDroppingObj = {};
+				cancelDroppingObj[dropping.pStateColorKey] = dropping.initColor;
+				cancelDroppingObj.sGenColorPickerDropping = null;
+				gEditorStore.setState(cancelDroppingObj);							
+				
+				return true; // so we dont close the window
 			}
 		},
 		keydown: function(e) {
