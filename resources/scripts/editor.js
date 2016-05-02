@@ -1107,67 +1107,73 @@ function init(aArrBufAndCore) {
 		},
 		componentDidUpdate: function(prevProps, prevState) {
 			var canValid = true;
-			
-			if (this.cstate && this.cstate.valid) {
-				
+
 				if (this.cstate.selection) {
-					// if changed stuff affects canvas
-					// color is now set by the color widgets. arrow by arrow widget etc.
+					// if changed stuff affects canvas draw, then adjust the drawing and invalidate
+
+					// invalidate due to handle change?
+					if (prevState.sCanHandleSize != this.state.sCanHandleSize) {
+						canValid = false;
+					}
+					
+					// did any properties change that affects selected drawable? if so then update the properties of the drawable and invalidate
+					var mySel = this.cstate.selection;
+					
 					var affectsStateVars = {
-						handle: ['sCanHandleSize'],
-						// fillcolor: ['sPalFillColor', 'sPalFillAlpha'],
-						// linecolor: ['sPalLineColor', 'sPalLineAlpha'],
-						// linewidth: [],
-						// linestyle: [],
-						// arrows: []
+						fillStyle: ['sPalFillColor', 'sPalFillAlpha'],
+						strokeStyle: mySel.name == 'Marker' ? ['sPalMarkerColor', 'sPalMarkerAlpha'] : ['sPalLineColor', 'sPalLineAlpha'],
+						lineWidth: 'sPalLineWidth',
+						// lineStyle: ,
+						arrowStart: 'sPalArrowStart',
+						arrowEnd: 'sPalArrowEnd',
+						arrowLength: 'sPalArrowLength',
+						fontface: 'sPalFontFace',
+						fontbold: 'sPalFontBold',
+						fontitalic: 'sPalFontItalic',
+						fontsize: 'sPalFontSize',
+						w: 'sGenPalW',
+						h: 'sGenPalH'
 					};
-					var affects = {
-						handle: true,
-						// fillcolor: false,
-						// linecolor: false,
-						// linewidth: false,
-						// linestyle: false,
-						// arrows: false
-					};
-					// switch (this.cstate.selection.name) {
-					// 	case 'Rectangle':
-					// 	case 'Oval':
-					// 			
-					// 			affects.fillcolor = true;
-					// 			affects.linecolor = true;
-					// 			affects.linewidth = true;
-					// 			affects.linestyle = true;
-					// 			
-					// 		break;
-					// 	case 'Line':
-					// 			
-					// 			affects.fillcolor = true;
-					// 			affects.linecolor = true;
-					// 			affects.linewidth = true;
-					// 			affects.linestyle = true;
-					// 			affects.arrows = true;
-					// 			
-					// 		break;
-					// 	default:
-					// 		// none
-					// }
+					
+					// special for line
+					var isText;
+					if (mySel.name == 'Line') {
+						delete affectsStateVars.fillStyle;
+					} else if (mySel.name == 'Text') {
+						isText = true;
+					}
 					
 					affectsFor:
-					for (var p in affects) {
-						if (affects[p]) {
-							var cStateVars = affectsStateVars[p];
-							var l = cStateVars.length;
-							for (var i=0; i<l; i++) {
-								var cVarName = cStateVars[i];
+					for (var p in mySel) {
+						// console.log('on sel prop:', p);
+						if (p in affectsStateVars) {
+							// console.warn('in sel - testing diff');
+							if (p == 'strokeStyle' || p == 'fillStyle') {
+									var cColorVarName = affectsStateVars[p][0];
+									var cAlphaVarName = affectsStateVars[p][1];
+									
+									if (prevState[cColorVarName] != this.state[cColorVarName] || prevState[cAlphaVarName] != this.state[cAlphaVarName]) {
+										// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
+										canValid = false;
+										mySel[p] = colorStrToCssRgba(this.state[cColorVarName], this.state[cAlphaVarName]);
+										if (p == 'strokeStyle' && mySel.name == 'Line') {
+											mySel.fillStyle = mySel[p]; // needed for arrow
+										}
+									}
+							} else {
+								var cVarName = affectsStateVars[p];
 								if (prevState[cVarName] != this.state[cVarName]) {
+									console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
 									canValid = false;
-									break affectsFor;
+									mySel[p] = this.state[cVarName];
+									if (isText && p.indexOf('font') === 0) {
+										mySel.font = this.calcCtxFont(mySel);
+									}
 								}
 							}
 						}
 					}
 				}
-			}
 			
 			// if pal tool changed, clear selection
 			if (this.cstate && prevState.sGenPalTool && this.cstate.selection && prevState.sGenPalTool != this.state.sGenPalTool) {
@@ -4167,8 +4173,8 @@ function init(aArrBufAndCore) {
 				if (this.props.sGenPalTool == 'Select') {
 					gCState.selection = cCutout;
 					gEditorStore.setState({
-						sGenPalW: tQS.w,
-						sGenPalH: tQS.h
+						sGenPalW: cCutout.w,
+						sGenPalH: cCutout.h
 					});
 				}
 				gCanStore.setCanState(false); // as i for sure added a new cutout
@@ -6104,7 +6110,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	// if you do pass aOptions.ctx, keep in mind that the ctx properties will be changed and not set back. so you should have a devoted canvas for this
 	// if you dont pass in a width to aOptions, it will return it to you in the return object
 	// the returned width is Math.ceil'ed
-	console.error('aChars: "' + aChars + '"');
+	// console.error('aChars: "' + aChars + '"');
 	var defaultOptions = {
 		width: undefined, // if you specify a width then i wont have to use measureText to get the width
 		canAndCtx: undefined, // set it to object {can:,ctx:} // if not provided, i will make one
@@ -6163,11 +6169,11 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	
 	ctx.fillStyle = 'white';
 	
-	console.log('w:', w);
+	// console.log('w:', w);
 	
 	var avgOfRange = (aOptions.range + 1) / 2;
 	var yBaseline = Math.ceil(aSize * avgOfRange);
-	console.log('yBaseline:', yBaseline);
+	// console.log('yBaseline:', yBaseline);
 	
 	ctx.fillText(aChars, 0, yBaseline);
 	
