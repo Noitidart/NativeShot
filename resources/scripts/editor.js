@@ -1132,7 +1132,9 @@ function init(aArrBufAndCore) {
 						fontitalic: 'sPalFontItalic',
 						fontsize: 'sPalFontSize',
 						w: 'sGenPalW',
-						h: 'sGenPalH'
+						h: 'sGenPalH',
+						blurradius: 'sPalBlurRadius',
+						blurblock: 'sPalBlurBlock'
 					};
 					
 					// special for line
@@ -1141,6 +1143,12 @@ function init(aArrBufAndCore) {
 						delete affectsStateVars.fillStyle;
 					} else if (mySel.name == 'Text') {
 						isText = true;
+					}
+					
+					// special stuff, for when resizing
+					if (this.cstate.resizing) {
+						delete affectsStateVars.w;
+						delete affectsStateVars.h;
 					}
 					
 					affectsFor:
@@ -1154,25 +1162,52 @@ function init(aArrBufAndCore) {
 									
 									if (prevState[cColorVarName] != this.state[cColorVarName] || prevState[cAlphaVarName] != this.state[cAlphaVarName]) {
 										// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
-										canValid = false;
-										mySel[p] = colorStrToCssRgba(this.state[cColorVarName], this.state[cAlphaVarName]);
-										if (p == 'strokeStyle' && mySel.name == 'Line') {
-											mySel.fillStyle = mySel[p]; // needed for arrow
+										var newColor = colorStrToCssRgba(this.state[cColorVarName], this.state[cAlphaVarName]);
+										if (mySel[p] !== newColor) {
+											canValid = false;
+											mySel[p] = newColor;
+											if (p == 'strokeStyle' && mySel.name == 'Line') {
+												mySel.fillStyle = newColor; // needed for arrow
+											}
 										}
 									}
 							} else {
 								var cVarName = affectsStateVars[p];
 								if (prevState[cVarName] != this.state[cVarName]) {
-									console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
-									canValid = false;
-									mySel[p] = this.state[cVarName];
-									if (isText && p.indexOf('font') === 0) {
-										mySel.font = this.calcCtxFont(mySel);
+									// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
+									if (mySel[p] !== this.state[cVarName]) {
+										// console.log('sending update on it');
+										canValid = false;
+										mySel[p] = this.state[cVarName];
+										if (isText && p.indexOf('font') === 0) {
+											mySel.font = this.calcCtxFont(mySel);
+										}
 									}
 								}
 							}
 						}
 					}
+					
+					// check if need to convert shape. like if rect was selected, and now made it oval. or gaussian and now mosaic - only for tools with a submenu
+					if (prevState.sGenPalTool == this.state.sGenPalTool && prevState.sPalSeldSubs[prevState.sGenPalTool] != this.state.sPalSeldSubs[prevState.sGenPalTool]) {
+						// exclude Freedraw submenu
+						if (prevState.sGenPalTool != 'Freedraw') {
+							var nameOfDrawableOfPrevSubTool = prevState.sPalSeldSubs[prevState.sGenPalTool];
+							var nameOfDrawableOfNowSubTool = this.state.sPalSeldSubs[prevState.sGenPalTool];
+							if (mySel.name == nameOfDrawableOfPrevSubTool) {
+								mySel.name = nameOfDrawableOfNowSubTool;
+								canValid = false;
+								if (nameOfDrawableOfPrevSubTool == 'Mosaic') {
+									delete mySel.blurblock;
+									mySel.blurradius = this.state.sPalBlurRadius;
+								} else if (nameOfDrawableOfPrevSubTool == 'Gaussian') {
+									delete mySel.blurradius;
+									mySel.blurblock = this.state.sPalBlurBlock;
+								}
+							}
+						}
+					}
+					
 				}
 			
 			// if pal tool changed, clear selection
