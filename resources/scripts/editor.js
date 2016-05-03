@@ -1151,7 +1151,7 @@ function init(aArrBufAndCore) {
 						delete affectsStateVars.h;
 					}
 					
-					affectsFor:
+					// start original block1929293055
 					for (var p in mySel) {
 						// console.log('on sel prop:', p);
 						if (p in affectsStateVars) {
@@ -1187,6 +1187,7 @@ function init(aArrBufAndCore) {
 							}
 						}
 					}
+					// end original block1929293055
 					
 					// check if need to convert shape. like if rect was selected, and now made it oval. or gaussian and now mosaic - only for tools with a submenu
 					if (prevState.sGenPalTool == this.state.sGenPalTool && prevState.sPalSeldSubs[prevState.sGenPalTool] != this.state.sPalSeldSubs[prevState.sGenPalTool]) {
@@ -3834,6 +3835,10 @@ function init(aArrBufAndCore) {
 	var Button = React.createClass({
 		displayName: 'Button',
 		click: function(e) {
+			
+			var affectsStateVars = {};
+			var affectsSelNames = [];
+			
 			switch (this.props.pButton.label) {
 				// start - actions
 				case 'Save':
@@ -3849,178 +3854,85 @@ function init(aArrBufAndCore) {
 				
 					break;
 				// end - actions
-				//// case 'Blur':
-				//// 	
-				//// 		if (gCState && gCState.selection) {
-				//// 			switch (gCState.selection.name) {
-				//// 				case 'Gaussian':
-				//// 				case 'Mosaic':
-				//// 					
-				//// 						var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.sGenPalTool];
-				//// 						var newValid = true;
-				//// 						if (gCState.selection.name != cSubTool) {
-				//// 							gCState.selection.name = cSubTool;
-				//// 							delete gCState.selection.blurradius;
-				//// 							delete gCState.selection.blurblock;
-				//// 							var propVar = gCState.selection.name == 'Gaussian' ? 'blurradius' : 'blurblock';
-				//// 							var stateVar = gCState.selection.name == 'Gaussian' ? 'sPalBlurRadius' : 'sPalBlurBlock';
-				//// 							gCState.selection[propVar] = gCanStore.rconn.state[stateVar];
-				//// 							newValid = false;
-				//// 						}
-				//// 						var propVar = gCState.selection.name == 'Gaussian' ? 'blurradius' : 'blurblock';
-				//// 						var stateVar = gCState.selection.name == 'Gaussian' ? 'sPalBlurRadius' : 'sPalBlurBlock';
-				//// 						if (gCState.selection[propVar] !== gCanStore.rconn.state[stateVar]) {
-				//// 							gCState.selection[propVar] = gCanStore.rconn.state[stateVar];
-				//// 							newValid = false;
-				//// 						}
-				//// 						gCanStore.setCanState(newValid);
-				//// 					
-				//// 					break;
-				//// 				default:
-				//// 					// this selection is not affected
-				//// 			}
-				//// 		}
-				//// 	
-				//// 	break;
-				//// case 'Text':
-				//// 		
-				//// 		if (!gCanMeasureHeight) {
-				//// 			gCanMeasureHeight = document.createElement('canvas');
-				//// 			gCtxMeasureHeight = gCanMeasureHeight.getContext('2d');
-				//// 		}
-				//// 		if (gCState && gCState.selection && gCState.selection.name == 'Text') {
-				//// 			var newValid = true; // valid based on the tests below
-				//// 			if (gCState.selection.fontface != this.props.sPalFontFace) {
-				//// 				gCState.selection.fontface = this.props.sPalFontFace;
-				//// 				newValid = false;
-				//// 			}
-				//// 			if (gCState.selection.fontbold != this.props.sPalFontBold) {
-				//// 				gCState.selection.fontbold = this.props.sPalFontBold;
-				//// 				newValid = false;
-				//// 			}
-				//// 			if (gCState.selection.fontitalic != this.props.sPalFontItalic) {
-				//// 				gCState.selection.fontitalic = this.props.sPalFontItalic;
-				//// 				newValid = false;
-				//// 			}
-				//// 			if (gCState.selection.fontsize != this.props.sPalFontSize) {
-				//// 				gCState.selection.fontsize = this.props.sPalFontSize;
-				//// 				newValid = false;
-				//// 			}
-				//// 			if (!newValid) {
-				//// 				gCState.selection.font = gCanStore.rconn.calcCtxFont(gCState.selection);
-				//// 				gCanStore.setCanState(newValid);
-				//// 			}
-				//// 		}
-				//// 	
-				//// 	break;
-				//// case 'Line':
-				//// 	
-				//// 		if (gCState && gCState.selection && gCState.selection.name == this.props.pButton.label) {
-				//// 			var mySel = gCState.selection;
-				//// 			var propToStateDict = {
-				//// 				lineWidth: 'sPalLineWidth',
-				//// 				arrowLength: 'sPalArrowLength',
-				//// 				arrowStart: 'sPalArrowStart',
-				//// 				arrowEnd: 'sPalArrowEnd'
-				//// 			};
-				//// 			
-				//// 			var boolHasNew = false;
-				//// 			for (var p in propToStateDict) {
-				//// 				if (p in mySel) {
-				//// 					var stateVar = propToStateDict[p];
-				//// 					if (gCanStore.rconn.state[stateVar] !== mySel[p]) {
-				//// 						mySel[p] = gCanStore.rconn.state[stateVar];
-				//// 						boolHasNew = true;
-				//// 					}
-				//// 				}
-				//// 			}
-				//// 			gCanStore.setCanState(!boolHasNew);
-				//// 		}
-				//// 	
-				//// 	break;
-				//// case 'Color':
-				//// 	
-				//// 		if (gCState && gCState.selection) {
-				//// 			switch (gCState.selection.name) {
-				//// 				case 'Rectangle':
-				//// 				case 'Oval':
-				//// 				case 'Line':
-				//// 				case 'Pencil':
-				//// 					
-				//// 						gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sPalLineColor, this.props.sPalLineAlpha);
-				//// 						gCanStore.rconn.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
-				//// 						gCanStore.setCanState(false);
-				//// 					
-				//// 					break;
-				//// 				default:
-				//// 					// this selection is not affected
-				//// 			}
-				//// 		}
-				//// 	
-				//// 	break;
-				//// case 'Fill Color':
-				//// 	
-				//// 		if (gCState && gCState.selection) {
-				//// 			switch (gCState.selection.name) {
-				//// 				case 'Rectangle':
-				//// 				case 'Oval':
-				//// 				case 'Text':
-				//// 					
-				//// 						gCState.selection.fillStyle = colorStrToCssRgba(this.props.sPalFillColor, this.props.sPalFillAlpha);
-				//// 						gCanStore.rconn.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
-				//// 						gCanStore.setCanState(false);
-				//// 					
-				//// 					break;
-				//// 				default:
-				//// 					// this selection is not affected
-				//// 			}
-				//// 		}
-				//// 	
-				//// 	break;
-				//// case 'Marker Color':
-				//// 	
-				//// 		if (gCState && gCState.selection) {
-				//// 			switch (gCState.selection.name) {
-				//// 				case 'Marker':
-				//// 					
-				//// 						gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
-				//// 						gCanStore.rconn.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);										
-				//// 						gCanStore.setCanState(false);
-				//// 					
-				//// 					break;
-				//// 				default:
-				//// 					// this selection is not affected
-				//// 			}
-				//// 		}
-				//// 	
-				//// 	break;
-				// case 'Shapes':
-				// 
-				// 		if (gCState && gCState.selection) {
-				// 			switch (gCState.selection.name) {
-				// 				case 'Rectangle':
-				// 				case 'Oval':
-				// 					
-				// 						var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.sGenPalTool];
-				// 						var newValid = true;
-				// 						if (gCState.selection.name != cSubTool) {
-				// 							gCState.selection.name = cSubTool;
-				// 							newValid = false;
-				// 						}
-				// 						
-				// 						if (gCState.selection.lineWidth !== gCanStore.rconn.state.sPalLineWidth) {
-				// 							gCState.selection.lineWidth = gCanStore.rconn.state.sPalLineWidth;
-				// 							newValid = false;
-				// 						}
-				// 						gCanStore.setCanState(newValid);
-				// 					
-				// 					break;
-				// 				default:
-				// 					// this selection is not affected
-				// 			}
-				// 		}
-				// 	
-				// 	break;
+				// start - on click reapply styles
+				case 'Blur':
+					
+						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
+						if (cSubTool == 'Gaussian') {
+							affectsSelNames.push('Gaussian');
+							affectsStateVars.blurradius = 'sPalBlurRadius';
+						} else {
+							affectsSelNames.push('Mosaic');
+							affectsStateVars.blurblock = 'sPalBlurBlock';
+						}
+					
+					break;
+				case 'Line':
+					
+						affectsSelNames.push('Line');
+						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
+						affectsStateVars.lineWidth = 'sPalLineWidth';
+						affectsStateVars.arrowStart = 'sPalArrowStart';
+						affectsStateVars.arrowEnd = 'sPalArrowEnd';
+						affectsStateVars.arrowLength = 'sPalArrowLength';
+					
+					break;
+				case 'Freedraw':
+					
+						affectsStateVars.lineWidth = 'sPalLineWidth';
+						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
+						if (cSubTool == 'Pencil') {
+							affectsSelNames.push('Pencil');
+							affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
+						} else {
+							affectsSelNames.push('Marker');
+							affectsStateVars.strokeStyle = ['sPalMarkerColor', 'sPalMarkerAlpha'];
+						}
+					
+					break;
+				case 'Shapes':
+					
+						affectsSelNames.push('Rectangle');
+						affectsSelNames.push('Oval');
+						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
+						affectsStateVars.lineWidth = 'sPalLineWidth';
+						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
+					
+					break;
+				case 'Text':
+					
+						affectsSelNames.push('Text');
+						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
+						affectsStateVars.fontface = 'sPalFontFace';
+						affectsStateVars.fontbold = 'sPalFontBold';
+						affectsStateVars.fontitalic = 'sPalFontItalic';
+						affectsStateVars.fontsize = 'sPalFontSize';
+					
+					break;
+				case 'Marker Color':
+				
+						affectsSelNames.push('Marker');
+						affectsStateVars.strokeStyle = ['sPalMarkerColor', 'sPalMarkerAlpha'];
+				
+					break;
+				case 'Color':
+				
+						affectsSelNames.push('Rectangle');
+						affectsSelNames.push('Oval');
+						affectsSelNames.push('Pencil');
+						affectsSelNames.push('Line');
+						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
+				
+					break;
+				case 'Fill Color':
+				
+						affectsSelNames.push('Rectangle');
+						affectsSelNames.push('Oval');
+						affectsSelNames.push('Text');
+						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
+				
+					break;
+				// end - on click reapply styles
 				case 'Close':
 						
 						window.close();
@@ -4061,6 +3973,55 @@ function init(aArrBufAndCore) {
 					break;
 				default:
 					// do nothing
+			}
+			
+			// if selection, do affectsStateVars stuff
+			if (!gChangingSubToolTo && affectsSelNames.length) {
+				var canValid = true;
+				
+				if (gCState && gCState.selection && affectsSelNames.indexOf(gCState.selection.name) > -1) {
+					var mySel = gCState.selection;
+					
+					var isText;
+					if (mySel.name == 'Text') {
+						isText = true;
+					}
+					
+					// start copy of block1929293055
+					for (var p in mySel) {
+						// console.log('on sel prop:', p);
+						if (p in affectsStateVars) {
+							// console.warn('in sel - testing diff');
+							if (p == 'strokeStyle' || p == 'fillStyle') {
+									var cColorVarName = affectsStateVars[p][0];
+									var cAlphaVarName = affectsStateVars[p][1];
+									
+									// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', gCanStore.rconn.state[cVarName]);
+									var newColor = colorStrToCssRgba(gCanStore.rconn.state[cColorVarName], gCanStore.rconn.state[cAlphaVarName]);
+									if (mySel[p] !== newColor) {
+										canValid = false;
+										mySel[p] = newColor;
+										if (p == 'strokeStyle' && mySel.name == 'Line') {
+											mySel.fillStyle = newColor; // needed for arrow
+										}
+									}
+							} else {
+								var cVarName = affectsStateVars[p];
+								if (mySel[p] !== gCanStore.rconn.state[cVarName]) {
+									// console.log('sending update on it');
+									canValid = false;
+									mySel[p] = gCanStore.rconn.state[cVarName];
+									if (isText && p.indexOf('font') === 0) {
+										mySel.font = gCanStore.rconn.calcCtxFont(mySel);
+									}
+								}
+							}
+						}
+					}
+					// end copy of block1929293055
+					
+					gCanStore.setCanState(canValid);
+				}
 			}
 			
 			if (this.props.pButton.multiDepress) {
