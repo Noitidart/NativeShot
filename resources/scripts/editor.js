@@ -25,8 +25,8 @@ var gDroppingCoords = [0,0];
 var gDroppingMixCtx;
 var gCanMeasureHeight;
 var gCtxMeasureHeight;
-var gWidthRef;
-var gHeightRef;
+// var gWidthRef;
+// var gHeightRef;
 var gWinArr;
 
 function unload() {
@@ -3426,6 +3426,9 @@ function init(aArrBufAndCore) {
 						}
 						if (!newValid) {
 							gCanStore.setCanState(newValid);
+							// parallel to link38378777577 - not exactly the same but it has similar lagginess
+							// gWidthRef.value = Math.abs(this.cstate.selection.w);
+							// gHeightRef.value = Math.abs(this.cstate.selection.h);
 							gEditorStore.setState({
 								sGenPalW: newW,
 								sGenPalH: newH
@@ -3991,6 +3994,33 @@ function init(aArrBufAndCore) {
 				//// 		}
 				//// 	
 				//// 	break;
+				// case 'Shapes':
+				// 
+				// 		if (gCState && gCState.selection) {
+				// 			switch (gCState.selection.name) {
+				// 				case 'Rectangle':
+				// 				case 'Oval':
+				// 					
+				// 						var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.sGenPalTool];
+				// 						var newValid = true;
+				// 						if (gCState.selection.name != cSubTool) {
+				// 							gCState.selection.name = cSubTool;
+				// 							newValid = false;
+				// 						}
+				// 						
+				// 						if (gCState.selection.lineWidth !== gCanStore.rconn.state.sPalLineWidth) {
+				// 							gCState.selection.lineWidth = gCanStore.rconn.state.sPalLineWidth;
+				// 							newValid = false;
+				// 						}
+				// 						gCanStore.setCanState(newValid);
+				// 					
+				// 					break;
+				// 				default:
+				// 					// this selection is not affected
+				// 			}
+				// 		}
+				// 	
+				// 	break;
 				case 'Close':
 						
 						window.close();
@@ -4029,33 +4059,6 @@ function init(aArrBufAndCore) {
 						gCanStore.setCanState(false); // as i for sure added a new cutout
 						
 					break;
-				// case 'Shapes':
-				// 
-				// 		if (gCState && gCState.selection) {
-				// 			switch (gCState.selection.name) {
-				// 				case 'Rectangle':
-				// 				case 'Oval':
-				// 					
-				// 						var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.sGenPalTool];
-				// 						var newValid = true;
-				// 						if (gCState.selection.name != cSubTool) {
-				// 							gCState.selection.name = cSubTool;
-				// 							newValid = false;
-				// 						}
-				// 						
-				// 						if (gCState.selection.lineWidth !== gCanStore.rconn.state.sPalLineWidth) {
-				// 							gCState.selection.lineWidth = gCanStore.rconn.state.sPalLineWidth;
-				// 							newValid = false;
-				// 						}
-				// 						gCanStore.setCanState(newValid);
-				// 					
-				// 					break;
-				// 				default:
-				// 					// this selection is not affected
-				// 			}
-				// 		}
-				// 	
-				// 	break;
 				default:
 					// do nothing
 			}
