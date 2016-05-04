@@ -703,7 +703,7 @@ function init(aArrBufAndCore) {
 			special: 'LineTools',
 			justClick: true,
 			isOption: true,
-			props: ['sPalLineWidth']
+			props: ['sPalLineWidth', 'sGenPalTool', 'sPalSeldSubs', 'sPalRectRadius']
 		},
 		{
 			special: 'ArrowTools',
@@ -851,39 +851,39 @@ function init(aArrBufAndCore) {
 				}
 			]
 		},
-		{
-			special: 'Divider'
-		},
-		{
-			label: 'Undo',
-			justClick: true,
-			icon: '\ue80b',
-			sub: [
-				{
-					label: 'Undo All',
-					icon: '\ue80c',
-					unfixable: true // never allow this to get fixed
-				},
-				{
-					special: 'UndoHistory'
-				}
-			]
-		},
-		{
-			label: 'Redo',
-			justClick: true,
-			icon: '\ue80a',
-			sub: [
-				{
-					label: 'Redo All',
-					icon: 'S',
-					unfixable: true // never allow this to get fixed
-				},
-				{
-					special: 'RedoHistory'
-				}
-			]
-		},
+		// {
+		// 	special: 'Divider'
+		// },
+		// {
+		// 	label: 'Undo',
+		// 	justClick: true,
+		// 	icon: '\ue80b',
+		// 	sub: [
+		// 		{
+		// 			label: 'Undo All',
+		// 			icon: '\ue80c',
+		// 			unfixable: true // never allow this to get fixed
+		// 		},
+		// 		{
+		// 			special: 'UndoHistory'
+		// 		}
+		// 	]
+		// },
+		// {
+		// 	label: 'Redo',
+		// 	justClick: true,
+		// 	icon: '\ue80a',
+		// 	sub: [
+		// 		{
+		// 			label: 'Redo All',
+		// 			icon: 'S',
+		// 			unfixable: true // never allow this to get fixed
+		// 		},
+		// 		{
+		// 			special: 'RedoHistory'
+		// 		}
+		// 	]
+		// },
 		{
 			special: 'Divider'
 		},
@@ -942,6 +942,7 @@ function init(aArrBufAndCore) {
 				sPalZoomViewLevel: this.props.pPalZoomViewLevel,
 				
 				sPalLineWidth: this.props.pPalLineWidth,
+				sPalRectRadius: this.props.pPalRectRadius,
 				
 				sPalFontSize: this.props.pPalFontSize,
 				sPalFontFace: this.props.pPalFontFace,
@@ -1143,6 +1144,8 @@ function init(aArrBufAndCore) {
 						delete affectsStateVars.fillStyle;
 					} else if (mySel.name == 'Text') {
 						isText = true;
+					} else if (mySel.name == 'Rectangle') {
+						affectsStateVars.radius = 'sPalRectRadius';
 					}
 					
 					// special stuff, for when resizing
@@ -1369,6 +1372,10 @@ function init(aArrBufAndCore) {
 						DRAWABLE.lineWidth = undefined;
 						DRAWABLE.setLineDash = undefined;
 						DRAWABLE.lineJoin = undefined;
+						
+						if (name == 'Rectangle') {
+							DRAWABLE.radius = aOptions.radius || this.state.sPalRectRadius;
+						}
 					
 					break;
 				default:
@@ -1427,9 +1434,15 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Rectangle':
 				
-						this.ctx.fillRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
-						if (aDrawable.lineWidth > 0) {
-							this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+						if (!aDrawable.radius) {
+							this.ctx.fillRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+							if (aDrawable.lineWidth > 0) {
+								this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+							}
+						} else {
+							var posd = this.makeDimsPositive(aDrawable, true);
+							roundRect(this.ctx, posd.x, posd.y, posd.w, posd.h, aDrawable.radius, true, aDrawable.lineWidth ? true : false);
+							// roundRect(this.ctx, aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h, aDrawable.radius, true, aDrawable.lineWidth ? true : false);
 						}
 					
 					break;
@@ -3081,6 +3094,7 @@ function init(aArrBufAndCore) {
 							fontface: 'sPalFontFace',
 							blurblock: 'sPalBlurBlock',
 							blurradius: 'sPalBlurRadius',
+							radius: 'sPalRectRadius',
 							fillStyle: 'sPalFill', // partial as i do alpha too
 							strokeStyle: mySel.name == 'Marker' ? 'sPalMarker' : 'sPalLine'  // partial as i do alpha too
 						};
@@ -3897,7 +3911,11 @@ function init(aArrBufAndCore) {
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
-					
+						
+						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
+						if (cSubTool == 'Rectangle') {
+							affectsStateVars.radius = 'sPalRectRadius';
+						}
 					break;
 				case 'Text':
 					
@@ -4288,8 +4306,11 @@ function init(aArrBufAndCore) {
 		render: function() {
 			// props
 			//		sPalLineWidth
+			//		sGenPalTool
+			//		sPalSeldSubs
 			return React.createElement('div', {className:'plinetools'},
-				React.createElement(InputNumber, {pLabel:'Line Width (px)', pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:0, pCStateSel:{'Rectangle':'lineWidth', 'Oval':'lineWidth', 'Line':'lineWidth', 'Pencil':'lineWidth', 'Marker':'lineWidth'}})
+				React.createElement(InputNumber, {pLabel:'Line Width (px)', pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:0, pCStateSel:{'Rectangle':'lineWidth', 'Oval':'lineWidth', 'Line':'lineWidth', 'Pencil':'lineWidth', 'Marker':'lineWidth'}}),
+				this.props.sGenPalTool == 'Shapes' && this.props.sPalSeldSubs.Shapes == 'Rectangle' ? React.createElement(InputNumber, {pLabel:'Line Radius (px)', pStateVarName:'sPalRectRadius', sPalRectRadius:this.props.sPalRectRadius, pMin:0 }) : undefined
 			);
 		}
 	});
@@ -5335,6 +5356,7 @@ function init(aArrBufAndCore) {
 			pPalArrowStart: false,
 			
 			pPalLineWidth: 12,
+			pPalRectRadius: 5,
 			
 			pPalFontSize: 24,
 			pPalFontFace: 'Arial',
@@ -6209,6 +6231,69 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		height: (botBound - topBound) + 1,
 		width: w
 	};
+}
+
+/**
+ * Draws a rounded rectangle using the current state of the canvas.
+ * If you omit the last three params, it will draw a rectangle
+ * outline with a 5 pixel border radius
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Number} x The top left x coordinate
+ * @param {Number} y The top left y coordinate
+ * @param {Number} width The width of the rectangle
+ * @param {Number} height The height of the rectangle
+ * @param {Number} [radius = 5] The corner radius; It can also be an object 
+ *                 to specify different radii for corners
+ * @param {Number} [radius.tl = 0] Top left
+ * @param {Number} [radius.tr = 0] Top right
+ * @param {Number} [radius.br = 0] Bottom right
+ * @param {Number} [radius.bl = 0] Bottom left
+ * @param {Boolean} [fill = false] Whether to fill the rectangle.
+ * @param {Boolean} [stroke = true] Whether to stroke the rectangle.
+ */
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+	if(typeof stroke == 'undefined') {
+		stroke = true;
+	}
+	if(typeof radius === 'undefined') {
+		radius = 5;
+	}
+	if(typeof radius === 'number') {
+		radius = {
+			tl: radius,
+			tr: radius,
+			br: radius,
+			bl: radius
+		};
+	} else {
+		var defaultRadius = {
+			tl: 0,
+			tr: 0,
+			br: 0,
+			bl: 0
+		};
+		for(var side in defaultRadius) {
+			radius[side] = radius[side] || defaultRadius[side];
+		}
+	}
+	ctx.beginPath();
+	ctx.moveTo(x + radius.tl, y);
+	ctx.lineTo(x + width - radius.tr, y);
+	ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+	ctx.lineTo(x + width, y + height - radius.br);
+	ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+	ctx.lineTo(x + radius.bl, y + height);
+	ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+	ctx.lineTo(x, y + radius.tl);
+	ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+	ctx.closePath();
+	if(fill) {
+		ctx.fill();
+	}
+	if(stroke) {
+		ctx.stroke();
+	}
+
 }
 
 function canvas_arrow(context, fromx, fromy, tox, toy, headlen){
