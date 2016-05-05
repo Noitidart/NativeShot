@@ -4617,11 +4617,13 @@ function init(aArrBufAndCore) {
 			pRgba.a = parseInt(this.props.sAlpha);
 			var pHex = hex;
 			
+			var pHsv = rgb2hsv(pRgba.r, pRgba.g, pRgba.b);
+			
 			return React.createElement('div', { className:'colorpicker' + (sGenInputNumberMousing ? ' mousing' : '') },
 				React.createElement('div', {className:'colorpicker-inner'},
 					React.createElement(ColorPickerChoices, {pStateColorKey, pSetStateName, sGenColorPickerDropping, sColor, pStateHistoryKey, sHistory}),
 					React.createElement(ColorPickerBoard, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
-					React.createElement(ColorPickerSliders, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
+					React.createElement(ColorPickerSliders, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName, pHsv}),
 					React.createElement(ColorPickerCodes, {pHex, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName})
 				)
 			);
@@ -4641,6 +4643,7 @@ function init(aArrBufAndCore) {
 	var ColorPickerSliders = React.createClass({
 		displayName: 'ColorPickerSliders',
 		mousedown: function(colorOrAlpha, e) {
+			console.log('e:', e);
 			// colorOrAlpha true for color
 			// false for alpha
 			if (e.button != 0) { return }
@@ -4649,7 +4652,12 @@ function init(aArrBufAndCore) {
 			
 			this.colorOrAlpha = colorOrAlpha;
 			
-			var brect = this.refs.alpha.getBoundingClientRect();
+			var brect;
+			if (colorOrAlpha) {
+				brect = this.refs.alpha.getBoundingClientRect();
+			} else {
+				brect = this.refs.hue.getBoundingClientRect();
+			}
 			// brect: DOMRect { x: 597.2166748046875, y: 300.3999938964844, width: 170, height: 12, top: 300.3999938964844, right: 767.2166748046875, bottom: 312.3999938964844, left: 597.2166748046875 }
 			console.log('brect:', brect);
 			
@@ -4660,6 +4668,8 @@ function init(aArrBufAndCore) {
 			var downx = e.clientX - this.minx;
 			var perx = Math.round(downx / this.widthx * 100);
 			// console.log('downx:', downx, '%:', perx);
+			
+			this.sGenInputNumberMousing = null;
 			
 			this.limitTestThenSet(perx);
 			
@@ -4678,7 +4688,16 @@ function init(aArrBufAndCore) {
 		},
 		limitTestThenSet: function(aNewVal) {
 			// returns true if set
-			var cval = this.colorOrAlpha ? '?' : this.props.pRgba.a;
+			
+			// figure out current value
+			var cval;
+			if (this.colorOrAlpha) {
+				cval = Math.round(this.props.pHsv.h / 360 * 100); // percentHue
+				console.log('current hue:', cval, this.props.pHsv);
+			} else {
+				cval = this.props.pRgba.a;
+			}
+			
 			if (aNewVal < 0 && cval != 0) { // set to min if not at min
 				aNewVal = 0;
 			} else if (aNewVal > 100 && cval != 100) { // set to max
@@ -4703,7 +4722,12 @@ function init(aArrBufAndCore) {
 				
 				var newStateObj = {}
 				if (this.colorOrAlpha) {
-					newStateObj[this.props.pStateColorKey] = aNewVal;
+					console.log(aNewVal / 100, this.props.pHsv.s / 100, this.props.pHsv.v / 100);
+					var newRgb = HSVtoRGB(aNewVal / 100, this.props.pHsv.s / 100, this.props.pHsv.v / 100);
+					console.log('newRgb:', newRgb);
+					var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
+					console.log('newHex:', newHex);
+					newStateObj[this.props.pStateColorKey] = newHex;
 				} else {
 					newStateObj[this.props.pStateAlphaKey] = aNewVal;
 				}
@@ -4739,16 +4763,18 @@ function init(aArrBufAndCore) {
 		},
 		render: function() {
 			// props
-			// var {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName} = this.props;
-			var {pRgba} = this.props;
+			// var {pHsv, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName} = this.props;
+			var {pRgba, pHsv} = this.props;
 			
 			var rgbaStr = 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + (pRgba.a/100) + ')';
 			var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
 			
+			var percentHue = Math.round(pHsv.h / 360 * 100);
+			
 			return React.createElement('div', {className:'colorpicker-sliders'},
 				React.createElement('div', {className:'colorpicker-sliders-wrap'},
-					React.createElement('div', {className:'colorpicker-slider-rainbow', ref:'color', onMouseDown:this.mousedown.bind(this, true) },
-						React.createElement('div', {className:'colorpicker-slider-thingy'})
+					React.createElement('div', {className:'colorpicker-slider-rainbow', ref:'hue', onMouseDown:this.mousedown.bind(this, true) },
+						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + percentHue+'% - ' + Math.round(9*(percentHue/100)) + 'px)'} }) /* -9px to counter the width so it doesnt oveflow at 100% */
 					),
 					React.createElement('div', {className:'colorpicker-slider-alpha', ref:'alpha', onMouseDown:this.mousedown.bind(this, false) },
 						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + pRgba.a+'% - ' + Math.round(9*(pRgba.a/100)) + 'px)'} }) /* -9px to counter the width so it doesnt oveflow at 100% */
@@ -6464,6 +6490,78 @@ function objectHasKeys(aObject) {
 	return false;
 }
 
+function rgb2hsv (r, g, b) {
+	http://stackoverflow.com/a/8023734/1828637
+    var rr, gg, bb,
+        r = r / 255,
+        g = g / 255,
+        b = b / 255,
+        h, s,
+        v = Math.max(r, g, b),
+        diff = v - Math.min(r, g, b),
+        diffc = function(c){
+            return (v - c) / 6 / diff + 1 / 2;
+        };
+
+    if (diff == 0) {
+        h = s = 0;
+    } else {
+        s = diff / v;
+        rr = diffc(r);
+        gg = diffc(g);
+        bb = diffc(b);
+
+        if (r === v) {
+            h = bb - gg;
+        }else if (g === v) {
+            h = (1 / 3) + rr - bb;
+        }else if (b === v) {
+            h = (2 / 3) + gg - rr;
+        }
+        if (h < 0) {
+            h += 1;
+        }else if (h > 1) {
+            h -= 1;
+        }
+    }
+    return {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        v: Math.round(v * 100)
+    };
+}
+
+/* accepts parameters
+ * h  Object = {h:x, s:y, v:z}
+ * OR 
+ * h, s, v
+*/
+function HSVtoRGB(h, s, v) {
+	// http://stackoverflow.com/a/17243070/1828637
+	// This code expects 0 <= h, s, v <= 1, if you're using degrees or radians, remember to divide them out.
+    var r, g, b, i, f, p, q, t;
+    if (arguments.length === 1) {
+        s = h.s, v = h.v, h = h.h;
+    }
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+    };
+}
 /////////// stackblur
 
 
