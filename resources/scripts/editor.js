@@ -694,7 +694,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalMarkerColorHist', pStateHistoryKey:'$string$sPalMarkerColorHist'}
+					props: {sGenInputNumberMousing:'sGenInputNumberMousing', sColor:'sPalMarkerColor', sAlpha:'sPalMarkerAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalMarkerAlpha', pStateColorKey:'$string$sPalMarkerColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalMarkerColorHist', pStateHistoryKey:'$string$sPalMarkerColorHist'}
 				}
 			],
 			isOption: true
@@ -719,7 +719,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalBothColorHist', pStateHistoryKey:'$string$sPalBothColorHist'}
+					props: {sGenInputNumberMousing:'sGenInputNumberMousing', sColor:'sPalFillColor', sAlpha:'sPalFillAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalFillAlpha', pStateColorKey:'$string$sPalFillColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalBothColorHist', pStateHistoryKey:'$string$sPalBothColorHist'}
 				}
 			],
 			isOption: true
