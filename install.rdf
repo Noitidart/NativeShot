@@ -24,7 +24,7 @@
 		<!-- Front End MetaData -->
 		<!-- must provide default non-localized because It's used as a default on AMO. It's used as a default by the add-on manager, with the possibility of other locales overriding it. Failure to provide a non-localized name will lead to failed upload on AMO. -->
 		<em:name>NativeShot</em:name>
-		<em:description>Capture and edit screenshots of anything on any monitor</em:description>
+		<em:description>Freeze frame screenshot tool to capture and edit anything on any monitor</em:description>
 		<em:creator>Noitidart</em:creator>
 		<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 		<!-- start localizing - For each entry in default data MUST have equivalent in each localized block -->
@@ -32,7 +32,7 @@
 			<Description>
 				<em:locale>en-US</em:locale>
 				<em:name>NativeShot</em:name>
-				<em:description>Capture and edit screenshots of anything on any monitor</em:description>
+				<em:description>Freeze frame screenshot tool to capture and edit anything on any monitor</em:description>
 				<em:creator>Noitidart</em:creator>
 				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 			</Description>
