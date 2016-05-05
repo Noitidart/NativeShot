@@ -4622,7 +4622,7 @@ function init(aArrBufAndCore) {
 			return React.createElement('div', { className:'colorpicker' + (sGenInputNumberMousing ? ' mousing' : '') },
 				React.createElement('div', {className:'colorpicker-inner'},
 					React.createElement(ColorPickerChoices, {pStateColorKey, pSetStateName, sGenColorPickerDropping, sColor, pStateHistoryKey, sHistory}),
-					React.createElement(ColorPickerBoard, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
+					React.createElement(ColorPickerBoard, {sColor, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
 					React.createElement(ColorPickerSliders, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName, pHsv}),
 					React.createElement(ColorPickerCodes, {pHex, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName})
 				)
@@ -4633,8 +4633,11 @@ function init(aArrBufAndCore) {
 	var ColorPickerBoard = React.createClass({
 		displayName: 'ColorPickerBoard',
 		render: function() {
+			// sColor
+			var {sColor} = this.props;
+
 			return React.createElement('div', {className:'colorpicker-board'},
-				React.createElement('div', {className:'colorpicker-board-color'}),
+				React.createElement('div', {className:'colorpicker-board-color', style:{backgroundColor:sColor} }),
 				React.createElement('div', {className:'colorpicker-board-white'}),
 				React.createElement('div', {className:'colorpicker-board-black'})
 			);
@@ -4769,6 +4772,9 @@ function init(aArrBufAndCore) {
 			var rgbaStr = 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + (pRgba.a/100) + ')';
 			var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
 			
+			var alphaBgImgStr = 'linear-gradient(to right, rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', 0), rgb(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ')), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+			
+			
 			var percentHue = Math.round(pHsv.h / 360 * 100);
 			
 			return React.createElement('div', {className:'colorpicker-sliders'},
@@ -4776,7 +4782,7 @@ function init(aArrBufAndCore) {
 					React.createElement('div', {className:'colorpicker-slider-rainbow', ref:'hue', onMouseDown:this.mousedown.bind(this, true) },
 						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + percentHue+'% - ' + Math.round(9*(percentHue/100)) + 'px)'} }) /* -9px to counter the width so it doesnt oveflow at 100% */
 					),
-					React.createElement('div', {className:'colorpicker-slider-alpha', ref:'alpha', onMouseDown:this.mousedown.bind(this, false) },
+					React.createElement('div', {className:'colorpicker-slider-alpha', ref:'alpha', onMouseDown:this.mousedown.bind(this, false), style:{backgroundImage:alphaBgImgStr} },
 						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + pRgba.a+'% - ' + Math.round(9*(pRgba.a/100)) + 'px)'} }) /* -9px to counter the width so it doesnt oveflow at 100% */
 					)
 				),
