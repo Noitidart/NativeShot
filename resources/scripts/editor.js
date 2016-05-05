@@ -4622,7 +4622,7 @@ function init(aArrBufAndCore) {
 			return React.createElement('div', { className:'colorpicker' + (sGenInputNumberMousing ? ' mousing' : '') },
 				React.createElement('div', {className:'colorpicker-inner'},
 					React.createElement(ColorPickerChoices, {pStateColorKey, pSetStateName, sGenColorPickerDropping, sColor, pStateHistoryKey, sHistory}),
-					React.createElement(ColorPickerBoard, {sColor, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
+					React.createElement(ColorPickerBoard, {pHsv, pStateColorKey, pSetStateName}),
 					React.createElement(ColorPickerSliders, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName, pHsv}),
 					React.createElement(ColorPickerCodes, {pHex, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName})
 				)
@@ -4632,12 +4632,97 @@ function init(aArrBufAndCore) {
 	
 	var ColorPickerBoard = React.createClass({
 		displayName: 'ColorPickerBoard',
-		render: function() {
-			// sColor
-			var {sColor} = this.props;
+		mousedown: function(e) {
+			if (e.button !== 0) { return }
+			
+			if (!this.brect) {
+				this.brect = ReactDOM.findDOMNode(this).getBoundingClientRect();
+			}
+			console.log('brect:', this.brect);
+			
+			var x = e.clientX - this.brect.left;
+			var y = e.clientY - this.brect.top;
+			var newHsv = {
+				h: this.props.pHsv.h,
+				s: parseInt(x / this.brect.width * 100, 10),
+				v: parseInt((1 - y / this.brect.height) * 100, 10),
+			};
+			// console.log('newHsv:', newHsv);
+			
+			var newRgb = HSVtoRGB(newHsv.h/360, newHsv.s/100, newHsv.v/100);
+			var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
+			gEditorStore.setState({
+				[this.props.pStateColorKey]: newHex,
+				sGenInputNumberMousing: 'crosshair'
+			});
+			this.sGenInputNumberMousing = 'crosshair';
+			window.addEventListener('mouseup', this.mouseup, false);
+			window.addEventListener('mousemove', this.mousemove, false);
+		},
+		mousemove: function(e) {
+			
+			var x = e.clientX - this.brect.left;
+			var y = e.clientY - this.brect.top;
+			var newHsv = {
+				h: this.props.pHsv.h,
+				s: parseInt(x / this.brect.width * 100, 10),
+				v: parseInt((1 - y / this.brect.height) * 100, 10),
+			};
+			// console.log('newHsv:', newHsv);
+			
+			if (newHsv.s < 0 || newHsv.s > 100 || newHsv.v < 0 || newHsv.v > 100) {
+				if (this.sGenInputNumberMousing != 'not-allowed') {
+					this.sGenInputNumberMousing = 'not-allowed';
+					gEditorStore.setState({
+						sGenInputNumberMousing: 'not-allowed'
+					});
+				}
+			} else {
+			
+				var newRgb = HSVtoRGB(newHsv.h/360, newHsv.s/100, newHsv.v/100);
+				var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
+				
 
-			return React.createElement('div', {className:'colorpicker-board'},
-				React.createElement('div', {className:'colorpicker-board-color', style:{backgroundColor:sColor} }),
+				var newStateObj = {
+					[this.props.pStateColorKey]: newHex,
+					setStateFromMouseMove: true
+				};
+				
+				if (this.sGenInputNumberMousing != 'crosshair') {
+					this.sGenInputNumberMousing = 'crosshair';
+					newStateObj.sGenInputNumberMousing = 'crosshair';
+				}
+				
+				gEditorStore.setState(newStateObj);
+			}
+			
+		},
+		mouseup: function(e) {
+			if (e.button != 0) { return }
+			
+			gEditorStore.setState({
+				sGenInputNumberMousing: null
+			});
+			
+			delete this.sGenInputNumberMousing;
+			
+			window.removeEventListener('mouseup', this.mouseup, false);
+			window.removeEventListener('mousemove', this.mousemove, false);
+		},
+		render: function() {
+			// props
+			var {pHsv} = this.props;
+
+			var thingyX = pHsv.s;
+			var thingyY = pHsv.v;
+			
+			var pBgRgb = HSVtoRGB(pHsv.h/360, 1, 1);
+			
+			var hexBg = rgbToHex(true, pBgRgb.r, pBgRgb.g, pBgRgb.b);
+			
+			return React.createElement('div', {className:'colorpicker-board', onMouseDown:this.mousedown},
+				React.createElement('div', {className:'colorpicker-board-thingy', style:{left:thingyX+'%', bottom:thingyY+'%'} }),
+				React.createElement('div', {className:'colorpicker-board-color', style:{backgroundColor:hexBg} }),
 				React.createElement('div', {className:'colorpicker-board-white'}),
 				React.createElement('div', {className:'colorpicker-board-black'})
 			);
@@ -4770,8 +4855,8 @@ function init(aArrBufAndCore) {
 			var {pRgba, pHsv} = this.props;
 			
 			var rgbaStr = 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + (pRgba.a/100) + ')';
-			var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
-			
+			var colorBgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+
 			var alphaBgImgStr = 'linear-gradient(to right, rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', 0), rgb(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ')), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
 			
 			
@@ -4786,7 +4871,7 @@ function init(aArrBufAndCore) {
 						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + pRgba.a+'% - ' + Math.round(9*(pRgba.a/100)) + 'px)'} }) /* -9px to counter the width so it doesnt oveflow at 100% */
 					)
 				),
-				React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
+				React.createElement('div', {style:{backgroundImage:colorBgImgStr}, className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
 			);
 		}
 	});

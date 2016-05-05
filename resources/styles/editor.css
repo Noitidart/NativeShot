@@ -297,7 +297,7 @@ body {
 .colorpicker-board-black {
 	background: linear-gradient(to bottom, transparent 0%, #000 100%);
 }
-.colorpicker-board::before {
+.colorpicker-board-thingy {
 	/* cursor */
 	content: '';
 	position: absolute;
@@ -306,8 +306,6 @@ body {
 	box-shadow: 0px 0px 0px 1.5px rgb(255, 255, 255), 0px 0px 1px 1px rgba(0, 0, 0, 0.3) inset, 0px 0px 1px 2px rgba(0, 0, 0, 0.4);
 	border-radius: 50%;
 	transform: translate(-2px, -2px);
-	top: 20%;
-	left: 20%;
 	z-index: 1;
 }
 
