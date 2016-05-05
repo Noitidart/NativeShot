@@ -431,6 +431,15 @@ body {
 	width: 40px;
 	cursor: pointer;
 }
+
+.mousing .colorpicker-choices-wrap.colorpicker-choices-dropper,
+.mousing .colorpicker-choices-opt,
+.mousing .colorpicker-slider-thingy,
+.mousing .colorpicker-slider-alpha,
+.mousing .colorpicker-slider-rainbow,
+.mousing .colorpicker-board {
+	cursor: inherit;
+}
 /* GROUP:colorpicker */
 
 /* start - zoom_view */

@@ -682,7 +682,7 @@ function init(aArrBufAndCore) {
 			sub: [
 				{
 					special: 'ColorPicker',
-					props: {sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalBothColorHist', pStateHistoryKey:'$string$sPalBothColorHist'}
+					props: {sGenInputNumberMousing:'sGenInputNumberMousing', sColor:'sPalLineColor', sAlpha:'sPalLineAlpha', pSetStateName:'$string$NativeShotEditor', pStateAlphaKey:'$string$sPalLineAlpha', pStateColorKey:'$string$sPalLineColor', sGenColorPickerDropping:'sGenColorPickerDropping', sHistory:'sPalBothColorHist', pStateHistoryKey:'$string$sPalBothColorHist'}
 				}
 			],
 			isOption: true
@@ -4589,11 +4589,13 @@ function init(aArrBufAndCore) {
 			//		sGenColorPickerDropping
 			//		sHistory - array of strings for sColor
 			//		pStateHistoryKey
+			//		sGenInputNumberMousing
 			
 			// only supports rgb mode
+			var {sColor, sAlpha, pStateColorKey, pStateAlphaKey, pSetStateName, sGenColorPickerDropping, sHistory, pStateHistoryKey, sGenInputNumberMousing} = this.props;
 			
 			// convert sColor into object of rgb
-			var sColor = this.props.sColor + '';
+			sColor = this.props.sColor + ''; // make it a string
 			// console.error('this.props:', this.props);
 			var rgb;
 			var hex;
@@ -4613,13 +4615,14 @@ function init(aArrBufAndCore) {
 			
 			var pRgba = rgb;
 			pRgba.a = parseInt(this.props.sAlpha);
+			var pHex = hex;
 			
-			return React.createElement('div', {className:'colorpicker'},
+			return React.createElement('div', { className:'colorpicker' + (sGenInputNumberMousing ? ' mousing' : '') },
 				React.createElement('div', {className:'colorpicker-inner'},
-					React.createElement(ColorPickerChoices, {pStateColorKey:this.props.pStateColorKey, pSetStateName:this.props.pSetStateName, sGenColorPickerDropping:this.props.sGenColorPickerDropping, sColor:this.props.sColor, pStateHistoryKey:this.props.pStateHistoryKey, sHistory:this.props.sHistory}),
-					React.createElement(ColorPickerBoard, {pRgba:pRgba}),
-					React.createElement(ColorPickerSliders, {pRgba:pRgba}),
-					React.createElement(ColorPickerCodes, {pHex:hex, pRgba:pRgba, pStateColorKey:this.props.pStateColorKey, pStateAlphaKey:this.props.pStateAlphaKey, pSetStateName:this.props.pSetStateName})
+					React.createElement(ColorPickerChoices, {pStateColorKey, pSetStateName, sGenColorPickerDropping, sColor, pStateHistoryKey, sHistory}),
+					React.createElement(ColorPickerBoard, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
+					React.createElement(ColorPickerSliders, {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName}),
+					React.createElement(ColorPickerCodes, {pHex, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName})
 				)
 			);
 		}
@@ -4637,21 +4640,118 @@ function init(aArrBufAndCore) {
 	});
 	var ColorPickerSliders = React.createClass({
 		displayName: 'ColorPickerSliders',
+		mousedown: function(colorOrAlpha, e) {
+			// colorOrAlpha true for color
+			// false for alpha
+			if (e.button != 0) { return }
+			
+			console.log('entered mousedown');
+			
+			this.colorOrAlpha = colorOrAlpha;
+			
+			var brect = this.refs.alpha.getBoundingClientRect();
+			// brect: DOMRect { x: 597.2166748046875, y: 300.3999938964844, width: 170, height: 12, top: 300.3999938964844, right: 767.2166748046875, bottom: 312.3999938964844, left: 597.2166748046875 }
+			console.log('brect:', brect);
+			
+			this.widthx = brect.width;
+			this.minx = brect.x;
+			this.maxx = brect.right;
+			
+			var downx = e.clientX - this.minx;
+			var perx = Math.round(downx / this.widthx * 100);
+			// console.log('downx:', downx, '%:', perx);
+			
+			this.limitTestThenSet(perx);
+			
+			window.addEventListener('mouseup', this.mouseup, false);
+			window.addEventListener('mousemove', this.mousemove, false);
+			
+		},
+		mousemove: function(e) {
+			
+			var downx = e.clientX - this.minx;
+			var perx = Math.round(downx / this.widthx * 100);
+			// console.log('downx:', downx, '%:', perx);
+			
+			this.limitTestThenSet(perx);
+			
+		},
+		limitTestThenSet: function(aNewVal) {
+			// returns true if set
+			var cval = this.colorOrAlpha ? '?' : this.props.pRgba.a;
+			if (aNewVal < 0 && cval != 0) { // set to min if not at min
+				aNewVal = 0;
+			} else if (aNewVal > 100 && cval != 100) { // set to max
+				aNewVal = 100;
+			}
+			
+			if (aNewVal < 0 || aNewVal > 100) {
+				if (this.sGenInputNumberMousing != 'not-allowed') {
+					this.sGenInputNumberMousing = 'not-allowed';
+					gEditorStore.setState({
+						sGenInputNumberMousing: 'not-allowed'
+					});
+				}
+				return false; // below min limit, or above max limit, dont set it
+			} else {
+
+				if (cval === aNewVal) {
+					// its already that number
+					console.log('already!');
+					return true;
+				}
+				
+				var newStateObj = {}
+				if (this.colorOrAlpha) {
+					newStateObj[this.props.pStateColorKey] = aNewVal;
+				} else {
+					newStateObj[this.props.pStateAlphaKey] = aNewVal;
+				}
+				
+				// if (this.sGenInputNumberMousing) {
+					if (this.sGenInputNumberMousing != 'ew-resize') {
+						this.sGenInputNumberMousing = 'ew-resize';
+						newStateObj.sGenInputNumberMousing = this.sGenInputNumberMousing;
+					}
+					newStateObj.setStateFromMouseMove = true;
+				// }
+				
+				gEditorStore.setState(newStateObj);
+				
+				return true;
+			}
+		},
+		mouseup: function(e) {
+			if (e.button != 0) { return }
+			
+			gEditorStore.setState({
+				sGenInputNumberMousing: null
+			});
+			delete this.sGenInputNumberMousing;
+			delete this.downval;
+			
+			
+			window.removeEventListener('mouseup', this.mouseup, false);
+			window.removeEventListener('mousemove', this.mousemove, false);
+			// gEditorStore.setState({
+				// sGenInputNumberMousing: null
+			// });
+		},
 		render: function() {
 			// props
-			//		pRgba
+			// var {pRgba, pStateColorKey, pStateAlphaKey, pSetStateName} = this.props;
+			var {pRgba} = this.props;
 			
-			var rgba = this.props.pRgba;
-			var rgbaStr = 'rgba(' + rgba.r + ', ' + rgba.g + ', ' + rgba.b + ', ' + (rgba.a/100) + ')';
+			var rgbaStr = 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + (pRgba.a/100) + ')';
 			var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
 			
 			return React.createElement('div', {className:'colorpicker-sliders'},
 				React.createElement('div', {className:'colorpicker-sliders-wrap'},
-					React.createElement('div', {className:'colorpicker-slider-rainbow'},
+					React.createElement('div', {className:'colorpicker-slider-rainbow', ref:'color', onMouseDown:this.mousedown.bind(this, true) },
 						React.createElement('div', {className:'colorpicker-slider-thingy'})
 					),
-					React.createElement('div', {className:'colorpicker-slider-alpha'},
-						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + this.props.pRgba.a+'% - ' + Math.round(9*(this.props.pRgba.a/100)) + 'px)'} }) /* -5px to counter the width so it doesnt oveflow at 100% */
+					React.createElement('div', {className:'colorpicker-slider-alpha', ref:'alpha', onMouseDown:this.mousedown.bind(this, false) },
+						React.createElement('div', {className:'colorpicker-slider-thingy', style:{left:'calc(' + pRgba.a+'% - ' + Math.round(9*(pRgba.a/100)) + 'px)'} }) /* -9px to counter the width so it doesnt oveflow at 100% */
 					)
 				),
 				React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'colorpicker-sliders-wrap colorpicker-slider-preview'})
