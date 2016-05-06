@@ -28,6 +28,7 @@ var gCtxMeasureHeight;
 // var gWidthRef;
 // var gHeightRef;
 var gWinArr;
+var gHotkeyRef = {};
 
 function unload() {
 	// if iMon == 0
@@ -566,7 +567,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Fullscreen', // by default it selects the current monitor
 			icon: '\ue80e',
-			hotkey: 'F', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
+			hotkey: 'f', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			// alt+F for all monitors
 			justClick: true,
 			// this sub is specially added
@@ -749,6 +750,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Save',
 			icon: '\ue804',
+			hotkey: 'cs',
 			justClick: true,
 			sub: [
 				{
@@ -764,17 +766,20 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Print',
 			justClick: true,
-			icon: '\ue805'
+			icon: '\ue805',
+			hotkey: 'cp'
 		},
 		{
 			label: 'Copy',
 			justClick: true,
-			icon: '\ue80d'
+			icon: '\ue80d',
+			hotkey: 'cc'
 		},
 		{
 			label: 'Upload to Cloud',
 			justClick: true,
 			icon: '\ue833',
+			hotkey: 'cu',
 			sub: [
 				{
 					label: 'Imgur Anonymous',
@@ -798,6 +803,7 @@ function init(aArrBufAndCore) {
 			label: 'Share to Social Media',
 			justClick: true,
 			icon: 'S',
+			hotkey: 'cm',
 			sub: [
 				{
 					label: 'Twitter',
@@ -813,6 +819,7 @@ function init(aArrBufAndCore) {
 			label: 'Similar Image Search',
 			justClick: true,
 			icon: '\ue821',
+			hotkey: 'ci',
 			sub: [
 				{
 					label: 'Tineye',
@@ -832,6 +839,7 @@ function init(aArrBufAndCore) {
 			label: 'Text Recognition',
 			justClick: true,
 			icon: 'S',
+			hotkey: 'ct',
 			sub: [
 				{
 					label: 'All',
@@ -891,7 +899,7 @@ function init(aArrBufAndCore) {
 			label: 'Close',
 			justClick: true,
 			icon: '\ue82f',
-			hotkey: 'Esc'
+			hotkey: 'Escape' // currently doesnt work with the hotkey algo
 		}
 	];
 
@@ -3318,6 +3326,71 @@ function init(aArrBufAndCore) {
 				default:
 					// do nothing
 			}
+			
+			// test hotkeys
+			var key = e.key;			
+			if (key) {
+				key = key.toLowerCase();
+				console.log('testing key:', key);
+				var testKey = function(aHotkey, aEntry) {
+					var triggerEntry = function() {
+						var evt = document.createEvent('MouseEvents');
+						evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, e.shiftKey, false, 0, null);
+						gHotkeyRef[aHotkey].dispatchEvent(evt);
+					};
+					
+					// shift modifier is ignored, as i use that for multi action
+					if (aHotkey.length == 2) {
+						// first letter is a modifier
+						if (key == aHotkey[1]) {
+							if (aHotkey[0] == 'a') {
+								// requires alt key
+								if (e.altKey && !e.metaHotkey && !e.ctrlKey) {
+									triggerEntry();
+								}
+							} else if (aHotkey[0] == 'c') {
+								// requires ctrl key on non-mac, and meta key on mac
+								if (core.os.name == 'darwin') {
+									if (e.metaHotkey && !e.ctrlKey && !e.altKey) {
+										triggerEntry();
+									}
+								} else {
+									if (e.ctrlKey && !e.metaHotkey && !e.altKey) {
+										triggerEntry();
+									}
+								}
+							}
+						}
+					} else if (aHotkey.length === 1) {
+						if (aHotkey == key) {
+							// requires no modifiers
+							if (!e.metaHotkey && !e.altKey && !e.ctrlKey) {
+								triggerEntry();
+							}
+						}
+					}
+				}
+				
+				var layout = this.props.pPalLayout;
+				var l = layout.length;
+				for (var i=0; i<l; i++) {
+					var entry = layout[i];
+					if (entry.hotkey) {
+						testKey(entry.hotkey, entry);
+					}
+					var sub = entry.sub;
+					if (sub) {
+						var l2 = sub.length;
+						for (var j=0; j<l2; j++) {
+							var subentry = sub[j];
+							if (subentry.hotkey) {
+								console.log('subentry with hotkey:', subentry);
+								testKey(subentry.hotkey, subentry);
+							}
+						}
+					}
+				}
+			}
 		},
 		cancelDropping: function() {
 			// returns true if canceled
@@ -4088,6 +4161,13 @@ function init(aArrBufAndCore) {
 				className:'pbutton',
 				onClick: this.click
 			};
+			
+			if (this.props.pButton.hotkey) {
+				cProps.ref = function(domEl) {
+					gHotkeyRef[this.props.pButton.hotkey] = domEl;
+				}.bind(this);
+			}
+			
 			if (this.props.sPalSeldSubs[this.props.pButton.label]) {
 				for (var i=0; i<this.props.pButton.sub.length; i++) {
 					if (this.props.pButton.sub[i].label == this.props.sPalSeldSubs[this.props.pButton.label]) {
@@ -4134,15 +4214,9 @@ function init(aArrBufAndCore) {
 				cButtonIcon = this.props.pButton.icon;
 			}
 			
-			// determine if Fullscreen button should have a submenu
-			var isFullscreenButtonAndFullscreenHasSubmenu;
-			if (this.props.pButton.label == 'Fullscreen' && tQS.allMonDim.length > 1) {
-				isFullscreenButtonAndFullscreenHasSubmenu = true;
-			}
-			
 			// determine submenu
 			var cSubmenu;
-			if (this.props.pButton.sub || isFullscreenButtonAndFullscreenHasSubmenu) {
+			if (this.props.pButton.sub) {
 				cSubmenu = React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
 					this.props.pButton.label
 				);
@@ -4258,6 +4332,12 @@ function init(aArrBufAndCore) {
 			
 			if (this.props.pSubButton.icontext) {
 				cProps['data-icontext'] = this.props.pSubButton.icontext;
+			}
+			
+			if (this.props.pSubButton.hotkey) {
+				cProps.ref = function(domEl) {
+					gHotkeyRef[this.props.pSubButton.hotkey] = domEl;
+				}.bind(this);
 			}
 			
 			if (this.props.pSubButton.special) {
@@ -5062,42 +5142,8 @@ function init(aArrBufAndCore) {
 			var cChildren = [];
 			
 			// iterate through this.props.pSub
-			if (this.props.pButton.label == 'Fullscreen') {	
-				// this.props.pSub is undefined if "Fullscreen"
-				
-				var allMonDim = tQS.allMonDim;
-				var l = allMonDim.length;
-				// if (l > 2) { // no need for this l2 > 1 check, as if it wasnt, then it would have never got to React.createElement(Submenu for "Fullscreen"
-				
-					// all monitors subbutton
-					cChildren.push(React.createElement(SubButton, overwriteObjWithObj({
-						pSubButton: {
-							label: 'All Monitors',
-							icon: 'A',
-							unfixable: true
-						}
-					}, this.props)));
-					
-					// individual monitor subbuttons
-					for (var i=0; i<l; i++) {
-						if (i !== tQS.iMon) {
-							cChildren.push(React.createElement(SubButton, overwriteObjWithObj({
-								pSubButton: {
-									label: 'Monitor ' + (i + 1),
-									icon: '\ue80e',
-									icontext: (i + 1),
-									unfixable: true
-								}
-							}, this.props)));
-						}
-					}
-				// } else {
-					// return undefined;
-				// }
-			} else {
-				for (var i=0; i<this.props.pSub.length; i++) {
-					cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
-				}
+			for (var i=0; i<this.props.pSub.length; i++) {
+				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 			}
 			
 			return React.createElement('div', {className:'psub'},
@@ -5616,6 +5662,41 @@ function init(aArrBufAndCore) {
 		editorstate.pPalY = 50; // link239285555
 	}
 	
+	// determine if Fullscreen button should have a submenu
+	if (tQS.allMonDim.length > 1) {
+		var l = palLayout.length;
+		for (var i=0; i<l; i++) {
+			var entry = palLayout[i];
+			if (entry.label == 'Fullscreen') {
+				entry.sub = [
+						{
+							label: 'All Monitors',
+							icon: 'A',
+							unfixable: true,
+							hotkey: 'af' // alt+f
+						}
+				];
+				
+				// individual monitor subbuttons
+				var allMonDim = tQS.allMonDim;
+				var l2 = allMonDim.length;
+				
+				for (var j=0; j<l2; j++) {
+					if (j !== tQS.iMon) {
+						entry.sub.push({
+							label: 'Monitor ' + (j + 1),
+							icon: '\ue80e',
+							icontext: (j + 1),
+							unfixable: true
+						});
+					}
+				}
+				
+				break;
+			}
+		}
+	}
+	
 	var initProps = editorstate;
 	console.log('initProps:', initProps);
 	initProps.pQS = pQS;
@@ -5623,7 +5704,7 @@ function init(aArrBufAndCore) {
 	initProps.pPhys = pPhys;
 	initProps.pCanInterval = 30;
 	initProps.pPalLayout = palLayout; // link1818181
-
+	
 	console.log('initProps:', initProps);
 	
 	var initReact = function() {
