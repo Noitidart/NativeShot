@@ -758,15 +758,16 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 						ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_BELOW]));
 						
 						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
+						// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
 						var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
 						console.log('rez_focus:', rez_focus);
 						
-						// Grab the keyboard to get all input
-						var reqGrab = ostypes.API('xcb_grab_keyboard')(ostypes.HELPER.cachedXCBConn(), false, XWindow, ostypes.CONST.XCB_CURRENT_TIME, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
-						var replyGrab = ostypes.API('xcb_grab_keyboard_reply')(ostypes.HELPER.cachedXCBConn(), reqGrab, null);
-						console.error('replyGrab:', replyGrab);
-						console.error('replyGrab.contents:', replyGrab.contents);
-						console.error('replyGrab.status:', replyGrab.contents.status);
+						// // Grab the keyboard to get all input
+						// var reqGrab = ostypes.API('xcb_grab_keyboard')(ostypes.HELPER.cachedXCBConn(), false, XWindow, ostypes.CONST.XCB_CURRENT_TIME, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
+						// var replyGrab = ostypes.API('xcb_grab_keyboard_reply')(ostypes.HELPER.cachedXCBConn(), reqGrab, null);
+						// console.error('replyGrab:', replyGrab);
+						// console.error('replyGrab.contents:', replyGrab.contents);
+						// console.error('replyGrab.status:', replyGrab.contents.status);
 						
 						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
 						console.log('rez_flush', rez_flush);
