@@ -741,8 +741,8 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
 						console.log('rez_unmap', rez_unmap);
 
-						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-						console.log('rez_flush', rez_flush);
+						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						// console.log('rez_flush', rez_flush);
 						
 						var chgValueList = ostypes.TYPE.uint32_t.array()([
 							1
@@ -753,8 +753,8 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
 						console.log('rez_map', rez_map);
 						
-						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-						console.log('rez_flush', rez_flush);
+						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						// console.log('rez_flush', rez_flush);
 												
 						// raise the window
 						var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_BELOW]));
