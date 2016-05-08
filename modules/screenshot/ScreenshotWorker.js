@@ -738,14 +738,17 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					console.log('XWindow:', XWindow);
 					
 					// setTimeout(function() {
+						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
+						console.log('rez_unmap', rez_unmap);
+
+						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						console.log('rez_flush', rez_flush);
+						
 						var chgValueList = ostypes.TYPE.uint32_t.array()([
 							1
 						]);
 						var rez_chg = ostypes.API('xcb_change_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CW_OVERRIDE_REDIRECT, chgValueList);
 						console.log('rez_chg:', rez_chg);
-						
-						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-						console.log('rez_unmap', rez_unmap);
 
 						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
 						console.log('rez_map', rez_map);
@@ -754,8 +757,8 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 						console.log('rez_flush', rez_flush);
 												
 						// raise the window
-						console.log('raising now');
-						ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_BELOW]));
+						var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_BELOW]));
+						console.log('rez_raise:', rez_raise);
 						
 						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
 						// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
