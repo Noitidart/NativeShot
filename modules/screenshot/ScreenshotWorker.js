@@ -121,7 +121,7 @@ self.onclose = function() {
 			break
 		case 'gtk':
 		
-				// ostypes.HELPER.ifOpenedXCBConnClose();
+				ostypes.HELPER.ifOpenedXCBConnClose();
 				
 			break;
 		case 'darwin':
@@ -1426,147 +1426,136 @@ function shootAllMons() {
 		case 'gtk':
 
 				// start - get all monitor resolutions
-				/*
-				var screen = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
+				
+				// get root window
+				var setup = ostypes.API('xcb_get_setup')(ostypes.HELPER.cachedXCBConn());
+				console.log('setup:', setup.contents);
+				
+				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
+				var rootWin = screens.data.contents.root;
+				console.log('rootWin:', rootWin);
 
-
-				var noutputs = parseInt(cutils.jscGetDeepest(screen.contents.noutput));
-
-
-				var screenOutputs = ctypes.cast(screen.contents.outputs, ostypes.TYPE.RROutput.array(noutputs).ptr).contents;
-				for (var i=noutputs-1; i>=0; i--) {
-					var info = ostypes.API('XRRGetOutputInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, screenOutputs[i]);
-					if (cutils.jscEqual(info.connection, ostypes.CONST.RR_Connected)) {
-						var ncrtcs = parseInt(cutils.jscGetDeepest(info.contents.ncrtc));
-						var infoCrtcs = ctypes.cast(info.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtcs).ptr).contents;
-						for (var j=ncrtcs-1; j>=0; j--) {
-							var crtc_info = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), screen, infoCrtcs[j]);
-
-
-							collMonInfos.push({
-								x: parseInt(cutils.jscGetDeepest(crtc_info.contents.x)),
-								y: parseInt(cutils.jscGetDeepest(crtc_info.contents.y)),
-								w: parseInt(cutils.jscGetDeepest(crtc_info.contents.width)),
-								h: parseInt(cutils.jscGetDeepest(crtc_info.contents.height)),
-								screenshot: null // for gtk, i take the big canvas and protion to each mon
-							});
-
-							ostypes.API('XRRFreeCrtcInfo')(crtc_info);
-						}
+				// get screens
+				var reqScreens = ostypes.API('xcb_randr_get_screen_resources_current')(ostypes.HELPER.cachedXCBConn(), rootWin);
+				var replyScreens = ostypes.API('xcb_randr_get_screen_resources_current_reply')(ostypes.HELPER.cachedXCBConn(), reqScreens, null);
+				
+				console.log('replyScreens:', replyScreens);
+				console.log('replyScreens.contents:', replyScreens.contents);
+				
+				var timestamp = replyScreens.contents.config_timestamp;
+				console.log('timestamp:', timestamp);
+				
+				var len = ostypes.API('xcb_randr_get_screen_resources_current_outputs_length')(replyScreens);
+				console.log('len:', len);
+				
+				var randr_outputs = ostypes.API('xcb_randr_get_screen_resources_current_outputs')(replyScreens);
+				console.log('randr_outputs:', randr_outputs);
+				
+				randr_outputs = ctypes.cast(randr_outputs, ostypes.TYPE.xcb_randr_output_t.array(len).ptr).contents;
+				console.log('casted randr_outputs:', randr_outputs);
+				
+				for (var i=0; i<len; i++) {
+					console.log('randr_outputs[i]:', randr_outputs[i]);
+					var reqOutput = ostypes.API('xcb_randr_get_output_info')(ostypes.HELPER.cachedXCBConn(), randr_outputs[i], timestamp);
+					var output = ostypes.API('xcb_randr_get_output_info_reply')(ostypes.HELPER.cachedXCBConn(), reqOutput, null);
+					
+					console.log('output:', output);
+					console.log('output.contents:', output.contents);
+					
+					if (output.isNull()) {
+						console.warn('got null output but will continue to len');
+						continue;
 					}
-					ostypes.API('XRRFreeOutputInfo')(info);
-				}
-				ostypes.API('XRRFreeScreenResources')(screen);
-
-				var monStrs = [];
-				for (var i=0; i<collMonInfos.length; i++) {
-					if (!collMonInfos[i].w || !collMonInfos[i].h)  {// test if 0 width height
-						collMonInfos.splice(i, 1);
-						i--;
-					} else {
-						var monStr = collMonInfos[i].w + 'x' + collMonInfos[i].h + '+' + collMonInfos[i].x + '+' + collMonInfos[i].y;
-						if (monStrs.indexOf(monStr) == -1) {
-							monStrs.push(monStr);
-						} else {
-							collMonInfos.splice(i, 1);
-							i--;
-						}
+					
+					if (cutils.jscEqual(output.contents.crtc, ostypes.CONST.XCB_NONE) || cutils.jscEqual(output.contents.connection, ostypes.CONST.XCB_RANDR_CONNECTION_DISCONNECTED)) {
+						console.warn('continue becuase its XCB_NONE or XCB_RANDR_CONNECTION_DISCONNECTED');
+						continue;
 					}
-				}
-				
-
-				*/
-				
-				// todo: become xcb based
-				////// var setup = ostypes.API('xcb_get_setup')(ostypes.HELPER.cachedXCBConn);
-				////// console.log('setup:', setup.contents);
-				////// 
-				////// var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
-				////// 
-				////// var screensCnt = screens.rem;
-				////// console.log('screensCnt:', screensCnt);
-				////// 
-				////// for (var i=0; i<screensCnt; i++) {
-				////// 	console.log('screen[' + i + ']:', screens);
-				////// 	console.log('screen[' + i + '].data:', screens.data.contents);
-                ////// 
-				////// 	collMonInfos.push({
-				////// 		x: parseInt(cutils.jscGetDeepest(xrrci.contents.x)),
-				////// 		y: parseInt(cutils.jscGetDeepest(xrrci.contents.y)),
-				////// 		w: parseInt(cutils.jscGetDeepest(screens.data.contents.width_in_pixels)),
-				////// 		h: parseInt(cutils.jscGetDeepest(screens.data.contents.height_in_pixels)),
-				////// 		screenshot: null // for x11, i take the big canvas and protion to each mon
-				////// 	});
-				////// 	
-				////// 	ostypes.API('xcb_screen_next')(screens.address());
-				////// }
-				
-				// XRRScreenResources *xrrr = XRRGetScreenResources(d, w);
-				var xrrr = ostypes.API('XRRGetScreenResources')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(ostypes.HELPER.cachedXOpenDisplay()));
-
-				
-				// int ncrtc = xrrr->ncrtc;
-				
-				var ncrtc = parseInt(cutils.jscGetDeepest(xrrr.contents.ncrtc));
-
-				
-				var crtcs = ctypes.cast(xrrr.contents.crtcs, ostypes.TYPE.RRCrtc.array(ncrtc).ptr).contents;
-				for (var i=0; i<ncrtc; i++) {
-					var xrrci = ostypes.API('XRRGetCrtcInfo')(ostypes.HELPER.cachedXOpenDisplay(), xrrr, crtcs[i]);
-					// printf("%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+					
+					var reqCrtc = ostypes.API('xcb_randr_get_crtc_info')(ostypes.HELPER.cachedXCBConn(), output.contents.crtc, timestamp);
+					var crtc = ostypes.API('xcb_randr_get_crtc_info_reply')(ostypes.HELPER.cachedXCBConn(), reqCrtc, null);
+					
+					console.log('crtc.contents:', crtc.contents);
 					
 					collMonInfos.push({
-						x: parseInt(cutils.jscGetDeepest(xrrci.contents.x)),
-						y: parseInt(cutils.jscGetDeepest(xrrci.contents.y)),
-						w: parseInt(cutils.jscGetDeepest(xrrci.contents.width)),
-						h: parseInt(cutils.jscGetDeepest(xrrci.contents.height)),
+						x: parseInt(cutils.jscGetDeepest(crtc.contents.x)),
+						y: parseInt(cutils.jscGetDeepest(crtc.contents.y)),
+						w: parseInt(cutils.jscGetDeepest(crtc.contents.width)),
+						h: parseInt(cutils.jscGetDeepest(crtc.contents.height)),
 						screenshot: null // for x11, i take the big canvas and protion to each mon
 					});
 					
-
-					
-					ostypes.API('XRRFreeCrtcInfo')(xrrci);
+					ostypes.API('free')(crtc);
+					ostypes.API('free')(output);
 				}
-				ostypes.API('XRRFreeScreenResources')(xrrr);
 				
-
+				ostypes.API('free')(replyScreens);
+				
+				
 				
 				// end - get all monitor resolutions
 				
 				// start - take shot of all monitors and push to just first element of collMonInfos
 				// https://github.com/BoboTiG/python-mss/blob/a4d40507c492962d59fcb97a509ede1f4b8db634/mss.py#L116
 
-				// enum_display_monitors
-				// this call to XGetWindowAttributes grab one screenshot of all monitors
-				var gwa = ostypes.TYPE.XWindowAttributes();
-				var rez_XGetWinAttr = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), gwa.address());
-
+				// // this call to XGetWindowAttributes grab one screenshot of all monitors
+				// var gwa = ostypes.TYPE.XWindowAttributes();
+				// var rez_XGetWinAttr = ostypes.API('XGetWindowAttributes')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), gwa.address());
+                // 
+				// 
+				// var fullWidth = parseInt(cutils.jscGetDeepest(gwa.width));
+				// var fullHeight = parseInt(cutils.jscGetDeepest(gwa.height));
+				// var originX = parseInt(cutils.jscGetDeepest(gwa.x));
+				// var originY = parseInt(cutils.jscGetDeepest(gwa.y));
 				
-				var fullWidth = parseInt(cutils.jscGetDeepest(gwa.width));
-				var fullHeight = parseInt(cutils.jscGetDeepest(gwa.height));
-				var originX = parseInt(cutils.jscGetDeepest(gwa.x));
-				var originY = parseInt(cutils.jscGetDeepest(gwa.y));
+				// figure out full width/height, and x y
+				var minX = collMonInfos[0].x;
+				var maxX = collMonInfos[0].x + collMonInfos[0].w;
+				var minY = collMonInfos[0].y;
+				var maxY = collMonInfos[0].y + collMonInfos[0].h;
+				for (var i=1; i<collMonInfos.length; i++) {
+					var cMinX = collMonInfos[i].x;
+					var cMaxX = collMonInfos[i].x + collMonInfos[i].w;
+					var cMinY = collMonInfos[i].y;
+					var cMaxY = collMonInfos[i].y + collMonInfos[i].h;
+					
+					if (cMinX < minX) {
+						minX = cMinX;
+					}
+					if (cMaxX > maxX) {
+						maxX = cMaxX;
+					}					
+					if (cMinY < minY) {
+						minY = cMinY;
+					}
+					if (cMaxY > maxY) {
+						maxY = cMaxY;
+					}
+				}
 				
-
+				var fullWidth = maxX - minX;
+				var fullHeight = maxY - minY;
 				
-				// get_pixels
-				var allplanes = ostypes.API('XAllPlanes')();
-
+				console.log(minX, minY, maxX, maxY, fullWidth, fullHeight);
 				
-				var ZPixmap = 2;
+				// capture shot
+				var reqShot = ostypes.API('xcb_get_image')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_IMAGE_FORMAT_Z_PIXMAP, rootWin, minX, minY, fullWidth, fullHeight, ostypes.CONST.XCB_ALL_PLANES);
+				var replyShot = ostypes.API('xcb_get_image_reply')(ostypes.HELPER.cachedXCBConn(), reqShot, null);
+				
+				console.log('replyShot:', replyShot);
+				console.log('replyShot.contents:', replyShot.contents);
 
-				var ximage = ostypes.API('XGetImage')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), originX, originY, fullWidth, fullHeight, allplanes, ZPixmap);
-
-
+				var dataShot = ostypes.API('xcb_get_image_data')(replyShot);
+				console.log('dataShot:', dataShot);
+				
 				var fullLen = 4 * fullWidth * fullHeight;
-				
 
 				var allShotBuf = new ArrayBuffer(fullWidth * fullHeight * 4);
 
+				ostypes.API('memcpy')(allShotBuf, dataShot, fullLen);
 
-
-				ostypes.API('memcpy')(allShotBuf, ximage.contents.data, fullLen);
-
+				// should call XDestroyImage on ximage
+				ostypes.API('free')(replyShot);
 				
 				var allShotUint8 = new Uint8Array(allShotBuf);
 				// end - take shot of all monitors and push to just first element of collMonInfos
