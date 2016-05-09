@@ -554,11 +554,11 @@ function init(aArrBufAndCore) {
 		// selection tools
 		{
 			label: 'Select',
-			icon: '\ue82c', // the fontello font code
+			icon: '\ue831', // the fontello font code
 			sub: [
 				{
 					label: 'Last Selection',
-					icon: '\ue82e',
+					icon: '\ue822',
 					unfixable: true
 				}
 			],
@@ -566,7 +566,7 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Fullscreen', // by default it selects the current monitor
-			icon: '\ue80e',
+			icon: '\ue80d',
 			hotkey: 'f', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			// alt+F for all monitors
 			justClick: true,
@@ -579,25 +579,25 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Window Wand',
-			icon: '\ue826'
+			icon: '\ue832'
 		},
 		{
 			label: 'Clear Selection',
 			justClick: true,
-			icon: '\ue82f'
+			icon: '\ue825'
 		},
 		{
 			special: 'Divider'
 		},
 		// misc tools
-		{
-			label: 'Toggle Cursor',
-			icon: '\ue822',
-			multiDepress: true
-		},
+		//{
+		//	label: 'Toggle Cursor',
+		//	icon: '\ue834',
+		//	multiDepress: true
+		//},
 		{
 			label: 'Zoom View',
-			icon: '\ue811',
+			icon: '\ue80f',
 			multiDepress: true,
 			/* sub: [ // i decided i will put this ZoomViewLevel into the widget itself
 				{
@@ -612,7 +612,7 @@ function init(aArrBufAndCore) {
 		// draw tools
 		{
 			label: 'Freedraw',
-			icon: '\ue830',
+			icon: '\ue82d',
 			sub: [
 				{
 					label: 'Pencil',
@@ -621,7 +621,7 @@ function init(aArrBufAndCore) {
 				},
 				{
 					label: 'Marker', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
-					icon: 'S',
+					icon: '\ueae9',
 					options: ['Marker Color']
 				}
 			],
@@ -629,11 +629,11 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Shapes',
-			icon: '\ue834',
+			icon: '\ue827',
 			sub: [
 				{
 					label: 'Rectangle',
-					icon: '\ue81d'
+					icon: '\ue81b'
 				},
 				// { // discontinued this, as i plan to offer a border radius option for when Rectangle is selected
 				// 	label: 'Rounded Rectangle',
@@ -641,32 +641,32 @@ function init(aArrBufAndCore) {
 				// },
 				{
 					label: 'Oval',
-					icon: '\ue81f'
+					icon: '\ue83d'
 				}
 			],
 			options: ['Color', 'Fill Color', 'LineTools', 'DimensionTools']
 		},
 		{
 			label: 'Line',
-			icon: '\ue831',
+			icon: '\ue82e',
 			options: ['Color', 'LineTools', 'ArrowTools']
 		},
 		{
 			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
-			icon: 'S',
+			icon: '\ueae8',
 			options: ['TextTools', 'Fill Color']
 		},
 		{
 			label: 'Blur',
-			icon: '\ue808',
+			icon: '\ue807',
 			sub: [
 				{
 					label: 'Gaussian',
-					icon: '\ue816'
+					icon: '\ue814'
 				},
 				{
 					label: 'Mosaic',
-					icon: '\ue81b',
+					icon: '\ue819',
 					options: ['Word Break / Ellipsis']
 				}
 			],
@@ -749,36 +749,36 @@ function init(aArrBufAndCore) {
 		// actions
 		{
 			label: 'Save',
-			icon: '\ue804',
+			icon: '\ue803',
 			hotkey: 'cs',
 			justClick: true,
 			sub: [
 				{
 					label: 'Quick',
-					icon: '\ue81e'
+					icon: '\ue81c'
 				},
 				{
 					label: 'Browse',
-					icon: '\ue825'
+					icon: '\ueaed'
 				}
 			]
 		},
 		{
 			label: 'Print',
 			justClick: true,
-			icon: '\ue805',
+			icon: '\ue804',
 			hotkey: 'cp'
 		},
 		{
 			label: 'Copy',
 			justClick: true,
-			icon: '\ue80d',
+			icon: '\ue80c',
 			hotkey: 'cc'
 		},
 		{
 			label: 'Upload to Cloud',
 			justClick: true,
-			icon: '\ue833',
+			icon: '\ue84e',
 			hotkey: 'cu',
 			sub: [
 				{
@@ -787,75 +787,75 @@ function init(aArrBufAndCore) {
 				},
 				{
 					label: 'Imgur',
-					icon: '\ue828'
+					icon: '\ue826'
 				},
 				{
 					label: 'Dropbox',
-					icon: '\ue809'
+					icon: '\ue808'
 				},
 				{
 					label: 'Google Drive',
-					icon: '\ue827'
+					icon: '\ue833'
 				}
 			]
 		},
 		{
 			label: 'Share to Social Media',
 			justClick: true,
-			icon: 'S',
+			icon: '\ue81e',
 			hotkey: 'cm',
 			sub: [
 				{
 					label: 'Twitter',
 					icon: '\ue802'
-				},
-				{
-					label: 'Facebook',
-					icon: '\ue801'
-				}
+				}//,
+				// {
+					// label: 'Facebook',
+					// icon: '\ue801'
+				// }
 			]
 		},
 		{
 			label: 'Similar Image Search',
 			justClick: true,
-			icon: '\ue821',
+			icon: '\ue81f',
 			hotkey: 'ci',
 			sub: [
 				{
 					label: 'Tineye',
-					icon: 'S'
+					icon: '\ue84f'
 				},
 				{
 					label: 'Google',
-					icon: '\ue810'
-				},
-				{
-					label: 'Bing',
-					icon: 'S'
-				}
+					icon: '\ue80e'
+				}//,
+				// {
+				// 	label: 'Bing',
+				// 	icon: '\ueaeb'
+				// }
 			]
 		},
 		{
 			label: 'Text Recognition',
 			justClick: true,
-			icon: 'S',
+			icon: '\ueafd',
 			hotkey: 'ct',
 			sub: [
 				{
 					label: 'All',
-					icon: 'S'
+					icon: '\ue848'
 				},
 				{
 					label: 'Tesseract',
-					icon: 'S'
+					icon: '\ue841'
 				},
 				{
 					label: 'GOCR',
-					icon: 'S'
+					icon: '\ueafa'
 				},
 				{
 					label: 'OCRAD',
-					icon: 'S'
+					icon: '\ue840'
 				}
 			]
 		},
@@ -898,7 +898,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Close',
 			justClick: true,
-			icon: '\ue82f',
+			icon: '\ue835',
 			hotkey: 'Escape' // currently doesnt work with the hotkey algo
 		}
 	];
@@ -3881,10 +3881,10 @@ function init(aArrBufAndCore) {
 
 			return React.createElement('div', {className:'paccessibility'},
 				React.createElement('div', {className: 'pbutton', onClick:this.enlarge},
-					'\ue81a'
+					'\ue818'
 				),
 				React.createElement('div', {className: 'pbutton', onClick:this.reduce},
-					'\ue819'
+					'\ue817'
 				)
 			);
 		}
@@ -4331,7 +4331,7 @@ function init(aArrBufAndCore) {
 			};
 			
 			if (this.props.pSubButton.icontext) {
-				cProps['data-icontext'] = this.props.pSubButton.icontext;
+				// cProps['data-icontext'] = this.props.pSubButton.icontext;
 			}
 			
 			if (this.props.pSubButton.hotkey) {
@@ -5108,17 +5108,15 @@ function init(aArrBufAndCore) {
 			return React.createElement('div', {className:'colorpicker-choices'},
 				React.createElement('div', {className:'colorpicker-choices-wrap'},
 					React.createElement('div', {className:'colorpicker-choices-history'},
-						React.createElement('div', {className:'colorpicker-choices-opt colorpicker-history-icon'},
-							'H'
-						),
-						!historyElements.length ? React.createElement('span', {style:{fontStyle:'italic'}}, 'No recent colors') : historyElements
+						React.createElement('div', {className:'colorpicker-choices-opt colorpicker-history-icon'}),
+						!historyElements.length ? React.createElement('div', {className:'colorpicker-history-none'}) : historyElements
 					),
 					React.createElement('div', {className:'colorpicker-choices-default'},
 						defaultElements
 					)
 				),
 				React.createElement('div', {className:'colorpicker-choices-wrap colorpicker-choices-dropper', onClick:this.dropperClick},
-					'\ue82a'
+					'\ue824'
 				)
 			);
 		}
@@ -5671,7 +5669,7 @@ function init(aArrBufAndCore) {
 				entry.sub = [
 						{
 							label: 'All Monitors',
-							icon: 'A',
+							icon: '\ue843',
 							unfixable: true,
 							hotkey: 'af' // alt+f
 						}
@@ -5685,7 +5683,7 @@ function init(aArrBufAndCore) {
 					if (j !== tQS.iMon) {
 						entry.sub.push({
 							label: 'Monitor ' + (j + 1),
-							icon: '\ue80e',
+							icon: getMonitorSvg(j),
 							icontext: (j + 1),
 							unfixable: true
 						});
@@ -5770,6 +5768,32 @@ var mmtmNOSCALE = {
 		return Math.round(aH);
 	}
 };
+
+function getMonitorSvg(num) {
+	switch (num) {
+		case 0:
+			return '\ue844';
+		case 1:
+			return '\ue84a';
+		case 2:
+			return '\ue849';
+		case 3:
+			return '\ue850';
+		case 4:
+			return '\ue847';
+		case 5:
+			return '\ue846';
+		case 6:
+			return '\ue845';
+		case 7:
+			return '\ue84c';
+		case 8:
+			return '\ue84b';
+		default:
+			return '\ue80d';
+	}
+}
+
 function MyContext(ctx) {
 
 	this.MMIFIED = true;
