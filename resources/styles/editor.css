@@ -490,7 +490,7 @@ body {
 	border-radius: 1px;
 	position: absolute;
 	z-index: 3;
-	cursor: move;
+	pointer-events: none;
 }
 /* end - zoom_view */
 

@@ -3709,14 +3709,15 @@ function init(aArrBufAndCore) {
 				this.zstate.valid = false;
 			}.bind(this);
 			
-			this.zstate.offsets = {
-				x: this.refs.view.offsetLeft,
-				y: this.refs.view.offsetTop,
-				w: gZoomViewW + 10, //this.refs.view.offsetWidth, // + 10 for the 5px border on each side
-				h: gZoomViewH + 10, //this.refs.view.offsetHeight,
+			this.offsets = {
+				// x: this.refs.view.offsetLeft,
+				// y: this.refs.view.offsetTop,
+				invalidxy: true,
+				// w: this.refs.view.offsetWidth, // gZoomViewW + 10, // + 10 for the 5px border on each side
+				// h: this.refs.view.offsetHeight, // gZoomViewH + 10,
 				desc: 'botlef' // toplef, toprit, botrit
 			};
-			// console.log('viewOffsets:', this.zstate.offsets);
+			console.log('viewOffsets:', this.offsets);
 			this.zstate.interval = setInterval(this.draw, 30);
 			
 			var bgimg = new Image();
@@ -3790,40 +3791,63 @@ function init(aArrBufAndCore) {
 				
 				// mark valid
 				this.zstate.valid = true;
-				
-				// dom positioning
-				var cX = mmtm.x(this.zstate.mouse.x);
-				var cY = mmtm.y(this.zstate.mouse.y);
-				var pad = 50;
-				var padX = mtmm.w(pad);
-				var padY = mtmm.h(pad);
-				if ((this.zstate.offsets.x - padX <= cX) && (this.zstate.offsets.x + this.zstate.offsets.w + padX >= cX) &&
-					(this.zstate.offsets.y - padY <= cY) && (this.zstate.offsets.y + this.zstate.offsets.h + padY >= cY)) {
-						if (this.zstate.offsets.desc == 'botlef') {
-							this.zstate.offsets.desc = 'botrit';
-							this.refs.view.style.right = '5%';
-							this.refs.view.style.left = '';
-						} else {
-							this.zstate.offsets.desc = 'botlef';
-							this.refs.view.style.left = '5%';
-							this.refs.view.style.right = '';
-						}
-						this.zstate.offsets.x = this.refs.view.offsetLeft;
-						this.zstate.offsets.y = this.refs.view.offsetTop;
-						// console.log('this.zstate.offsets:', this.zstate.offsets);
-				}
-				
+								
 				// dom visibility
 				var shouldBeVisible = false;
-				console.log('offsets:', this.zstate.offsets, 'mouse:', this.zstate.mouse);
+				// console.log('offsets:', this.offsets, 'mouse:', this.zstate.mouse);
 				if ((tQS.x <= this.zstate.mouse.x) && (tQS.x + tQS.w >= this.zstate.mouse.x) &&
 					(tQS.y <= this.zstate.mouse.y) && (tQS.y + tQS.h >= this.zstate.mouse.y)) {
-						shouldBeVisible = true;
+						shouldBeVisible = true;						
 				}
 				// console.log('shouldBeVisible', tQS.iMon, shouldBeVisible, 'this.zstate.visible:', this.zstate.visible);
 				if (this.zstate.visible != shouldBeVisible) {
 					this.zstate.visible = shouldBeVisible;
 					this.refs.view.style.display = shouldBeVisible ? '' : 'none';
+				}
+				
+				if (shouldBeVisible) {
+					// dom positioning of the view
+					
+					if (this.offsets.invalidxy) {
+						delete this.offsets.invalidxy;
+						this.offsets.x = this.refs.view.offsetLeft;
+						this.offsets.y = this.refs.view.offsetTop;
+						
+						if (!this.offsets.w) {
+							this.offsets.w = this.refs.view.offsetWidth;
+							this.offsets.h = this.refs.view.offsetHeight;
+						}
+					}
+					
+					var cX = mmtm.x(this.zstate.mouse.x);
+					var cY = mmtm.y(this.zstate.mouse.y);
+					var pad = 50;
+					var padX = mtmm.w(pad);
+					var padY = mtmm.h(pad);
+					
+					var viewMinX = this.offsets.x - padX;
+					var viewMaxX = this.offsets.x + this.offsets.w + padX;
+					var viewMinY = this.offsets.y - padY;
+					var viewMaxY = this.offsets.y + this.offsets.h + padY;
+					
+					console.log('view is in x of:', viewMinX, '-', viewMaxX, 'and y of:', viewMinY, '-', viewMaxY, 'AND MON MOUSE IS IN:', cX, cY);
+
+					if ((this.offsets.x - padX <= cX) && (this.offsets.x + this.offsets.w + padX >= cX) &&
+						(this.offsets.y - padY <= cY) && (this.offsets.y + this.offsets.h + padY >= cY)) {
+							if (this.offsets.desc == 'botlef') {
+								this.offsets.desc = 'botrit';
+								this.refs.view.style.right = '5%';
+								this.refs.view.style.left = '';
+							} else {
+								this.offsets.desc = 'botlef';
+								this.refs.view.style.left = '5%';
+								this.refs.view.style.right = '';
+							}
+							this.offsets.invalidxy = false;
+							this.offsets.x = this.refs.view.offsetLeft;
+							this.offsets.y = this.refs.view.offsetTop;
+							// console.log('this.offsets:', this.offsets);
+					}
 				}
 			}
 		},
@@ -5509,7 +5533,7 @@ function init(aArrBufAndCore) {
 			if (newPropVal != this.lastDomElValue) {
 				// if (prevProps.value != newPropVal) {
 					this.refs.input.value = newPropVal;
-					console.log('ok updated input to', newPropVal, 'pLabel:', this.props.pLabel);
+					// console.log('ok updated input to', newPropVal, 'pLabel:', this.props.pLabel);
 					this.lastDomElValue = newPropVal;
 				// }
 			}
