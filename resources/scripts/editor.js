@@ -115,7 +115,7 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 		gBoolClose = boolClose;
 		var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 		if (!cutouts.length) {
-			alert('no selection made!');
+			// alert('no selection made!');
 		} else {
 			
 			var cutoutsAsRects = [];
@@ -846,16 +846,16 @@ function init(aArrBufAndCore) {
 					icon: '\ue848'
 				},
 				{
-					label: 'Tesseract',
-					icon: '\ue841'
-				},
-				{
 					label: 'GOCR',
 					icon: '\ueafa'
 				},
 				{
 					label: 'OCRAD',
 					icon: '\ue840'
+				},
+				{
+					label: 'Tesseract',
+					icon: '\ue841'
 				}
 			]
 		},
@@ -1103,7 +1103,7 @@ function init(aArrBufAndCore) {
 			window.addEventListener('mousemove', this.mousemove, false);
 			window.addEventListener('mousedown', this.mousedown, false);
 			window.addEventListener('mouseup', this.mouseup, false);
-			window.addEventListener('keyup', this.keyup, false);
+			// window.addEventListener('keyup', this.keyup, false);
 			window.addEventListener('keydown', this.keydown, false);
 			window.addEventListener('dblclick', this.dblclick, false);
 			
@@ -3286,112 +3286,7 @@ function init(aArrBufAndCore) {
 			
 			
 		},
-		keyup: function(e) {
-			switch (e.key) {
-				case 'Delete':
-				
-						// if (!this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing) {
-						//	switch (this.state.sGenPalTool) {
-						//		case 'Select':
-						//		case 'Shapes':
-						//		case 'Line':
-						//		case 'Freedraw':
-						//		case 'Blur':
-										if (this.cstate.selection) {
-											if (this.cstate.selection.name == 'Text' && this.cstate.typing) {
-												// dont delete it as they are just deleting text
-											} else {
-												var rez_valid = this.dDelete(this.cstate.selection);
-												this.clearSelection();
-												gCanStore.setCanState(rez_valid);
-											}
-										}
-						//			break;
-						//		default:
-						//			// do nothing
-						//	}
-						// }
-				
-					break;
-				case 'Escape':
-						
-						var canceledDropping = this.cancelDropping();
-						if (canceledDropping) {
-							return; // so we dont close the window
-						}
-						
-						window.close();
-				
-					break;
-				default:
-					// do nothing
-			}
-			
-			// test hotkeys
-			var key = e.key;			
-			if (key) {
-				key = key.toLowerCase();
-				console.log('testing key:', key);
-				var testKey = function(aHotkey, aEntry) {
-					var triggerEntry = function() {
-						var evt = document.createEvent('MouseEvents');
-						evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, e.shiftKey, false, 0, null);
-						gHotkeyRef[aHotkey].dispatchEvent(evt);
-					};
-					
-					// shift modifier is ignored, as i use that for multi action
-					if (aHotkey.length == 2) {
-						// first letter is a modifier
-						if (key == aHotkey[1]) {
-							if (aHotkey[0] == 'a') {
-								// requires alt key
-								if (e.altKey && !e.metaHotkey && !e.ctrlKey) {
-									triggerEntry();
-								}
-							} else if (aHotkey[0] == 'c') {
-								// requires ctrl key on non-mac, and meta key on mac
-								if (core.os.name == 'darwin') {
-									if (e.metaHotkey && !e.ctrlKey && !e.altKey) {
-										triggerEntry();
-									}
-								} else {
-									if (e.ctrlKey && !e.metaHotkey && !e.altKey) {
-										triggerEntry();
-									}
-								}
-							}
-						}
-					} else if (aHotkey.length === 1) {
-						if (aHotkey == key) {
-							// requires no modifiers
-							if (!e.metaHotkey && !e.altKey && !e.ctrlKey) {
-								triggerEntry();
-							}
-						}
-					}
-				}
-				
-				var layout = this.props.pPalLayout;
-				var l = layout.length;
-				for (var i=0; i<l; i++) {
-					var entry = layout[i];
-					if (entry.hotkey) {
-						testKey(entry.hotkey, entry);
-					}
-					var sub = entry.sub;
-					if (sub) {
-						var l2 = sub.length;
-						for (var j=0; j<l2; j++) {
-							var subentry = sub[j];
-							if (subentry.hotkey) {
-								console.log('subentry with hotkey:', subentry);
-								testKey(subentry.hotkey, subentry);
-							}
-						}
-					}
-				}
-			}
-		},
+		// keyup: function(e) {},
 		cancelDropping: function() {
 			// returns true if canceled
 			var dropping = this.state.sGenColorPickerDropping;
@@ -3405,20 +3300,44 @@ function init(aArrBufAndCore) {
 			}
 		},
 		keydown: function(e) {
+			var newValid = true;
+			
 			var mySel = this.cstate.selection;
+			
+			// high priority "returning" keydown's
+			switch (e.key) {
+				case 'Escape':
+						
+						var canceledDropping = this.cancelDropping();
+						if (canceledDropping) {
+							return; // so we dont close the window
+						}
+						
+						window.close();
+						return;
+				
+					break;
+			}
+			
 			if (this.cstate.typing) {
 				if (e.key.length == 1) {
 					mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
 					mySel.index++;
-					gCanStore.setCanState(false);
+					newValid = false;
 				} else {
 					switch (e.key) {
+						case 'Escape':
+							
+								this.cstate.typing = false;
+								newValid = false;
+							
+							break;
 						case 'Backspace':
 							
 								if (mySel.index > 0) {
 									mySel.index--;
 									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
-									gCanStore.setCanState(false);
+									newValid = false;
 								}
 							
 							break;
@@ -3426,7 +3345,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index < mySel.chars.length) {
 									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
-									gCanStore.setCanState(false);
+									newValid = false;
 								}
 							
 							break;
@@ -3434,7 +3353,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index > 0) {
 									mySel.index--;
-									gCanStore.setCanState(false);
+									newValid = false;
 								}
 							
 							break;
@@ -3442,7 +3361,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index < mySel.chars.length) {
 									mySel.index++;
-									gCanStore.setCanState(false);
+									newValid = false;
 								}
 							
 							break;
@@ -3450,7 +3369,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index > 0) {
 									mySel.index = 0;
-									gCanStore.setCanState(false);
+									newValid = false;
 								}
 							
 							break;
@@ -3458,7 +3377,7 @@ function init(aArrBufAndCore) {
 							
 								if (mySel.index < mySel.chars.length) {
 									mySel.index = mySel.chars.length;
-									gCanStore.setCanState(false);
+									newValid = false;
 								}
 							
 							break;
@@ -3467,125 +3386,211 @@ function init(aArrBufAndCore) {
 					}
 				}
 			// } else if (mySel && !this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing && !this.cstate.typing) {
-			} else if (mySel && !this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing && !this.cstate.typing) {
+			} else if (!this.cstate.dragging && !this.cstate.resizing && !this.cstate.lining && !this.cstate.pathing && !this.cstate.typing) {
 				// hotkeys for move (and resize if applicable)
-				if (e.altKey) {
-					// resize
-					if ('w' in mySel) {
-						var resizeBy = mtmm.w(1); // pixels to move by // :todo: detect if its a resize in h then use mtmm.h
-						if (e.shiftKey) {
-							resizeBy = mtmm.w(10); // :todo: detect if its a resize in h then use mtmm.h
+				if (mySel) {
+					if (e.altKey) {
+						// resize
+						if ('w' in mySel) {
+							var resizeBy = mtmm.w(1); // pixels to move by // :todo: detect if its a resize in h then use mtmm.h
+							if (e.shiftKey) {
+								resizeBy = mtmm.w(10); // :todo: detect if its a resize in h then use mtmm.h
+							}
+							var newW = mySel.w;
+							var newH = mySel.h;
+							switch (e.key) {
+								case 'ArrowDown':
+									
+										newH -= resizeBy;
+									
+									break;
+								case 'ArrowUp':
+									
+										newH += resizeBy;
+									
+									break;
+								case 'ArrowRight':
+									
+										newW += resizeBy;
+									
+									break;
+								case 'ArrowLeft':
+									
+										newW -= resizeBy;
+									
+									break;
+							}
+							if (newW !== mySel.w || newH !== mySel.h) {
+								var widthOrHeightChanged = false; // because if not greater then 0 i dont accept it
+								if (mySel.w !== newW && newW >= 0) {
+									mySel.w = newW;
+									widthOrHeightChanged = true;
+								}
+								if (mySel.h !== newH && newH >= 0) {
+									mySel.h = newH;
+									widthOrHeightChanged = true;
+								}
+								if (widthOrHeightChanged) {
+									newValid = false;
+									// parallel to link38378777577 - not exactly the same but it has similar lagginess
+									// gWidthRef.value = Math.abs(this.cstate.selection.w);
+									// gHeightRef.value = Math.abs(this.cstate.selection.h);
+									gEditorStore.setState({
+										sGenPalW: newW,
+										sGenPalH: newH
+									});
+								}
+							}
 						}
-						var newW = mySel.w;
-						var newH = mySel.h;
+					} else {
+						// move
+						var moveBy = mtmm.w(1); // cant use mtmm.x because otehrwise that will move it with offset // pixels to move by // :todo: detect if its a move in y then use mtmm.y
+						if (e.shiftKey) {
+							moveBy = mtmm.w(10); // :todo: detect if its a move in y then use mtmm.h
+						}
+
+						var moveDirX = 0;
+						var moveDirY = 0;
 						switch (e.key) {
 							case 'ArrowDown':
 								
-									newH -= resizeBy;
+									moveDirY = 1;
 								
 								break;
 							case 'ArrowUp':
 								
-									newH += resizeBy;
+									moveDirY = -1;
 								
 								break;
 							case 'ArrowRight':
 								
-									newW += resizeBy;
+									moveDirX = 1;
 								
 								break;
 							case 'ArrowLeft':
 								
-									newW -= resizeBy;
+									moveDirX = -1;
 								
 								break;
-							default:
-								// nothing special
-								return;
+							case 'Delete':
+							
+									if (!this.dDelete(mySel)) {
+										this.clearSelection();
+										newValid = false;
+									}
+							
+								break;
+							case 'Escape': // never gets here, as escape is at top to close out editor
+								
+									if (!this.clearSelection()) {
+										newValid = false;
+									}
+								
+								break;
 						}
-						var newValid = true;
-						if (mySel.w !== newW && newW >= 0) {
-							mySel.w = newW;
-							newValid = false;
-						}
-						if (mySel.h !== newH && newH >= 0) {
-							mySel.h = newH;
-							newValid = false;
-						}
-						if (!newValid) {
-							gCanStore.setCanState(newValid);
-							// parallel to link38378777577 - not exactly the same but it has similar lagginess
-							// gWidthRef.value = Math.abs(this.cstate.selection.w);
-							// gHeightRef.value = Math.abs(this.cstate.selection.h);
-							gEditorStore.setState({
-								sGenPalW: newW,
-								sGenPalH: newH
-							})
-						}
-					}
-				} else {
-					// move
-					var moveBy = mtmm.w(1); // cant use mtmm.x because otehrwise that will move it with offset // pixels to move by // :todo: detect if its a move in y then use mtmm.y
-					if (e.shiftKey) {
-						moveBy = mtmm.w(10); // :todo: detect if its a move in y then use mtmm.h
-					}
-
-					var moveDirX = 0;
-					var moveDirY = 0;
-					switch (e.key) {
-						case 'ArrowDown':
+						
+						if (moveDirX || moveDirY) {
+							var moveByX = moveBy * moveDirX;
+							var moveByY = moveBy * moveDirY;
 							
-								moveDirY = 1;
-							
-							break;
-						case 'ArrowUp':
-							
-								moveDirY = -1;
-							
-							break;
-						case 'ArrowRight':
-							
-								moveDirX = 1;
-							
-							break;
-						case 'ArrowLeft':
-							
-								moveDirX = -1;
-							
-							break;
-						default:
-							// nothing special
-							return;
-					}
-					
-					var moveByX = moveBy * moveDirX;
-					var moveByY = moveBy * moveDirY;
-					
-					// determine move type
-					if ('x2' in mySel) {
-						mySel.x += moveByX;
-						mySel.y += moveByY;
-						mySel.x2 += moveByX;
-						mySel.y2 += moveByY;
-					} else if ('path' in mySel) {
-						var path = mySel.path;
-						var l = path.length;
-						for (var i=0; i<l; i++) {
-							if (i % 2) {
-								path[i] += moveByY;
+							// determine move type
+							if ('x2' in mySel) {
+								mySel.x += moveByX;
+								mySel.y += moveByY;
+								mySel.x2 += moveByX;
+								mySel.y2 += moveByY;
+							} else if ('path' in mySel) {
+								var path = mySel.path;
+								var l = path.length;
+								for (var i=0; i<l; i++) {
+									if (i % 2) {
+										path[i] += moveByY;
+									} else {
+										path[i] += moveByX;
+									}
+								}
 							} else {
-								path[i] += moveByX;
+								// this is not always true `if ('w' in mySel || ) {` as for text
+								mySel.x += moveByX;
+								mySel.y += moveByY;
+							}
+							
+							newValid = false;
+						}
+					}
+				}
+				
+				// other hotkeys
+				// console.log('e:', e);
+				if (!e.repeat) {					
+					// test hotkeys
+					var key = e.key;			
+					if (key) {
+						key = key.toLowerCase();
+						console.log('testing key:', key);
+						var testKey = function(aHotkey, aEntry) {
+							var triggerEntry = function() {
+								var evt = document.createEvent('MouseEvents');
+								evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, e.shiftKey, false, 0, null);
+								gHotkeyRef[aHotkey].dispatchEvent(evt);
+							};
+							
+							// shift modifier is ignored, as i use that for multi action
+							if (aHotkey.length == 2) {
+								// first letter is a modifier
+								if (key == aHotkey[1]) {
+									if (aHotkey[0] == 'a') {
+										// requires alt key
+										if (e.altKey && !e.metaHotkey && !e.ctrlKey) {
+											triggerEntry();
+										}
+									} else if (aHotkey[0] == 'c') {
+										// requires ctrl key on non-mac, and meta key on mac
+										if (core.os.name == 'darwin') {
+											if (e.metaHotkey && !e.ctrlKey && !e.altKey) {
+												triggerEntry();
+											}
+										} else {
+											if (e.ctrlKey && !e.metaHotkey && !e.altKey) {
+												triggerEntry();
+											}
+										}
+									}
+								}
+							} else if (aHotkey.length === 1) {
+								if (aHotkey == key) {
+									// requires no modifiers
+									if (!e.metaHotkey && !e.altKey && !e.ctrlKey) {
+										triggerEntry();
+									}
+								}
 							}
 						}
-					} else {
-						// this is not always true `if ('w' in mySel || ) {` as for text
-						mySel.x += moveByX;
-						mySel.y += moveByY;
+						
+						var layout = this.props.pPalLayout;
+						var l = layout.length;
+						for (var i=0; i<l; i++) {
+							var entry = layout[i];
+							if (entry.hotkey) {
+								testKey(entry.hotkey, entry);
+							}
+							var sub = entry.sub;
+							if (sub) {
+								var l2 = sub.length;
+								for (var j=0; j<l2; j++) {
+									var subentry = sub[j];
+									if (subentry.hotkey) {
+										console.log('subentry with hotkey:', subentry);
+										testKey(subentry.hotkey, subentry);
+									}
+								}
+							}
+						}
 					}
-					
-					gCanStore.setCanState(false);
 				}
 			}
+			
+			gCanStore.setCanState(newValid);
 		},
 		////// end - canvas functions
 		render: function() {
