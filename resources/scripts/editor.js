@@ -1670,65 +1670,67 @@ function init(aArrBufAndCore) {
 						
 						// draw handles
 						var handleSize = this.state.sCanHandleSize;
-						var half = handleSize / 2;
-						
-						var selectionHandles = this.cstate.selectionHandles;
-						
-						// top left, middle, right
-						selectionHandles[0] = {
-							x: aDrawable.x-half,
-							y: aDrawable.y-half
-						};
-						
-						selectionHandles[1] = {
-							x: aDrawable.x+aDrawable.w/2-half,
-							y: aDrawable.y-half
-						};
-						
-						selectionHandles[2] = {
-							x: aDrawable.x+aDrawable.w-half,
-							y: aDrawable.y-half
-						};
-						
-						//middle left
-						selectionHandles[3] = {
-							x: aDrawable.x-half,
-							y: aDrawable.y+aDrawable.h/2-half
-						};
-						
-						//middle right
-						selectionHandles[4] = {
-							x: aDrawable.x+aDrawable.w-half,
-							y: aDrawable.y+aDrawable.h/2-half
-						};
-						
-						//bottom left, middle, right
-						selectionHandles[6] = {
-							x: aDrawable.x+aDrawable.w/2-half,
-							y: aDrawable.y+aDrawable.h-half
-						};
-						
-						selectionHandles[5] = {
-							x: aDrawable.x-half,
-							y: aDrawable.y+aDrawable.h-half
-						};
-						
-						selectionHandles[7] = {
-							x: aDrawable.x+aDrawable.w-half,
-							y: aDrawable.y+aDrawable.h-half
-						};
-						
-						this.ctx.fillStyle = '#000000';
-						this.ctx.setLineDash([]);
-						this.ctx.strokeStyle = '#ffffff';
-						this.ctx.beginPath();
-						for (i = 0; i < 8; i += 1) {
-							cur = selectionHandles[i];
-							this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
-						};
-						
-						this.ctx.fill();
-						this.ctx.stroke();
+						if (handleSize) {
+							var half = handleSize / 2;
+							
+							var selectionHandles = this.cstate.selectionHandles;
+							
+							// top left, middle, right
+							selectionHandles[0] = {
+								x: aDrawable.x-half,
+								y: aDrawable.y-half
+							};
+							
+							selectionHandles[1] = {
+								x: aDrawable.x+aDrawable.w/2-half,
+								y: aDrawable.y-half
+							};
+							
+							selectionHandles[2] = {
+								x: aDrawable.x+aDrawable.w-half,
+								y: aDrawable.y-half
+							};
+							
+							//middle left
+							selectionHandles[3] = {
+								x: aDrawable.x-half,
+								y: aDrawable.y+aDrawable.h/2-half
+							};
+							
+							//middle right
+							selectionHandles[4] = {
+								x: aDrawable.x+aDrawable.w-half,
+								y: aDrawable.y+aDrawable.h/2-half
+							};
+							
+							//bottom left, middle, right
+							selectionHandles[6] = {
+								x: aDrawable.x+aDrawable.w/2-half,
+								y: aDrawable.y+aDrawable.h-half
+							};
+							
+							selectionHandles[5] = {
+								x: aDrawable.x-half,
+								y: aDrawable.y+aDrawable.h-half
+							};
+							
+							selectionHandles[7] = {
+								x: aDrawable.x+aDrawable.w-half,
+								y: aDrawable.y+aDrawable.h-half
+							};
+							
+							this.ctx.fillStyle = '#000000';
+							this.ctx.setLineDash([]);
+							this.ctx.strokeStyle = '#ffffff';
+							this.ctx.beginPath();
+							for (i = 0; i < 8; i += 1) {
+								cur = selectionHandles[i];
+								this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							};
+							
+							this.ctx.fill();
+							this.ctx.stroke();
+						}
 					
 					break;
 				case 'Text':
@@ -1789,28 +1791,30 @@ function init(aArrBufAndCore) {
 						
 						// draw handles
 						var handleSize = this.state.sCanHandleSize;
-						var half = handleSize / 2;
-						
-						var selectionHandles = this.cstate.selectionHandles;
-						selectionHandles.length = 2;
-						
-						selectionHandles[0] = {
-							x: aDrawable.x-half,
-							y: aDrawable.y-half
-						};
-						
-						selectionHandles[1] = {
-							x: aDrawable.x2-half,
-							y: aDrawable.y2-half
-						};
-						
-						this.ctx.beginPath();
-						for (i = 0; i < 2; i += 1) {
-							cur = selectionHandles[i];
-							this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
-						};
-						this.ctx.fill();
-						this.ctx.stroke();
+						if (handleSize) {
+							var half = handleSize / 2;
+							
+							var selectionHandles = this.cstate.selectionHandles;
+							selectionHandles.length = 2;
+							
+							selectionHandles[0] = {
+								x: aDrawable.x-half,
+								y: aDrawable.y-half
+							};
+							
+							selectionHandles[1] = {
+								x: aDrawable.x2-half,
+								y: aDrawable.y2-half
+							};
+							
+							this.ctx.beginPath();
+							for (i = 0; i < 2; i += 1) {
+								cur = selectionHandles[i];
+								this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							};
+							this.ctx.fill();
+							this.ctx.stroke();
+						}
 					
 					break;
 				case 'Pencil':
@@ -1829,20 +1833,22 @@ function init(aArrBufAndCore) {
 						// this.ctx.stroke();
 						// draw handles
 						var handleSize = this.state.sCanHandleSize;
-						var half = handleSize / 2;
-						
-						// var selectionHandles = this.cstate.selectionHandles;
-						// selectionHandles.length = 2;
-						
-						this.ctx.beginPath();
-						// for (i = 0; i < 2; i += 1) {
-							// cur = selectionHandles[i];
-							// this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
-						// };
-						this.ctx.rect(aDrawable.path[0] - half, aDrawable.path[1] - half, handleSize, handleSize);
-						this.ctx.rect(aDrawable.path[aDrawable.path.length-2] - half, aDrawable.path[aDrawable.path.length-1] - half, handleSize, handleSize);
-						this.ctx.fill();
-						this.ctx.stroke();
+						if (handleSize) {
+							var half = handleSize / 2;
+							
+							// var selectionHandles = this.cstate.selectionHandles;
+							// selectionHandles.length = 2;
+							
+							this.ctx.beginPath();
+							// for (i = 0; i < 2; i += 1) {
+								// cur = selectionHandles[i];
+								// this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							// };
+							this.ctx.rect(aDrawable.path[0] - half, aDrawable.path[1] - half, handleSize, handleSize);
+							this.ctx.rect(aDrawable.path[aDrawable.path.length-2] - half, aDrawable.path[aDrawable.path.length-1] - half, handleSize, handleSize);
+							this.ctx.fill();
+							this.ctx.stroke();
+						}
 				
 					break;
 				default:
@@ -1864,7 +1870,7 @@ function init(aArrBufAndCore) {
 				
 						if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 							var selectionHandles = this.cstate.selectionHandles;
-							var handleSize = this.state.sCanHandleSize;
+							var handleSize = this.state.sCanHandleSize < 5 ? 5 : this.state.sCanHandleSize;
 							for (var i=0; i<2; i++) {
 								if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 									(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
@@ -1930,7 +1936,7 @@ function init(aArrBufAndCore) {
 					// is aDrawable selected
 					if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 						var selectionHandles = this.cstate.selectionHandles;
-						var handleSize = this.state.sCanHandleSize;
+						var handleSize = this.state.sCanHandleSize < 5 ? 5 : this.state.sCanHandleSize;
 						for (var i=0; i<8; i++) {
 							if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 								(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
@@ -2381,7 +2387,7 @@ function init(aArrBufAndCore) {
 					nLevel = cLevel - 1;
 				}
 				
-				if (nLevel >= 1 && nLevel <= 40) {
+				if (nLevel >= 1 && nLevel <= 32) {
 					gEditorStore.setState({
 						sPalZoomViewLevel: nLevel
 					});
@@ -3625,7 +3631,6 @@ function init(aArrBufAndCore) {
 			if (this.state.sGenInputNumberMousing) {
 				cCanProps.style.cursor = this.state.sGenInputNumberMousing;
 				cPalPalProps.style.cursor = this.state.sGenInputNumberMousing;				
-				cPalProps.pZoomViewCursor = this.state.sGenInputNumberMousing;
 				cPalProps.pPalSubwrapCursor = this.state.sGenInputNumberMousing;
 				editorWrapProps.className += ' inputnumber-component-mousing';
 			} else if (this.state.sGenPalDragStart) {
@@ -3858,8 +3863,8 @@ function init(aArrBufAndCore) {
 		// },
 		render: function() {
 			// props - cPalProps - its all of them
-			// return React.createElement('canvas', {className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px', cursor:this.props.pZoomViewCursor }, onMouseDown:this.mousedown});
-			return React.createElement('canvas', {ref:'view', className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{display:'none', bottom:'5%', left: '5%', cursor:this.props.pZoomViewCursor } });
+			// return React.createElement('canvas', {className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{left:this.props.sPalZoomViewCoords.x+'px', top:this.props.sPalZoomViewCoords.y+'px' }, onMouseDown:this.mousedown});
+			return React.createElement('canvas', {ref:'view', className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{display:'none', bottom:'5%', left: '5%'} });
 		}
 	});
 	
@@ -3867,41 +3872,67 @@ function init(aArrBufAndCore) {
 	var Accessibility = React.createClass({
 		// the zoom controls that affect the toolbar
 		displayName: 'Accessibility',
-		enlarge: function() {
-			var cPaletteSize = this.props.sPalSize;
-			var cHandleSize = this.props.sCanHandleSize;
-			
-			var nPaletteSize = cPaletteSize;
-			var nHandleSize = cHandleSize;
-			
-			if (cPaletteSize + 8 <= 56) {
-				nPaletteSize = cPaletteSize + 8;
-			}
-			if (cHandleSize + 3 <= 25) {
-				nHandleSize = cHandleSize + 3;
-			}
-			gEditorStore.setState({
-				sPalSize: nPaletteSize,
-				sCanHandleSize: nHandleSize
-			});
-		},
-		reduce: function() {
-			var cPaletteSize = this.props.sPalSize;
-			var cHandleSize = this.props.sCanHandleSize;
+		enlarge: function(e) {
+			if (e.altKey) {
+				// sCanHandleSize
+				var max = 34;
+				var del = 2;
+				var cHandleSize = this.props.sCanHandleSize;
+				
+				var nHandleSize = cHandleSize;
+				
+				if (cHandleSize + del <= max) {
+					nHandleSize = cHandleSize + del;
+				}
 
-			var nPaletteSize = cPaletteSize;
-			var nHandleSize = cHandleSize;
-			
-			if (cPaletteSize - 8 > 0) {
-				nPaletteSize = cPaletteSize - 8;
+				gEditorStore.setState({
+					sCanHandleSize: nHandleSize
+				});
+			} else {
+				// sPalSize
+				var max = 58;
+				var del = 2;
+				var cPaletteSize = this.props.sPalSize;
+				var nPaletteSize = cPaletteSize;
+				if (cPaletteSize + del <= max) {
+					nPaletteSize = cPaletteSize + del;
+				}
+
+				gEditorStore.setState({
+					sPalSize: nPaletteSize,
+				});
 			}
-			if (cHandleSize - 3 > 7) {
-				nHandleSize = cHandleSize - 3;
+		},
+		reduce: function(e) {
+			if (e.altKey) {
+				// sCanHandleSize
+				var min = 0;
+				var del = 2;
+				var cHandleSize = this.props.sCanHandleSize;
+				
+				var nHandleSize = cHandleSize;
+				
+				if (cHandleSize - del >= min) {
+					nHandleSize = cHandleSize - del;
+				}
+
+				gEditorStore.setState({
+					sCanHandleSize: nHandleSize
+				});
+			} else {
+				// sPalSize
+				var min = 12;
+				var del = 2;
+				var cPaletteSize = this.props.sPalSize;
+				var nPaletteSize = cPaletteSize;
+				if (cPaletteSize - del >= min) {
+					nPaletteSize = cPaletteSize - del;
+				}
+
+				gEditorStore.setState({
+					sPalSize: nPaletteSize,
+				});
 			}
-			gEditorStore.setState({
-				sPalSize: nPaletteSize,
-				sCanHandleSize: nHandleSize
-			});
 		},
 		render: function() {
 			// props
@@ -5622,7 +5653,7 @@ function init(aArrBufAndCore) {
 		}
 		
 		editorstate = {
-			pPalSize: 40,
+			pPalSize: 38,
 			pPalSeldSubs: palSeldSubs,
 			pPalMultiDepresses: {}, // if its depressed, then the tool label is the key and the value is true
 			
@@ -5654,7 +5685,7 @@ function init(aArrBufAndCore) {
 			pPalFontItalic: undefined,
 			pPalFontUnderline: undefined,
 			
-			pCanHandleSize: 19,
+			pCanHandleSize: 18,
 			pPalSeldSubs: palSeldSubs,
 			
 			pPalX: 5, // link239285555
