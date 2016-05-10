@@ -610,6 +610,16 @@ body {
 /* end - inputnumber-label */
 
 /* start - other_stuff */
+.hoverlistener {
+	min-width: 0;
+	min-height: 0;
+	transition: min-width 1ms;
+}
+.hoverlistener:hover {
+	min-width: 1px;
+	min-height: 1px;
+	transition: min-height 1ms;
+}
 .pbutton-icon-color {
 	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
 	background-repeat: no-repeat, repeat;

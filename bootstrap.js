@@ -1823,26 +1823,10 @@ function forBtnIdAndService_addEntryToLog(aBtnId, aServiceName) {
 function copyForBtnId(aBtnId) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
 	
-	var data = cBtnStore.data.dataurl;
-	var channel = Services.io.newChannel(data, null, null);
-	var input = channel.open();
-	var imgTools = Cc['@mozilla.org/image/tools;1'].getService(Ci.imgITools);
+	// var data = cBtnStore.data.dataurl;
+	CLIPBOARD.set(cBtnStore.data.dataurl, 'image');
 	
-	var container = {};
-	imgTools.decodeImageData(input, channel.contentType, container);
-
-	var wrapped = Cc['@mozilla.org/supports-interface-pointer;1'].createInstance(Ci.nsISupportsInterfacePointer);
-	wrapped.data = container.value;
-	
-	var trans = Transferable(gEditor.gBrowserDOMWindow);
-
-	trans.addDataFlavor(channel.contentType);
-	
-	trans.setTransferData(channel.contentType, wrapped, -1);
-	
-	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
-	
-	/* to consider
+	/* to consider and test
 		// have to first set imageURL = createBlob
 	  
 	   // Also put the image's html <img> tag on the clipboard.  This is 
@@ -2377,37 +2361,7 @@ var NBs = { // short for "notification bars"
 	}
 };
 // END - Addon Functionalities
-// start - clipboard boilerplate
-// Create a constructor for the built-in supports-string class.
-const nsSupportsString = CC("@mozilla.org/supports-string;1", "nsISupportsString");
-function SupportsString(str) {
-    // Create an instance of the supports-string class
-    var res = nsSupportsString();
 
-    // Store the JavaScript string that we want to wrap in the new nsISupportsString object
-    res.data = str;
-    return res;
-}
-
-// Create a constructor for the built-in transferable class
-const nsTransferable = CC("@mozilla.org/widget/transferable;1", "nsITransferable");
-
-// Create a wrapper to construct an nsITransferable instance and set its source to the given window, when necessary
-function Transferable(source) {
-    var res = nsTransferable();
-    if ('init' in res) {
-        // When passed a Window object, find a suitable privacy context for it.
-        if (source instanceof Ci.nsIDOMWindow) {
-            // Note: in Gecko versions >16, you can import the PrivateBrowsingUtils.jsm module
-            // and use PrivateBrowsingUtils.privacyContextFromWindow(sourceWindow) instead
-            source = source.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
-		}
-		
-        res.init(source);
-    }
-    return res;
-}
-// end - clipboard boilerplate
 /*start - windowlistener*/
 var windowListener = {
 	//DO NOT EDIT HERE
@@ -4493,10 +4447,7 @@ function jsonToDOM(json, doc, nodes) {
 }
 
 function copyTextToClip(aTxt, aDOMWindow) {
-	var trans = Transferable(aDOMWindow ? aDOMWindow : Services.wm.getMostRecentWindow('navigator:browser'));
-	trans.addDataFlavor('text/unicode');
-	trans.setTransferData('text/unicode', SupportsString(aTxt), aTxt.length * 2); // We multiply the length of the string by 2, since it's stored in 2-byte UTF-16 format internally.
-	Services.clipboard.setData(trans, null, Services.clipboard.kGlobalClipboard);
+	CLIPBOARD.set(aTxt, 'text');
 }
 
 function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType) {

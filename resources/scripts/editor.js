@@ -4222,6 +4222,17 @@ function init(aArrBufAndCore) {
 				gChangingSubToolTo = null;
 			}
 		},
+		setLabelText: function(aNewTxt, aKey) {
+			// if aNewTxt is undefined, then it resets it
+			if (aNewTxt) {
+				this.settingKey = aKey;
+				this.refs.plabel.textContent = aNewTxt;
+			} else {
+				if (aKey == this.settingKey) {
+					this.refs.plabel.textContent = this.props.pButton.label;
+				}
+			}
+		},
 		render: function() {
 			// props
 			//		pButton
@@ -4296,14 +4307,14 @@ function init(aArrBufAndCore) {
 			// determine submenu
 			var cSubmenu;
 			if (this.props.pButton.sub) {
-				cSubmenu = React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
+				cSubmenu = React.createElement(Submenu, overwriteObjWithObj({pSub:this.props.pButton.sub, setLabelText:this.setLabelText}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSub:this.props.pButton.sub, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/,
 					this.props.pButton.label
 				);
 			}
 			
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
-					React.createElement('span', {},
+					React.createElement('span', {ref:'plabel'},
 						this.props.pButton.label
 					)
 				),
@@ -4314,6 +4325,24 @@ function init(aArrBufAndCore) {
 	});
 	
 	var SubButton = React.createClass({
+		hoverout: function() {
+			console.log('hover outted');
+			this.props.setLabelText(null, this.props.pSubButton.label);
+		},
+		hoverover: function() {
+			console.log('hover overed');
+			this.props.setLabelText(this.props.pSubButton.label, this.props.pSubButton.label);
+		},
+		hoverlistener: function(e) {
+			console.log('hoverlistener, name:', e.propertyName);
+			if (e.propertyName == 'min-width') {
+				// mouse outted
+				this.hoverout();
+			} else if (e.propertyName == 'min-height') {
+				// mouse overed
+				this.hoverover();
+			}
+		},
 		click: function(e) {
 			var dontStopPropagation = false;
 			
@@ -4403,10 +4432,12 @@ function init(aArrBufAndCore) {
 			//		pSubButton
 			//		pButton
 			//		sPalSeldSubs
+			//		setLabelText
 
 			var cProps = {
-				className:'pbutton',
-				onClick: this.click
+				className:'pbutton hoverlistener',
+				onClick: this.click,
+				onTransitionEnd: this.hoverlistener
 			};
 			
 			if (this.props.pSubButton.icontext) {
@@ -5215,12 +5246,13 @@ function init(aArrBufAndCore) {
 			//		sGenColorPickerDropping
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
+			//		setLabelText
 			
 			var cChildren = [];
 			
 			// iterate through this.props.pSub
 			for (var i=0; i<this.props.pSub.length; i++) {
-				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i]}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
+				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i], setLabelText:this.props.setLabelText}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 			}
 			
 			return React.createElement('div', {className:'psub'},
