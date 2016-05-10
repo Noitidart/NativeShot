@@ -576,13 +576,13 @@ function init(aArrBufAndCore) {
 					unfixable: true
 				}
 			],
-			options: ['DimensionTools']
+			options: ['DimensionTools'],
+			hotkey: 'm'
 		},
 		{
 			label: 'Fullscreen', // by default it selects the current monitor
 			icon: '\ue80d',
-			hotkey: 'f', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
-			// alt+F for all monitors
+			hotkey: 'ca', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			justClick: true,
 			// this sub is specially added
 			// sub: [
@@ -593,12 +593,14 @@ function init(aArrBufAndCore) {
 		},
 		{
 			label: 'Window Wand',
-			icon: '\ue832'
+			icon: '\ue832',
+			hotkey: 'w'
 		},
 		{
 			label: 'Clear Selection',
 			justClick: true,
-			icon: '\ue825'
+			icon: '\ue825',
+			hotkey: 'ad'
 		},
 		{
 			special: 'Divider'
@@ -613,6 +615,7 @@ function init(aArrBufAndCore) {
 			label: 'Zoom View',
 			icon: '\ue80f',
 			multiDepress: true,
+			hotkey: 'z'
 			/* sub: [ // i decided i will put this ZoomViewLevel into the widget itself
 				{
 					special: 'ZoomViewLevel'
@@ -627,6 +630,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Freedraw',
 			icon: '\ue82d',
+			hotkey: 'f',
 			sub: [
 				{
 					label: 'Pencil',
@@ -644,6 +648,7 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Shapes',
 			icon: '\ue827',
+			hotkey: 's',
 			sub: [
 				{
 					label: 'Rectangle',
@@ -663,12 +668,14 @@ function init(aArrBufAndCore) {
 		{
 			label: 'Line',
 			icon: '\ue82e',
+			hotkey: 'l',
 			options: ['Color', 'LineTools', 'ArrowTools']
 		},
 		{
 			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
 			icon: '\ueae8',
-			options: ['TextTools', 'Fill Color']
+			options: ['TextTools', 'Fill Color'],
+			hotkey: 't'
 		},
 		{
 			label: 'Blur',
@@ -684,7 +691,8 @@ function init(aArrBufAndCore) {
 					options: ['Word Break / Ellipsis']
 				}
 			],
-			options: ['BlurTools', 'DimensionTools']
+			options: ['BlurTools', 'DimensionTools'],
+			hotkey: 'b'
 		},
 		{
 			special: 'Divider'
@@ -833,7 +841,7 @@ function init(aArrBufAndCore) {
 			label: 'Similar Image Search',
 			justClick: true,
 			icon: '\ue81f',
-			hotkey: 'ci',
+			hotkey: 'cf',
 			sub: [
 				{
 					label: 'Tineye',
@@ -853,7 +861,7 @@ function init(aArrBufAndCore) {
 			label: 'Text Recognition',
 			justClick: true,
 			icon: '\ueafd',
-			hotkey: 'ct',
+			hotkey: 'cr',
 			sub: [
 				{
 					label: 'All',
@@ -3343,6 +3351,13 @@ function init(aArrBufAndCore) {
 								topic: 'insertTextFromClipboard',
 								iMon: tQS.iMon
 							}));
+					} else if (e.key.toLowerCase() == 'd' && ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey))) {
+						// deselect
+						if ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey)) {
+							this.cstate.typing = false;
+							newValid = false;
+							this.clearSelection()
+						}
 					} else {
 						// insert single char
 						mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
@@ -3351,12 +3366,6 @@ function init(aArrBufAndCore) {
 					}
 				} else {
 					switch (e.key) {
-						case 'Escape':
-							
-								this.cstate.typing = false;
-								newValid = false;
-							
-							break;
 						case 'Backspace':
 							
 								if (mySel.index > 0) {
@@ -3509,6 +3518,16 @@ function init(aArrBufAndCore) {
 								
 									if (!this.clearSelection()) {
 										newValid = false;
+									}
+								
+								break;
+							case 'D':
+							case 'd':
+								
+									if ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey)) {
+										if (!this.clearSelection()) {
+											newValid = false;
+										}
 									}
 								
 								break;
@@ -5782,7 +5801,7 @@ function init(aArrBufAndCore) {
 							label: 'All Monitors',
 							icon: '\ue843',
 							unfixable: true,
-							hotkey: 'af' // alt+f
+							hotkey: 'aa'
 						}
 				];
 				
