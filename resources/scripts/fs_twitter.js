@@ -10,7 +10,7 @@ var core = {
 			content_accessible: 'chrome://nativeshot-accessible/content/',
 			scripts: 'chrome://nativeshot/content/resources/scripts/'
 		},
-		cache_key: Math.random() // set to version on release
+		cache_key: 'v1.8b.rev44' // set to version on release
 	}
 };
 const gContentFrameMessageManager = this;
@@ -169,18 +169,18 @@ function on_nativeShot_notifyDataTweetSuccess(aEvent) {
 	
 	var parser = Cc['@mozilla.org/xmlextras/domparser;1'].createInstance(Ci.nsIDOMParser);
 	var parsedDocument = parser.parseFromString(refDetails.tweet_html, 'text/html');
-	console.error('refDetails.tweet_html:', refDetails.tweet_html);
+
 	
 	var photos = [];
 	var pattPhotoUrl = /data-(?:image-url|img-src)=["']?([^"' >]+)/g; // https://github.com/Noitidart/NativeShot/wiki/Twitter-Response-HTML
 	var matchPhotoUrl;
-	console.log('ok looping');
+
 	while (matchPhotoUrl = pattPhotoUrl.exec(refDetails.tweet_html)) {
-		console.log('matchPhotoUrl:', matchPhotoUrl);
+
 		photos.push(matchPhotoUrl[1]);
 	}
 	
-	console.log('imgIdsAttached_andPreviewIndex:', imgIdsAttached_andPreviewIndex);
+
 	
 	for (var i=0; i<photos.length; i++) {
 		for (var imgId in imgIdsAttached_andPreviewIndex) {
@@ -490,7 +490,7 @@ function attachSentImgData() {
 	}
 	
 	countPreview = tweetDialogDialog.querySelectorAll('img[src^=blob]').length;
-	console.log('countPreview:', countPreview);
+
 
 	
 	var img = aContentDocument.createElement('img');
@@ -511,7 +511,7 @@ function waitForAttachToFinish() {
 	// keeps checking the preview account, if it goes up then it has attached
 	
 	var nowCountPreview = tweetDialogDialog.querySelectorAll('img[src^=blob]').length;
-	console.log('nowCountPreview:', nowCountPreview);
+
 	if (nowCountPreview == countPreview + 1) {
 		// :todo: add event listener on click of the x of the preview, on delete, send msg to parent saying deleted, also delete from imgIdsAttached_andPreviewIndex
 		var justAttachedImgId = currentlyAttaching.imgId;
