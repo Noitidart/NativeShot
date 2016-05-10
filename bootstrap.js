@@ -1308,26 +1308,10 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		showFileInOSExplorer(nsifileOfCopyTxt);
 	},
 	showOcrResults: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		// aBrowser.ownerDocument.defaultView.alert(gEditorABData_BtnENTRY.data.result_txt.tesseract);
-		
-		// var result_txt = gEditorABData_BtnENTRY.data.result_txt
-		// var alertStrArr = [];
-		// for (var p in result_txt) {
-		// 	if (Object.keys(result_txt).length > 1) {
-		// 		alertStrArr.push(core.addon.l10n.bootstrap['ocr_label_' + p]);
-		// 		alertStrArr.push();
-		// 		alertStrArr.push();
-		// 	}
-		// 	alertStrArr.push(result_txt[p]);
-		// }
-		// var alertStr = alertStrArr.join('\n');
-		// Services.prompt.alert(aBrowser.ownerDocument.defaultView, core.addon.l10n.bootstrap.ocr_results_title, alertStr);
-
 		var newtab = aBrowser.ownerDocument.defaultView.gBrowser.loadOneTab('about:nativeshot?text=' + gEditorABData_BtnENTRY.btnId, {
 			inBackground: false,
 			relatedToCurrent: false
 		});
-		
 	},
 	retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// uses menudata if it is present, else it uses meta.action
@@ -1795,10 +1779,14 @@ function ocrForBtnId(aBtnId) {
 				data.result_txt[allArr_serviceTypeStr[i]] = aTxtArr[i];
 			}
 			cBtnStore.setBtnState({
-				bTxt: 'Show Results', // :l10n:
+				bTxt: 'Text Processed - Show Results', // :l10n:
 				bType: 'button',
 				bClick: 'showOcrResults'
 			});
+			
+			if (ifEditorClosed_andBarHasOnlyOneAction_copyToClip(cBtnStore.sessionId)) {
+				gEditorABClickCallbacks_Btn.showOcrResults(cBtnStore, null, Services.wm.getMostRecentWindow('navigator:browser').gBrowser.selectedBrowser);
+			}
 		},
 		genericReject.bind(null, 'promiseAll_ocr', 0)
 	).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
@@ -1914,6 +1902,8 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 		bType: 'menu-button',
 		bMenu: retryMenu
 	});
+	
+	ifEditorClosed_andBarHasOnlyOneAction_copyToClip(cBtnStore.sessionId);
 }
 
 function gEUnload() {
@@ -3390,21 +3380,38 @@ var MainWorkerMainThreadFuncs = {
 
 function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 	// copy to clipboard if there was only one btn for this bar
+	// returns true, if yes
 	var cBarData = gEditorABData_Bar[aSessionId];
 	console.log('cBarData:', cBarData, 'shown:', cBarData.shown);
-	if (cBarData.shown && cBarData.btnIds.length == 1) {
+	if (cBarData.shown && cBarData.btnIds.length === 1) {
 		// only one action done for this so copy it to clipboard,
 		// and close bar within 10sec
 		var onlyBtn = gEditorABData_Btn[cBarData.btnIds[0]];
+		
+		// show system notification
 		if (onlyBtn.data.copyTxt) {
 			copyTextToClip(onlyBtn.data.copyTxt);
 			var alertNotifTitle = 'Copied to Clipboard';
 			var alertNotifBody = 'Link copied to your clipboard';
 			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + alertNotifTitle, alertNotifBody, null, null, null, 'NativeShot');
+		} else if (onlyBtn.data.result_txt && Object.keys(onlyBtn.data.result_txt).length === 1) {
+			for (var p in onlyBtn.data.result_txt) {
+				copyTextToClip(onlyBtn.data.result_txt[p]);
+			}
+			var alertNotifTitle = 'Copied to Clipboard';
+			var alertNotifBody = 'Processed text copied to your clipboard';
+			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + alertNotifTitle, alertNotifBody, null, null, null, 'NativeShot');
 		}
+		
+		// autoclose bar with message
 		if (onlyBtn.data.copyTxt || onlyBtn.data.dataurl) { // these two keys signify completion
-			autocloseBar(aSessionId);
+			autocloseBar(aSessionId, 'One action made so copied to clipboard');
+		} else if (onlyBtn.data.result_txt) {
+			autocloseBar(aSessionId, 'One action made so opened results tab');
+		} else if (onlyBtn.data.tabWk) {
+			autocloseBar(aSessionId, 'One action made so focused tab');
 		}
+		return true;
 	} else {
 		console.error('bar not yet shown');
 	}
@@ -3412,7 +3419,7 @@ function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 
 var gAutocloseBar = {};
 
-function autocloseBar(aSessionId) {
+function autocloseBar(aSessionId, aClosingMsg) {
 	var cBarData = gEditorABData_Bar[aSessionId];
 	console.log('cBarData:', cBarData, 'shown:', cBarData.shown);
 	if (gAutocloseBar[aSessionId]) {
@@ -3431,7 +3438,7 @@ function autocloseBar(aSessionId) {
 							AB.Callbacks[cBarData.ABRef.aId]();
 							delete gAutocloseBar[aSessionId];
 						} else {
-							cBarData.ABRef.aTxt = cBarData.ABRef.origATxt + ' - One action made so copied to clipboard and closing this bar in ' + gAutocloseBar[aSessionId].timeLeft + 's';
+							cBarData.ABRef.aTxt = cBarData.ABRef.origATxt + ' - ' + aClosingMsg + ' and closing this bar in ' + gAutocloseBar[aSessionId].timeLeft + 's';
 							AB.setState(cBarData.ABRef);
 							gAutocloseBar[aSessionId].timer.initWithCallback(gAutocloseBar[aSessionId].callback, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
 						}
