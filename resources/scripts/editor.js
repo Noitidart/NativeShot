@@ -1670,55 +1670,56 @@ function init(aArrBufAndCore) {
 						
 						// draw handles
 						var handleSize = this.state.sCanHandleSize;
+						
+						var half = handleSize / 2;
+						
+						var selectionHandles = this.cstate.selectionHandles;
+						
+						// top left, middle, right
+						selectionHandles[0] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y-half
+						};
+						
+						selectionHandles[1] = {
+							x: aDrawable.x+aDrawable.w/2-half,
+							y: aDrawable.y-half
+						};
+						
+						selectionHandles[2] = {
+							x: aDrawable.x+aDrawable.w-half,
+							y: aDrawable.y-half
+						};
+						
+						//middle left
+						selectionHandles[3] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y+aDrawable.h/2-half
+						};
+						
+						//middle right
+						selectionHandles[4] = {
+							x: aDrawable.x+aDrawable.w-half,
+							y: aDrawable.y+aDrawable.h/2-half
+						};
+						
+						//bottom left, middle, right
+						selectionHandles[6] = {
+							x: aDrawable.x+aDrawable.w/2-half,
+							y: aDrawable.y+aDrawable.h-half
+						};
+						
+						selectionHandles[5] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y+aDrawable.h-half
+						};
+						
+						selectionHandles[7] = {
+							x: aDrawable.x+aDrawable.w-half,
+							y: aDrawable.y+aDrawable.h-half
+						};
+							
 						if (handleSize) {
-							var half = handleSize / 2;
-							
-							var selectionHandles = this.cstate.selectionHandles;
-							
-							// top left, middle, right
-							selectionHandles[0] = {
-								x: aDrawable.x-half,
-								y: aDrawable.y-half
-							};
-							
-							selectionHandles[1] = {
-								x: aDrawable.x+aDrawable.w/2-half,
-								y: aDrawable.y-half
-							};
-							
-							selectionHandles[2] = {
-								x: aDrawable.x+aDrawable.w-half,
-								y: aDrawable.y-half
-							};
-							
-							//middle left
-							selectionHandles[3] = {
-								x: aDrawable.x-half,
-								y: aDrawable.y+aDrawable.h/2-half
-							};
-							
-							//middle right
-							selectionHandles[4] = {
-								x: aDrawable.x+aDrawable.w-half,
-								y: aDrawable.y+aDrawable.h/2-half
-							};
-							
-							//bottom left, middle, right
-							selectionHandles[6] = {
-								x: aDrawable.x+aDrawable.w/2-half,
-								y: aDrawable.y+aDrawable.h-half
-							};
-							
-							selectionHandles[5] = {
-								x: aDrawable.x-half,
-								y: aDrawable.y+aDrawable.h-half
-							};
-							
-							selectionHandles[7] = {
-								x: aDrawable.x+aDrawable.w-half,
-								y: aDrawable.y+aDrawable.h-half
-							};
-							
 							this.ctx.fillStyle = '#000000';
 							this.ctx.setLineDash([]);
 							this.ctx.strokeStyle = '#ffffff';
@@ -1791,22 +1792,22 @@ function init(aArrBufAndCore) {
 						
 						// draw handles
 						var handleSize = this.state.sCanHandleSize;
+						var half = handleSize / 2;
+						
+						var selectionHandles = this.cstate.selectionHandles;
+						selectionHandles.length = 2;
+						
+						selectionHandles[0] = {
+							x: aDrawable.x-half,
+							y: aDrawable.y-half
+						};
+						
+						selectionHandles[1] = {
+							x: aDrawable.x2-half,
+							y: aDrawable.y2-half
+						};
+						
 						if (handleSize) {
-							var half = handleSize / 2;
-							
-							var selectionHandles = this.cstate.selectionHandles;
-							selectionHandles.length = 2;
-							
-							selectionHandles[0] = {
-								x: aDrawable.x-half,
-								y: aDrawable.y-half
-							};
-							
-							selectionHandles[1] = {
-								x: aDrawable.x2-half,
-								y: aDrawable.y2-half
-							};
-							
 							this.ctx.beginPath();
 							for (i = 0; i < 2; i += 1) {
 								cur = selectionHandles[i];
@@ -1833,12 +1834,12 @@ function init(aArrBufAndCore) {
 						// this.ctx.stroke();
 						// draw handles
 						var handleSize = this.state.sCanHandleSize;
+						var half = handleSize / 2;
+						
+						// var selectionHandles = this.cstate.selectionHandles;
+						// selectionHandles.length = 2;
+						
 						if (handleSize) {
-							var half = handleSize / 2;
-							
-							// var selectionHandles = this.cstate.selectionHandles;
-							// selectionHandles.length = 2;
-							
 							this.ctx.beginPath();
 							// for (i = 0; i < 2; i += 1) {
 								// cur = selectionHandles[i];
