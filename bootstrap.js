@@ -759,6 +759,8 @@ function initAndRegisterAbout() {
 			var redirUrl;
 			if (aURI.path.toLowerCase().indexOf('?options') > -1) {
 				redirUrl = core.addon.path.content + 'app/options.xhtml';
+			} else if (aURI.path.toLowerCase().indexOf('?text') > -1) {
+				redirUrl = core.addon.path.content + 'app/ocr.xhtml' + aURI.path.substr(aURI.path.indexOf('?text'));
 			} else {
 				redirUrl = core.addon.path.content + 'app/main.xhtml';
 			}
@@ -1308,19 +1310,24 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 	showOcrResults: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// aBrowser.ownerDocument.defaultView.alert(gEditorABData_BtnENTRY.data.result_txt.tesseract);
 		
-		var result_txt = gEditorABData_BtnENTRY.data.result_txt
-		var alertStrArr = [];
-		for (var p in result_txt) {
-			if (Object.keys(result_txt).length > 1) {
-				alertStrArr.push(core.addon.l10n.bootstrap['ocr_label_' + p]);
-				alertStrArr.push();
-				alertStrArr.push();
-			}
-			alertStrArr.push(result_txt[p]);
-		}
-		var alertStr = alertStrArr.join('\n');
-		Services.prompt.alert(aBrowser.ownerDocument.defaultView, core.addon.l10n.bootstrap.ocr_results_title, alertStr);
+		// var result_txt = gEditorABData_BtnENTRY.data.result_txt
+		// var alertStrArr = [];
+		// for (var p in result_txt) {
+		// 	if (Object.keys(result_txt).length > 1) {
+		// 		alertStrArr.push(core.addon.l10n.bootstrap['ocr_label_' + p]);
+		// 		alertStrArr.push();
+		// 		alertStrArr.push();
+		// 	}
+		// 	alertStrArr.push(result_txt[p]);
+		// }
+		// var alertStr = alertStrArr.join('\n');
+		// Services.prompt.alert(aBrowser.ownerDocument.defaultView, core.addon.l10n.bootstrap.ocr_results_title, alertStr);
 
+		var newtab = aBrowser.ownerDocument.defaultView.gBrowser.loadOneTab('about:nativeshot?text=' + gEditorABData_BtnENTRY.btnId, {
+			inBackground: false,
+			relatedToCurrent: false
+		});
+		
 	},
 	retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// uses menudata if it is present, else it uses meta.action
@@ -3569,6 +3576,25 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 		}
 		
 		return mainDeferred_callInBootstrap.promise;
+	},
+	getOcrResults: function(aBtnId, aMsgEvent) {
+		console.log('in bootstrap getOcrResults for:', aBtnId);
+		var cBtnStore = gEditorABData_Btn[aBtnId];
+		if (!cBtnStore || !cBtnStore.data || !cBtnStore.data.result_txt) {
+			aMsgEvent.target.contentWindow.postMessage({
+				topic: 'reactOcrResults',
+				error: 'Data not found for this ID' // :l10n:
+			}, '*');
+		} else {
+			var clonedArrBuf = cBtnStore.data.arrbuf.slice();
+			aMsgEvent.target.contentWindow.postMessage({
+				topic: 'reactOcrResults',
+				arrbuf: clonedArrBuf,
+				width: cBtnStore.data.width,
+				height: cBtnStore.data.height,
+				result_txt: cBtnStore.data.result_txt
+			}, '*', [clonedArrBuf]);
+		}
 	}
 };
 

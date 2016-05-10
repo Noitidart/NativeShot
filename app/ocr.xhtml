@@ -1,14 +1,14 @@
 <!DOCTYPE html [
 	<!ENTITY % blah1 SYSTEM "chrome://nativeshot/locale/app_common.dtd">
 	%blah1;
-	<!ENTITY % blah2 SYSTEM "chrome://nativeshot/locale/app_options.dtd">
+	<!ENTITY % blah2 SYSTEM "chrome://nativeshot/locale/app_ocr.dtd">
 	%blah2;
 ]>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-		<title>&nativeshot.app-options.title;</title>
+		<title>&nativeshot.app-ocr.title;</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
-		<meta name="description" content="&nativeshot.app-options.desc;" />
+		<meta name="description" content="&nativeshot.app-ocr.desc;" />
 		<link rel="shortcut icon" href="chrome://nativeshot/content/resources/images/icon16.png" type="image/png" />
 		
     <meta charset="utf-8"/>
@@ -22,30 +22,22 @@
 	<link rel="stylesheet" href="chrome://nativeshot/content/app/css/font-awesome-v4.3.0.min.css"/> <!-- http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css -->
 	<link href="chrome://nativeshot/content/app/css/animsition.min.css" rel="stylesheet"/>
 	<link href="chrome://nativeshot/content/app/css/style.css" rel="stylesheet" type="text/css"/>
-	
+
 	<style>
-		/* my style overrides */		
-		.price-title span {
-			font-size: 40px;
-			white-space: nowrap;
+		.second-caption p {
+			font-weight: normal;
 		}
 		
-		.filesystem-path {
-			overflow: hidden;
+		.dataerror.second-caption p {
+			font-size: 24px;
+			font-weight: 300;
+			color: #222;
+			text-align: center;
 		}
 		
-		.filesystem-path .price-title sup {
-			font-size: 20px;
-			position: absolute;
-			top: 25%;
-			left: 10%;
-			color: #666;
-			white-space: nowrap;
-		}
-		
-		.nav-item-disabled {
-			color: #000 !important; /*disables hover*/
-			cursor: default;
+		.logo,
+		.det-tags a {
+			-moz-user-select: none;
 		}
 	</style>
 	
@@ -54,34 +46,24 @@
 	<script src="chrome://nativeshot/content/resources/scripts/react-dom.js"></script>
   </head>
 <body class="animsition">
-	<header>
+	<header style="background: #fff; height: 75px;">
 	  <div class="container">
 		  <div class="logo" style="text-indent: 46px; background: transparent url(chrome://nativeshot/content/resources/images/icon32.png) no-repeat scroll 0% 85%; white-space:nowrap;">
 			 <a href="#" style="cursor:default;">
-				&nativeshot.app-common.head;
+				&nativeshot.app-ocr.head;
 			 </a>
-		  </div>
-		  <div class="nav-menu-icon">
-		     <a href="#"><i></i></a>
-		  </div>
-		  <nav class="menu">
-		    <ul>
-				<li>
-					<a href="about:nativeshot" class="animsition-link">&nativeshot.app-common.nav-main;<span class="fa fa-angle-down"></span></a>
-	            </li>
-				<li>
-					<a href="#" class="nav-item-disabled">&nativeshot.app-common.nav-options;<span class="fa fa-angle-down"></span></a>
-				</li>
-		    </ul>
-		  </nav> 
+		  </div> 
 		</div>   
 	</header>
 	
-	<div id="main_wrapp" class="main-wrapp"></div>
+	<div id="main_wrapp" class="main-wrapp" />
     
 <script src="chrome://nativeshot/content/app/js/bootstrap.min.js"></script>
 <script src="chrome://nativeshot/content/app/js/jquery.animsition.min.js"></script>
+<script>
+	var noScrollHead = true;
+</script>
 <script src="chrome://nativeshot/content/app/js/all.js"></script>
-<script src="chrome://nativeshot/content/app/js/app_options.js"></script>
+<script src="chrome://nativeshot/content/app/js/app_ocr.js"></script>
 </body>
 </html>

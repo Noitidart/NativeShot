@@ -279,20 +279,7 @@
 	/**********************************/			 
 	
 	$(window).scroll(function() {
-	   if ($('.time-line').length) {
-		 $('.time-line').not('.animated').each(function(){
-		  if($(window).scrollTop() >= $(this).offset().top-$(window).height()*0.5)
-		   {$(this).addClass('animated').find('.timer').countTo();}});
-		}
-		if ($('.start-line').length){
-			if($(window).scrollTop() >= $('.start-line').offset().top - $('.start-line').height()){
-				 $('.skill-line div').each(function(){
-							var objel = $(this);
-							var pb_width = objel.attr('data-width-pb');
-							objel.css({'width':pb_width});
-						});
-			  }
-		 }
+	   if (typeof(noScrollHead) == 'undefined') {
 		if ($(window).scrollTop() >= 10){
 			$('header').addClass('fix');  
 		}else {
@@ -304,6 +291,7 @@
 		}else {
 			$('.scroll-head').removeClass('fix');
 		}
+	   }
 	});
 				 
 				 
