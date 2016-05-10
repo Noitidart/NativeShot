@@ -1796,6 +1796,18 @@ function ocrForBtnId(aBtnId) {
 	}
 }
 
+var _cache_forBtnIdAndService_addEntryToLog = {};
+function forBtnIdAndService_addEntryToLog(aBtnId, aServiceName) {
+	var id = aBtnId + '-' + aServiceName;
+	if (_cache_forBtnIdAndService_addEntryToLog[id]) {
+		console.log('will not add to log as it was already addeded');
+		return;
+	} else {
+		_cache_forBtnIdAndService_addEntryToLog[id] = 1;
+		addEntryToLog(aServiceName);
+	}
+}
+
 function copyForBtnId(aBtnId) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
 	

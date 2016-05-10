@@ -64,6 +64,25 @@ var Container = React.createClass({
 	getInitialState: function() {
 		return {};
 	},
+	copy: function(e) {
+		console.log('copied, e:', e);
+		var parentNodes = document.querySelectorAll('[data-service-name]'); // parent el of the pTxt textNodes
+		var l = parentNodes.length;
+		
+		var sel = window.getSelection();
+		if (sel.toString().trim().length) {
+			for (var i=0; i<l; i++) {
+				var textNode = parentNodes[i].childNodes[0]; // the pTxt containing node. its always a signle text element ah
+				if (textNode && textNode.textContent.trim().length) {
+					console.error(i, 'textNode.textContent.trim():', textNode.textContent.trim());
+					if (sel.containsNode(textNode, true)) {
+						var serviceName = parentNodes[i].getAttribute('data-service-name').toLowerCase();
+						contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['callInBootstrap', ['forBtnIdAndService_addEntryToLog', gQS.text, serviceName.toLowerCase()]]);
+					}
+				}
+			}
+		}
+	},
 	componentDidMount: function() {
 		MyStore.setState = this.setState.bind(this);
 		document.addEventListener('copy', this.copy, false);
@@ -108,6 +127,7 @@ var Row = React.createClass({
 	},
 	copy: function() {
 		contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['callInBootstrap', ['copyTextToClip', this.props.pTxt]]);
+		contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['callInBootstrap', ['forBtnIdAndService_addEntryToLog', gQS.text, this.props.pName.toLowerCase()]]);
 	},
 	pre: function() {
 		MyStore.setState({
@@ -151,7 +171,7 @@ var Row = React.createClass({
 				React.createElement('div', { className:(!sJuxt ? 'col-lg-12 col-md-12 col-sm-12 col-xs-12' : 'col-lg-6 col-md-6 col-sm-6 col-xs-6') },
 					React.createElement('div', { className:'second-caption' },
 						React.createElement('p', null,
-							React.createElement('span', { style:(sNoPre ? undefined : {whiteSpace:'pre'}) },
+							React.createElement('span', { 'data-service-name':pName, style:(sNoPre ? undefined : {whiteSpace:'pre'}) },
 								pTxt
 							)
 						)
