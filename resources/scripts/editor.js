@@ -29,6 +29,7 @@ var gCtxMeasureHeight;
 // var gHeightRef;
 var gWinArr;
 var gHotkeyRef = {};
+// const minInvisCanHandleSize = 10;
 
 function unload() {
 	// if iMon == 0
@@ -1669,6 +1670,7 @@ function init(aArrBufAndCore) {
 						this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
 						
 						// draw handles
+						// var handleSize = this.state.sCanHandleSize < minInvisCanHandleSize ? minInvisCanHandleSize : this.state.sCanHandleSize;
 						var handleSize = this.state.sCanHandleSize;
 						
 						var half = handleSize / 2;
@@ -1719,7 +1721,7 @@ function init(aArrBufAndCore) {
 							y: aDrawable.y+aDrawable.h-half
 						};
 							
-						if (handleSize) {
+						if (this.state.sCanHandleSize) {
 							this.ctx.fillStyle = '#000000';
 							this.ctx.setLineDash([]);
 							this.ctx.strokeStyle = '#ffffff';
@@ -1791,6 +1793,7 @@ function init(aArrBufAndCore) {
 						// this.ctx.stroke();
 						
 						// draw handles
+						// var handleSize = this.state.sCanHandleSize < minInvisCanHandleSize ? minInvisCanHandleSize : this.state.sCanHandleSize;
 						var handleSize = this.state.sCanHandleSize;
 						var half = handleSize / 2;
 						
@@ -1807,7 +1810,7 @@ function init(aArrBufAndCore) {
 							y: aDrawable.y2-half
 						};
 						
-						if (handleSize) {
+						if (this.state.sCanHandleSize) {
 							this.ctx.beginPath();
 							for (i = 0; i < 2; i += 1) {
 								cur = selectionHandles[i];
@@ -1833,13 +1836,14 @@ function init(aArrBufAndCore) {
 						// this.ctx.fill();
 						// this.ctx.stroke();
 						// draw handles
+						// var handleSize = this.state.sCanHandleSize < minInvisCanHandleSize ? minInvisCanHandleSize : this.state.sCanHandleSize;
 						var handleSize = this.state.sCanHandleSize;
 						var half = handleSize / 2;
 						
 						// var selectionHandles = this.cstate.selectionHandles;
 						// selectionHandles.length = 2;
 						
-						if (handleSize) {
+						if (this.state.sCanHandleSize) {
 							this.ctx.beginPath();
 							// for (i = 0; i < 2; i += 1) {
 								// cur = selectionHandles[i];
@@ -1871,7 +1875,8 @@ function init(aArrBufAndCore) {
 				
 						if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 							var selectionHandles = this.cstate.selectionHandles;
-							var handleSize = this.state.sCanHandleSize < 5 ? 5 : this.state.sCanHandleSize;
+							// var handleSize = this.state.sCanHandleSize < minInvisCanHandleSize ? minInvisCanHandleSize : this.state.sCanHandleSize;
+							var handleSize = this.state.sCanHandleSize;
 							for (var i=0; i<2; i++) {
 								if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 									(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
@@ -1937,7 +1942,8 @@ function init(aArrBufAndCore) {
 					// is aDrawable selected
 					if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 						var selectionHandles = this.cstate.selectionHandles;
-						var handleSize = this.state.sCanHandleSize < 5 ? 5 : this.state.sCanHandleSize;
+						// var handleSize = this.state.sCanHandleSize < minInvisCanHandleSize ? minInvisCanHandleSize : this.state.sCanHandleSize;
+						var handleSize = this.state.sCanHandleSize;
 						for (var i=0; i<8; i++) {
 							if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 								(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
@@ -3907,7 +3913,7 @@ function init(aArrBufAndCore) {
 		reduce: function(e) {
 			if (e.altKey) {
 				// sCanHandleSize
-				var min = 0;
+				var min = 4;
 				var del = 2;
 				var cHandleSize = this.props.sCanHandleSize;
 				
