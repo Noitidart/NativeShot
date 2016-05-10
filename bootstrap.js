@@ -9,6 +9,10 @@ Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 Cu.import('resource://gre/modules/AddonManager.jsm');
 
+const COMMONJS_URI = 'resource://gre/modules/commonjs';
+const { require } = Cu.import(COMMONJS_URI + '/toolkit/require.js', {});
+var CLIPBOARD = require('sdk/clipboard');
+
 // Globals
 var core = { // core has stuff added into by MainWorker (currently MainWorker) and then it is updated
 	addon: {
@@ -547,6 +551,14 @@ var EditorFuncs = {
 			BOOTSTRAP[aData.method].apply(null, aData.argsArr)
 		} else {
 			BOOTSTRAP[aData.method]();
+		}
+	},
+	insertTextFromClipboard: function(aData) {
+		if (CLIPBOARD.currentFlavors.indexOf('text') > -1) {
+			colMon[aData.iMon].E.DOMWindow.postMessage({
+				topic: 'insertTextFromClipboard',
+				text: CLIPBOARD.get('text')
+			}, '*');
 		}
 	},
 	broadcastToOthers: function(aData) {

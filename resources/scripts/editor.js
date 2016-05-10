@@ -509,6 +509,15 @@ function fullfillCompositeRequest(aData) {
 	}
 }
 
+function insertTextFromClipboard(aData) {
+	if (gCState.typing) {
+		var mySel = gCState.selection; // if in typing mode, obviously a selection is there
+		mySel.chars = mySel.chars.substr(0, mySel.index) + aData.text + mySel.chars.substr(mySel.index);
+		mySel.index += aData.text.length;
+		gCanStore.setCanState(false);
+	}
+}
+
 function makeSelection(aData) {
 	// aData.cutoutsArr is an array of cutout objects
 	console.log('incoming makeSelection, aData:', aData);
@@ -3327,9 +3336,19 @@ function init(aArrBufAndCore) {
 			
 			if (this.cstate.typing) {
 				if (e.key.length == 1) {
-					mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
-					mySel.index++;
-					newValid = false;
+					// support pasting
+					if (e.key.toLowerCase() == 'v' && ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey))) {
+							// request paste
+							Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+								topic: 'insertTextFromClipboard',
+								iMon: tQS.iMon
+							}));
+					} else {
+						// insert single char
+						mySel.chars = mySel.chars.substr(0, mySel.index) + e.key + mySel.chars.substr(mySel.index);
+						mySel.index++;
+						newValid = false;
+					}
 				} else {
 					switch (e.key) {
 						case 'Escape':
@@ -4091,11 +4110,11 @@ function init(aArrBufAndCore) {
 					break;
 				case 'Select':
 					
-						// if (gCanState.cutouts.length) {
-						// 	if (!gCanState.selection || gCanState.selection != gCanState.cutouts[0]) {
-						// 		// gCanState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
-						// 		gCanState.selection = gCanState.cutouts[0];
-						// 		gCanState.valid = false;
+						// if (gCState.cutouts.length) {
+						// 	if (!gCState.selection || gCState.selection != gCState.cutouts[0]) {
+						// 		// gCState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
+						// 		gCState.selection = gCState.cutouts[0];
+						// 		gCState.valid = false;
 						// 	}
 						// }
 					
