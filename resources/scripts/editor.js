@@ -410,6 +410,11 @@ function fullfillCompositeRequest(aData) {
 			case 'Text Recognition':
 				
 					oauthServiceName = sub.toLowerCase();
+					
+					if (oauthServiceName == 'all') {
+						// its all ocr
+						oauthServiceName = 'ocrall';
+					}
 				
 				break;
 			default:
@@ -453,7 +458,7 @@ function fullfillCompositeRequest(aData) {
 			// plain array buffer actions
 			triggerNSCommEvent({
 				topic: 'callInBootstrap',
-				method: 'doOcr',
+				method: 'uploadOauth',
 				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height],
 				iMon: tQS.iMon
 			});

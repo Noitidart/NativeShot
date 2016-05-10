@@ -4,20 +4,10 @@ Cm.QueryInterface(Ci.nsIComponentRegistrar);
 
 const PromiseWorker = Cu.import('resource://gre/modules/PromiseWorker.jsm').BasePromiseWorker;
 Cu.import('resource:///modules/CustomizableUI.jsm');
-Cu.import('resource://gre/modules/FileUtils.jsm');
-// Cu.import('resource://gre/modules/Geometry.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 Cu.import('resource://gre/modules/AddonManager.jsm');
-
-var importGlobalPropertiesArr = [];
-if (!Ci.nsIDOMFileReader) {
-	importGlobalPropertiesArr.push('FileReader');
-}
-if (importGlobalPropertiesArr.length) {
-	Cu.importGlobalProperties(importGlobalPropertiesArr);
-}
 
 // Globals
 var core = { // core has stuff added into by MainWorker (currently MainWorker) and then it is updated
@@ -1312,8 +1302,25 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 	},
 	openInFinder: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// console.log('this:', this, 'gEditorABData_BtnENTRY:', gEditorABData_BtnENTRY, 'doClose:', doClose, 'aBrowser:', aBrowser);
-		var nsifileOfCopyTxt = new FileUtils.File(gEditorABData_BtnENTRY.data.copyTxt); // i can do this because for save-quick save-browse copyTxt is platform path
+		var nsifileOfCopyTxt = new nsIFile(gEditorABData_BtnENTRY.data.copyTxt); // i can do this because for save-quick save-browse copyTxt is platform path
 		showFileInOSExplorer(nsifileOfCopyTxt);
+	},
+	showOcrResults: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
+		// aBrowser.ownerDocument.defaultView.alert(gEditorABData_BtnENTRY.data.result_txt.tesseract);
+		
+		var result_txt = gEditorABData_BtnENTRY.data.result_txt
+		var alertStrArr = [];
+		for (var p in result_txt) {
+			if (Object.keys(result_txt).length > 1) {
+				alertStrArr.push(core.addon.l10n.bootstrap['ocr_label_' + p]);
+				alertStrArr.push();
+				alertStrArr.push();
+			}
+			alertStrArr.push(result_txt[p]);
+		}
+		var alertStr = alertStrArr.join('\n');
+		Services.prompt.alert(aBrowser.ownerDocument.defaultView, core.addon.l10n.bootstrap.ocr_results_title, alertStr);
+
 	},
 	retry: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// uses menudata if it is present, else it uses meta.action
@@ -1499,110 +1506,6 @@ var gEditor = {
 		gEditor.forceFocus = true; // as user needs browser focus so they can tweet it
 		// this.closeOutEditor(e);
 	},
-	ocr: function(serviceTypeStr, aArrBuf, aWidth, aHeight) {
-		// serviceTypeStr valid values
-		//	gocr
-		//	ocrad
-		//	tesseract
-		//	all
-
-
-		
-		// this.compositeSelection();
-		
-		var cDOMWindow = gEditor.gBrowserDOMWindow;
-		// var cWidth = gEditor.canComp.width;
-		// var cHeight = gEditor.canComp.height;
-			
-		var serviceTypeFunc = {
-			gocr: function(aByteArr, dontTransfer) {
-				if (!bootstrap.GOCRWorker) {
-					bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
-				}
-				
-				return GOCRWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
-			},
-			ocrad: function(aByteArr, dontTransfer) {
-				if (!bootstrap.OCRADWorker) {
-					bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
-				}
-				
-				return OCRADWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
-			},
-			tesseract: function(aByteArr, dontTransfer) {
-				if (!bootstrap.TesseractWorker) {
-					bootstrap.TesseractWorker = new PromiseWorker(core.addon.path.content + 'modules/tesseract/TesseractWorker.js');
-				}
-				
-				return TesseractWorker.post('readByteArr', [aByteArr, aWidth, aHeight], null, dontTransfer ? undefined : [aByteArr]);
-			}
-		};
-		
-		// var cImgData = this.ctxComp.getImageData(0, 0, this.canComp.width, this.canComp.height);
-		// console.log('cImgData:', cImgData);
-		// gEditor.closeOutEditor(e);
-		
-		var promiseAllArr_ocr = [];
-		var allArr_serviceTypeStr = [];
-		if (serviceTypeStr == 'all') {
-			for (var p in serviceTypeFunc) {
-				promiseAllArr_ocr.push(serviceTypeFunc[p](aArrBuf, true));
-				allArr_serviceTypeStr.push(p);
-			}
-		} else {
-			promiseAllArr_ocr.push(serviceTypeFunc[serviceTypeStr](aArrBuf));
-			allArr_serviceTypeStr.push(serviceTypeStr);
-		}
-		
-		var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
-		promiseAll_ocr.then(
-			function(aTxtArr) {
-				console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
-				aArrBuf = undefined; // when do all, we dont transfer, so it doesnt get neutered, so lets just do this, it might help it gc
-				var alertStrArr = [];
-				for (var i=0; i<allArr_serviceTypeStr.length; i++) {
-					if (allArr_serviceTypeStr.length > 1) {
-						// alertStrArr.push(allArr_serviceTypeStr[i] + ':');
-						alertStrArr.push(core.addon.l10n.bootstrap['ocr_label_' + allArr_serviceTypeStr[i]]);
-						alertStrArr.push();
-						alertStrArr.push();
-					}
-					alertStrArr.push(aTxtArr[i]);
-				}
-				var alertStr = alertStrArr.join('\n');
-				Services.prompt.alert(cDOMWindow, core.addon.l10n.bootstrap.ocr_results_title, alertStr); // :todo: hook this up to the notif-bar system once i rework it
-				if (allArr_serviceTypeStr.length == 1) {
-					copyTextToClip(alertStr, cDOMWindow);
-				} else {
-					var choices = [core.addon.l10n.bootstrap.ocr_opt_all];
-					for (var i=0; i<allArr_serviceTypeStr.length; i++) {
-						choices.push(core.addon.l10n.bootstrap['ocr_opt_' + allArr_serviceTypeStr[i]]);
-					}
-					var selectedChoiceIndex = {};
-					var rez_select = Services.prompt.select(cDOMWindow, core.addon.l10n.bootstrap.ocr_choice_title, core.addon.l10n.bootstrap.ocr_choice_msg, choices.length, choices, selectedChoiceIndex)
-					if (rez_select) {
-						console.log('selectedChoiceIndex:', selectedChoiceIndex); // this is ```Object { value: 2 }```
-						if (selectedChoiceIndex.value == 0) {
-							copyTextToClip(alertStr, cDOMWindow);
-							console.log('copied all to clip:', alertStr);
-							for (var realServiceTypeStr in serviceTypeFunc) {
-								addEntryToLog(realServiceTypeStr);
-							}
-						} else {
-							copyTextToClip(aTxtArr[selectedChoiceIndex.value - 1], cDOMWindow);
-							addEntryToLog(allArr_serviceTypeStr[selectedChoiceIndex.value - 1]);
-							console.log('copied just ', selectedChoiceIndex.value, ' to clip:', aTxtArr[selectedChoiceIndex.value - 1]);
-						}
-					}
-				}
-			},
-			genericReject.bind(null, 'promiseAll_ocr', 0)
-		).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
-		
-		if (serviceTypeStr != 'all') {
-			addEntryToLog(serviceTypeStr);
-		}
-	},
 	uploadOauthDataUrl: function(aOAuthService, aDataUrl) {
 		// print
 		// copy
@@ -1648,7 +1551,6 @@ var gEditor = {
 
 var uploadOauthDataUrl = gEditor.uploadOauthDataUrl;
 var uploadOauth = gEditor.uploadOauth;
-var doOcr = gEditor.ocr;
 var shareToTwitter = gEditor.shareToTwitter;
 
 function createNewBtnStore(aSessionId, aService) {
@@ -1699,6 +1601,14 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 		case 'print':
 			
 				cMethodForService = 'bootstrap_printForBtnId';
+			
+			break;
+		case 'ocrall':
+		case 'tesseract':
+		case 'gocr':
+		case 'ocrad':
+			
+				cMethodForService = 'bootstrap_ocrForBtnId';
 			
 			break;
 		default:
@@ -1817,6 +1727,80 @@ function printForBtnId(aBtnId) {
 	});
 }
 
+function ocrForBtnId(aBtnId) {
+	var cBtnStore = gEditorABData_Btn[aBtnId];
+	var data = cBtnStore.data;
+	
+	// cBtnStore.meta.service valid values
+	//	gocr
+	//	ocrad
+	//	tesseract
+	//	ocrall
+
+	cBtnStore.setBtnState({
+		bTxt: 'Processing...', // :l10n:
+		bType: 'button',
+		bClick: null
+	});
+
+	var serviceTypeFunc = {
+		gocr: function() {
+			if (!bootstrap.GOCRWorker) {
+				bootstrap.GOCRWorker = new PromiseWorker(core.addon.path.content + 'modules/gocr/GOCRWorker.js');
+			}
+			var clonedArrBuf = data.arrbuf.slice();
+			return GOCRWorker.post('readByteArr', [clonedArrBuf, data.width, data.height], null, [clonedArrBuf]);
+		},
+		ocrad: function() {
+			if (!bootstrap.OCRADWorker) {
+				bootstrap.OCRADWorker = new PromiseWorker(core.addon.path.content + 'modules/ocrad/OCRADWorker.js');
+			}
+			var clonedArrBuf = data.arrbuf.slice();
+			return OCRADWorker.post('readByteArr', [clonedArrBuf, data.width, data.height], null, [clonedArrBuf]);
+		},
+		tesseract: function() {
+			if (!bootstrap.TesseractWorker) {
+				bootstrap.TesseractWorker = new PromiseWorker(core.addon.path.content + 'modules/tesseract/TesseractWorker.js');
+			}
+			var clonedArrBuf = data.arrbuf.slice();
+			return TesseractWorker.post('readByteArr', [clonedArrBuf, data.width, data.height], null, [clonedArrBuf]);
+		}
+	};
+
+	var promiseAllArr_ocr = [];
+	var allArr_serviceTypeStr = [];
+	if (cBtnStore.meta.service == 'ocrall') {
+		for (var p in serviceTypeFunc) {
+			promiseAllArr_ocr.push(serviceTypeFunc[p]());
+			allArr_serviceTypeStr.push(p);
+		}
+	} else {
+		promiseAllArr_ocr.push(serviceTypeFunc[cBtnStore.meta.service]());
+		allArr_serviceTypeStr.push(cBtnStore.meta.service);
+	}
+	
+	var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
+	promiseAll_ocr.then(
+		function(aTxtArr) {
+			console.log('Fullfilled - promiseAll_ocr - ', aTxtArr);
+			data.result_txt = {};
+			for (var i=0; i<aTxtArr.length; i++) {
+				data.result_txt[allArr_serviceTypeStr[i]] = aTxtArr[i];
+			}
+			cBtnStore.setBtnState({
+				bTxt: 'Show Results', // :l10n:
+				bType: 'button',
+				bClick: 'showOcrResults'
+			});
+		},
+		genericReject.bind(null, 'promiseAll_ocr', 0)
+	).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
+	
+	if (cBtnStore.meta.service != 'ocrall') {
+		addEntryToLog(cBtnStore.meta.service);
+	}
+}
+
 function copyForBtnId(aBtnId) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
 	
@@ -1872,7 +1856,7 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 	var ansifileFieldFound = false;
 	for (var aPostKey in aPostDataObj) {
 		if (aPostDataObj[aPostKey] == '{{ansifile}}') {
-			aPostDataObj[aPostKey] = new FileUtils.File(aPlatPathToImg);
+			aPostDataObj[aPostKey] = new nsIFile(aPlatPathToImg);
 			ansifileFieldFound = true;
 			break;
 		}
@@ -3852,7 +3836,7 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 			aNsiFile.reveal();
 		}
 	} else {
-		var cNsiFile = new FileUtils.File(aDirPlatPath);
+		var cNsiFile = new nsIFile(aDirPlatPath);
 		
 		if (!aFileName) {
 			// its a directory
@@ -3895,7 +3879,7 @@ function browseFile(aDialogTitle, aOptions={}) {
 	}
 	
 	if (aOptions.startDirPlatPath) {
-		fp.displayDirectory = new FileUtils.File(aOptions.startDirPlatPath);
+		fp.displayDirectory = new nsIFile(aOptions.startDirPlatPath);
 	}
 	
 	var fpDoneCallback = function(rv) {
@@ -4807,4 +4791,5 @@ function overwriteObjWithObj(obj1, obj2){
     for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
     return obj3;
 }
+var nsIFile = CC('@mozilla.org/file/local;1', Ci.nsILocalFile, 'initWithPath');
 // end - common helper functions
