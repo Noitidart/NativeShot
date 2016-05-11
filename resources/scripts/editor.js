@@ -3575,7 +3575,7 @@ function init(aArrBufAndCore) {
 						var testKey = function(aHotkey, aEntry) {
 							var triggerEntry = function() {
 								var evt = document.createEvent('MouseEvents');
-								evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, e.shiftKey, false, 0, null);
+								evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, e.altKey, e.shiftKey, false, 0, null); // a.altKey needed for reduce/englarge
 								gHotkeyRef[aHotkey].dispatchEvent(evt);
 							};
 							
@@ -3611,7 +3611,15 @@ function init(aArrBufAndCore) {
 							}
 						}
 						
-						var layout = this.props.pPalLayout;
+						var layout = [
+							...this.props.pPalLayout,
+							{ hotkey: 'c+' },
+							{ hotkey: 'a+' },
+							{ hotkey: 'c=' },
+							{ hotkey: 'a=' },
+							{ hotkey: 'c-' },
+							{ hotkey: 'a-' }
+						];
 						var l = layout.length;
 						for (var i=0; i<l; i++) {
 							var entry = layout[i];
@@ -3972,16 +3980,24 @@ function init(aArrBufAndCore) {
 				});
 			}
 		},
+		componentDidMount: function() {
+			gHotkeyRef['c+'] = this.refs.enlarge;
+			gHotkeyRef['a+'] = this.refs.enlarge;
+			gHotkeyRef['c='] = this.refs.enlarge;
+			gHotkeyRef['a='] = this.refs.enlarge;
+			gHotkeyRef['c-'] = this.refs.reduce;
+			gHotkeyRef['a-'] = this.refs.reduce;
+		},
 		render: function() {
 			// props
 			// 		sPalSize
 			//		sCanHandleSize
 
 			return React.createElement('div', {className:'paccessibility'},
-				React.createElement('div', {className: 'pbutton', onClick:this.enlarge},
+				React.createElement('div', {className: 'pbutton', onClick:this.enlarge, ref:'enlarge'},
 					'\ue818'
 				),
-				React.createElement('div', {className: 'pbutton', onClick:this.reduce},
+				React.createElement('div', {className: 'pbutton', onClick:this.reduce, ref:'reduce'},
 					'\ue817'
 				)
 			);
