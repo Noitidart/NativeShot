@@ -679,6 +679,9 @@ var EditorFuncs = {
 		
 		colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
 		
+		// set windowtype attribute
+		// colMon[aData.iMon].E.DOMWindow.document.documentElement.setAttribute('windowtype', 'nativeshot:canvas');
+		
 		// check to see if all monitors inited, if they have been, the fetch all win
 		var allWinInited = true;
 		var l = colMon.length;
@@ -731,6 +734,37 @@ var EditorFuncs = {
 		}
 	}
 };
+
+function reRaiseCanvasWins() {
+	// goes through colMon and raises them again, useful really only for Linux
+	
+	var aArrHwndPtr = [];
+	var aArrHwndPtrOsParams = {};
+	
+	var l = colMon.length;
+	for (var i=0; i<l; i++) {
+		var hwndPtrStr = colMon[i].hwndPtrStr;
+		aArrHwndPtr.push(hwndPtrStr);
+		// aArrHwndPtrOsParams[hwndPtrStr] = {
+			// left: colMon[i].x,
+			// top: colMon[i].y,
+			// right: colMon[i].x + colMon[i].w,
+			// bottom: colMon[i].y + colMon[i].h,
+			// width: colMon[i].w,
+			// height: colMon[i].h
+		// };
+	}
+
+	// var promise_reTop = ScreenshotWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
+	var promise_reTop = ScreenshotWorker.post('gtkRaiseWindow', [aArrHwndPtr]);
+	promise_reTop.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_reTop - ', aVal);			
+		},
+		genericReject.bind(null, 'promise_reTop', 0)
+	).catch(genericCatch.bind(null, 'promise_reTop', 0));
+	
+}
 
 function nscomm(aEvent) {
 	console.log('incoming nscomm, aEvent:', aEvent);
@@ -1541,7 +1575,11 @@ var gEditor = {
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
 		
-		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
+		var storeServiceAs = aOAuthService;
+		if (storeServiceAs == 'save-browse-canvas') {
+			storeServiceAs = 'save-browse';
+		} 
+		var cBtn = createNewBtnStore(cSessionId, storeServiceAs);
 		
 		cBtn.data.arrbuf = aArrBuf; // link947444544
 		cBtn.data.width = aWidth;
@@ -1573,6 +1611,11 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
 	
 	var cMethodForService;
+	// var saveBrowseCanvas;
+	// if (aOAuthService == 'save-browse-canvas') {
+		// aOAuthService = 'save-browse';
+		// saveBrowseCanvas = true;
+	// }
 	cBtnStore.meta.service = aOAuthService;
 	switch (aOAuthService) { // link64098756794556
 		case 'dropbox':
@@ -1585,6 +1628,7 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 			break;
 		case 'save-quick':
 		case 'save-browse':
+		case 'save-browse-canvas':
 			
 				cMethodForService = 'saveToDiskImgArrBufForBtnId';
 			
@@ -1623,6 +1667,11 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 	if (cMethodForService.indexOf('bootstrap_') === 0) {
 		BOOTSTRAP[cMethodForService.substr(10)](cBtnStore.btnId);
 	} else {
+		// var postArr = [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId];
+		// if (saveBrowseCanvas) {
+			// postArr.push(null);
+			// postArr.push(true);
+		// }
 		var promise_methodForService = MainWorker.post(cMethodForService, [cBtnStore.btnId, aOAuthService, cBtnStore.sessionId]); // link888778
 		promise_methodForService.then(
 			function(aVal) {
@@ -3874,14 +3923,26 @@ function browseFile(aDialogTitle, aOptions={}) {
 		filters: undefined, // else an array. in sets of two. so one filter would be ['PNG', '*.png'] or two filters woul be ['PNG', '*.png', 'All Files', '*']
 		startDirPlatPath: undefined, // string - platform path to dir the dialog should start in
 		returnDetails: false,
-		async: false // if set to true, then it wont block main thread while its open, and it will also return a promise
+		async: false, // if set to true, then it wont block main thread while its open, and it will also return a promise
+		win: undefined // null for no parentWin, string for what you want passed to getMostRecentWindow, or a window object. NEGATIVE is special for NativeShot, it is negative iMon
 	}
 	
 	validateOptionsObj(aOptions, cOptionsDefaults);
 	
 	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 	
-	fp.init(Services.wm.getMostRecentWindow(null), aDialogTitle, Ci.nsIFilePicker[aOptions.mode]);
+	var parentWin;
+	if (aOptions.win === undefined) {
+		parentWin = null;
+	} else if (typeof(aOptions.win) == 'number') {
+		// sepcial for nativeshot
+		parentWin = colMon[Math.abs(aOptions.win)].E.DOMWindow;
+	} else if (aOptions.win === null || typeof(aOptions.win) == 'string') {
+		parentWin = Services.wm.getMostRecentWindow(aOptions.win);
+	} else {
+		parentWin = aOptions.win; // they specified a window probably
+	}
+	fp.init(parentWin, aDialogTitle, Ci.nsIFilePicker[aOptions.mode]);
 	
 	if (aOptions.filters) {
 		for (var i=0; i<aOptions.filters.length; i=i+2) {

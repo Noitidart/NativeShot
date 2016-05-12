@@ -733,9 +733,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					console.log('hwndPtr:', hwndPtr);
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-					console.log('XWindow:', XWindow);
+					console.log('XWindow1a:', XWindow);
 					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
-					console.log('XWindow:', XWindow);
+					console.log('XWindow1b:', XWindow);
 					
 					// setTimeout(function() {
 						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
@@ -757,7 +757,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 						// console.log('rez_flush', rez_flush);
 												
 						// raise the window
-						var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_BELOW]));
+						var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
 						console.log('rez_raise:', rez_raise);
 						
 						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
@@ -1108,6 +1108,28 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 		default:
 
 	}
+}
+
+function gtkRaiseWindow(aArrHwndPtrStr) {
+	for (var i=0; i<aArrHwndPtrStr.length; i++) {
+		var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+		console.log('hwndPtr:', hwndPtr);
+		var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+		console.log('XWindow1a:', XWindow);
+		XWindow = parseInt(cutils.jscGetDeepest(XWindow));
+		console.log('XWindow1b:', XWindow);
+					
+		var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
+		console.log('rez_raise:', rez_raise);
+		
+		// Set input focus (we have override_redirect=1, so the wm will not do this for us)
+		// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
+		var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
+		console.log('rez_focus:', rez_focus);
+	}
+	
+	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+	console.log('rez_flush', rez_flush);
 }
 
 function focusWindows(aArrHwndPtrStr) {

@@ -353,6 +353,9 @@ function fullfillCompositeRequest(aData) {
 			case 'Save':
 				
 					oauthServiceName = 'save-' + sub.toLowerCase();
+					if (!boolclose && oauthServiceName == 'save-browse') {
+						oauthServiceName = 'save-browse-canvas';
+					}
 				
 				break;
 			case 'Upload to Cloud':

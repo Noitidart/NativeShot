@@ -437,8 +437,10 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 			
 				break;
 			case 'save-browse':
+			case 'save-browse-canvas':
 			
-					self.postMessageWithCallback(['callInBootstrap', ['browseFile', formatStringFromName('filepicker-title-save-screenshot', 'bootstrap'), {mode:'modeSave', filters:['PNG Image', '*.png'], returnDetails:true, async:true}]], function(aBrowsedDetails) {
+					var parentWin = aServiceName == 'save-browse-canvas' ? null : 'navigator:browser';
+					self.postMessageWithCallback(['callInBootstrap', ['browseFile', formatStringFromName('filepicker-title-save-screenshot', 'bootstrap'), {mode:'modeSave', filters:['PNG Image', '*.png'], returnDetails:true, async:true, win:parentWin }]], function(aBrowsedDetails) {
 						console.log('aBrowsedDetails:', aBrowsedDetails);
 						if (aBrowsedDetails) {
 							console.log('got file path:', aBrowsedDetails.filepath);
@@ -450,9 +452,15 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 								msg: 'Cancelled'
 							});
 						}
+						
+						if (core.os.mname == 'gtk' && aServiceName == 'save-browse-canvas') {
+							// re-raise the canvas windows
+							self.postMessage(['callInBootstrap', ['reRaiseCanvasWins']]);
+						}
+						
 					});
 
-					if (core.os.mname == 'darwin') {
+					if (core.os.mname == 'darwin' && aServiceName == 'save-browse-canvas') {
 						self.postMessage(['callInBootstrap', ['macSetLevelOfBrowseFile']]);
 					}
 					
@@ -477,6 +485,7 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 			
 				break;
 			case 'save-browse':
+			case 'save-browse-canvas':
 			
 					cFilePath = aRentryData.filepath;
 					cNoOverwrite = !aRentryData.replace;
@@ -535,6 +544,9 @@ function saveToDiskImgArrBufForBtnId(aBtnId, aServiceName, aScreenshotTime, aRen
 			break;
 		}
 		
+		if (aServiceName == 'save-browse-canvas') {
+			aServiceName = 'save-browse';
+		}
 		addEntryToLog(aServiceName, {
 			n: OS.Path.basename(useFilePath),
 			f: OS.Path.dirname(useFilePath)
