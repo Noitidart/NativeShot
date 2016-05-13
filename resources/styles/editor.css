@@ -335,7 +335,7 @@ body {
 	cursor: pointer;
 }
 .colorpicker-slider-alpha {
-	background-image: linear-gradient(to right, rgba(70, 136, 143, 0), rgb(70, 136, 143)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-image: linear-gradient(to right, rgba(70, 136, 143, 0), rgb(70, 136, 143)), url('chrome://nativeshot/content/resources/images/trans5x5.png');
 	background-repeat: no-repeat, repeat;
 	background-position: right, top left;
 	position: relative;
@@ -354,11 +354,11 @@ body {
 .colorpicker-sliders-wrap.colorpicker-slider-preview {
 	flex-grow: 0;
 	/*
-	background-image: url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-image: url('chrome://nativeshot/content/resources/images/trans5x5.png');
 	background-color: rgba(10, 22, 240, 0.5);
 	background-repeat: repeat;
 	*/
-	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('chrome://nativeshot/content/resources/images/trans5x5.png');
 	background-repeat: no-repeat, repeat;
 	background-position: right, top left;
 	
@@ -621,7 +621,7 @@ body {
 	transition: min-height 1ms;
 }
 .pbutton-icon-color {
-	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==');
+	background-image: linear-gradient(to right, rgba(30, 75, 115, 0.5), rgba(30, 75, 115, 0.5)), url('chrome://nativeshot/content/resources/images/trans5x5.png');
 	background-repeat: no-repeat, repeat;
 	background-position: right, top left;
 	width: 1em;

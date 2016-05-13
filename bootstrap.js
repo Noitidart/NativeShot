@@ -58,6 +58,8 @@ var OSStuff = {};
 var gFonts;
 var gEditorStateStr;
 
+var gCuiCssFilename;
+
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
@@ -2463,7 +2465,8 @@ var windowListener = {
 		
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
-			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + 'cui.css', null, null), domWinUtils.AUTHOR_SHEET);
+			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + gCuiCssFilename, null, null), domWinUtils.AUTHOR_SHEET);
+			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + 'general.css', null, null), domWinUtils.AUTHOR_SHEET);
 			
 			for (aGroupId in NBs.crossWin) {
 				NBs.insertGlobalToWin(aGroupId, aDOMWindow);
@@ -2490,7 +2493,8 @@ var windowListener = {
 		
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
-			domWinUtils.removeSheet(Services.io.newURI(core.addon.path.styles + 'cui.css', null, null), domWinUtils.AUTHOR_SHEET);
+			domWinUtils.removeSheet(Services.io.newURI(core.addon.path.styles + gCuiCssFilename, null, null), domWinUtils.AUTHOR_SHEET);
+			domWinUtils.removeSheet(Services.io.newURI(core.addon.path.styles + 'general.css', null, null), domWinUtils.AUTHOR_SHEET);
 		}
 		
 		contextMenuDestroy(aDOMWindow);
@@ -3757,6 +3761,30 @@ function startup(aData, aReason) {
 		});
 		
 		contextMenuBootstrapStartup();
+		
+		// determine gCuiCssFilename for windowListener.register
+		if (Services.prefs.getCharPref('app.update.channel') == 'aurora') {
+			if (core.os.mname != 'darwin') {
+				// i didnt test dev edition on winxp, not sure what it is there
+				gCuiCssFilename = 'cui_dev.css';
+			} else {
+				gCuiCssFilename = 'cui_dev_mac.css';
+			}
+		} else {
+			if (core.os.mname == 'darwin') {
+				gCuiCssFilename = 'cui_mac.css';
+			} else if (core.os.mname == 'gtk') {
+				gCuiCssFilename = 'cui_gtk.css';
+			} else {
+				// windows
+				if (core.os.version <= 5.2) {
+					// xp
+					gCuiCssFilename = 'cui_gtk.css';
+				} else {
+					gCuiCssFilename = 'cui.css';
+				}
+			}
+		}
 		
 		//windowlistener more
 		windowListener.register();

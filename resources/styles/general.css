@@ -1,0 +1,39 @@
+@-moz-document url("chrome://browser/content/browser.xul") {
+	/*
+	#cui_nativeshot {
+		filter: grayscale(1);
+		transition: filter 200ms;
+	}
+	*/
+	#cui_nativeshot .toolbarbutton-badge {
+		background-color: #00A8EC;
+	}
+	/*
+	#cui_nativeshot:hover {
+		filter: grayscale(0);
+	}
+	*/
+	/*start-non cui stuff*/
+	notification button[class*=nativeshot] .button-icon,
+	notificationbox[id*=NativeShotABjetpack] .button-icon {
+		display: -moz-box;
+		-moz-margin-end: 5px;
+	}
+	notification button.nativeshot-twitter-bad .button-icon {
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_bad16.png');
+	}
+	notification button.nativeshot-twitter-good .button-icon {
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_good16.png');
+	}
+	notification button.nativeshot-twitter-neutral .button-icon {
+		list-style-image: url('chrome://nativeshot/content/resources/images/twitter_neutral16.png');
+	}
+	
+	#toolbar-context-menu_nativeshot-menuitem .menu-iconic-left,
+	#toolbar-context-menu_nativeshot-menuitem .menu-iconic-right,
+	#customizationPanelItemContextMenu_nativeshot-menuitem .menu-iconic-left,
+	#customizationPanelItemContextMenu_nativeshot-menuitem .menu-iconic-right {
+		visibility: visible; /* needed because on ubuntu 15.01 they are hidden */
+	}
+	/*end-non cui stuff*/
+}

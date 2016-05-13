@@ -3955,7 +3955,7 @@ function init(aArrBufAndCore) {
 		reduce: function(e) {
 			if (e.altKey) {
 				// sCanHandleSize
-				var min = 4;
+				var min = 6;
 				var del = 2;
 				var cHandleSize = this.props.sCanHandleSize;
 				
@@ -4336,7 +4336,7 @@ function init(aArrBufAndCore) {
 						cProps.className += ' eyedropper';
 					}
 				}
-				var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+				var bgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("chrome://nativeshot/content/resources/images/trans5x5.png")';
 				cButtonIcon = React.createElement('div', {style:{backgroundImage:bgImgStr}, className:'pbutton-icon-color'});
 			} else {
 				cButtonIcon = this.props.pButton.icon;
@@ -5083,9 +5083,9 @@ function init(aArrBufAndCore) {
 			var {pRgba, pHsv} = this.props;
 			
 			var rgbaStr = 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + (pRgba.a/100) + ')';
-			var colorBgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+			var colorBgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("chrome://nativeshot/content/resources/images/trans5x5.png")';
 
-			var alphaBgImgStr = 'linear-gradient(to right, rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', 0), rgb(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ')), url("data:image/png;base64,R0lGODdhCgAKAPAAAOXl5f///ywAAAAACgAKAEACEIQdqXt9GxyETrI279OIgwIAOw==")';
+			var alphaBgImgStr = 'linear-gradient(to right, rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', 0), rgb(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ')), url("chrome://nativeshot/content/resources/images/trans5x5.png")';
 			
 			
 			var percentHue = Math.round(pHsv.h / 360 * 100);
@@ -5750,7 +5750,7 @@ function init(aArrBufAndCore) {
 			pPalLineAlpha: 100,
 			pPalBothColorHist: [],
 			pPalFillColor: 'rgb(74, 144, 226)',
-			pPalFillAlpha: 100,
+			pPalFillAlpha: 75,
 			pPalMarkerColor: '#ffef15',
 			pPalMarkerAlpha: 50,
 			pPalMarkerColorHist: [],

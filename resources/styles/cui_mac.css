@@ -4,6 +4,6 @@
 	}
 	#cui_nativeshot[cui-areatype="menu-panel"],
 	toolbarpaletteitem[place="palette"] > #cui_nativeshot {
-		list-style-image: url('chrome://nativeshot/content/resources/images/offgray32.png');
+		list-style-image: url('chrome://nativeshot/content/resources/images/dark32.png');
 	}
 }
