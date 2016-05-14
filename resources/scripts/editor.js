@@ -563,7 +563,7 @@ function init(aArrBufAndCore) {
 		{
 			// Accessibility - from where user increase/decrease size of palette
 			special: 'Accessibility',
-			props: ['sCanHandleSize', 'sPalSize']
+			props: ['sCanHandleSize', 'sPalSize', 'sGenAltKey']
 		},
 		{
 			special: 'Divider'
@@ -942,6 +942,8 @@ function init(aArrBufAndCore) {
 				sGenPalTool: 'Select', // the label of the currently active tool
 				sGenPalW: 0, // width
 				sGenPalH: 0, // height
+				sGenAltKey: false,
+				sGenShiftKey: false,
 				
 				// all these keys below should be synced to fill of editor state
 				
@@ -1128,7 +1130,7 @@ function init(aArrBufAndCore) {
 			window.addEventListener('mousemove', this.mousemove, false);
 			window.addEventListener('mousedown', this.mousedown, false);
 			window.addEventListener('mouseup', this.mouseup, false);
-			// window.addEventListener('keyup', this.keyup, false);
+			window.addEventListener('keyup', this.keyup, false);
 			window.addEventListener('keydown', this.keydown, false);
 			window.addEventListener('dblclick', this.dblclick, false);
 			
@@ -3318,7 +3320,28 @@ function init(aArrBufAndCore) {
 			
 			
 		},
-		// keyup: function(e) {},
+		keyup: function(e) {
+			switch (e.key) {
+				case 'Alt':
+					
+						if (this.state.sGenAltKey) {
+							this.setState({
+								sGenAltKey: false
+							});
+						}
+					
+					break;
+				case 'Shift':
+					
+						if (this.state.sGenShiftKey) {
+							this.setState({
+								sGenShiftKey: false
+							});
+						}
+					
+					break;
+			}
+		},
 		cancelDropping: function() {
 			// returns true if canceled
 			var dropping = this.state.sGenColorPickerDropping;
@@ -3338,6 +3361,24 @@ function init(aArrBufAndCore) {
 			
 			// high priority "returning" keydown's
 			switch (e.key) {
+				case 'Alt':
+					
+						if (!e.repeat && !this.state.sGenAltKey) {
+							this.setState({
+								sGenAltKey: true
+							});
+						}
+					
+					break;
+				case 'Shift':
+					
+						if (!e.repeat && !this.state.sGenShiftKey) {
+							this.setState({
+								sGenShiftKey: true
+							});
+						}
+					
+					break;
 				case 'Escape':
 						
 						var canceledDropping = this.cancelDropping();
@@ -4007,12 +4048,24 @@ function init(aArrBufAndCore) {
 			// props
 			// 		sPalSize
 			//		sCanHandleSize
-
+			//		sGenAltKey
+			var { sGenAltKey } = this.props;
+			
 			return React.createElement('div', {className:'paccessibility'},
 				React.createElement('div', {className: 'pbutton', onClick:this.enlarge, ref:'enlarge'},
+					React.createElement('div', {className:'plabel'},
+						React.createElement('span', {},
+							!sGenAltKey ? 'Enlarge Palette' : 'Enlarge Handles'
+						)
+					),
 					'\ue818'
 				),
 				React.createElement('div', {className: 'pbutton', onClick:this.reduce, ref:'reduce'},
+					React.createElement('div', {className:'plabel plabelbot'},
+						React.createElement('span', {},
+							!sGenAltKey ? 'Shrink Palette' : 'Shrink Handles'
+						)
+					),
 					'\ue817'
 				)
 			);
@@ -4279,8 +4332,19 @@ function init(aArrBufAndCore) {
 				this.refs.plabel.textContent = aNewTxt;
 			} else {
 				if (aKey == this.settingKey) {
-					this.refs.plabel.textContent = this.props.pButton.label;
+					var origLabel = this.props.pButton.label;
+					if (!this.props.sGenShiftKey) {
+						origLabel += ' & Close';
+					}
+					this.refs.plabel.textContent = origLabel;
 				}
+			}
+		},
+		componentDidMount: function() {
+			
+			// if its an action button, then append to label " & Close" - i can do this in did mount, because when mount for sure alt is not pressed, well pretty sure so yea no big
+			if (['Save', 'Print', 'Copy', 'Upload to Cloud', 'Share to Social Media', 'Similar Image Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
+				this.isActionButton = true;
 			}
 		},
 		render: function() {
@@ -4296,6 +4360,7 @@ function init(aArrBufAndCore) {
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
 			//		sGenColorPickerDropping
+			//		sGenShiftKey - should only if its an action type button. but right now i send it to all, no plans to make it not send to all.
 			
 			var cProps = {
 				className:'pbutton',
@@ -4362,10 +4427,15 @@ function init(aArrBufAndCore) {
 				);
 			}
 			
+			var origLabel = this.props.pButton.label;
+			if (this.isActionButton && !this.props.sGenShiftKey) {
+				origLabel += ' & Close';
+			}
+			
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
 					React.createElement('span', {ref:'plabel'},
-						this.props.pButton.label
+						origLabel
 					)
 				),
 				cSubmenu,
@@ -5401,6 +5471,7 @@ function init(aArrBufAndCore) {
 						}
 					}
 					*/
+					
 					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:cLayoutEntry}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalSeldSubs:this.props.sPalSeldSubs, pButton:cLayoutEntry, sGenPalTool:this.props.sGenPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 				}
 			}

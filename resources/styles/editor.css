@@ -119,6 +119,10 @@ body {
 	flex-direction: column;
 	font-size: .5em;
 }
+/* custom plabel stuff */
+.paccessibility .plabel {
+	font-size: 1em;
+}
 /* end - paccessibility */
 
 /* start - paccessibility_children */
@@ -190,6 +194,18 @@ body {
 /* start:minfontsize */
 .minfontsize .plabel {
 	font-size: 12px;
+}
+/* state:plabelbot */
+/* state:innate */
+.plabelbot {
+	bottom: 0;
+	top: auto !important; /* so the .pbutton:hover .plabel setting of top doesnt apply */
+	transition: bottom 200ms, opacity 200ms;
+}
+/* start:pbutton_hover_bot */
+.pbutton:hover .plabelbot {
+	/* transform: translate(0, -2em); */
+	bottom: -2.3em; /*calc(-1.5em - 0.6em - 0.2em) ::: -.5em will put it at top as font-size is .5em &&&& "- 0.6em" because padding on the `.plabel span` is 0.3px AND -0.2em is just good measure*/
 }
 /* end - plabel */
 
