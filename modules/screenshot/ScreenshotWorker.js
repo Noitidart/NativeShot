@@ -605,45 +605,49 @@ function getAllWin(aOptions) {
 					// and nativeshot_canvas width and height is equal to that of its respective desktop width and height
 					var numDesktop = 0;
 					var desktopDimWxH = [];
-					for (var i=0; i<rezWinArr.length-1; i++) {
-						if (rezWinArr[i].title == 'nativeshot_canvas') {
+					for (var i=0; i<rezWinArr.length; i++) {
+						if (rezWinArr[i].title == 'Desktop') {
 							numDesktop++;
-							desktopDimWxH.push(rezWinArr[i].width + ' x ' + rezWinArr[i].height);
+							desktopDimWxH.push(rezWinArr[i]);
 						}
 					}
 					// now splice out all things that have any dimensions matching these EXCEPT the last numMon elements as they will be titled Desktop
-					for (var i=rezWinArr.length-numDesktop; i<rezWinArr.length; i++) {
-						if (rezWinArr[i].title != 'DesktopAA') {
-
-						}
-					}
-					for (var i=0; i<rezWinArr.length-numDesktop; i++) {
-						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
+					// for (var i=rezWinArr.length-numDesktop; i<rezWinArr.length; i++) {
+					// 	if (rezWinArr[i].title != 'DesktopAA') {
+                    // 
+					// 	}
+					// }
+					for (var i=0; i<rezWinArr.length; i++) {
+						var cWin = rezWinArr[i];
+						if (cWin.title == 'Desktop') {
 							continue;
 						}
-						if (desktopDimWxH.indexOf(rezWinArr[i].width + ' x ' + rezWinArr[i].height) > -1) {
-
-							rezWinArr.splice(i, 1);
-							i--;
-						}
-					}
-					
-					// 2) splice out the editor contextmenu, which will be the first blank titled thing after the first nativeshot_canvas
-					var nativeshotCanvasPID = 0;
-					for (var i = 0; i < rezWinArr.length - 1; i++) { // - 1 as we dont want the very last item
-						if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
-							nativeshotCanvasPID = rezWinArr[i].pid;
-						}
-						if (!nativeshotCanvasPID) {
-							continue;
-						} else {
-							if (rezWinArr[i].pid == nativeshotCanvasPID && rezWinArr[i].title == '') {
-								// first non titled thing with same pid after the first nativeshot_canvas should be the right click contextmenu of editor
+						for (var j=0; j<numDesktop; j++) {
+							var cDesktop = desktopDimWxH[j];
+							if (cWin.width == cDesktop.width && cWin.height == cDesktop.height && cWin.left == cDesktop.left && cWin.top == cDesktop.top) {
 								rezWinArr.splice(i, 1);
+								i--;
 								break;
 							}
 						}
 					}
+					
+					// // 2) splice out the editor contextmenu, which will be the first blank titled thing after the first nativeshot_canvas
+					// var nativeshotCanvasPID = 0;
+					// for (var i = 0; i < rezWinArr.length - 1; i++) { // - 1 as we dont want the very last item
+					// 	if (rezWinArr[i].title == 'nativeshot_canvas') { // need to leave nativeshot_canvas in as mainthread uses it as a pointer position to start from
+					// 		nativeshotCanvasPID = rezWinArr[i].pid;
+					// 	}
+					// 	if (!nativeshotCanvasPID) {
+					// 		continue;
+					// 	} else {
+					// 		if (rezWinArr[i].pid == nativeshotCanvasPID && rezWinArr[i].title == '') {
+					// 			// first non titled thing with same pid after the first nativeshot_canvas should be the right click contextmenu of editor
+					// 			rezWinArr.splice(i, 1);
+					// 			break;
+					// 		}
+					// 	}
+					// }
 					// end - post analysis
 				} finally {
 					ostypes.API('CFRelease')(cfarr_win);

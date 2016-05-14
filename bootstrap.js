@@ -658,6 +658,15 @@ var EditorFuncs = {
 			}
 		}
 		if (allWinInited) {
+			// var macDesktopDims = [];
+			// if (core.os.mname == 'darwin') {
+			// 	for (var i=0; i<l; i++) {
+			// 		macDesktopDims.push
+			// 			allWinInited = false;
+			// 			break;
+			// 		}
+			// 	}
+			// }
 			var promise_fetchWin = ScreenshotWorker.post('getAllWin', [{
 				getPid: true,
 				getBounds: true,
