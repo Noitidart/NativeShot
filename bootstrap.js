@@ -2932,6 +2932,7 @@ var AB = { // AB stands for attention bar
 		// end - original block link77728110
 		delete aDOMWindow[core.addon.id + '-AB'];
 		console.error('done uninit');
+		aDOMWindow.removeEventListener(core.addon.id + '-AB', AB.msgEventListener, false);
 	},
 	ensureInitedIntoWindow: function(aDOMWindow) {
 		// dont run this yoruself, ensureInstancesToWindow runs this. so if you want to run yourself, then run ensureInstancesToWindow(aDOMWindow)
@@ -2951,10 +2952,11 @@ var AB = { // AB stands for attention bar
 				Services.scriptloader.loadSubScript(core.addon.path.scripts + 'react-dom.js?' + core.addon.cache_key, aDOMWindow);
 			}
 			Services.scriptloader.loadSubScript(core.addon.path.scripts + 'ab-react-components.js?' + core.addon.cache_key, aDOMWindow);
+			aDOMWindow.addEventListener(core.addon.id + '-AB', AB.msgEventListener, false);
 		}
 	},
 	init: function() {
-		Services.mm.addMessageListener(core.addon.id + '-AB', AB.msgListener);
+		// Services.mm.addMessageListener(core.addon.id + '-AB', AB.msgListener);
 		
 		Services.wm.addListener(AB.winListener);
 		
@@ -2963,7 +2965,7 @@ var AB = { // AB stands for attention bar
 		// and its impossible that Insts exists before Init, so no need to iterate through all windows.
 	},
 	uninit: function() {
-		Services.mm.removeMessageListener(core.addon.id + '-AB', AB.msgListener);
+		// Services.mm.removeMessageListener(core.addon.id + '-AB', AB.msgListener);
 		
 		Services.wm.removeListener(AB.winListener);
 		
@@ -2976,18 +2978,26 @@ var AB = { // AB stands for attention bar
 			}
 		}
 	},
-	msgListener: {
-		receiveMessage: function(aMsgEvent) {
-			var aMsgEventData = aMsgEvent.data;
-			console.error('getting aMsgEvent, data:', aMsgEventData);
-			// this means trigger a callback with id aMsgEventData
-			var cCallbackId = aMsgEventData;
-			var cBrowser = aMsgEvent.target;
-			if (AB.Callbacks[cCallbackId]) { // need this check because react components always send message on click, but it may not have a callback
-				AB.Callbacks[cCallbackId](cBrowser);
-			}
+	msgEventListener: function(e) {
+		console.error('getting aMsgEvent, data:', e.detail);
+		var cCallbackId = e.detail.cbid;
+		var cBrowser = e.detail.browser; 
+		if (AB.Callbacks[cCallbackId]) { // need this check because react components always send message on click, but it may not have a callback
+			AB.Callbacks[cCallbackId](cBrowser);
 		}
 	},
+	// msgListener: {
+	// 	receiveMessage: function(aMsgEvent) {
+	// 		var aMsgEventData = aMsgEvent.data;
+	// 		console.error('getting aMsgEvent, data:', aMsgEventData);
+	// 		// this means trigger a callback with id aMsgEventData
+	// 		var cCallbackId = aMsgEventData;
+	// 		var cBrowser = aMsgEvent.target;
+	// 		if (AB.Callbacks[cCallbackId]) { // need this check because react components always send message on click, but it may not have a callback
+	// 			AB.Callbacks[cCallbackId](cBrowser);
+	// 		}
+	// 	}
+	// },
 	loadInstancesIntoWindow: function(aDOMWindow) {
 		// this function is called when there may be instances in AB.Insts but and it needs to be verified that its mounted in window
 		// basically this is called when a new window is opened
