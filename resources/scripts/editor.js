@@ -1691,10 +1691,12 @@ function init(aArrBufAndCore) {
 				case 'Gaussian':
 				case 'Mosaic':
 				
-						this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+						if (this.state.sCanHandleSize > 0) {
+							this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
+						}
 						
 						// draw handles
-						var handleSize = this.state.sCanHandleSize;
+						var handleSize = Math.abs(this.state.sCanHandleSize);
 						
 						var half = handleSize / 2;
 						
@@ -1743,18 +1745,20 @@ function init(aArrBufAndCore) {
 							x: aDrawable.x+aDrawable.w-half,
 							y: aDrawable.y+aDrawable.h-half
 						};
+
+						if (aDrawable.name != 'cutout' || (aDrawable.name == 'cutout' && this.state.sCanHandleSize > 0)) {
+							this.ctx.fillStyle = '#000000';
+							this.ctx.setLineDash([]);
+							this.ctx.strokeStyle = '#ffffff';
+							this.ctx.beginPath();
+							for (i = 0; i < 8; i += 1) {
+								cur = selectionHandles[i];
+								this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
+							};
 						
-						this.ctx.fillStyle = '#000000';
-						this.ctx.setLineDash([]);
-						this.ctx.strokeStyle = '#ffffff';
-						this.ctx.beginPath();
-						for (i = 0; i < 8; i += 1) {
-							cur = selectionHandles[i];
-							this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
-						};
-						
-						this.ctx.fill();
-						this.ctx.stroke();
+							this.ctx.fill();
+							this.ctx.stroke();
+						}
 					
 					break;
 				case 'Text':
@@ -1782,7 +1786,9 @@ function init(aArrBufAndCore) {
 						}
 						x = aDrawable.x;
 						
-						this.ctx.strokeRect(aDrawable.x, y, w, h);
+						// if (this.state.sCanHandleSize > 0) {
+							this.ctx.strokeRect(aDrawable.x, y, w, h);
+						// }
 						
 						if (this.cstate.typing) {
 							// draw ibeam
@@ -1814,7 +1820,7 @@ function init(aArrBufAndCore) {
 						// this.ctx.stroke();
 						
 						// draw handles
-						var handleSize = this.state.sCanHandleSize;
+						var handleSize = Math.abs(this.state.sCanHandleSize);
 						var half = handleSize / 2;
 						
 						var selectionHandles = this.cstate.selectionHandles;
@@ -1854,7 +1860,7 @@ function init(aArrBufAndCore) {
 						// this.ctx.fill();
 						// this.ctx.stroke();
 						// draw handles
-						var handleSize = this.state.sCanHandleSize;
+						var handleSize = Math.abs(this.state.sCanHandleSize);
 						var half = handleSize / 2;
 						
 						// var selectionHandles = this.cstate.selectionHandles;
@@ -1890,7 +1896,7 @@ function init(aArrBufAndCore) {
 				
 						if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 							var selectionHandles = this.cstate.selectionHandles;
-							var handleSize = this.state.sCanHandleSize;
+							var handleSize = Math.abs(this.state.sCanHandleSize);
 							for (var i=0; i<2; i++) {
 								if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 									(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
@@ -1956,7 +1962,7 @@ function init(aArrBufAndCore) {
 					// is aDrawable selected
 					if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 						var selectionHandles = this.cstate.selectionHandles;
-						var handleSize = this.state.sCanHandleSize;
+						var handleSize = Math.abs(this.state.sCanHandleSize);
 						for (var i=0; i<8; i++) {
 							if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
 								(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
@@ -3929,14 +3935,17 @@ function init(aArrBufAndCore) {
 				var cHandleSize = this.props.sCanHandleSize;
 				
 				var nHandleSize = cHandleSize;
-				
 				if (cHandleSize + del <= max) {
-					nHandleSize = cHandleSize + del;
+					if (nHandleSize < 0) {
+						// i decided only one step below 0, and thats when no border is drawn so it is at min, so abs it
+						nHandleSize = Math.abs(nHandleSize);
+					} else {
+						nHandleSize = cHandleSize + del;
+					}
+					gEditorStore.setState({
+						sCanHandleSize: nHandleSize
+					});
 				}
-
-				gEditorStore.setState({
-					sCanHandleSize: nHandleSize
-				});
 			} else {
 				// sPalSize
 				var max = 58;
@@ -3945,11 +3954,10 @@ function init(aArrBufAndCore) {
 				var nPaletteSize = cPaletteSize;
 				if (cPaletteSize + del <= max) {
 					nPaletteSize = cPaletteSize + del;
+					gEditorStore.setState({
+						sPalSize: nPaletteSize,
+					});
 				}
-
-				gEditorStore.setState({
-					sPalSize: nPaletteSize,
-				});
 			}
 		},
 		reduce: function(e) {
@@ -3961,13 +3969,18 @@ function init(aArrBufAndCore) {
 				
 				var nHandleSize = cHandleSize;
 				
-				if (cHandleSize - del >= min) {
+				if (nHandleSize == min) {
+					// i decided only one step below 0 and thats when nothing drawn
+					nHandleSize = min * -1;
+					gEditorStore.setState({
+						sCanHandleSize: nHandleSize
+					});
+				} else if (cHandleSize - del >= min) {
 					nHandleSize = cHandleSize - del;
+					gEditorStore.setState({
+						sCanHandleSize: nHandleSize
+					});
 				}
-
-				gEditorStore.setState({
-					sCanHandleSize: nHandleSize
-				});
 			} else {
 				// sPalSize
 				var min = 12;
@@ -3976,11 +3989,10 @@ function init(aArrBufAndCore) {
 				var nPaletteSize = cPaletteSize;
 				if (cPaletteSize - del >= min) {
 					nPaletteSize = cPaletteSize - del;
+					gEditorStore.setState({
+						sPalSize: nPaletteSize,
+					});
 				}
-
-				gEditorStore.setState({
-					sPalSize: nPaletteSize,
-				});
 			}
 		},
 		componentDidMount: function() {
