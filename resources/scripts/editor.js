@@ -34,7 +34,7 @@ function unload() {
 	// if iMon == 0
 	// set the new state object from react to file
 	// if (gQS.iMon === 0) {
-		console.error('sending state object:', gCanStore.rconn.state);
+		// console.error('sending state object:', gCanStore.rconn.state);
 		var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
 		for (var p in immutableEditorstate) {
 			if (p.indexOf('sGen') !== 0) {
@@ -44,24 +44,24 @@ function unload() {
 			delete immutableEditorstate[p];
 		}
 		
-		Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+		triggerNSCommEvent({
 			topic: 'updateEditorState',
 			editorstateStr: JSON.stringify(immutableEditorstate),
 			iMon: tQS.iMon
-		}));
+		});
 	// }
-	Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+	triggerNSCommEvent({
 		topic: 'broadcastToOthers',
 		postMsgObj: {
 			topic: 'removeUnloadAndClose'
 		},
 		iMon: tQS.iMon
-	}));
-	Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+	});
+	triggerNSCommEvent({
 		topic: 'callInBootstrap',
 		method: 'gEUnload',
 		iMon: tQS.iMon
-	}));
+	});
 }
 
 function removeUnloadAndClose() {
@@ -168,25 +168,25 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 						}.bind(null, requestLoad), false);
 					} else {
 						requestLoad.topic = 'requestCompositeData';
-						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+						triggerNSCommEvent({
 							topic: 'broadcastToSpecific',
 							postMsgObj: requestLoad,
 							toMon: p, // as p is target iMon
 							iMon: tQS.iMon
-						}));
+						});
 					}
 				}
 			}
 			
-			Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+			triggerNSCommEvent({
 				topic: 'addSelectionToHistory',
 				cutoutsArr: cutouts,
 				iMon: tQS.iMon
-			}));			
+			});			
 			
 		}
 	} else {
-		alert('action is in progress');
+		alert('cannot make do another action as previous action is still in progress');
 	}
 }
 
@@ -1025,14 +1025,14 @@ function init(aArrBufAndCore) {
 					// needsBroadcast = false;
 					// clearTimeout(gBroadcastTimeout);
 					// gBroadcastTimeout = setTimeout(function() {
-						Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+						triggerNSCommEvent({
 							topic: 'broadcastToOthers',
 							postMsgObj: {
 								topic: 'reactSetState',
 								updatedStates: JSON.stringify(aObj)
 							},
 							iMon: tQS.iMon
-						}));
+						});
 						
 						// triggerNSCommEvent{
 							// topic: 'broadcastToOthers',
@@ -2335,14 +2335,14 @@ function init(aArrBufAndCore) {
 			if (!isValid) {
 				this.cstate.valid = false;
 				if (!dontBroadcast) {
-					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+					triggerNSCommEvent({
 						topic: 'broadcastToOthers',
 						postMsgObj: {
 							topic: 'canSetState',
 							cstate: JSON.stringify(this.cstate)
 						},
 						iMon: tQS.iMon
-					}));
+					});
 				}
 			}
 		},
@@ -3356,10 +3356,10 @@ function init(aArrBufAndCore) {
 					// support pasting
 					if (e.key.toLowerCase() == 'v' && ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey))) {
 							// request paste
-							Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+							triggerNSCommEvent({
 								topic: 'insertTextFromClipboard',
 								iMon: tQS.iMon
-							}));
+							});
 					} else if (e.key.toLowerCase() == 'd' && ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey))) {
 						// deselect
 						if ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey)) {
@@ -3757,14 +3757,14 @@ function init(aArrBufAndCore) {
 			
 			this.zstate.setInvalid = function(isBroadcast) {
 				if (!isBroadcast) {
-					Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+					triggerNSCommEvent({
 						topic: 'broadcastToOthers',
 						postMsgObj: {
 							topic: 'zcanInvalidate',
 							mouse: this.zstate.mouse
 						},
 						iMon: tQS.iMon
-					}));
+					});
 				}
 				this.zstate.valid = false;
 			}.bind(this);
@@ -4444,11 +4444,11 @@ function init(aArrBufAndCore) {
 			
 			if (this.props.pSubButton.label == 'Last Selection') {
 				var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
-				Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({
+				triggerNSCommEvent({
 					topic: 'selectPreviousSelection',
 					cutoutsArr: cutouts.length ? cutouts : null,
 					iMon: tQS.iMon
-				}));
+				});
 			}
 			
 			if (!this.props.pSubButton.unfixable) {
@@ -6121,10 +6121,10 @@ function receiveWinArr(aData) {
 }
 
 // link9999191911111
-Services.obs.notifyObservers(null, core.addon.id + '_nativeshot-editor-request', JSON.stringify({ // this sometimes triggers `uncaught exception: out of memory editor.js:5611:1`
+triggerNSCommEvent({ // changed away from notifyObservers to triggerNSCommEvent because ---> // this sometimes triggers `uncaught exception: out of memory editor.js:5611:1`
 	topic: 'init',
 	iMon: tQS.iMon
-}));
+});
 
 /*
 // while bootstrap is responding to the request from link9999191911111 ill load in other stuff

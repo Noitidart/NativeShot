@@ -463,41 +463,7 @@ function indexOfSelInG(aSel) {
 	}
 }
 // break - last selection stuff
-var observers = {
-	'nativeshot-editor-request': {
-		observe: function (aSubject, aTopic, aData) {
-			// aData JSON.stringify in must be in format:
-			/*
-				{
-					topic: 'func to call in bootstrap',
-					iMon: 'the iMon of the calling editor window',
-					// whatever else
-				}
-			*/
-			aData = JSON.parse(aData);
-			
-			var requiredKeys = ['topic', 'iMon'];
-			for (var i=0; i<requiredKeys.length; i++) {
-				if (!(requiredKeys[i] in aData)) {
-					console.error('missing required keys in nativeshot-editor-request aData arg, aData:', aData);
-					throw new Error('missing required keys in nativeshot-editor-request aData arg');
-				}
-			}
-			
-			if (!(aData.topic in EditorFuncs)) {
-				console.error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
-				throw new Error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
-			}
-			EditorFuncs[aData.topic](aData);
-		},
-		reg: function () {
-			Services.obs.addObserver(observers['nativeshot-editor-request'], core.addon.id + '_nativeshot-editor-request', false);
-		},
-		unreg: function () {
-			Services.obs.removeObserver(observers['nativeshot-editor-request'], core.addon.id + '_nativeshot-editor-request');
-		}
-	}
-};
+
 var EditorFuncs = {
 	// resume - last selection stuff
 	addSelectionToHistory: function(aData) {
@@ -679,8 +645,6 @@ var EditorFuncs = {
 			editorstateStr: gEditorStateStr
 		}, '*', [colMon[iMon].screenshotArrBuf]);
 		
-		colMon[aData.iMon].E.DOMWindow.addEventListener('nscomm', nscomm, false);
-		
 		// set windowtype attribute
 		// colMon[aData.iMon].E.DOMWindow.document.documentElement.setAttribute('windowtype', 'nativeshot:canvas');
 		
@@ -770,6 +734,16 @@ function reRaiseCanvasWins() {
 
 function nscomm(aEvent) {
 	console.log('incoming nscomm, aEvent:', aEvent);
+
+	// aEvent.detail must be in format:
+	/*
+		{
+			topic: 'func to call in bootstrap',
+			iMon: 'the iMon of the calling editor window',
+			// whatever else
+		}
+	*/
+
 	var aData = aEvent.detail;
 	
 	var requiredKeys = ['topic', 'iMon'];
@@ -866,7 +840,6 @@ var colMon; // rename of collMonInfos
 }
 */
 
-// start - observer handlers
 // start - canvas functions to act across all canvases
 
 var gPostPrintRemovalFunc;
@@ -1999,7 +1972,6 @@ function gEUnload() {
 }
 // end - canvas functions to act across all canvases
 
-// end - observer handlers
 
 function shootAllMons(aDOMWindow) {
 	
@@ -2079,6 +2051,7 @@ function shootAllMons(aDOMWindow) {
 				// docEl: aEditorDOMWindow.document.documentElement,
 				// doc: aEditorDOMWindow.document,
 			};
+			aEditorDOMWindow.addEventListener('nscomm', nscomm, false);
 		}
 	};
 	
@@ -3790,12 +3763,6 @@ function startup(aData, aReason) {
 		windowListener.register();
 		//end windowlistener more
 		
-		//start observers stuff more
-		for (var o in observers) {
-			observers[o].reg();
-		}
-		//end observers stuff more
-		
 		initAndRegisterAbout();
 		
 		AB.init();
@@ -3847,12 +3814,6 @@ function shutdown(aData, aReason) {
 	//windowlistener more
 	windowListener.unregister();
 	//end windowlistener more
-	
-	//start observers stuff more
-	for (var o in observers) {
-		observers[o].unreg();
-	}
-	//end observers stuff more
 	
 	// clear intervals if any are pending
 	if (gDelayedShotObj) {
