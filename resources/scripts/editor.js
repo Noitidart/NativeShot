@@ -1242,6 +1242,10 @@ function init(aArrBufAndCore) {
 								} else if (nameOfDrawableOfPrevSubTool == 'Gaussian') {
 									delete mySel.blurradius;
 									mySel.blurblock = this.state.sPalBlurBlock;
+								} else if (nameOfDrawableOfPrevSubTool == 'Rectangle') {
+									delete mySel.radius;
+								} else if (nameOfDrawableOfPrevSubTool == 'Oval') {
+									mySel.radius = this.state.sPalRectRadius;
 								}
 							}
 						}
@@ -4333,7 +4337,7 @@ function init(aArrBufAndCore) {
 			} else {
 				if (aKey == this.settingKey) {
 					var origLabel = this.props.pButton.label;
-					if (!this.props.sGenShiftKey) {
+					if (this.isActionButton && !this.props.sGenShiftKey) {
 						origLabel += ' & Close';
 					}
 					this.refs.plabel.textContent = origLabel;
