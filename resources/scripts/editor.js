@@ -358,7 +358,7 @@ function fullfillCompositeRequest(aData) {
 					}
 				
 				break;
-			case 'Upload to Cloud':
+			case 'Upload':
 			
 					switch (sub) {
 						case 'Imgur Anonymous':
@@ -386,7 +386,7 @@ function fullfillCompositeRequest(aData) {
 					}
 			
 				break;
-			case 'Similar Image Search':
+			case 'Search':
 			
 					switch (sub) {
 						case 'Tineye':
@@ -409,7 +409,7 @@ function fullfillCompositeRequest(aData) {
 					}
 			
 				break;
-			case 'Share to Social Media':
+			case 'Share':
 			case 'Text Recognition':
 				
 					oauthServiceName = sub.toLowerCase();
@@ -801,7 +801,7 @@ function init(aArrBufAndCore) {
 			hotkey: 'cc'
 		},
 		{
-			label: 'Upload to Cloud',
+			label: 'Upload',
 			justClick: true,
 			icon: '\ue84e',
 			hotkey: 'cu',
@@ -825,7 +825,7 @@ function init(aArrBufAndCore) {
 			]
 		},
 		{
-			label: 'Share to Social Media',
+			label: 'Share',
 			justClick: true,
 			icon: '\ue81e',
 			hotkey: 'cm',
@@ -841,7 +841,7 @@ function init(aArrBufAndCore) {
 			]
 		},
 		{
-			label: 'Similar Image Search',
+			label: 'Search',
 			justClick: true,
 			icon: '\ue81f',
 			hotkey: 'cf',
@@ -4117,9 +4117,9 @@ function init(aArrBufAndCore) {
 				case 'Save':
 				case 'Copy':
 				case 'Print':
-				case 'Upload to Cloud':
-				case 'Share to Social Media':
-				case 'Similar Image Search':
+				case 'Upload':
+				case 'Share':
+				case 'Search':
 				case 'Text Recognition':
 				
 					var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.pButton.label];
@@ -4347,7 +4347,7 @@ function init(aArrBufAndCore) {
 		componentDidMount: function() {
 			
 			// if its an action button, then append to label " & Close" - i can do this in did mount, because when mount for sure alt is not pressed, well pretty sure so yea no big
-			if (['Save', 'Print', 'Copy', 'Upload to Cloud', 'Share to Social Media', 'Similar Image Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
+			if (['Save', 'Print', 'Copy', 'Upload', 'Share', 'Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
 				this.isActionButton = true;
 			}
 		},
@@ -4503,7 +4503,7 @@ function init(aArrBufAndCore) {
 				gCanStore.setCanState(false); // as i for sure added a new cutout
 			}
 			
-			if (['Save', 'Upload to Cloud', 'Share to Social Media', 'Similar Image Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
+			if (['Save', 'Upload', 'Share', 'Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
 			} else if (this.props.pButton.label == 'Blur') {
