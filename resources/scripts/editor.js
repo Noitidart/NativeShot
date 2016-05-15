@@ -2662,11 +2662,22 @@ function init(aArrBufAndCore) {
 					var oldy = this.cstate.selection.y;
 					console.log('this.cstate.resizing:', this.cstate.resizing, tQS.iMon);
 					switch(this.cstate.resizing) {
-						case 2:
+						case 2:							
 							this.cstate.selection.x = mx;
 							this.cstate.selection.y = my;
 							this.cstate.selection.w += oldx - mx;
-							this.cstate.selection.h += oldy - my;
+							// this.cstate.selection.h += oldy - my;
+							
+							
+							if (e.shiftKey) {
+								// draw sqaure
+								var oldh = this.cstate.selection.h + oldy - my;
+								this.cstate.selection.y = my + (oldh - this.cstate.selection.w);
+								this.cstate.selection.h += oldy - this.cstate.selection.y;
+							} else {
+								this.cstate.selection.h += oldy - my;
+							}
+							
 							break;
 						case 3:
 							this.cstate.selection.y = my;
@@ -2675,7 +2686,16 @@ function init(aArrBufAndCore) {
 						case 4:
 							this.cstate.selection.y = my;
 							this.cstate.selection.w = mx - oldx;
-							this.cstate.selection.h += oldy - my;
+							// this.cstate.selection.h += oldy - my;
+							
+							if (e.shiftKey) {
+								// draw sqaure
+								var oldh = this.cstate.selection.h + oldy - my;
+								this.cstate.selection.y = my + (oldh - this.cstate.selection.w);
+								this.cstate.selection.h += oldy - this.cstate.selection.y;
+							} else {
+								this.cstate.selection.h += oldy - my;
+							}
 							break;
 						case 5:
 							this.cstate.selection.x = mx;
@@ -2688,6 +2708,11 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.x = mx;
 							this.cstate.selection.w += oldx - mx;
 							this.cstate.selection.h = my - oldy;
+							
+							if (e.shiftKey) {
+								// draw sqaure
+								this.cstate.selection.h = this.cstate.selection.w;
+							}
 							break;
 						case 8:
 							this.cstate.selection.h = my - oldy;
@@ -2696,7 +2721,8 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.w = mx - oldx;
 							this.cstate.selection.h = my - oldy;
 							
-							if (e.altKey) {
+							if (e.shiftKey) {
+								// draw sqaure
 								this.cstate.selection.h = this.cstate.selection.w;
 							}
 							break;
@@ -3127,7 +3153,7 @@ function init(aArrBufAndCore) {
 					switch (toolsub) {
 						case 'Select-':
 						
-								if (!e.shiftKey) {
+								if (!e.altKey) {
 									// remove all previous cutouts
 									this.dDeleteAll(['cutout']);
 								}
