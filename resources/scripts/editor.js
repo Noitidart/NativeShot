@@ -29,6 +29,9 @@ var gCtxMeasureHeight;
 // var gHeightRef;
 var gWinArr;
 var gHotkeyRef = {};
+var gMX = 0;
+var gMY = 0;
+var gMTime = 0;
 
 function unload() {
 	// if iMon == 0
@@ -512,6 +515,143 @@ function fullfillCompositeRequest(aData) {
 	}
 }
 
+// start - paste copied_drawable stuff
+var gPasteDrawableResponses = null; // object, with key being the monitors requested from
+function initPasteDrawable() {
+	// check if request already in process
+	if (gPasteDrawableResponses) {
+		// paste already in progress
+		return;
+	}
+	
+	// start process
+	if (!gCState.copied_drawable) {
+		console.log('nothing in copied_drawable');
+		return;
+	}
+	
+	// ok continue
+	gPasteDrawableResponses = {};
+	
+	// populate gPasteDrawableResponses with the monitors i need a response from
+	var allMonDim = tQS.allMonDim;
+	for (var toMon=0; toMon<allMonDim.length; toMon++) {
+		gPasteDrawableResponses[toMon] = null;
+	}
+	
+	// ask all monitors for their gMX and gMY and gMTime
+	var requestLoad = {
+		topic: 'respondPasteDrawableRequest',
+		requestingMon: tQS.iMon
+	};
+	for (var toMon=0; toMon<allMonDim.length; toMon++) {
+		if (toMon == tQS.iMon) {
+			setTimeout(function() {
+				respondPasteDrawableRequest(requestLoad);
+			}, 0);
+		} else {
+			triggerNSCommEvent({
+				topic: 'broadcastToSpecific',
+				postMsgObj: requestLoad,
+				toMon,
+				iMon: tQS.iMon
+			});
+		}
+	}
+}
+function respondPasteDrawableRequest(aData) {
+	// emits a fullfillPasteDrawableRequest to requestingMon
+	// if all requests fullfilled then it does the paste
+	
+	var requestingMon = aData.requestingMon;
+	
+	var responseLoad = {
+		topic: 'completePasteDrawableRequest',
+		fromMon: tQS.iMon,
+		mx: gMX,
+		my: gMY,
+		mtime: gMTime
+	};
+	if (requestingMon == tQS.iMon) {
+		completePasteDrawableRequest(responseLoad);
+	} else {
+		triggerNSCommEvent({
+			topic: 'broadcastToSpecific',
+			postMsgObj: responseLoad,
+			toMon: requestingMon,
+			iMon: tQS.iMon
+		});
+	}
+}
+
+function completePasteDrawableRequest(aData) {
+	// called multiple times on the requesting mon, so called by respondPasteDrawableRequest, when all responses are in gPasteDrawableResponses, then it does the paste
+	
+	var fromMon = aData.fromMon;
+	
+	// update gPasteDrawableResponses
+	gPasteDrawableResponses[fromMon] = {
+		mx: aData.mx,
+		my: aData.my,
+		mtime: aData.mtime
+	};
+	
+	// check if all responses fullfilled
+	for (var p in gPasteDrawableResponses) {
+		if (!gPasteDrawableResponses[p]) {
+			return; // all responses not yet fullfilled so exit to not complete
+		}
+	}
+	
+	// got here, so all were fullfilled
+	// find the latest time
+	var latestTimeEntry;
+	for (var p in gPasteDrawableResponses) {
+		var cEntry = gPasteDrawableResponses[p];
+		if (!latestTimeEntry || cEntry.mtime > latestTimeEntry.mtime) {
+			latestTimeEntry = gPasteDrawableResponses[p];
+		}
+	}
+	
+	// paste drawable
+	var clonedDrawable = JSON.parse(gCState.copied_drawable);
+	clonedDrawable.id = gCState.nextid++;
+	
+	// translate the paste to where the mouse is currently
+	if ('w' in clonedDrawable || 'chars' in clonedDrawable) {
+		clonedDrawable.x = latestTimeEntry.mx;
+		clonedDrawable.y = latestTimeEntry.my;
+	} else if ('path' in clonedDrawable) {
+		var path = clonedDrawable.path;
+		var dx = latestTimeEntry.mx - path[0];
+		var dy = latestTimeEntry.my - path[1];
+		var l = path.length;
+		for (var i=0; i<l; i++) {
+			if (i % 2) {
+				path[i] += dy;
+			} else {
+				path[i] += dx;
+			}
+		}
+	} else if ('x2' in clonedDrawable) {
+		var dx = latestTimeEntry.mx - clonedDrawable.x;
+		var dy = latestTimeEntry.my - clonedDrawable.y;
+		clonedDrawable.x += dx;
+		clonedDrawable.x2 += dx;
+		clonedDrawable.y += dy;
+		clonedDrawable.y2 += dy;
+	}
+	else { console.error('what the heck??? no translate for this drawable?? clonedDrawable:', clonedDrawable); }
+	
+	console.log('clonedDrawable:', clonedDrawable);
+	
+	gPasteDrawableResponses = null;
+	
+	gCanStore.rconn.dAdd(clonedDrawable);
+	gCanStore.setCanState(false);
+}
+// end - paste copied_drawable stuff
+
 function insertTextFromClipboard(aData) {
 	if (gCState.typing) {
 		var mySel = gCState.selection; // if in typing mode, obviously a selection is there
@@ -603,7 +743,7 @@ function init(aArrBufAndCore) {
 			label: 'Clear Selection',
 			justClick: true,
 			icon: '\ue825',
-			hotkey: 'ad'
+			hotkey: 'd'
 		},
 		{
 			special: 'Divider'
@@ -1096,6 +1236,8 @@ function init(aArrBufAndCore) {
 
 			gCanStore.rconn = this; // connectio to the react component
 			
+			this.cstate.copied_drawable = null;
+			
 			// start - simon canvas stuff
 			this.cstate.valid = false;
 			gCanStore.oscalectx1_draw = false;
@@ -1292,8 +1434,7 @@ function init(aArrBufAndCore) {
 			
 			// set obj props
 			DRAWABLE.name = name;
-			DRAWABLE.id = this.cstate.nextid;
-			this.cstate.nextid++;
+			DRAWABLE.id = this.cstate.nextid++;
 			
 			// set rest
 			switch (name) {
@@ -2337,10 +2478,13 @@ function init(aArrBufAndCore) {
 				return undefined; // so setStyleablesDefaults will then set it to the default
 			}
 		},
-		setCanState: function(isValid, dontBroadcast) {
+		setCanState: function(isValid, dontBroadcast, forceBroadcast) {
 			if (!isValid) {
 				this.cstate.valid = false;
-				if (!dontBroadcast) {
+			}
+			
+			if (!isValid || forceBroadcast) {
+				if (!dontBroadcast || forceBroadcast) {
 					triggerNSCommEvent({
 						topic: 'broadcastToOthers',
 						postMsgObj: {
@@ -2437,6 +2581,9 @@ function init(aArrBufAndCore) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
+			gMX = mx;
+			gMY = my;
+			gMTime = Date.now();
 			// console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				gZState.mouse = {x:mx, y:my};
@@ -3455,17 +3602,21 @@ function init(aArrBufAndCore) {
 							break;
 						case 'Home':
 							
-								if (mySel.index > 0) {
-									mySel.index = 0;
-									newValid = false;
+								if (!e.repeat) {
+									if (mySel.index > 0) {
+										mySel.index = 0;
+										newValid = false;
+									}
 								}
 							
 							break;
 						case 'End':
 							
-								if (mySel.index < mySel.chars.length) {
-									mySel.index = mySel.chars.length;
-									newValid = false;
+								if (!e.repeat) {
+									if (mySel.index < mySel.chars.length) {
+										mySel.index = mySel.chars.length;
+										newValid = false;
+									}
 								}
 							
 							break;
@@ -3562,25 +3713,22 @@ function init(aArrBufAndCore) {
 								break;
 							case 'Delete':
 							
-									if (!this.dDelete(mySel)) {
-										this.clearSelection();
-										newValid = false;
+									if (!e.repeat) {
+										if (!this.dDelete(mySel)) {
+											this.clearSelection();
+											newValid = false;
+										}
 									}
 							
-								break;
-							case 'Escape': // never gets here, as escape is at top to close out editor
-								
-									if (!this.clearSelection()) {
-										newValid = false;
-									}
-								
 								break;
 							case 'D':
 							case 'd':
 								
-									if ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey)) {
-										if (!this.clearSelection()) {
-											newValid = false;
+									if (!e.repeat) {
+										if ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey)) {
+											if (!this.clearSelection()) {
+												newValid = false;
+											}
 										}
 									}
 								
@@ -3616,13 +3764,41 @@ function init(aArrBufAndCore) {
 							newValid = false;
 						}
 					}
+					
+					// other hotkeys during selection
+					switch (e.key) {
+						case 'C':
+						case 'c':
+							
+								// ac - alt+c
+								if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.altKey) {
+									// copy drawable
+									this.cstate.copied_drawable = JSON.stringify(mySel);
+									this.setCanState(true, false, true);
+								}
+							
+							break;
+					}
 				}
 				
 				// other hotkeys
+				switch (e.key) {
+					case 'V':
+					case 'v':
+					
+							// av - alt+v
+							if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.altKey) {
+								initPasteDrawable();
+							}
+					
+						break;
+				}
+				
+				// hotkeys tied to buttons in palette
 				// console.log('e:', e);
 				if (!e.repeat) {					
 					// test hotkeys
-					var key = e.key;			
+					var key = e.key;
 					if (key) {
 						key = key.toLowerCase();
 						console.log('testing key:', key);

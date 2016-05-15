@@ -742,7 +742,7 @@ function reRaiseCanvasWins() {
 }
 
 function nscomm(aEvent) {
-	console.log('incoming nscomm, aEvent:', aEvent);
+	// console.log('incoming nscomm, aEvent.detail:', aEvent.detail);
 
 	// aEvent.detail must be in format:
 	/*
