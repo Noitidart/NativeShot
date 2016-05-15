@@ -2722,15 +2722,43 @@ function init(aArrBufAndCore) {
 					});
 					gCanStore.setCanState(false);
 				} else if (this.cstate.lining) {
+					var sxkey, sykey, exkey, eykey;
 					if (this.cstate.lining == 10) {
 						// lining start
-						this.cstate.selection.x = mx;
-						this.cstate.selection.y = my;
+						sxkey = 'x2';
+						sykey = 'y2';
+						exkey = 'x';
+						eykey = 'y';
 					} else if (this.cstate.lining == 11) {
 						// lining end
-						this.cstate.selection.x2 = mx;
-						this.cstate.selection.y2 = my;
+						sxkey = 'x';
+						sykey = 'y';
+						exkey = 'x2';
+						eykey = 'y2';
 					}
+
+					var ex, ey;
+					if (e.shiftKey) {
+						var sx = this.cstate.selection[sxkey];
+						var sy = this.cstate.selection[sykey];
+						var length = pointsDistance(sx, sy, mx, my);
+						
+						// find nearest angle by 45deg
+						var angle = degrees(pointsAngle(sx, sy, mx, my));
+						var useAngle = closestNumber(angle, [-180, -135, -90, -45, 0, 45, 90, 135, 180]);
+						
+						ex = sx + (length * Math.cos(radians(useAngle)));
+						ey = sy + (length * Math.sin(radians(useAngle)));
+						
+						// console.log('length:', length, 'angle:', angle, 'useAngle:', useAngle, 'sx:', sx, 'sy:', sy, 'ex:', ex, 'ey:', ey);
+					} else {
+						ex = mx;
+						ey = my;
+					}
+					
+					this.cstate.selection[exkey] = ex;
+					this.cstate.selection[eykey] = ey;
+					
 					gCanStore.setCanState(false);
 				} else if (this.cstate.pathing) {
 					this.cstate.pathing[0] = mx;
@@ -7170,9 +7198,61 @@ function HSVtoRGB(h, s, v) {
         b: Math.round(b * 255)
     };
 }
+
+function pointsDistance(x1, y1, x2, y2) {
+	// http://snipplr.com/view/47207/distance-between-two-points/
+	var xs = 0;
+	var ys = 0;
+
+	xs = x1 - x2;
+	xs = xs * xs;
+
+	ys = y2 - y1;
+	ys = ys * ys;
+
+	return Math.sqrt( xs + ys );
+}
+
+function pointsAngle(x1, y1, x2, y2){
+	// http://snipplr.com/view/47060/
+	var dx = x2 - x1;
+	var dy = y2 - y1;
+	return Math.atan2(dy, dx);
+}
+
+function closestNumber(num, arr) {
+	// http://stackoverflow.com/a/8584940/1828637
+	var curr = arr[0];
+	var diff = Math.abs (num - curr);
+	for (var val = 0; val < arr.length; val++) {
+		var newdiff = Math.abs (num - arr[val]);
+		if (newdiff < diff) {
+			diff = newdiff;
+			curr = arr[val];
+		}
+	}
+	return curr;
+}
+
+function closestNumberBinary(num, arr) {
+	// http://stackoverflow.com/a/8584940/1828637
+	var mid;
+	var lo = 0;
+	var hi = arr.length - 1;
+	while(hi - lo > 1) {
+		mid = Math.floor((lo + hi) / 2);
+		if(arr[mid] < num) {
+			lo = mid;
+		} else {
+			hi = mid;
+		}
+	}
+	if(num - arr[lo] <= arr[hi] - num) {
+		return arr[lo];
+	}
+	return arr[hi];
+}
 /////////// stackblur
-
-
 function BlurStack()
 {
 	this.r = 0;
