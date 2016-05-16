@@ -15,7 +15,7 @@ function nsInitPage(aPostNonSkelInit_CB) {
 	var do_step2 = function() {
 		// refresh prefs in bootstrap core object - as source of truth  for prefs is in bootstrap
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['refreshCoreForPrefs']], bootstrapMsgListener.funcScope, function(aCoreAddonPrefs) {
-
+			console.log('aCoreAddonPrefs:', aCoreAddonPrefs);
 			core.addon.prefs = aCoreAddonPrefs;
 			do_step3();
 		});
@@ -39,7 +39,7 @@ function nsInitPage(aPostNonSkelInit_CB) {
 function nsOnFocus() {
 	// refresh prefs in bootstrap core object
 	sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['refreshCoreForPrefs']], bootstrapMsgListener.funcScope, function(aCoreAddonPrefs) {
-
+		console.log('aCoreAddonPrefs:', aCoreAddonPrefs);
 		core.addon.prefs = aCoreAddonPrefs;
 		refreshGDOMState();
 		MyStore.setState({
@@ -171,12 +171,12 @@ var gDOMStructureCallbacks = {
 		return (!aBlockState.value ? core.addon.l10n.app_options.on : core.addon.l10n.app_options.off);
 	},
 	'callback:quickdir-reset-hidden': function(aBlockState) {
-
+		console.error('aBlockState.value:', aBlockState.value, 'core.addon.prefs.quick_save_dir.defaultValue:', core.addon.prefs.quick_save_dir.defaultValue);
 		if (aBlockState.value == core.addon.prefs.quick_save_dir.defaultValue) {
-
+			console.log('euqla so hide');
 			return true;
 		} else {
-
+			console.log('mismatch so show');
 			return false;
 		}
 	},
@@ -195,7 +195,7 @@ var gDOMStructureCallbacks = {
 	},
 	'callback:printprev-toggle-click': function() {
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'print_preview', !core.addon.prefs.print_preview.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
-
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
 			core.addon.prefs.print_preview = aCorePrefNameObj;
 			refreshGDOMState();
 			MyStore.setState({
@@ -206,7 +206,7 @@ var gDOMStructureCallbacks = {
 	'callback:systemhotkey-toggle-click': function() {
 		var newPrefValue = !core.addon.prefs.system_hotkey.value;
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'system_hotkey', !core.addon.prefs.system_hotkey.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
-
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
 			core.addon.prefs.system_hotkey = aCorePrefNameObj;
 			refreshGDOMState();
 			MyStore.setState({
@@ -221,7 +221,7 @@ var gDOMStructureCallbacks = {
 	},
 	'callback:autoup-toggle-click': function() {
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'autoupdate', !core.addon.prefs.autoupdate.value]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
-
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
 			core.addon.prefs.autoupdate = aCorePrefNameObj;
 			refreshGDOMState();
 			MyStore.setState({
@@ -233,7 +233,7 @@ var gDOMStructureCallbacks = {
 		
 		var do_setPref = function(aDirPlatPath) {
 			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'quick_save_dir', aDirPlatPath]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
-
+				console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
 				core.addon.prefs.quick_save_dir = aCorePrefNameObj;
 				refreshGDOMState();
 				MyStore.setState({
@@ -243,7 +243,7 @@ var gDOMStructureCallbacks = {
 		};
 		
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['browseFile', core.addon.l10n.app_options.change_dir_dialog_title, {mode:'modeGetFolder', async:true}]], bootstrapMsgListener.funcScope, function(aDirPlatPath) {
-
+			console.log('aDirPlatPath:', aDirPlatPath);
 			if (aDirPlatPath && aDirPlatPath != core.addon.prefs.quick_save_dir.value) {
 				do_setPref(aDirPlatPath);
 			}
@@ -251,7 +251,7 @@ var gDOMStructureCallbacks = {
 	},
 	'callback:quickdir-reset-click': function() {
 		sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['callInBootstrap', ['prefSet', 'quick_save_dir', core.addon.prefs.quick_save_dir.defaultValue]], bootstrapMsgListener.funcScope, function(aCorePrefNameObj) {
-
+			console.log('pref set:', aCorePrefNameObj); // on fail bootstrap funciton throws so it will never get here
 			core.addon.prefs.quick_save_dir = aCorePrefNameObj;
 			refreshGDOMState();
 			MyStore.setState({
@@ -263,7 +263,7 @@ var gDOMStructureCallbacks = {
 
 function getObjKeyVal(aObj, aKey, aState) { // react components uses this only for non-click callbacks
 	if (aKey == 'hidden') {
-
+		console.error('doing getObjKeyVal on aObj:', aObj, 'aKey:', aKey, 'aState:', aState);
 	}
 	if (aKey in aObj) {
 		var cVal = aObj[aKey];
@@ -390,7 +390,7 @@ var Block = React.createClass({
 		
 		var cBlockDescs = [];
 		var cDescs = this.props.pBlock.descs;
-
+		console.error('cDescs:', cDescs);
 		for (var i=0; i<cDescs.length; i++) {
 			cBlockDescs.push(React.createElement('li', {},
 				cDescs[i]
@@ -399,15 +399,15 @@ var Block = React.createClass({
 		
 		var cBlockBtns = [];
 		var cBtns = this.props.pBlock.btns;
-
+		// console.log('cBtns:', cBtns);
 		for (var i=0; i<cBtns.length; i++) {
 			var cBtnHidden = getObjKeyVal(cBtns[i], 'hidden', this.props.sBlockValue);
-
+			console.error('cBtnHidden:', cBtnHidden);
 			if (!cBtnHidden) {
 				cBlockBtns.push(React.createElement(Button, {sBlockValue:this.props.sBlockValue, pBtn:cBtns[i]}));
 			}
 		}
-
+		console.log('cBlockBtns:', cBlockBtns);
 		
 		// add space between the cBtns if there is more than 1
 		// so [1, 2] becomes Array [ 1, " ", 2 ]
@@ -524,7 +524,7 @@ function doOnBeforeUnload() {
 }
 
 function doOnContentLoad() {
-
+	console.log('in doOnContentLoad');
 	initPage();
 }
 
@@ -593,7 +593,7 @@ var bootstrapMsgListener = {
 	funcScope: bootstrapCallbacks,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-
+		console.log('framescript getting aMsgEvent, unevaled:', uneval(aMsgEventData));
 		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
 		
 		var callbackPendingId;
@@ -614,12 +614,12 @@ var bootstrapMsgListener = {
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
-
+							console.error('aReject:', aReason);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
-
+							console.error('aCatch:', aCatch);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
@@ -629,7 +629,7 @@ var bootstrapMsgListener = {
 				}
 			}
 		}
-
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
 		
 	}
 };
@@ -688,7 +688,7 @@ function genericReject(aPromiseName, aPromiseToReject, aReason) {
 		name: aPromiseName,
 		aReason: aReason
 	};
-
+	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -698,7 +698,7 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		name: aPromiseName,
 		aCaught: aCaught
 	};
-
+	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -709,7 +709,7 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 	// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
 	for (var aOptKey in aOptions) {
 		if (!(aOptKey in aOptionsDefaults)) {
-
+			console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
 			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
 		}
 	}

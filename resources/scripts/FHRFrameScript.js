@@ -1,5 +1,5 @@
 const {classes:Cc, interfaces:Ci} = Components;
-
+console.log('FHRFrameScript loaded, this:', Components.stack, Components.stack.filename);
 var gFhrFsMsgListenerId = Components.stack.filename.match(/fhrFsMsgListenerId=([^&]+)/)[1]; // Components.stack.filename == "chrome://nativeshot/content/resources/scripts/FHRFrameScript.js?fhrFsMsgListenerId=NativeShot@jetpack-fhr_1&v=0.2623310905363082"
 
 //////////////////////////////////////////////////////// start - boilerplate
@@ -30,18 +30,18 @@ var bootstrapMsgListener = {
 	funcScope: bootstrapCallbacks,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-
+		console.log('framescript getting aMsgEvent, unevaled:', uneval(aMsgEventData));
 		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
-
+		
 		var callbackPendingId;
 		if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
 			callbackPendingId = aMsgEventData.pop();
 		}
-
+		
 		var funcName = aMsgEventData.shift();
 		if (funcName in this.funcScope) {
 			var rez_fs_call = this.funcScope[funcName].apply(null, aMsgEventData);
-
+			
 			if (callbackPendingId) {
 				// rez_fs_call must be an array or promise that resolves with an array
 				if (rez_fs_call.constructor.name == 'Promise') {
@@ -51,12 +51,12 @@ var bootstrapMsgListener = {
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
-
+							console.error('aReject:', aReason);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
-
+							console.error('aCatch:', aCatch);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
@@ -66,8 +66,8 @@ var bootstrapMsgListener = {
 				}
 			}
 		}
-
-
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+		
 	}
 };
 contentMMFromContentWindow_Method2(content).addMessageListener(core.addon.id, bootstrapMsgListener);
@@ -130,7 +130,7 @@ function genericReject(aPromiseName, aPromiseToReject, aReason) {
 		name: aPromiseName,
 		aReason: aReason
 	};
-
+	console.error('Rejected - ' + aPromiseName + ' - ', rejObj);
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -140,7 +140,7 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		name: aPromiseName,
 		aCaught: aCaught
 	};
-
+	console.error('Caught - ' + aPromiseName + ' - ', rejObj);
 	if (aPromiseToReject) {
 		aPromiseToReject.reject(rejObj);
 	}
@@ -158,10 +158,10 @@ function xpcomSetTimeout(aNsiTimer, aDelayTimerMS, aTimerCallback) {
 
 // START - framescript functionality
 if (content.document.readyState == 'complete') {
-
+	console.error('frame script ready, readyState is complete and location is:', content.location.href)
 	contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FHRFrameScriptReady']);
 } else {
-
+	console.error('frame script NOT YET ready, readyState is "' + content.document.readyState + '" and location is:', content.location.href)
 	addEventListener('DOMContentLoaded', listenInitialReady, false);
 }
 
@@ -170,7 +170,7 @@ function listenInitialReady(e) {
 	if (contentWindow.frameElement) {
 		// not yet top most
 	} else {
-
+		console.error('ok now initial page loaded, readyState:', contentWindow.document.readyState, 'and loc:', contentWindow.location.href); // well readyState is interactive, it is not complete. but thats ok, because i only have listeners for `DOMContentLoaded`, nothing for `load`
 		removeEventListener('DOMContentLoaded', listenInitialReady, false);
 		contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['FHRFrameScriptReady']);
 	}
@@ -193,7 +193,7 @@ var gInitialParams = [];
 function initiallyFullyLoaded() {
 	// meant to wait for fully load before doing loadPage
 	if (content.document.readyState == 'complete') {
-
+		console.error('ok fully loaded, going to loadPage now');
 		removeEventListener('load', initiallyFullyLoaded, false);
 		pageLoading = false;
 		bootstrapCallbacks.loadPage(gInitialParams.shift(), gInitialParams.shift(), gInitialParams.shift(), gInitialParams.shift());
@@ -205,21 +205,21 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 		// if want to load page by click, then set aClickSetName
 		// must set aSrc OR aClickSetName never both!
 		if (aSrc && aClickSetName) {
-
+			console.error('must set aSrc OR aClickSetName never both!');
 			throw new Error('must set aSrc OR aClickSetName never both!');
 		}
-
+		
 		if (pageLoading) {
 			throw new Error('cannot load yet, as previous page is still loading');
 		}
-
+		
 		gData = aData;
 		gMainDeferred_loadPage = new Deferred();
-
-
-
+		
+		console.error(aSrc, aClickSetName, aCallbackSetName, aData);
+		
 		if (content.document.readState && content.document.readState != 'complete') {
-
+			console.error('NOT FULLY LOADED, so doing that stuff for args:', aSrc, aClickSetName, aCallbackSetName, aData);
 			pageLoading = true; // so nothing re-enters here
 			if (aClickSetName) {
 				// then wait for the full page to be loaded, otherwise javascript and other stuff will be stoped with .stop()
@@ -233,19 +233,19 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 				// stop all pages, otherwise DOMContentLoaded will fire prematurely
 				var contentWindowArr = getAllContentWins(content);
 				for (var h=0; h<contentWindowArr.length; h++) {
-
+					console.error('stopping frame:', h, contentWindowArr[h].document.readState, contentWindowArr[h].location.href);
 					contentWindowArr[h].stop();
 				}
 			}
 		}
-
+		
 		pageLoading = true;
-
+		console.error('added aCallbackSetName:', aCallbackSetName);
 		gLoadedCallbackSetName = aCallbackSetName;
 		addEventListener('DOMContentLoaded', pageLoaded, false);
-
+		
 		xpcomSetTimeout(gTimeout, gTimeoutMs, pageTimeouted); //gTimeout = setTimeout(pageTimeouted, gTimeoutMs);
-
+		
 		if (aSrc) {
 			if (aSrc == 'RELOAD') {
 				content.location.reload(true);
@@ -254,21 +254,21 @@ var bootstrapCallbacks = { // can use whatever, but by default it uses this
 			}
 		} else if (aClickSetName) {
 			if (!clickSet[aClickSetName]) {
-
+				console.error('clickSet name not found!! aClickSetName:', aClickSetName);
 				throw new Error('clickSet name not found!!');
 			}
-
+			
 			tryClicks(content, aClickSetName);
 		} else {
-
+			console.error('should never ever get here');
 			throw new Error('should never ever get here');
 		}
-
+		
 		return gMainDeferred_loadPage.promise;
 	},
 	destroySelf: function() {
 		contentMMFromContentWindow_Method2(content).removeMessageListener(core.addon.id, bootstrapMsgListener);
-
+		console.log('ok destroyed self');
 	}
 };
 
@@ -292,12 +292,12 @@ function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
 	// cur_try_cnt is set progrmatically devuser should never set it
 	// try clicking in all frames
 
-
+	console.error(aClickSetName, 'trying click set now, cur_try_cnt:', cur_try_cnt);
 	var contentWindowArr = getAllContentWins(aContentWindow);
-
+	
 	var rez_clickExec;
 	for (var h=0; h<contentWindowArr.length; h++) {
-
+		try { console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML); } catch(ex) { console.error('ex:', ex) } // ex happens when it loads about:blank and there is no document.documentElement
 		for (var i=0; i<clickSet[aClickSetName].length; i++) {
 			rez_clickExec = clickSet[aClickSetName][i].exec(contentWindowArr[h], contentWindowArr[h].document);
 			if (rez_clickExec) {
@@ -305,9 +305,9 @@ function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
 			}
 		}
 	}
-
+	
 	// if (!rez_clickExec) { // obviously if get to this point then rez_clickExec
-
+		console.log('all click instructions failed, try:', cur_try_cnt);
 		if (cur_try_cnt < MAX_TRY_CNT) {
 			xpcomSetTimeout(gTriesTimeout, MAX_TRY_CNT, tryClicks.bind(null, aContentWindow, aClickSetName, cur_try_cnt + 1)); // setTimeout
 		} else {
@@ -323,15 +323,15 @@ function tryClicks(aContentWindow, aClickSetName, cur_try_cnt=0) {
 }
 
 function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
-
+	console.log('in tryLoadeds:', aCallbackSetName);
 	// test all frames with callback set
 	// if none of the tests of the callback for that return for that frame, then try next frame.
 		// if none of the frames then report failed callbacks fhrResponse object
-
+	console.error(aCallbackSetName, 'trying load callback set now, cur_try_cnt:', cur_try_cnt);
 	var contentWindowArr = getAllContentWins(aContentWindow);
 
 	for (var h=0; h<contentWindowArr.length; h++) {
-
+		try { console.log('h:', h, 'contentWindowArr[h].document.documentElement.innerHTML:', contentWindowArr[h].document.documentElement.innerHTML); } catch(ex) { console.error('ex:', ex) } // ex happens when it loads about:blank and there is no document.documentElement
 		for (var i=0; i<callbackSet[aCallbackSetName].length; i++) {
 			var rezTest = callbackSet[aCallbackSetName][i].test(contentWindowArr[h], contentWindowArr[h].document);
 			if (rezTest) {
@@ -340,7 +340,7 @@ function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
 			}
 		}
 	}
-
+	
 	if (cur_try_cnt < MAX_TRY_CNT) {
 		xpcomSetTimeout(gTriesTimeout, MAX_TRY_CNT, tryLoadeds.bind(null, aContentWindow, aCallbackSetName, cur_try_cnt + 1)); // setTimeout
 	} else {
@@ -355,8 +355,8 @@ function tryLoadeds(aContentWindow, aCallbackSetName, cur_try_cnt=0) {
 	}
 }
 
-function pageTimeouted() {
-
+function pageTimeouted() {	
+	console.error('triggered timeout!');
 	loadPage_finalizer(
 		{
 			status: false,
@@ -367,27 +367,27 @@ function pageTimeouted() {
 }
 
 function pageLoaded(e) {
-
+	console.error('triggered pageLoaded!');
 	// waits till the loaded event triggers on top window not frames
 	var contentWindow = e.target.defaultView;
 	var contentDocument = contentWindow.document;
-
+	
 	if (contentWindow.frameElement) {
 		// top window not yet loaded
-
-
-
+		// var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation); // console.log('remove on prod');
+		// var docuri = webnav.document.documentURI; // console.log('remove on prod');
+		// console.error('NOT TOP LOADED:', contentwindow.location, docuri);
 	} else {
 		// ok top finished loading
-
-
+		console.error('ok top finished loading');
+		
 		var cLoadedCallbackSetName = gLoadedCallbackSetName; // do this here as loadPage_finalizer clears it out
-
+		
 		loadPage_finalizer(); // sets the variables to done loading, like removes timeout listener
-
+		
 		var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 		var docuri = webnav.document.documentURI;
-
+		
 		if (docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') == -1) { // because i used http://127.0.0.1/nativeshot it will fail load on allow as well, so i have to detect that here // see link324335445454448
 			// failed loading
 			loadPage_finalizer(
@@ -398,7 +398,7 @@ function pageLoaded(e) {
 				},
 				false
 			);
-
+			
 			// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/folder_name%3Fstate%3Dblah%23access_token%3Dfda25d1a39fd974a08a0485eccd8cd752ae16dd4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3D32f7854e11b0091c6206d6ff3668a1f6f4f99c52%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 		} else {
 			tryLoadeds(content, cLoadedCallbackSetName); // i dont know why, but if i put contentWindow here, i get cant access dead object. with the imgur retry after login. so when reuse fhr. so weird. :todo: figure this out for real
@@ -407,26 +407,26 @@ function pageLoaded(e) {
 }
 
 function loadPage_finalizer(aFHRResponse, aDoStop) {
-
+	
 	if (aDoStop) {
 		var contentWindowArr = getAllContentWins(content);
 		for (var h=0; h<contentWindowArr.length; h++) {
 			contentWindowArr[h].stop();
 		}
 	}
-
+	
 	gTimeout.cancel(); //clearTimeout(gTimeout);
 	removeEventListener('DOMContentLoaded', pageLoaded, false);
 	pageLoading = false;
 	gLoadedCallbackSetName = undefined;
-
-
-
+	
+	console.error('removed pageLoaded');
+	
 	if (aFHRResponse) {
 		gMainDeferred_loadPage.resolve([aFHRResponse]);
 	}
-
-
+	
+	console.error('reslved if it was there to resolve');
 }
 
 // custom callbacks specific to NativeShot
@@ -439,7 +439,7 @@ var callbackSet = {
 		// 	fhrResponse: 'testing!!', // string just for test, it should be a fhrResponse object // nice test shows, this.fhrResponse within .test() is accessing the right thing, which is this thing
 		// 	test: function(aContentWindow, aContentDocument) { // must return fhrResponse obj, else it must return undefined/null
 		// 		// if test succesful, then it returns resolveObj, it may update some stuff in resolveObj
-
+		// 		console.log('this.fhrResponse:', this.fhrResponse);
 		// 	}
 		// },
 		{
@@ -475,22 +475,22 @@ var callbackSet = {
 				screenname: undefined // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
-
+				
 					// :maintain-per-website:
 					var domEl = aContentDocument.querySelector('.auth-button[name=allow_access]');
 					if (domEl) {
 						// var preStart_index = aContentDocument.documentElement.innerHTML.indexOf('"email": "');
 						// var start_index = preStart_index + '"email": "'.length;
 						// var end_index = aContentDocument.documentElement.innerHTML.indexOf('"', start_index);
-						//
+						// 
 						// if (preStart_index > -1 && end_index > -1) {
 						// 	var screenname = aContentDocument.documentElement.innerHTML.substr(start_index, end_index);
-
+						// 	console.log('screenname:', screenname);
 						// 	this.fhrResponse.screenname = screenname;
 						// }
 						return this.fhrResponse;
 					}
-
+				
 
 			}
 		}
@@ -503,33 +503,33 @@ var callbackSet = {
 				allowedParams: '' // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
-
+				
 				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 				var docuri = webnav.document.documentURI;
-
-
+				console.log('docuri:', docuri);
+				
 				var lochref = aContentWindow.location.href;
 				var lochash = aContentWindow.location.hash;
-
-
-
+				console.log('aContentWindow.location.href:', lochref);
+				console.log('aContentWindow.location.hash:', lochash);
+				
 				// docuri if localhost is not setup:
 					// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/nativeshot%3Fstate%3D1461945377084%23access_token%3Dd9c614034b86b92acde49b137ec3d990f20e24e4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3Dd816c4f1c4c869a61a62f54d30001390cde9461b%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 				// docuri if localhost is set up is same as lochref:
 					// http://127.0.0.1/nativeshot?state=1461945377084#access_token=d9c614034b86b92acde49b137ec3d990f20e24e4&expires_in=2419200&token_type=bearer&refresh_token=d816c4f1c4c869a61a62f54d30001390cde9461b&account_username=Noitidart&account_id=12688375
-
+				
 				if ((docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') > -1) || lochref.indexOf('127.0.0.1/nativeshot') > -1) {
 					var receivedParamsFullStr = lochash[0] == '#' ? lochash.substr(1) : lochash;
 					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
-
+					
 					var receivedParamsKeyVal = {};
 					for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
 						var splitPiece = receivedParamsPiecesStrArr[i].split('=');
 						receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
 					}
-
+					
 					this.fhrResponse.allowedParams = receivedParamsKeyVal;
-					return this.fhrResponse;
+					return this.fhrResponse;	
 				}
 			}
 		}
@@ -545,12 +545,12 @@ var callbackSet = {
 			test: function(aContentWindow, aContentDocument) {
 				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 				var docuri = webnav.document.documentURI;
-
-
+				console.log('docuri:', docuri);
+				console.log('win loc:', aContentWindow.location.href);
 				for (var l in aContentWindow.location) {
-
+					console.log('win loc:', l, JSON.stringify(aContentWindow.location[l]));
 				}
-
+				console.error('ok end line');
 				if (aContentWindow.location.hostname == 'accounts.google.com') {
 					var domEl = aContentDocument.getElementById('gaia_loginform');
 					if (domEl) { // :maintain-per-website:
@@ -583,18 +583,18 @@ var callbackSet = {
 				if (domEl) { // :maintain-per-website:
 					var attrAction = domEl.getAttribute('action');
 					if (attrAction && /AccountChooser/i.test(attrAction)) { // .indexOf('/AccountChooser')
-
+						console.log('ok found account chooser');
 						var acctBtns = domEl.querySelectorAll('button');
 						for (var i=0; i<acctBtns.length; i++) {
-
-
-
+							
+							console.log('total btns:', acctBtns.length, i, acctBtns[i]);
+							
 							var attrEmail = acctBtns[i].getAttribute('value');
 							if (!attrEmail) {
-
+								console.error('no email found!');
 								return;
 							}
-
+							
 							// uid is attrEmail
 
 							var domElAcctScreenname = acctBtns[i].querySelector('span');
@@ -603,7 +603,7 @@ var callbackSet = {
 								// i dont exit if screenname not found as not yet required
 								acctScreenname = domElAcctScreenname.textContent.trim();
 							}
-
+							
 							var acctInfo = {
 								uid: attrEmail,
 								screenname: acctScreenname
@@ -626,7 +626,7 @@ var callbackSet = {
 			test: function(aContentWindow, aContentDocument) {
 				var domEl = aContentDocument.getElementById('submit_approve_access');
 				if (domEl) { // :maintain-per-website:
-
+				
 					// var loggedInUserDomEl = aContentDocument.querySelector('a[href*=SignOutOptions]');
 					// if (loggedInUserDomEl) {
 					// 	this.fhrResponse.screenname = loggedInUserDomEl.childNodes[0].textContent;
@@ -644,34 +644,34 @@ var callbackSet = {
 				allowedParams: '' // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
-
+				
 				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 				var docuri = webnav.document.documentURI;
-
-
+				console.log('docuri:', docuri);
+				
 				var lochref = aContentWindow.location.href;
 				var lochash = aContentWindow.location.hash;
-
-
-
+				console.log('aContentWindow.location.href:', lochref);
+				console.log('aContentWindow.location.hash:', lochash);
+				
 				// docuri if localhost is not setup:
 					// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/nativeshot%3Fstate%3D1461945377084%23access_token%3Dd9c614034b86b92acde49b137ec3d990f20e24e4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3Dd816c4f1c4c869a61a62f54d30001390cde9461b%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 				// docuri if localhost is set up is same as lochref:
 					// http://127.0.0.1/nativeshot?state=1461945377084#access_token=d9c614034b86b92acde49b137ec3d990f20e24e4&expires_in=2419200&token_type=bearer&refresh_token=d816c4f1c4c869a61a62f54d30001390cde9461b&account_username=Noitidart&account_id=12688375
-
+				
 				if ((docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') > -1) || lochref.indexOf('127.0.0.1/nativeshot') > -1) {
-
+					
 					var receivedParamsFullStr = lochash[0] == '#' ? lochash.substr(1) : lochash;
 					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
-
+					
 					var receivedParamsKeyVal = {};
 					for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
 						var splitPiece = receivedParamsPiecesStrArr[i].split('=');
 						receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
 					}
-
+					
 					this.fhrResponse.allowedParams = receivedParamsKeyVal;
-					return this.fhrResponse;
+					return this.fhrResponse;	
 				}
 			}
 		}
@@ -699,7 +699,7 @@ var callbackSet = {
 			test: function(aContentWindow, aContentDocument) {
 				var domEl = aContentDocument.getElementById('upload-global-logged-in');
 				if (domEl) { // :maintain-per-website:
-
+				
 					// var loggedInUserDomEl = domEl.querySelector('.green');
 					// if (loggedInUserDomEl) {
 					// 	this.fhrResponse.username = loggedInUserDomEl.textContent;
@@ -735,34 +735,34 @@ var callbackSet = {
 				allowedParams: '' // set by .test()
 			},
 			test: function(aContentWindow, aContentDocument) {
-
+				
 				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 				var docuri = webnav.document.documentURI;
-
-
+				console.log('docuri:', docuri);
+				
 				var lochref = aContentWindow.location.href;
 				var lochash = aContentWindow.location.hash;
-
-
-
+				console.log('aContentWindow.location.href:', lochref);
+				console.log('aContentWindow.location.hash:', lochash);
+				
 				// docuri if localhost is not setup:
 					// about:neterror?e=connectionFailure&u=http%3A//127.0.0.1/nativeshot%3Fstate%3D1461945377084%23access_token%3Dd9c614034b86b92acde49b137ec3d990f20e24e4%26expires_in%3D2419200%26token_type%3Dbearer%26refresh_token%3Dd816c4f1c4c869a61a62f54d30001390cde9461b%26account_username%3DNoitidart%26account_id%3D12688375&c=UTF-8&f=regular&d=Firefox%20can%27t%20establish%20a%20connection%20to%20the%20server%20at%20127.0.0.1.
 				// docuri if localhost is set up is same as lochref:
 					// http://127.0.0.1/nativeshot?state=1461945377084#access_token=d9c614034b86b92acde49b137ec3d990f20e24e4&expires_in=2419200&token_type=bearer&refresh_token=d816c4f1c4c869a61a62f54d30001390cde9461b&account_username=Noitidart&account_id=12688375
-
+				
 				if ((docuri.indexOf('about:') === 0 && docuri.indexOf('127.0.0.1/nativeshot') > -1) || lochref.indexOf('127.0.0.1/nativeshot') > -1) {
 
 					var receivedParamsFullStr = lochash[0] == '#' ? lochash.substr(1) : lochash;
 					var receivedParamsPiecesStrArr = receivedParamsFullStr.split('&');
-
+					
 					var receivedParamsKeyVal = {};
 					for (var i=0; i<receivedParamsPiecesStrArr.length; i++) {
 						var splitPiece = receivedParamsPiecesStrArr[i].split('=');
 						receivedParamsKeyVal[splitPiece[0]] = splitPiece[1];
 					}
-
+					
 					this.fhrResponse.allowedParams = receivedParamsKeyVal;
-					return this.fhrResponse;
+					return this.fhrResponse;	
 				}
 			}
 		}
@@ -774,20 +774,20 @@ var callbackSet = {
 				statusText: 'loaded'
 			},
 			test: function(aContentWindow, aContentDocument) {
-
+				
 				var webnav = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 				var docuri = webnav.document.documentURI;
 
 				if (docuri.indexOf('about:') !== 0) {
-
-
-
+					console.log('aContentWindow.location.href:', aContentWindow.location.href);
+					console.log('aContentWindow.location.hash:', aContentWindow.location.hash);
+					
 					return this.fhrResponse;
 				}
 			}
 		}
 	]
-	////
+	//// 
 }
 
 // link324335445454448
@@ -826,7 +826,7 @@ var clickSet = {
 						domEl.click();
 						return true;
 					} else {
-
+						console.warn('btn is disabled!');
 					}
 				}
 			}
@@ -840,17 +840,17 @@ var clickSet = {
 				if (domEl) { // :maintain-per-website:
 					var attrAction = domEl.getAttribute('action');
 					if (attrAction && /AccountChooser/i.test(attrAction)) { // .indexOf('/AccountChooser')
-
-
+						console.log('ok found account chooser');
+						console.log('searching for targetUid:', JSON.stringify(gData));
 						var acctBtns = domEl.querySelectorAll('button');
 						for (var i=0; i<acctBtns.length; i++) {
-
-
-
+							
+							console.log('total btns:', acctBtns.length, i, acctBtns[i]);
+							
 							var attrEmail = acctBtns[i].getAttribute('value');
-
+							console.log('attrEmail:', attrEmail);
 							if (!attrEmail) {
-
+								console.error('no email found!');
 								return;
 							}
 							// uid is attrEmail
@@ -860,13 +860,13 @@ var clickSet = {
 									acctBtns[i].click();
 									return true;
 								} else {
-
+									console.warn('btn is disabled!');
 								}
 							}
 						}
 					}
 				}
-
+				
 				// var domEl = aContentDocument.getElementById(gData.domElId);
 				// if (domEl) {
 				// 	domEl.click();

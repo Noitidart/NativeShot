@@ -109,7 +109,7 @@ function init(objCore) {
 
 // Start - Addon Functionality
 self.onclose = function() {
-
+	console.error('starting self.onclose');
 	
 	switch (core.os.mname) {
 		case 'winnt':
@@ -133,7 +133,7 @@ self.onclose = function() {
 			// nothing special
 	}
 	
-
+	console.error('ok completed the self.onclose stuff');
 }
 
 function getAllWin(aOptions) {
@@ -481,10 +481,10 @@ function getAllWin(aOptions) {
 						
 						if (aOptions.hwndAsPtr) {
 							var windowNumber = ostypes.API('objc_msgSend')(c_win, ostypes.HELPER.sel('objectForKey:'), myNSStrings.get('kCGWindowNumber')); // (NSString *)[window objectForKey:@"kCGWindowName"];
-
+							// console.log('windowNumber:', windowNumber, cutils.jscGetDeepest(windowNumber), cutils.jscGetDeepest(windowNumber, 10), cutils.jscGetDeepest(windowNumber, 16)); // >>> windowNumber: ctypes.voidptr_t(ctypes.UInt64("0xb37")) ctypes.voidptr_t(ctypes.UInt64("0xb37")) 2871 b37
 							
 							var windowNumberIntVal = ostypes.API('objc_msgSend')(windowNumber, ostypes.HELPER.sel('intValue'));
-
+							// console.log('windowNumberIntVal:', windowNumberIntVal, cutils.jscGetDeepest(windowNumberIntVal), cutils.jscGetDeepest(windowNumberIntVal, 10), cutils.jscGetDeepest(windowNumberIntVal, 16)) // >>> windowNumberIntVal: ctypes.voidptr_t(ctypes.UInt64("0xb")) ctypes.voidptr_t(ctypes.UInt64("0xb")) 11 b
 							
 							// results of console logging
 							// windowNumber: ctypes.voidptr_t(ctypes.UInt64("0x6137")) ctypes.voidptr_t(ctypes.UInt64("0x6137")) 24887 6137 ScreenshotWorker.js:458:1
@@ -676,7 +676,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 			'0x999': {left:0, top:0, ...}
 		}
 	*/
-
+	console.error('in setWinAlwaysOnTop. aArrHwndPtrStr:', aArrHwndPtrStr)
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
 		case 'winnt':
 			
@@ -689,7 +689,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// var lpString = ostypes.TYPE.LPTSTR.targetType.array(500)();
 					// var nWinTitleLen = ostypes.API('GetWindowText')(hwndPtr, lpString, lpString.length);
 					// var nWinTitle = lpString.readString();
-
+					// console.log('nWinTitle:', nWinTitle);
 					
 					// start - remove border from window - http://stackoverflow.com/a/2400467/1828637
 					var GWL_STYLE = -16;
@@ -700,11 +700,11 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					var WS_SYSMENU = 0x00080000;
 					
 					var lStyle = ostypes.API('GetWindowLongPtr')(hwndPtr, GWL_STYLE);
-
+					console.log('lStyle:', lStyle);
 					lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
 					
 					var rez_setLong = ostypes.API('SetWindowLongPtr')(hwndPtr, GWL_STYLE, lStyle);
-
+					console.log('rez_setLong:', rez_setLong);
 					
 					// var GWL_EXSTYLE = -20;
 					// var WS_EX_DLGMODALFRAME = 0x00000001;
@@ -712,11 +712,11 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// var WS_EX_STATICEDGE = 0x00020000;
 					
 					// var lExStyle = ostypes.API('GetWindowLongPtr')(hwndPtr, GWL_EXSTYLE);
-
+					// console.log('lExStyle:', lExStyle);
 					// lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
 					
 					// var rez_setLong = ostypes.API('SetWindowLongPtr')(hwndPtr, GWL_EXSTYLE, lExStyle);
-
+					// console.log('rez_setLong:', rez_setLong);
 					
 					
 					var SWP_FRAMECHANGED = 0x0020;
@@ -726,58 +726,58 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 					// var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, 0/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
 					// var rez_setTop = ostypes.API('SetWindowPos')(aHwnd, ostypes.CONST.HWND_TOPMOST, aOptions[aArrHwndPtrStr[i]].left, aOptions[aArrHwndPtrStr[i]].top, aOptions[aArrHwndPtrStr[i]].width, aOptions[aArrHwndPtrStr[i]].height, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
 				}
-
+				console.log('will force focus now');
 				var rez_winForceFocus = winForceForegroundWindow(hwndPtr); // use the last hwndPtr, i just need to focus one of my canvas windows // so if user hits esc it will work, otherwise the keyboard focus is in the other app even though my canvas window is top most
-
+				// console.log('rez_winForceFocus:', rez_winForceFocus);
 				
 			break;
 		case 'gtk':
 				
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-
+					console.log('hwndPtr:', hwndPtr);
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-
+					console.log('XWindow1a:', XWindow);
 					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
-
+					console.log('XWindow1b:', XWindow);
 					
 					// setTimeout(function() {
 						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-
+						console.log('rez_unmap', rez_unmap);
 
 						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-
+						// console.log('rez_flush', rez_flush);
 						
 						var chgValueList = ostypes.TYPE.uint32_t.array()([
 							1
 						]);
 						var rez_chg = ostypes.API('xcb_change_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CW_OVERRIDE_REDIRECT, chgValueList);
-
+						console.log('rez_chg:', rez_chg);
 
 						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-
+						console.log('rez_map', rez_map);
 						
 						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-
+						// console.log('rez_flush', rez_flush);
 												
 						// raise the window
 						var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
-
+						console.log('rez_raise:', rez_raise);
 						
 						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
 						// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
 						var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
-
+						console.log('rez_focus:', rez_focus);
 						
 						// // Grab the keyboard to get all input
 						// var reqGrab = ostypes.API('xcb_grab_keyboard')(ostypes.HELPER.cachedXCBConn(), false, XWindow, ostypes.CONST.XCB_CURRENT_TIME, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
 						// var replyGrab = ostypes.API('xcb_grab_keyboard_reply')(ostypes.HELPER.cachedXCBConn(), reqGrab, null);
-
-
-
+						// console.error('replyGrab:', replyGrab);
+						// console.error('replyGrab.contents:', replyGrab.contents);
+						// console.error('replyGrab.status:', replyGrab.contents.status);
 						
 						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-
+						console.log('rez_flush', rez_flush);
 						
 					// }, 5000);
 				}
@@ -793,9 +793,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				////// for (var i=0; i<aArrHwndPtrStr.length; i++) {
                 ////// 
 				////// 	var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-
+				////// 	console.log('hwndPtr:', hwndPtr);
 				////// 	var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-
+				////// 	console.log('XWindow:', XWindow);
                 //////     
 				////// 	// set window always on top
 				////// 	var xevent = ostypes.TYPE.XEvent();
@@ -809,9 +809,9 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				////// 	xevent.xclient.format = 32; // because xclient.data is long, i defined that in the struct union
 				////// 	xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
 				////// 	
-
+				////// 	console.log('xevent set');
 				////// 	var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address());
-
+				////// 	console.log('rez_SendEv set on top:', rez_SendEv);
 				////// 	
 				////// 	// focus the window
 				////// 	var xevent = ostypes.TYPE.XEvent();
@@ -826,10 +826,10 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				////// 	xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
 				////// 	
 				////// 	var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-
+                //////     console.log('rez_SendEv focus:', rez_SendEv);
 				////// 	
 				////// 	var rez_xmap = ostypes.API('XMapRaised')(ostypes.HELPER.cachedXOpenDisplay(), xevent.xclient.window);
-
+				////// 	console.log('rez_xmap:', rez_xmap);
 				////// 	
 				////// 	// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_STICKY');
 				////// 	// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
@@ -1117,23 +1117,23 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 function gtkRaiseWindow(aArrHwndPtrStr) {
 	for (var i=0; i<aArrHwndPtrStr.length; i++) {
 		var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-
+		console.log('hwndPtr:', hwndPtr);
 		var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-
+		console.log('XWindow1a:', XWindow);
 		XWindow = parseInt(cutils.jscGetDeepest(XWindow));
-
+		console.log('XWindow1b:', XWindow);
 					
 		var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
-
+		console.log('rez_raise:', rez_raise);
 		
 		// Set input focus (we have override_redirect=1, so the wm will not do this for us)
 		// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
 		var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
-
+		console.log('rez_focus:', rez_focus);
 	}
 	
 	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-
+	console.log('rez_flush', rez_flush);
 }
 
 function focusWindows(aArrHwndPtrStr) {
@@ -1210,7 +1210,7 @@ function shootAllMons() {
 		
 		// var PROCESS_PER_MONITOR_DPI_AWARE = 2;
 		// var rez_setaware = SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-
+		// console.log('rez_setaware:', rez_setaware, 'convertPrimHrToHex:', convertPrimHrToHex(rez_setaware));
 	// }
 	
 	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
@@ -1306,7 +1306,7 @@ function shootAllMons() {
 					if (s == 0) {
 						var dpiX = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSX)));
 						var dpiY = parseInt(cutils.jscGetDeepest(ostypes.API('GetDeviceCaps')(hdcScreen, ostypes.CONST.LOGPIXELSY)));
-
+						// console.log('dpiX:', dpiX, 'dpiY:', dpiY);
 						dpiScaleX = dpiX / 96; // because 96 is default which is 1
 						dpiScaleY = dpiY / 96;
 					}
@@ -1325,10 +1325,10 @@ function shootAllMons() {
 							collMonInfos[s].win81ScaleY = win81ScaleY;
 						}
 					} else if (dpiScaleX != 1 || dpiScaleY != 1) {
-
+						// console.log('dpiScaleX, dpiScaleY', dpiScaleX, dpiScaleY);
 						collMonInfos[s].win81ScaleX = dpiScaleX;
 						collMonInfos[s].win81ScaleY = dpiScaleY;
-
+						// console.log('win81ScaleX, win81ScaleY', collMonInfos[s].win81ScaleX, collMonInfos[s].win81ScaleY);
 					}
 					
 					var w = collMonInfos[s].w;
@@ -1336,7 +1336,7 @@ function shootAllMons() {
 
 					var modW = w % 4;
 					var useW = modW != 0 ? w + (4-modW) : w;
-
+					// console.log('useW:', useW, 'w:', w);
 					
 					var hdcMemoryDC = ostypes.API('CreateCompatibleDC')(hdcScreen); 
 
@@ -1506,53 +1506,53 @@ function shootAllMons() {
 				
 				// get root window
 				var setup = ostypes.API('xcb_get_setup')(ostypes.HELPER.cachedXCBConn());
-
+				console.log('setup:', setup.contents);
 				
 				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
 				var rootWin = screens.data.contents.root;
-
+				console.log('rootWin:', rootWin);
 
 				// get screens
 				var reqScreens = ostypes.API('xcb_randr_get_screen_resources_current')(ostypes.HELPER.cachedXCBConn(), rootWin);
 				var replyScreens = ostypes.API('xcb_randr_get_screen_resources_current_reply')(ostypes.HELPER.cachedXCBConn(), reqScreens, null);
 				
-
-
+				console.log('replyScreens:', replyScreens);
+				console.log('replyScreens.contents:', replyScreens.contents);
 				
 				var timestamp = replyScreens.contents.config_timestamp;
-
+				console.log('timestamp:', timestamp);
 				
 				var len = ostypes.API('xcb_randr_get_screen_resources_current_outputs_length')(replyScreens);
-
+				console.log('len:', len);
 				
 				var randr_outputs = ostypes.API('xcb_randr_get_screen_resources_current_outputs')(replyScreens);
-
+				console.log('randr_outputs:', randr_outputs);
 				
 				randr_outputs = ctypes.cast(randr_outputs, ostypes.TYPE.xcb_randr_output_t.array(len).ptr).contents;
-
+				console.log('casted randr_outputs:', randr_outputs);
 				
 				for (var i=0; i<len; i++) {
-
+					console.log('randr_outputs[i]:', randr_outputs[i]);
 					var reqOutput = ostypes.API('xcb_randr_get_output_info')(ostypes.HELPER.cachedXCBConn(), randr_outputs[i], timestamp);
 					var output = ostypes.API('xcb_randr_get_output_info_reply')(ostypes.HELPER.cachedXCBConn(), reqOutput, null);
 					
-
-
+					console.log('output:', output);
+					console.log('output.contents:', output.contents);
 					
 					if (output.isNull()) {
-
+						console.warn('got null output but will continue to len');
 						continue;
 					}
 					
 					if (cutils.jscEqual(output.contents.crtc, ostypes.CONST.XCB_NONE) || cutils.jscEqual(output.contents.connection, ostypes.CONST.XCB_RANDR_CONNECTION_DISCONNECTED)) {
-
+						console.warn('continue becuase its XCB_NONE or XCB_RANDR_CONNECTION_DISCONNECTED');
 						continue;
 					}
 					
 					var reqCrtc = ostypes.API('xcb_randr_get_crtc_info')(ostypes.HELPER.cachedXCBConn(), output.contents.crtc, timestamp);
 					var crtc = ostypes.API('xcb_randr_get_crtc_info_reply')(ostypes.HELPER.cachedXCBConn(), reqCrtc, null);
 					
-
+					console.log('crtc.contents:', crtc.contents);
 					
 					collMonInfos.push({
 						x: parseInt(cutils.jscGetDeepest(crtc.contents.x)),
@@ -1613,17 +1613,17 @@ function shootAllMons() {
 				var fullWidth = maxX - minX;
 				var fullHeight = maxY - minY;
 				
-
+				console.log(minX, minY, maxX, maxY, fullWidth, fullHeight);
 				
 				// capture shot
 				var reqShot = ostypes.API('xcb_get_image')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_IMAGE_FORMAT_Z_PIXMAP, rootWin, minX, minY, fullWidth, fullHeight, ostypes.CONST.XCB_ALL_PLANES);
 				var replyShot = ostypes.API('xcb_get_image_reply')(ostypes.HELPER.cachedXCBConn(), reqShot, null);
 				
-
-
+				console.log('replyShot:', replyShot);
+				console.log('replyShot.contents:', replyShot.contents);
 
 				var dataShot = ostypes.API('xcb_get_image_data')(replyShot);
-
+				console.log('dataShot:', dataShot);
 				
 				var fullLen = 4 * fullWidth * fullHeight;
 
@@ -2043,25 +2043,25 @@ function winForceForegroundWindow(aHwndToFocus) {
 	if (hFrom.isNull()) {
 		// nothing in foreground, so calling process is free to focus anything
 		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-
+		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
 		return rez_SetSetForegroundWindow ? true : false;
 	}
 
 	if (cutils.comparePointers(hTo, hFrom) === 0) {
 		// window is already focused
-
+		console.log('window is already focused');
 		return true;
 	}
 	
 	var pidFrom = ostypes.TYPE.DWORD();
 	var threadidFrom = ostypes.API('GetWindowThreadProcessId')(hFrom, pidFrom.address());
-
-
+	console.info('threadidFrom:', threadidFrom);
+	console.info('pidFrom:', pidFrom);
 	
 	var pidTo = ostypes.TYPE.DWORD();
 	var threadidTo = ostypes.API('GetWindowThreadProcessId')(hTo, pidTo.address()); // threadidTo is thread of my firefox id, and hTo is that of my firefox id so this is possible to do
-
-
+	console.info('threadidTo:', threadidTo);
+	console.info('pidTo:', pidTo);
 	
 	// impossible to get here if `cutils.jscEqual(threadidFrom, threadidTo)` because if thats the case, then the window is already focused!!
 	// if (cutils.jscEqual(threadidFrom, threadidTo) {
@@ -2072,28 +2072,28 @@ function winForceForegroundWindow(aHwndToFocus) {
 		// or
 		// the pid that needs to be focused is not currently focused, but the calling pid is currently focused. the current pid is allowed to shift focus to anything else it wants
 		// if (cutils.jscEqual(pidFrom, pidTo)) {
-
+		// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
 		// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
-
+			console.log('the process, of the window that is currently focused, is of this calling thread, so i can go ahead and just focus it - no need for attach');
 		// }
 		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-
+		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
 		return rez_SetSetForegroundWindow ? true : false;
 	}
 	
 	var threadidOfCallingProcess = ostypes.API('GetCurrentThreadId')();
-
+	console.log('threadidOfCallingProcess:', threadidOfCallingProcess);
 	
 	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, true);
-
+	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
 	if (!rez_AttachThreadInput) {
 		throw new Error('failed to attach thread input');
 	}
 	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-
+	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
 
 	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, false);
-
+	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
 	
 	return rez_SetSetForegroundWindow ? true : false;
 }
@@ -2117,11 +2117,11 @@ function trashFile(aFilePlatPath) {
 				sfo.hNameMappings = null;
 				sfo.lpszProgressTitle = null;
 				
-
+				console.log('sfo.pFrom:', sfo.pFrom.toString());
 				
 				var rez_trash = ostypes.API('SHFileOperation')(sfo.address());
-
-
+				console.log('rez_trash:', rez_trash);
+				console.log('sfo.fAnyOperationsAborted:', sfo.fAnyOperationsAborted);
 				
 				if (cutils.jscEqual(rez_trash, 0)) {
 					return true;
@@ -2134,10 +2134,10 @@ function trashFile(aFilePlatPath) {
 		case 'gtk':
 
 				var cGFile = ostypes.API('g_file_new_for_path')(aFilePlatPath);
-
+				console.log('cGFile:', cGFile);
 				
 				var rez_trash = ostypes.API('g_file_trash')(cGFile, null, null);
-
+				console.log('rez_trash:', rez_trash);
 				
 				if (cutils.jscEqual(rez_trash, 1)) {
 					return true;
@@ -2157,24 +2157,24 @@ function trashFile(aFilePlatPath) {
 					// var cNSArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('array'));
 					
 					var NSURL = ostypes.HELPER.class('NSURL');
-
+					console.log('aFilePlatPath:', aFilePlatPath);
 					
 					var cMacUrl = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('fileURLWithPath:isDirectory:'), trashNSStrings.get(aFilePlatPath), ostypes.CONST.NO);
-
+					console.log('cMacUrl:', cMacUrl);
 					if (cMacUrl.isNull()) {
-
+						console.error('failed to create NSURL');
 						return false;
 					}
 					
 					var cMacUrlArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('arrayWithObject:'), cMacUrl);
-
+					console.log('cMacUrlArray:', cMacUrlArray);
 
 					var NSWorkspace = ostypes.HELPER.class('NSWorkspace');
 					
 					var sharedWorkspace = ostypes.API('objc_msgSend')(NSWorkspace, ostypes.HELPER.sel('sharedWorkspace'));
 					
 					var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, ostypes.CONST.NIL); // verified that NIL is not modified it is still 0x0 after calling this
-
+					console.log('rez_trash:', rez_trash); // value is meaningless
 					
 					// as val of rez_trash is meaningless i have to check until its trashed. i dont think this function blocks till trash completes, so i loop below
 					var TRASHED_CHECK_INTERVAL = 100; // ms
@@ -2182,7 +2182,7 @@ function trashFile(aFilePlatPath) {
 					var trashed_check_i = 0;
 					while (trashed_check_i < MAX_TRASHED_CHECK_CNT) {
 						var trashedFileExists = OS.File.exists(aFilePlatPath);
-
+						console.log(trashed_check_i, 'trashedFileExists:', trashedFileExists);
 						if (!trashedFileExists) {
 							// yes it was trashed
 							return true;
@@ -2197,9 +2197,9 @@ function trashFile(aFilePlatPath) {
 					// OSStuff[handlerId] = {};
 					// 
 					// OSStuff[handlerId].myHandler_js = function(NSURLs, error) {
-
+					// 	console.error('handler called');
 					// 	
-
+					// 	console.log('error:', error, error.toString(), error.isNull());
 					// 	
 					// 	// return nothing as per its IMP
 					// };
@@ -2210,7 +2210,7 @@ function trashFile(aFilePlatPath) {
 					// var myBlock_c = ostypes.HELPER.createBlock(OSStuff[handlerId].myHandler_c);
 					// 
 					// var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, myBlock_c.address()); // verified that NIL is not modified it is still 0x0 after calling this
-
+					// console.log('rez_trash:', rez_trash);
 					
 					
 				} finally {				
