@@ -9,7 +9,7 @@ var core = {
 			scripts: 'chrome://nativeshot/content/resources/scripts/',
 			styles: 'chrome://nativeshot/content/resources/styles/'
 		},
-		cache_key: Math.random()
+		cache_key: 'v1.8'
 	}
 };
 
@@ -37,7 +37,7 @@ function unload() {
 	// if iMon == 0
 	// set the new state object from react to file
 	// if (gQS.iMon === 0) {
-		// console.error('sending state object:', gCanStore.rconn.state);
+
 		var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
 		for (var p in immutableEditorstate) {
 			if (p.indexOf('sGen') !== 0) {
@@ -78,12 +78,12 @@ function reactSetState(aData) {
 }
 
 function canSetState(aData) {
-	// console.log('in canSetState, aData:', aData);
+
 	var newCanState = JSON.parse(aData.cstate);
 	
 	if (newCanState.selection) {
 		if (!newCanState.drawables) {
-			console.error('if canSetState includes selection it MUST include drawables with it as well');
+
 			throw new Error('if canSetState includes selection it MUST include drawables with it as well');
 			// because the reference needs to be same as i affect this.selection.PROPERTY as if it were the object in the drawable
 		}
@@ -152,7 +152,7 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 				}
 			}
 			
-			console.log('need to request from:', JSON.parse(JSON.stringify(gCompositesArr)));
+
 			
 			// send requests to all the monitors
 			for (var i=0; i<l; i++) {
@@ -195,16 +195,16 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 
 function requestCompositeData(aData) {
 	// emites a fullfillCompositeRequest to requestingMon
-	console.log('incoming requestCompositeData, aData:', aData);
+
 	var subcutout = aData.subcutout;
-	console.log('getImageData with subcutout:', subcutout);
+
 	// link1818111116
 	var x = Math.round(subcutout.x - tQS.x);
 	var y = Math.round(subcutout.y - tQS.y);
 	var w = Math.round(subcutout.w);
 	var h = Math.round(subcutout.h);
-	console.log('sub:', subcutout.x, subcutout.y, subcutout.w, subcutout.h);
-	console.log('get:', x, y, w, h);
+
+
 	// var subImagedata = gCanStore.rconn.oscalectx0.getImageData(x, y, w, h);
 	var requestingMon = aData.requestingMon;
 	var cutoutid = aData.id;
@@ -253,7 +253,7 @@ var gCompositesArr; // array // each element is an object // when an array, othe
 }
 */
 function fullfillCompositeRequest(aData) {
-	console.log('incoming fullfillCompositeRequest, aData:', aData);
+
 	
 	var cId = aData.id;
 	var cMon = aData.fromMon;
@@ -265,7 +265,7 @@ function fullfillCompositeRequest(aData) {
 	for (var i=0; i<l; i++) {
 		var cEntry = compositesArr[i];
 		if (cEntry.id === cId) {
-			console.log('id match on cEntry:', cEntry);
+
 			cEntry.data[cMon].arrbuf = cArrBuf;
 			break;
 		}
@@ -278,7 +278,7 @@ function fullfillCompositeRequest(aData) {
 		var cEntry = compositesArr[i];
 		for (var p in cEntry.data) { // p is iMon
 			if (!cEntry.data[p].arrbuf) {
-				console.log('arrbuf for cutout id "' + cEntry.id + '" and monitor "' + p + '" not yet delivered, compositesArr:', compositesArr);
+
 				allRequestsFullfilled = false;
 				break commArrLoop;
 			}
@@ -385,7 +385,7 @@ function fullfillCompositeRequest(aData) {
 						
 							break;
 						default:
-							console.error('should never get here unrecognized sub:', sub);
+
 					}
 			
 				break;
@@ -408,7 +408,7 @@ function fullfillCompositeRequest(aData) {
 						
 							break;
 						default:
-							console.error('should never get here unrecognized sub:', sub);
+
 					}
 			
 				break;
@@ -424,7 +424,7 @@ function fullfillCompositeRequest(aData) {
 				
 				break;
 			default:
-				console.error('no bootstrap action specified, action:', action, 'sub:', sub);
+
 				return;
 		}
 		
@@ -526,7 +526,7 @@ function initPasteDrawable() {
 	
 	// start process
 	if (!gCState.copied_drawable) {
-		console.log('nothing in copied_drawable');
+
 		return;
 	}
 	
@@ -641,9 +641,9 @@ function completePasteDrawableRequest(aData) {
 		clonedDrawable.y += dy;
 		clonedDrawable.y2 += dy;
 	}
-	else { console.error('what the heck??? no translate for this drawable?? clonedDrawable:', clonedDrawable); }
+
 	
-	console.log('clonedDrawable:', clonedDrawable);
+
 	
 	gPasteDrawableResponses = null;
 	
@@ -663,7 +663,7 @@ function insertTextFromClipboard(aData) {
 
 function makeSelection(aData) {
 	// aData.cutoutsArr is an array of cutout objects
-	console.log('incoming makeSelection, aData:', aData);
+
 	gCanStore.rconn.dDeleteAll(['cutout']);
 	for (var i=0; i<aData.cutoutsArr.length; i++) {
 		gCState.drawables.push(aData.cutoutsArr[i]);
@@ -685,7 +685,7 @@ function triggerNSCommEvent(myEventDetail) {
 }
 
 function init(aArrBufAndCore) {
-	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
+
 	
 	core = aArrBufAndCore.core;
 	gFonts = aArrBufAndCore.fonts;
@@ -1159,7 +1159,7 @@ function init(aArrBufAndCore) {
 					// shouldBroadcast = !isBroadcast; // useless really, as when fromDraw the broadcast param is never specified
 					shouldBroadcast = true;
 				} else {
-					console.error('should never ever get here!!');
+
 					throw new Error('should never ever get here!!');
 					shouldBroadcast = !isBroadcast;
 				}
@@ -1267,7 +1267,7 @@ function init(aArrBufAndCore) {
 			// now that Style is setup, i can add Drawable's
 			
 			this.cstate.dim = this.newDrawable(null, null, null, null, 'dim');
-			console.log('this.cstate.dim:', this.cstate.dim);
+
 			
 			window.addEventListener('mousemove', this.mousemove, false);
 			window.addEventListener('mousedown', this.mousedown, false);
@@ -1333,15 +1333,15 @@ function init(aArrBufAndCore) {
 					
 					// start original block1929293055
 					for (var p in mySel) {
-						// console.log('on sel prop:', p);
+
 						if (p in affectsStateVars) {
-							// console.warn('in sel - testing diff');
+
 							if (p == 'strokeStyle' || p == 'fillStyle') {
 									var cColorVarName = affectsStateVars[p][0];
 									var cAlphaVarName = affectsStateVars[p][1];
 									
 									if (prevState[cColorVarName] != this.state[cColorVarName] || prevState[cAlphaVarName] != this.state[cAlphaVarName]) {
-										// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
+
 										var newColor = colorStrToCssRgba(this.state[cColorVarName], this.state[cAlphaVarName]);
 										if (mySel[p] !== newColor) {
 											canValid = false;
@@ -1354,9 +1354,9 @@ function init(aArrBufAndCore) {
 							} else {
 								var cVarName = affectsStateVars[p];
 								if (prevState[cVarName] != this.state[cVarName]) {
-									// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
+
 									if (mySel[p] !== this.state[cVarName]) {
-										// console.log('sending update on it');
+
 										canValid = false;
 										mySel[p] = this.state[cVarName];
 										if (isText && p.indexOf('font') === 0) {
@@ -1559,7 +1559,7 @@ function init(aArrBufAndCore) {
 					
 					break;
 				default:
-					console.error('no props specified for a drawable with name "' + DRAWABLE.name + '"');
+
 					throw new Error('no props specified for a drawable with name "' + DRAWABLE.name + '"');
 			}
 			
@@ -1573,19 +1573,19 @@ function init(aArrBufAndCore) {
 			
 			if (['cutout'].indexOf(aDrawable.name) > -1) {
 				// not drawable
-				console.error('trying to draw an undrawable, aDrawable:', aDrawable);
+
 				return true;
 			}
 			
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
 			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
-				console.error('width or height is 0 so not drawing, aDrawable:', aDrawable);
+
 				return true;
 			}
 			
 			// style the this.ctx
-			// console.log('applying styles of aDrawable:', aDrawable);
+
 			this.applyCtxStyle(aDrawable); // whatever keys exist that are in styleables will be styled to this.ctx
 			
 			// draw it
@@ -1767,7 +1767,7 @@ function init(aArrBufAndCore) {
 		dSelect: function(aDrawable) {
 			// returns the valid value
 			
-			// console.error('doing select for drawable:', aDrawable);
+
 			// set styles - and determine if its selectable
 			var curStyle;
 			switch (aDrawable.name) {
@@ -1816,14 +1816,14 @@ function init(aArrBufAndCore) {
 				default:
 					// not selectable
 						// dim
-					console.warn('aDrawable drawable is NOT selectable! tried to select a drawable with name:', aDrawable.name, 'drawable obj:', aDrawable);
+
 					return true; // so no need to invalidate
 			}
 			
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
 			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
-				console.error('width or height is 0 so not drawing');
+
 				return true;
 			}
 			
@@ -1921,7 +1921,7 @@ function init(aArrBufAndCore) {
 						var fontsize = aDrawable.fontsize; // i expect it to be in px
 						if (aDrawable.chars.length) {
 							var mh = measureHeight(font, fontsize, aDrawable.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
-							// console.log('mh:', mh);
+
 							w = mh.width;
 							// i want to keep the baseline at aDrawable.y
 							y = mh.relativeTop < 0 ? aDrawable.y + mh.relativeTop : aDrawable.y;
@@ -2025,7 +2025,7 @@ function init(aArrBufAndCore) {
 				
 					break;
 				default:
-					console.error('should never get here, as would have returned earlier, as aDrawable one is not drawable');
+
 			}
 			
 			return false;
@@ -2034,7 +2034,7 @@ function init(aArrBufAndCore) {
 			// returns 0 if not contained. returns 1 if contained in draggable area. returns 2 - 9 if in resizable area etc
 			// is uncontainable
 			if (['dim'].indexOf(aDrawable.name) > -1) {
-				console.error('tried to test contains on an uncontainable! aDrawable:', aDrawable);
+
 				return;
 			}
 			
@@ -2085,7 +2085,7 @@ function init(aArrBufAndCore) {
 						var fontsize = aDrawable.fontsize; // i expect it to be in px
 						if (aDrawable.chars.length) {
 							var mh = measureHeight(font, fontsize, aDrawable.chars, {width:w, ctx:gCtxMeasureHeight, can:gCanMeasureHeight});
-							// console.log('mh:', mh);
+
 							w = mh.width;
 							// i want to keep the baseline at aDrawable.y
 							y = mh.relativeTop < 0 ? aDrawable.y + mh.relativeTop : aDrawable.y;
@@ -2352,7 +2352,7 @@ function init(aArrBufAndCore) {
 				// var cDropperColor = this.ctx.getImageData(dx, dy, 1, 1).data;
 				// var cDropperColor0 = this.ctx0.getImageData(dx, dy, 1, 1).data;
 				// var avgRGBA = arraysAvg(cDropperColor, cDropperColor0);
-				// console.log('ok mixed. setting.', 'avgRGBA:', uneval(avgRGBA), 'dim:', uneval(cDropperColor), 'base:', uneval(cDropperColor0), 'mixedRGBA:', uneval(mixedRGBA));
+
 				
 			}
 			
@@ -2373,7 +2373,7 @@ function init(aArrBufAndCore) {
 				var l = drawables.length;
 				for(var i = 0; i < l; i++) {
 					var drawable = drawables[i];
-					// console.error('drawable', i, drawable);
+
 					if (drawable.name == 'cutout') {
 						// this is drawn as negative space with `this.dim.draw()`
 						continue;
@@ -2388,7 +2388,7 @@ function init(aArrBufAndCore) {
 									drawable.x > this.cstate.width || drawable.y > this.cstate.height || // test top left coord // this is why we need positive coords // THIS NEEDS REVISIT based on mtmm and mmtm
 									drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0
 								   ) {
-									console.error('not drawing this drawable:', drawable);
+
 									continue;
 								}
 							break;
@@ -2399,15 +2399,15 @@ function init(aArrBufAndCore) {
 					
 					this.dDraw(drawable);
 				}
-				// console.log('done drawing drawable');
+
 
 				if (!gCanStore.oscalectx1_draw) {
 					// draw selection
 					if(this.cstate.selection != null) {
-						// console.log('ok this.cstate.selection:', this.cstate.selection);
+
 						this.dSelect(this.cstate.selection);
 						// if (this.cstate.selection == this.dim || (this.cstate.selection.w && this.cstate.selection.h)) {
-							// console.log('ok selecting');
+
 							// this.cstate.selection.select(this.ctx);
 						// }
 					}
@@ -2472,7 +2472,7 @@ function init(aArrBufAndCore) {
 			}
 			
 			if (font.length) {
-				// console.log('ok cacled font is:', font.join(' '));
+
 				return font.join(' ');
 			} else {
 				return undefined; // so setStyleablesDefaults will then set it to the default
@@ -2522,7 +2522,7 @@ function init(aArrBufAndCore) {
 				styleables.fillStyle = styleables.strokeStyle;
 			}
 			
-			// console.log('styleables.font:', styleables.font);
+
 			
 			for (var p in styleables) {
 				if (p in aDrawable) {
@@ -2531,12 +2531,12 @@ function init(aArrBufAndCore) {
 						aDrawable.font = this.calcCtxFont(aDrawable);
 						if (aDrawable.font === undefined) {
 							// ok need to set defaults
-							console.log('ok NEED TO SET DEFAULTS FONT');
+
 							aDrawable.font = styleables.font;
 							for (var pf in fontablesDefaults) {
 								aDrawable[pf] = fontablesDefaults[pf];
 							}
-							console.log('ok set to default font:', aDrawable.font);
+
 						} // else do nothing, it already has one set
 					} else {
 						// for everything other then 'font'
@@ -2552,7 +2552,7 @@ function init(aArrBufAndCore) {
 			return styleables;
 		},
 		wheel: function(e) {
-			// console.log('wheel:', e.deltaMode, e.deltaX, e.deltaY);
+
 			
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				var cLevel = this.state.sPalZoomViewLevel;
@@ -2572,9 +2572,9 @@ function init(aArrBufAndCore) {
 			}
 		},
 		mousemove: function(e) {
-			// console.log('mousemove on mon:', tQS.iMon);
+
 			if (this.cstate.downedInMon > -1 && tQS.iMon !== this.cstate.downedInMon) {
-				console.warn('ignoring mousemove as it is not in monitor downed in');
+
 				return;
 			}
 			
@@ -2584,7 +2584,7 @@ function init(aArrBufAndCore) {
 			gMX = mx;
 			gMY = my;
 			gMTime = Date.now();
-			// console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
+
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				gZState.mouse = {x:mx, y:my};
 				gZState.setInvalid();
@@ -2654,13 +2654,13 @@ function init(aArrBufAndCore) {
 						
 							break;
 						default:
-							console.error('deverror: no drag mechnaism defined');
+
 					}
 					gCanStore.setCanState(false); // Something's dragging so we must redraw
 				} else if (this.cstate.resizing) {
 					var oldx = this.cstate.selection.x;
 					var oldy = this.cstate.selection.y;
-					console.log('this.cstate.resizing:', this.cstate.resizing, tQS.iMon);
+
 					switch(this.cstate.resizing) {
 						case 2:							
 							this.cstate.selection.x = mx;
@@ -2737,7 +2737,7 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.y2 = my;
 							break;
 						default:
-							console.error('should never get here');
+
 					}
 					
 					// link38378777577
@@ -2776,7 +2776,7 @@ function init(aArrBufAndCore) {
 						ex = sx + (length * Math.cos(radians(useAngle)));
 						ey = sy + (length * Math.sin(radians(useAngle)));
 						
-						// console.log('length:', length, 'angle:', angle, 'useAngle:', useAngle, 'sx:', sx, 'sy:', sy, 'ex:', ex, 'ey:', ey);
+
 					} else {
 						ex = mx;
 						ey = my;
@@ -2843,9 +2843,9 @@ function init(aArrBufAndCore) {
 						for (var i=l; i>-1; i--) {
 							var drawable = drawables[i];
 							isContained = this.dContains(drawable, mx, my);
-							// console.log('isContained:', isContained, 'drawable:', drawable)
+
 							if (isContained) {
-								// console.error('yes drawable contains:', drawable);
+
 								break;
 							}
 						}
@@ -2912,7 +2912,7 @@ function init(aArrBufAndCore) {
 								
 									break;
 								default:
-									console.error('should never get here');
+
 							}
 							if (cursor) {
 								if (this.state.sGenCanMouseMoveCursor != cursor) {
@@ -3041,7 +3041,7 @@ function init(aArrBufAndCore) {
 						break;
 					case 'Text-':
 						
-							console.log('ok filtering Text');
+
 							selectFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
 						
 						break;
@@ -3052,12 +3052,12 @@ function init(aArrBufAndCore) {
 				// if selectFilterFunc then lets test if should select or deselect
 				if (selectFilterFunc) {
 					var drawables = gCState.drawables.filter(selectFilterFunc);
-					// console.log('iterating drawables:', drawables);
+
 					var l = drawables.length;
 					for(var i=l-1; i>=0; i--) {
 						var isContained = this.dContains(drawables[i], mx, my);
 						if (isContained) {
-							console.log('ok you clicked in this drawable:', drawables[i]);
+
 							var mySel = drawables[i];
 							
 							this.dBringToFront(mySel);
@@ -3136,7 +3136,7 @@ function init(aArrBufAndCore) {
 					}
 					
 					if (this.cstate.selection) {
-						console.log('ok removing from selection this:', this.cstate.selection);
+
 						this.clearSelection();
 						if (this.cstate.typing) {
 							this.cstate.typing = false; // this was below setCanState // testing if i put up here if its ok
@@ -3183,7 +3183,7 @@ function init(aArrBufAndCore) {
 						case 'Text-':
 							
 								// if (this.cstate.typing) {
-									// console.log('exiting typing, this was selection:', this.cstate.selection);
+
 									// this.clearSelection();
 									// this.cstate.typing = false;
 									// this.cstate.valid = false;
@@ -3263,7 +3263,7 @@ function init(aArrBufAndCore) {
 									
 								break;
 							default:
-								console.error('should never get here, well unless maybe i dont know think about it, this.cstate.selection.name:', this.cstate.selection.name);
+
 						}
 						return;
 					}
@@ -3276,7 +3276,7 @@ function init(aArrBufAndCore) {
 			if (!aStateColorVarOrColor || !aStateHistoryVar) {
 				return;
 			}
-			// console.log('aStateColorVarOrColor:', aStateColorVarOrColor, 'aStateHistoryVar:', aStateHistoryVar, 'this.state:', this.state);
+
 			var cColor = this.state[aStateColorVarOrColor];
 			if (cColor === undefined) {
 				cColor = aStateColorVarOrColor;
@@ -3293,7 +3293,7 @@ function init(aArrBufAndCore) {
 				}
 			});
 			var idxCoInHist = cHistory.indexOf(cColor);
-			console.log('cColor:', cColor, 'cHistory:', cHistory, 'idxCoInHist:', idxCoInHist);
+
 			var immutedHistory;
 			if (idxCoInHist == -1) {
 				immutedHistory = cHistory.slice();
@@ -3360,13 +3360,13 @@ function init(aArrBufAndCore) {
 											var stateVarColor = stateVar + 'Color';
 											var stateVarAlpha = stateVar + 'Alpha';
 											
-											console.log('mySel[p]:', mySel[p], 'where p:', p);
-											console.log('sending aAlpha as:', mySel[p]);
+
+
 											var selRgba = colorStrToCssRgba(mySel[p], mySel[p], true);
 											selRgba.a *= 100;
-											console.log('sending 0 in as aAlpha');
+
 											var stateColorRGB = colorStrToCssRgba(this.state[stateVarColor], 0, true);
-											console.log('stateColorRGB:', stateColorRGB);
+
 											var stateAlpha = this.state[stateVarAlpha];
 											
 											if (selRgba.r !== stateColorRGB.r || selRgba.g !== stateColorRGB.g || selRgba.b !== stateColorRGB.b) {
@@ -3411,7 +3411,7 @@ function init(aArrBufAndCore) {
 		mouseup: function(e) {
 			if (e.button != 0) { return }
 			
-			console.log('mouseup in imon:', tQS.iMon);
+
 			this.cstate.downedInMon = -1;
 			
 			var mouse = this.getMouse(e);
@@ -3437,7 +3437,7 @@ function init(aArrBufAndCore) {
 						gCanStore.setCanState(false); // to update on mouse up?
 					} else if (this.cstate.resizing) {
 						this.cstate.resizing = 0;
-						console.error('due to mouseup, resizing set to 0 to stop', tQS.iMon);
+
 						if (!this.cstate.selection.w || !this.cstate.selection.h) {
 							// 0 size
 							this.dDelete(this.cstate.selection);
@@ -3481,7 +3481,7 @@ function init(aArrBufAndCore) {
 						
 						// var first_nativeshot_canvas_found = false;
 						var l = gWinArr.length;
-						// console.log('now going through l:', l, 'gWinArr:', gWinArr);
+
 						for (var i=0; i<l; i++) {
 							var cwin = gWinArr[i];
 							// if (cwin.title == 'nativeshot_canvas') {
@@ -3513,7 +3513,7 @@ function init(aArrBufAndCore) {
 								
 								break;
 							}
-							// else { console.log(x, ',', y, 'not in win:', cwin); }
+
 						}
 						
 						// if (!cCutout) {
@@ -3823,8 +3823,11 @@ function init(aArrBufAndCore) {
 					switch (e.key) {
 						case 'C':
 						case 'c':
+						case 'ç': // mac with caps lock off
+						case 'Ç': // mac with caps lock on
 							
 								// ac - alt+c
+								// console.log('c hit', 'repeat:', e.repeat, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey, 'alt:', e.altKey);
 								if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.altKey) {
 									// copy drawable
 									this.cstate.copied_drawable = JSON.stringify(mySel);
@@ -3832,6 +3835,8 @@ function init(aArrBufAndCore) {
 								}
 							
 							break;
+						// default:
+							// console.log('key during sel hit:', e.key, 'keyCode:', e.keyCode, 'repeat:', e.repeat, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey, 'alt:', e.altKey);
 					}
 				}
 				
@@ -3839,6 +3844,7 @@ function init(aArrBufAndCore) {
 				switch (e.key) {
 					case 'V':
 					case 'v':
+					case '√': // mac with caps lock on or off
 					
 							// av - alt+v
 							if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.altKey) {
@@ -3849,13 +3855,13 @@ function init(aArrBufAndCore) {
 				}
 				
 				// hotkeys tied to buttons in palette
-				// console.log('e:', e);
+
 				if (!e.repeat) {					
 					// test hotkeys
 					var key = e.key;
 					if (key) {
 						key = key.toLowerCase();
-						console.log('testing key:', key);
+
 						var testKey = function(aHotkey, aEntry) {
 							var triggerEntry = function() {
 								var evt = document.createEvent('MouseEvents');
@@ -3869,17 +3875,17 @@ function init(aArrBufAndCore) {
 								if (key == aHotkey[1]) {
 									if (aHotkey[0] == 'a') {
 										// requires alt key
-										if (e.altKey && !e.metaHotkey && !e.ctrlKey) {
+										if (e.altKey && !e.metaKey && !e.ctrlKey) {
 											triggerEntry();
 										}
 									} else if (aHotkey[0] == 'c') {
 										// requires ctrl key on non-mac, and meta key on mac
 										if (core.os.name == 'darwin') {
-											if (e.metaHotkey && !e.ctrlKey && !e.altKey) {
+											if (e.metaKey && !e.ctrlKey && !e.altKey) {
 												triggerEntry();
 											}
 										} else {
-											if (e.ctrlKey && !e.metaHotkey && !e.altKey) {
+											if (e.ctrlKey && !e.metaKey && !e.altKey) {
 												triggerEntry();
 											}
 										}
@@ -3888,7 +3894,7 @@ function init(aArrBufAndCore) {
 							} else if (aHotkey.length === 1) {
 								if (aHotkey == key) {
 									// requires no modifiers
-									if (!e.metaHotkey && !e.altKey && !e.ctrlKey) {
+									if (!e.metaKey && !e.altKey && !e.ctrlKey) {
 										triggerEntry();
 									}
 								}
@@ -3902,9 +3908,26 @@ function init(aArrBufAndCore) {
 							{ hotkey: 'c=' },
 							{ hotkey: 'a=' },
 							{ hotkey: 'c-' },
-							{ hotkey: 'a-' }
+							{ hotkey: 'a-' },
+							{ hotkey: 'a–' }, // mac alt- caps off or on
+							{ hotkey: 'a≠' }, // mac alt+ caps off or on
 						];
+						
 						var l = layout.length;
+						
+						// if aa in hotkey, then add the mac alt a stuff
+						for (var i=0; i<l; i++) {
+							var entry = layout[i];
+							if (entry.hotkey && entry.hotkey == 'aa') {
+								layout.push({ hotkey: 'aå' });
+								layout.push({ hotkey: 'aÅ' });
+								gHotkeyRef['aå'] = gHotkeyRef['aa'];
+								gHotkeyRef['aÅ'] = gHotkeyRef['aa'];
+								l = layout.length;
+								break;
+							}
+						}
+						
 						for (var i=0; i<l; i++) {
 							var entry = layout[i];
 							if (entry.hotkey) {
@@ -3916,7 +3939,7 @@ function init(aArrBufAndCore) {
 								for (var j=0; j<l2; j++) {
 									var subentry = sub[j];
 									if (subentry.hotkey) {
-										console.log('subentry with hotkey:', subentry);
+
 										testKey(subentry.hotkey, subentry);
 									}
 								}
@@ -4052,7 +4075,7 @@ function init(aArrBufAndCore) {
 				// h: this.refs.view.offsetHeight, // gZoomViewH + 10,
 				desc: 'botlef' // toplef, toprit, botrit
 			};
-			console.log('viewOffsets:', this.offsets);
+
 			this.zstate.interval = setInterval(this.draw, 30);
 			
 			var bgimg = new Image();
@@ -4129,12 +4152,12 @@ function init(aArrBufAndCore) {
 								
 				// dom visibility
 				var shouldBeVisible = false;
-				// console.log('offsets:', this.offsets, 'mouse:', this.zstate.mouse);
+
 				if ((tQS.x <= this.zstate.mouse.x) && (tQS.x + tQS.w >= this.zstate.mouse.x) &&
 					(tQS.y <= this.zstate.mouse.y) && (tQS.y + tQS.h >= this.zstate.mouse.y)) {
 						shouldBeVisible = true;						
 				}
-				// console.log('shouldBeVisible', tQS.iMon, shouldBeVisible, 'this.zstate.visible:', this.zstate.visible);
+
 				if (this.zstate.visible != shouldBeVisible) {
 					this.zstate.visible = shouldBeVisible;
 					this.refs.view.style.display = shouldBeVisible ? '' : 'none';
@@ -4165,7 +4188,7 @@ function init(aArrBufAndCore) {
 					var viewMinY = this.offsets.y - padY;
 					var viewMaxY = this.offsets.y + this.offsets.h + padY;
 					
-					console.log('view is in x of:', viewMinX, '-', viewMaxX, 'and y of:', viewMinY, '-', viewMaxY, 'AND MON MOUSE IS IN:', cX, cY);
+
 
 					if ((this.offsets.x - padX <= cX) && (this.offsets.x + this.offsets.w + padX >= cX) &&
 						(this.offsets.y - padY <= cY) && (this.offsets.y + this.offsets.h + padY >= cY)) {
@@ -4181,7 +4204,7 @@ function init(aArrBufAndCore) {
 							this.offsets.invalidxy = false;
 							this.offsets.x = this.refs.view.offsetLeft;
 							this.offsets.y = this.refs.view.offsetTop;
-							// console.log('this.offsets:', this.offsets);
+
 					}
 				}
 			}
@@ -4275,8 +4298,10 @@ function init(aArrBufAndCore) {
 			gHotkeyRef['a+'] = this.refs.enlarge;
 			gHotkeyRef['c='] = this.refs.enlarge;
 			gHotkeyRef['a='] = this.refs.enlarge;
+			gHotkeyRef['a≠'] = this.refs.enlarge; // mac alt+ caps off or on
 			gHotkeyRef['c-'] = this.refs.reduce;
 			gHotkeyRef['a-'] = this.refs.reduce;
+			gHotkeyRef['a–'] = this.refs.reduce; // mac alt- caps off or on
 		},
 		render: function() {
 			// props
@@ -4496,14 +4521,14 @@ function init(aArrBufAndCore) {
 					
 					// start copy of block1929293055
 					for (var p in mySel) {
-						// console.log('on sel prop:', p);
+
 						if (p in affectsStateVars) {
-							// console.warn('in sel - testing diff');
+
 							if (p == 'strokeStyle' || p == 'fillStyle') {
 									var cColorVarName = affectsStateVars[p][0];
 									var cAlphaVarName = affectsStateVars[p][1];
 									
-									// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', gCanStore.rconn.state[cVarName]);
+
 									var newColor = colorStrToCssRgba(gCanStore.rconn.state[cColorVarName], gCanStore.rconn.state[cAlphaVarName]);
 									if (mySel[p] !== newColor) {
 										canValid = false;
@@ -4515,7 +4540,7 @@ function init(aArrBufAndCore) {
 							} else {
 								var cVarName = affectsStateVars[p];
 								if (mySel[p] !== gCanStore.rconn.state[cVarName]) {
-									// console.log('sending update on it');
+
 									canValid = false;
 									mySel[p] = gCanStore.rconn.state[cVarName];
 									if (isText && p.indexOf('font') === 0) {
@@ -4680,15 +4705,15 @@ function init(aArrBufAndCore) {
 	
 	var SubButton = React.createClass({
 		hoverout: function() {
-			console.log('hover outted');
+
 			this.props.setLabelText(null, this.props.pSubButton.label);
 		},
 		hoverover: function() {
-			console.log('hover overed');
+
 			this.props.setLabelText(this.props.pSubButton.label, this.props.pSubButton.label);
 		},
 		hoverlistener: function(e) {
-			console.log('hoverlistener, name:', e.propertyName);
+
 			if (e.propertyName == 'min-width') {
 				// mouse outted
 				this.hoverout();
@@ -4716,7 +4741,7 @@ function init(aArrBufAndCore) {
 						var cMon = allMonDim[i];
 						allmonRect = allmonRect.union(new Rect(cMon.x, cMon.y, cMon.w, cMon.h));
 					}
-					console.log('allmonRect:', allmonRect);
+
 					cCutout = gCanStore.rconn.newDrawable(allmonRect.x, allmonRect.y, allmonRect.width, allmonRect.height, 'cutout');
 				} else {
 					var iMon = this.props.pSubButton.icontext - 1;
@@ -5000,7 +5025,7 @@ function init(aArrBufAndCore) {
 			})
 		},
 		componentDidUpdate: function(prevProps, prevState) {
-			// console.log('arrowtools did update!', 'prevProps:', uneval(prevProps), 'nowProps:', uneval(this.props));
+
 			//// if (gCState && gCState.selection && gCState.selection.name == 'Line') {
 			//// 	var newValid = true;
 			//// 	if (prevProps.sPalArrowStart != this.props.sPalArrowStart) {
@@ -5140,7 +5165,7 @@ function init(aArrBufAndCore) {
 			
 			// convert sColor into object of rgb
 			sColor = this.props.sColor + ''; // make it a string
-			// console.error('this.props:', this.props);
+
 			var rgb;
 			var hex;
 			if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
@@ -5149,12 +5174,12 @@ function init(aArrBufAndCore) {
 					hex = hex.substr(1);
 				}
 				rgb = hexToRgb(sColor);
-				// console.log('rgb:', rgb);
+
 			} else {
 				hex = rgbToHex(false, sColor);
-				// console.log('hex:', hex);
+
 				rgb = hexToRgb(hex);
-				// console.log('rgb2:', rgb);
+
 			}
 			
 			var pRgba = rgb;
@@ -5182,7 +5207,7 @@ function init(aArrBufAndCore) {
 			if (!this.brect) {
 				this.brect = ReactDOM.findDOMNode(this).getBoundingClientRect();
 			}
-			console.log('brect:', this.brect);
+
 			
 			var x = e.clientX - this.brect.left;
 			var y = e.clientY - this.brect.top;
@@ -5191,7 +5216,7 @@ function init(aArrBufAndCore) {
 				s: parseInt(x / this.brect.width * 100, 10),
 				v: parseInt((1 - y / this.brect.height) * 100, 10),
 			};
-			// console.log('newHsv:', newHsv);
+
 			
 			var newRgb = HSVtoRGB(newHsv.h/360, newHsv.s/100, newHsv.v/100);
 			var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
@@ -5212,7 +5237,7 @@ function init(aArrBufAndCore) {
 				s: parseInt(x / this.brect.width * 100, 10),
 				v: parseInt((1 - y / this.brect.height) * 100, 10),
 			};
-			// console.log('newHsv:', newHsv);
+
 			
 			if (newHsv.s < 0 || newHsv.s > 100 || newHsv.v < 0 || newHsv.v > 100) {
 				if (this.sGenInputNumberMousing != 'not-allowed') {
@@ -5275,12 +5300,12 @@ function init(aArrBufAndCore) {
 	var ColorPickerSliders = React.createClass({
 		displayName: 'ColorPickerSliders',
 		mousedown: function(colorOrAlpha, e) {
-			console.log('e:', e);
+
 			// colorOrAlpha true for color
 			// false for alpha
 			if (e.button != 0) { return }
 			
-			console.log('entered mousedown');
+
 			
 			this.colorOrAlpha = colorOrAlpha;
 			
@@ -5291,7 +5316,7 @@ function init(aArrBufAndCore) {
 				brect = this.refs.hue.getBoundingClientRect();
 			}
 			// brect: DOMRect { x: 597.2166748046875, y: 300.3999938964844, width: 170, height: 12, top: 300.3999938964844, right: 767.2166748046875, bottom: 312.3999938964844, left: 597.2166748046875 }
-			console.log('brect:', brect);
+
 			
 			this.widthx = brect.width;
 			this.minx = brect.x;
@@ -5299,7 +5324,7 @@ function init(aArrBufAndCore) {
 			
 			var downx = e.clientX - this.minx;
 			var perx = Math.round(downx / this.widthx * 100);
-			// console.log('downx:', downx, '%:', perx);
+
 			
 			this.sGenInputNumberMousing = null;
 			
@@ -5313,7 +5338,7 @@ function init(aArrBufAndCore) {
 			
 			var downx = e.clientX - this.minx;
 			var perx = Math.round(downx / this.widthx * 100);
-			// console.log('downx:', downx, '%:', perx);
+
 			
 			this.limitTestThenSet(perx);
 			
@@ -5325,7 +5350,7 @@ function init(aArrBufAndCore) {
 			var cval;
 			if (this.colorOrAlpha) {
 				cval = Math.round(this.props.pHsv.h / 360 * 100); // percentHue
-				console.log('current hue:', cval, this.props.pHsv);
+
 			} else {
 				cval = this.props.pRgba.a;
 			}
@@ -5348,17 +5373,17 @@ function init(aArrBufAndCore) {
 
 				if (cval === aNewVal) {
 					// its already that number
-					console.log('already!');
+
 					return true;
 				}
 				
 				var newStateObj = {}
 				if (this.colorOrAlpha) {
-					console.log(aNewVal / 100, this.props.pHsv.s / 100, this.props.pHsv.v / 100);
+
 					var newRgb = HSVtoRGB(aNewVal / 100, this.props.pHsv.s / 100, this.props.pHsv.v / 100);
-					console.log('newRgb:', newRgb);
+
 					var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
-					console.log('newHex:', newHex);
+
 					newStateObj[this.props.pStateColorKey] = newHex;
 				} else {
 					newStateObj[this.props.pStateAlphaKey] = aNewVal;
@@ -5423,7 +5448,7 @@ function init(aArrBufAndCore) {
 		displayName: 'ColorPickerCodes',
 		changehex: function(e) {
 			var newValue = e.target.value;
-			console.log('newValue:', newValue);
+
 			if (newValue.length == 3 || newValue == 6) {
 				var setStateObj = {};
 				setStateObj[this.props.pStateColorKey] = newValue;
@@ -5533,7 +5558,7 @@ function init(aArrBufAndCore) {
 				}
 			}
 			
-			console.log('addColorSetStateObj:', addColorSetStateObj);
+
 			
 			gColorPickerSetState[this.props.pSetStateName](overwriteObjWithObj(setStateObj, addColorSetStateObj));
 		},
@@ -5627,7 +5652,7 @@ function init(aArrBufAndCore) {
 			var iEnd = pPalLayout.length;
 			
 			// start - get active tool options
-			// console.log('this.props.sGenPalTool:', this.props.sGenPalTool);
+
 			var activeToolOptions;
 			
 			
@@ -5689,10 +5714,10 @@ function init(aArrBufAndCore) {
 				} else {
 					/*
 					if (cLayoutEntry.label == 'Clear Selection' && gCState && gCState.drawables) {
-						// console.log('gCState:', gCState);
+
 						var cutoutFound = false;
 						var drawables = gCState.drawables;
-						console.log('doing checks! drawables:', drawables);
+
 						var l = drawables.length;
 						for (var j=0; j<l; j++) {
 							if (drawables[j].name == 'cutout') {
@@ -5736,7 +5761,7 @@ function init(aArrBufAndCore) {
 		displayName: 'InputNumber',
 		wheel: function(e) {
 			var newVal;
-			// console.log('e:', e.deltaMode, e.deltaY);
+
 			if (e.deltaY < 0) {
 				newVal = this.props[this.props.pStateVarName] + this.crement;
 			} else {
@@ -5769,7 +5794,7 @@ function init(aArrBufAndCore) {
 						if (isNaN(e.key) || e.key == ' ') {
 							e.preventDefault();
 						} else {
-							console.log('e.key:', '"' + e.key + '"');
+
 						}
 					}
 					
@@ -5790,7 +5815,7 @@ function init(aArrBufAndCore) {
 				var newSetValue = this.getSetValue(aNewVal);
 				if (this.props[this.props.pStateVarName] === newSetValue) {
 					// its already that number
-					console.log('already!');
+
 					return true;
 				}
 				
@@ -5842,7 +5867,7 @@ function init(aArrBufAndCore) {
 			
 			var newVal = this.downval + (delSensitivity * this.crement);
 			
-			// console.log('downx:', this.downx, 'clientX:', e.clientX, 'delX:', delX, 'delSensitivity:', delSensitivity);
+
 			
 			
 			// i do this extra limit test here, as mouse move can move greatly so i might miss the minimum/maximum
@@ -5886,7 +5911,7 @@ function init(aArrBufAndCore) {
 		},
 		change: function(e) {
 			// cool this doesnt trigger unless user manually changes the field
-			console.warn('triggering onchange!');
+
 			// if (!e || !e.target) {
 				// return;
 			// }
@@ -5939,7 +5964,7 @@ function init(aArrBufAndCore) {
 					
 						break;
 					default:
-						console.error('pStateVarName of "' + this.props.pStateVarName +'" is marked as special but no special getSetValue mechanism defined');
+
 						throw new Error('pStateVarName of "' + this.props.pStateVarName +'" is marked as special but no special getSetValue mechanism defined');
 				}
 			} else {
@@ -5950,10 +5975,10 @@ function init(aArrBufAndCore) {
 		componentDidMount: function() {
 			this.lastDomElValue = this.props[this.props.pStateVarName];
 			// if (this.props.pLabel == 'Width') {
-				// console.error('mounted width');
+
 				// gWidthRef = this.refs.input;
 			// } else if (this.props.pLabel == 'Height') {
-				// console.error('mounted height');
+
 				// gHeightRef = this.refs.input;
 			// }
 		},
@@ -5965,16 +5990,16 @@ function init(aArrBufAndCore) {
 			// }
 		// },
 		componentDidUpdate: function(prevProps) {
-			// console.log('did update, prevProps:', prevProps);
+
 			var newPropVal = this.props[this.props.pStateVarName];
 			if (newPropVal != this.lastDomElValue) {
 				// if (prevProps.value != newPropVal) {
 					this.refs.input.value = newPropVal;
-					// console.log('ok updated input to', newPropVal, 'pLabel:', this.props.pLabel);
+
 					this.lastDomElValue = newPropVal;
 				// }
 			}
-			// else { console.log('no need to update input value as it matches lastDomElValue'); }
+
 		},
 		render: function() {
 			// props
@@ -6105,7 +6130,7 @@ function init(aArrBufAndCore) {
 	var pPalCoordsOnVisibleMon = false;
 	var pPalX = editorstate.pPalX; // i dont do mmtm here or on `var pPalY` because pal position is relative to 0,0
 	var pPalY = editorstate.pPalY;
-	// console.log('pPal:', pPalX, ', ', pPalY, 'from prespective of primary monitor meaning 0,0. this iMon:', tQS.iMon);
+
 	var allMonDim = tQS.allMonDim;
 	var l = allMonDim.length;
 	for (var i=0; i<l; i++) {
@@ -6114,14 +6139,14 @@ function init(aArrBufAndCore) {
 			pPalY >= cMonDim.y && pPalY <= cMonDim.y + cMonDim.h) {
 				// setTimeout(function() {
 					// alert('yes pal is on visible mon of iMon: ' + i);
-					// console.log('yes pal is on vis mon of iMon:', i, cMonDim);
+
 				// }, 1000);
 				pPalCoordsOnVisibleMon = true;
 				break;
 		}
 	}
 	if (!pPalCoordsOnVisibleMon) {
-		// console.log('pPal coords not on any visible monitor, here are all the dimensions:', allMonDim);
+
 		editorstate.pPalX = 5; // link239285555
 		editorstate.pPalY = 50; // link239285555
 	}
@@ -6162,14 +6187,14 @@ function init(aArrBufAndCore) {
 	}
 	
 	var initProps = editorstate;
-	console.log('initProps:', initProps);
+
 	initProps.pQS = pQS;
 	initProps.pScreenshotArrBuf = aArrBufAndCore.screenshotArrBuf;
 	initProps.pPhys = pPhys;
 	initProps.pCanInterval = 30;
 	initProps.pPalLayout = palLayout; // link1818181
 	
-	console.log('initProps:', initProps);
+
 	
 	var initReact = function() {
 		window.addEventListener('unload', unload, false);
@@ -6180,7 +6205,7 @@ function init(aArrBufAndCore) {
 		);
 	};
 	
-	// console.log('document.readyState:', document.readyState);
+
 	if (document.readyState != 'complete') {
 		window.addEventListener('DOMContentLoaded', initReact, false);
 	} else {
@@ -6407,10 +6432,10 @@ if (!('win81ScaleX' in tQS)) {
 // delete tQS.win81ScaleX;
 // delete tQS.win81ScaleY;
 
-console.log('tQS:', tQS);
+
 var gQS = tQS;
 window.addEventListener('message', function(aWinMsgEvent) {
-	// console.error('incoming window message to HTML: iMon:', tQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
+
 	var aData = aWinMsgEvent.data;
 	if (aData.topic in window) {
 		window[aData.topic](aData);
@@ -6422,7 +6447,7 @@ window.addEventListener('message', function(aWinMsgEvent) {
 function receiveWinArr(aData) {
 	// for window wand
 	gWinArr = aData.winArr;
-	console.log('got gWinArr:', gWinArr);
+
 }
 
 // link9999191911111
@@ -6443,7 +6468,7 @@ if (typeof(React) == 'undefined') {
 	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'react-with-addons.js?' + core.addon.cache_key);
 	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'react-dom.js?' + core.addon.cache_key);
 }
-else { console.error('devwarn!!!! React is already in here!!!') }
+
 */
 
 // end - pre-init
@@ -6756,7 +6781,7 @@ function rgbToHex(withHash, rOrStr, g, b) {
 		if (!rgb) {
 			throw new Error('rgbToHex failed, invalid string of "' + rOrStr + '"');
 		} else {
-			// console.log('rgb:', rgb);
+
 			r = parseInt(rgb[1]);
 			g = parseInt(rgb[2]);
 			b = parseInt(rgb[3]);
@@ -6783,18 +6808,18 @@ function colorStrToCssRgba(aColorStr, aAlpha, retObj) {
 	var rgb;
 	if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
 		rgb = hexToRgb(sColor);
-		// console.log('rgb:', rgb);
+
 	} else {
 		var hexFirst = rgbToHex(false, sColor);
-		// console.log('hexFirst:', hexFirst);
+
 		rgb = hexToRgb(hexFirst);
-		// console.log('rgb2:', rgb);
+
 	}
 	
 	var sAlpha;
 	if (isNaN(aAlpha)) {
 		// then its a string
-		console.log('aAlpha:', aAlpha);
+
 		aAlpha = /\.?\d+(?!.*\d)/.exec(aAlpha);
 		if (!aAlpha) {
 			throw new Error('no number in aAlpha: ' + aAlpha);
@@ -6862,7 +6887,7 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 	// ensures no invalid keys are found in aOptions, any key found in aOptions not having a key in aOptionsDefaults causes throw new Error as invalid option
 	for (var aOptKey in aOptions) {
 		if (!(aOptKey in aOptionsDefaults)) {
-			console.error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value, aOptionsDefaults:', aOptionsDefaults, 'aOptions:', aOptions);
+
 			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
 		}
 	}
@@ -6907,7 +6932,7 @@ function arraysSum(...intarr) {
 			sumarr[j] += cIntarr[j];
 		}
 	}
-	console.log('sumarr:', sumarr);
+
 	return sumarr;
 }
 
@@ -6919,7 +6944,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	// if you do pass aOptions.ctx, keep in mind that the ctx properties will be changed and not set back. so you should have a devoted canvas for this
 	// if you dont pass in a width to aOptions, it will return it to you in the return object
 	// the returned width is Math.ceil'ed
-	// console.error('aChars: "' + aChars + '"');
+
 	var defaultOptions = {
 		width: undefined, // if you specify a width then i wont have to use measureText to get the width
 		canAndCtx: undefined, // set it to object {can:,ctx:} // if not provided, i will make one
@@ -6978,18 +7003,18 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	
 	ctx.fillStyle = 'white';
 	
-	// console.log('w:', w);
+
 	
 	var avgOfRange = (aOptions.range + 1) / 2;
 	var yBaseline = Math.ceil(aSize * avgOfRange);
-	// console.log('yBaseline:', yBaseline);
+
 	
 	ctx.fillText(aChars, 0, yBaseline);
 	
 	var yEnd = aSize * aOptions.range;
 	
 	var data = ctx.getImageData(0, 0, w, yEnd).data;
-	// console.log('data:', data)
+
 	
 	var botBound = -1;
 	var topBound = -1;

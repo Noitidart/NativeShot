@@ -227,7 +227,7 @@ body {
 	opacity: 0;
 	transition: top 200ms, opacity 200ms;
 	top: 90%;
-	
+	left: 1px;
 	background-color: rgba(240, 241, 242, 0.6);
 	border: 1px solid rgba(170, 170, 170, 0.3);
 	border-radius: 3px;
