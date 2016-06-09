@@ -684,7 +684,7 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
 
 					var hwndStr = aArrHwndPtrStr[i];
-					var hwndPtr = ostypes.TYPE.HWND.ptr(ctypes.UInt64(hwndStr));
+					var hwndPtr = ostypes.TYPE.HWND(ctypes.UInt64(hwndStr));
 					
 					// var lpString = ostypes.TYPE.LPTSTR.targetType.array(500)();
 					// var nWinTitleLen = ostypes.API('GetWindowText')(hwndPtr, lpString, lpString.length);
@@ -1115,25 +1115,53 @@ function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
 }
 
 function gtkRaiseWindow(aArrHwndPtrStr) {
-	for (var i=0; i<aArrHwndPtrStr.length; i++) {
-		var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-		console.log('hwndPtr:', hwndPtr);
-		var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-		console.log('XWindow1a:', XWindow);
-		XWindow = parseInt(cutils.jscGetDeepest(XWindow));
-		console.log('XWindow1b:', XWindow);
-					
-		var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
-		console.log('rez_raise:', rez_raise);
+	switch (core.os.mname) {
+		case 'winnt':
 		
-		// Set input focus (we have override_redirect=1, so the wm will not do this for us)
-		// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
-		var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
-		console.log('rez_focus:', rez_focus);
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.HWND(ctypes.UInt64(aArrHwndPtrStr[i]));
+					
+					// while (true) {
+						var rez_focus = ostypes.API('SetForegroundWindow')(hwndPtr);
+						console.log('rez_focus:', rez_focus);
+						
+						var hFrom = ostypes.API('GetForegroundWindow')();
+						if (hFrom.isNull()) {
+							// nothing in foreground, so calling process is free to focus anything
+							console.error('nothing in foreground right now');
+							// continue;
+						}
+						console.log('hFrom:', hFrom, 'hTo:', hwndPtr);
+						if (cutils.comparePointers(hFrom, hwndPtr) === 0) {
+							console.error('succesfully focused window, hwndPtr:', hwndPtr);
+							// break;
+						}
+					// }
+				}
+		
+			break;
+		case 'gtk':
+				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					console.log('hwndPtr:', hwndPtr);
+					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					console.log('XWindow1a:', XWindow);
+					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
+					console.log('XWindow1b:', XWindow);
+								
+					var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
+					console.log('rez_raise:', rez_raise);
+					
+					// Set input focus (we have override_redirect=1, so the wm will not do this for us)
+					// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
+					var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
+					console.log('rez_focus:', rez_focus);
+				}
+				
+				var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+				console.log('rez_flush', rez_flush);
+			break;
 	}
-	
-	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-	console.log('rez_flush', rez_flush);
 }
 
 function focusWindows(aArrHwndPtrStr) {
@@ -2041,7 +2069,7 @@ function winForceForegroundWindow(aHwndToFocus) {
 	
 	var hFrom = ostypes.API('GetForegroundWindow')();
 	if (hFrom.isNull()) {
-		// nothing in foreground, so calling process is free to focus anything
+		console.log('nothing in foreground, so calling process is free to focus anything')
 		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
 		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
 		return rez_SetSetForegroundWindow ? true : false;
@@ -2074,17 +2102,17 @@ function winForceForegroundWindow(aHwndToFocus) {
 		// if (cutils.jscEqual(pidFrom, pidTo)) {
 		// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
 		// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
-			console.log('the process, of the window that is currently focused, is of this calling thread, so i can go ahead and just focus it - no need for attach');
+			console.log('the process, of the window that is currently focused, is of process of this ChromeWorker, so i can go ahead and just focus it - no need for attach');
 		// }
 		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
 		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
 		return rez_SetSetForegroundWindow ? true : false;
 	}
 	
-	var threadidOfCallingProcess = ostypes.API('GetCurrentThreadId')();
-	console.log('threadidOfCallingProcess:', threadidOfCallingProcess);
+	var threadidOfChromeWorker = ostypes.API('GetCurrentThreadId')(); // thread id of this ChromeWorker
+	console.log('threadidOfChromeWorker:', threadidOfChromeWorker);
 	
-	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, true);
+	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, true);
 	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
 	if (!rez_AttachThreadInput) {
 		throw new Error('failed to attach thread input');
@@ -2092,7 +2120,7 @@ function winForceForegroundWindow(aHwndToFocus) {
 	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
 	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
 
-	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfCallingProcess, threadidFrom, false);
+	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, false);
 	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
 	
 	return rez_SetSetForegroundWindow ? true : false;

@@ -64,7 +64,6 @@ var gCuiCssFilename;
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'mm', function () { return Cc['@mozilla.org/globalmessagemanager;1'].getService(Ci.nsIMessageBroadcaster).QueryInterface(Ci.nsIFrameScriptLoader); });
 
 // start - pref stuff
 // Initialize the prefs object in core - this needs to be done first in the mainthread as then core gets sent to workers
@@ -107,7 +106,7 @@ var gPrefMeta = { // short for pref meta data // dictates dom structure in optio
 		getter: function() {
 			// do no validation on gotten val, just report it back to devuser, validation is done after it is got
 			var mainDeferred_getAutoupdate = new Deferred();
-			
+
 			AddonManager.getAddonByID(core.addon.id, function(addon) {
 				// start - set lastUpdatedDate into core, this is bad, as getter is meant only for specific stuff. but on startup this gets called, and i need last updated date which is available here so this is unrelated to the pref system
 				if (!core.addon.lastUpdatedDate) {
@@ -131,7 +130,7 @@ var gPrefMeta = { // short for pref meta data // dictates dom structure in optio
 					}
 				}
 			});
-			
+
 			return mainDeferred_getAutoupdate.promise;
 		}
 	}
@@ -139,37 +138,37 @@ var gPrefMeta = { // short for pref meta data // dictates dom structure in optio
 
 // only use prefGet function if you want to get fresh, otherwise just use core.addon.prefs[aPrefName] for the value
 function prefGet(aPrefName) {
-	
+
 	var prefType = gPrefMeta[aPrefName].type;
 	var gotVal;
 	switch (prefType) {
 		case 'Custom':
-			
+
 				gotVal = gPrefMeta[aPrefName].getter();
-			
+
 			break;
 		case 'Char':
 		case 'Int':
 		case 'Bool':
-			
+
 				try {
 					gotVal = Services.prefs['get' + prefType + 'Pref'](core.addon.prefbranch + aPrefName);
 				} catch(ex) {
 					// pref probably doesnt exist, so set it to defaultValue
 					gotVal = gPrefMeta[aPrefName].defaultValue;
 				}
-			
+
 			break;
 		default:
 			console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
 			throw new Error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName');
 	}
-	
+
 	if (gotVal.constructor.name == 'Promise') {
 		var deferred_waitGetter = new Deferred();
-		
+
 		// actually on error it returns the default value, because you wanted it fresh right, meaning the devuser thinks current value is defunct?? maybe so im going with this  decided against ----> // on error, it resolves with the current value, if no current value, then it resolves with the default value link444522952112
-		
+
 		gotVal.then(
 			function(aVal) {
 				console.log('Fullfilled - gotVal - ', aVal);
@@ -216,7 +215,7 @@ function prefGet(aPrefName) {
 				deferred_waitGetter.resolve(gPrefMeta[aPrefName].defaultValue); // link444522952112
 			}
 		);
-		
+
 		return deferred_waitGetter.promise;
 	} else {
 		// start - copy block1029221000
@@ -240,22 +239,22 @@ function getFromCore_curValOrDefault(aPrefName) {
 }
 
 function prefSet(aPrefName, aNewVal) {
-	// returns the prefName obj from core.addon.prefs on set. for non custom and custom sync the return true is valid statement that it succesfully was set. for custom async it is not valid as it will return true before set is complete. 
-	
+	// returns the prefName obj from core.addon.prefs on set. for non custom and custom sync the return true is valid statement that it succesfully was set. for custom async it is not valid as it will return true before set is complete.
+
 	if (isValidPrefVal(aPrefName, aNewVal)) {
 		var prefType = gPrefMeta[aPrefName].type;
 		switch (prefType) {
 			case 'Custom':
-				
+
 					gPrefMeta[aPrefName].setter(aNewVal);
-				
+
 				break;
 			case 'Char':
 			case 'Int':
 			case 'Bool':
-				
+
 					Services.prefs['set' + prefType + 'Pref'](core.addon.prefbranch + aPrefName, aNewVal);
-				
+
 				break;
 			default:
 				console.error('could not set because, invalid type set by devuser in gPrefMeta for aPrefName:', aPrefName);
@@ -274,7 +273,7 @@ function isValidPrefVal(aPrefName, aVal) {
 	// RETURNS
 		// true
 		// false
-	
+
 	var cValues = gPrefMeta[aPrefName].values;
 	if (!cValues) {
 		console.error('valid values not set for aPrefName:', aPrefName);
@@ -291,7 +290,7 @@ function isValidPrefVal(aPrefName, aVal) {
 			}
 		}
 	}
-	
+
 	return false;
 }
 
@@ -320,7 +319,7 @@ function refreshCoreForPrefs() {
 	// RETURNS
 		// promise telling you when complete. resolve value is core.addon.prefs
 	var mainDeferred_refreshCoreForPrefs = new Deferred();
-	
+
 	var promiseAllArr_getterRequests = [];
 	for (var aPrefName in gPrefMeta) {
 		var fetchFresh = prefGet(aPrefName);
@@ -328,7 +327,7 @@ function refreshCoreForPrefs() {
 			promiseAllArr_getterRequests.push(fetchFresh);
 		}
 	}
-	
+
 	if (!promiseAllArr_getterRequests.length) {
 		mainDeferred_refreshCoreForPrefs.resolve(core.addon.prefs);
 	} else {
@@ -341,25 +340,26 @@ function refreshCoreForPrefs() {
 			genericReject.bind(null, 'promiseAll_getterRequests', mainDeferred_refreshCoreForPrefs)
 		).catch(genericCatch.bind(null, 'promiseAll_getterRequests', mainDeferred_refreshCoreForPrefs));
 	}
-	
+
 	return mainDeferred_refreshCoreForPrefs.promise;
 }
 // end - pref stuff
 
 // start - beutify stuff
-
-var devtools;
-try {
-	var { devtools } = Cu.import('resource://devtools/shared/Loader.jsm', {});
-} catch(ex) {
-	var { devtools } = Cu.import('resource://gre/modules/devtools/Loader.jsm', {});
-}
-var beautify1 = {};
-var beautify2 = {};
-devtools.lazyRequireGetter(beautify1, 'beautify', 'devtools/jsbeautify');
-devtools.lazyRequireGetter(beautify2, 'beautify', 'devtools/shared/jsbeautify/beautify');
-
+var beautifyInited = false;
 function BEAUTIFY() {
+	if (beautifyInited) {
+		var devtools;
+		try {
+			var { devtools } = Cu.import('resource://devtools/shared/Loader.jsm', {});
+		} catch(ex) {
+			var { devtools } = Cu.import('resource://gre/modules/devtools/Loader.jsm', {});
+		}
+		var beautify1 = {};
+		var beautify2 = {};
+		devtools.lazyRequireGetter(beautify1, 'beautify', 'devtools/jsbeautify');
+		devtools.lazyRequireGetter(beautify2, 'beautify', 'devtools/shared/jsbeautify/beautify');
+	}
 	try {
 		beautify1.beautify.js('""');
 		return beautify1.beautify;
@@ -389,13 +389,13 @@ function extendCore() {
 				core.os.version_name = 'xp';
 			}
 			break;
-			
+
 		case 'darwin':
 			var userAgent = myServices.hph.userAgent;
 
 			var version_osx = userAgent.match(/Mac OS X 10\.([\d\.]+)/);
 
-			
+
 			if (!version_osx) {
 				throw new Error('Could not identify Mac OS X version.');
 			} else {
@@ -413,14 +413,14 @@ function extendCore() {
 				// this makes it so that 10.10.0 becomes 10.100
 				// 10.10.1 => 10.101
 				// so can compare numerically, as 10.100 is less then 10.101
-				
+
 				//core.os.version = 6.9; // note: debug: temporarily forcing mac to be 10.6 so we can test kqueue
 			}
 			break;
 		default:
 			// nothing special
 	}
-	
+
 
 }
 
@@ -431,13 +431,13 @@ function indexOfSelInG(aSel) {
 	// aSel is an array of subcutouts
 	// will return the index it is found in gUsedSelections
 	// -1 if not found
-	
+
 	var l = gUsedSelections.length;
-	
+
 	if (!l) {
 		return -1;
 	} else {
-		
+
 		for (var i=l-1; i>=0; i--) {
 			var tSel = gUsedSelections[i]; // testSelection
 			var l2 = tSel.length;
@@ -458,7 +458,7 @@ function indexOfSelInG(aSel) {
 				}
 			}
 		}
-		
+
 		return -1; // not found
 	}
 }
@@ -486,9 +486,9 @@ var EditorFuncs = {
 		if (!gUsedSelections.length) {
 			return;
 		}
-		
+
 		var cSel = aData.cutoutsArr; // cutouts of the current selection
-		
+
 		// figure out the selection to make
 		var selToMake;
 		if (cSel) {
@@ -532,7 +532,7 @@ var EditorFuncs = {
 	broadcastToOthers: function(aData) {
 		// aData requires the key postMsgObj
 		// broadcasts to all other aEditorDOMWindow except for aData.iMon
-		
+
 		if (!aData.postMsgObj) {
 			console.error('aData missing "postMsgObj" key');
 			throw new Error('aData missing "postMsgObj" key');
@@ -570,11 +570,11 @@ var EditorFuncs = {
 	init: function(aData) {
 		// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
 		// also transfer the screenshot data to the window
-		
+
 		var iMon = aData.iMon; // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-		
+
 		var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
-		
+
 		if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
 			throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
 		}
@@ -586,13 +586,13 @@ var EditorFuncs = {
 			// aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
 			// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
 		// }
-		
+
 		aEditorDOMWindow.focus();
-		
+
 		// if (core.os.name != 'darwin') {
 			// aEditorDOMWindow.fullScreen = true;
 		// }
-		
+
 		// set window on top:
 		var aArrHwndPtr = [aHwndPtrStr];
 		var aArrHwndPtrOsParams = {};
@@ -604,7 +604,7 @@ var EditorFuncs = {
 			width: colMon[iMon].w,
 			height: colMon[iMon].h
 		};
-		
+
 		// if (core.os.name != 'darwinAAAA') {
 		var promise_setWinAlwaysTop = ScreenshotWorker.post('setWinAlwaysOnTop', [aArrHwndPtr, aArrHwndPtrOsParams]);
 		promise_setWinAlwaysTop.then(
@@ -614,28 +614,28 @@ var EditorFuncs = {
 					initOstypes();
 					// link98476884
 					OSStuff.NSMainMenuWindowLevel = aVal;
-					
-					var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);							
+
+					var NSWindowString = getNativeHandlePtrStr(aEditorDOMWindow);
 					var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
 
 					var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
 					console.log('rez_setLevel:', rez_setLevel.toString());
-					
+
 					var newSize = ostypes.TYPE.NSSize(colMon[iMon].w, colMon[iMon].h);
 					var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
 					console.log('rez_setContentSize:', rez_setContentSize.toString());
-					
+
 					aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
 				}
 			},
 			genericReject.bind(null, 'promise_setWinAlwaysTop', 0)
 		).catch(genericCatch.bind(null, 'promise_setWinAlwaysTop', 0));
-		
+
 		if (!gFonts) {
 				var fontsEnumerator = Cc['@mozilla.org/gfx/fontenumerator;1'].getService(Ci.nsIFontEnumerator);
 				gFonts = fontsEnumerator.EnumerateAllFonts({});
 		}
-		
+
 		colMon[aData.iMon].E.DOMWindow.postMessage({
 			from: 'bootstrap',
 			topic: 'init',
@@ -644,10 +644,10 @@ var EditorFuncs = {
 			fonts: gFonts,
 			editorstateStr: gEditorStateStr
 		}, '*', [colMon[iMon].screenshotArrBuf]);
-		
+
 		// set windowtype attribute
 		// colMon[aData.iMon].E.DOMWindow.document.documentElement.setAttribute('windowtype', 'nativeshot:canvas');
-		
+
 		// check to see if all monitors inited, if they have been, the fetch all win
 		var allWinInited = true;
 		var l = colMon.length;
@@ -667,6 +667,9 @@ var EditorFuncs = {
 			// 		}
 			// 	}
 			// }
+			if (core.os.mname == 'winnt') {
+				reRaiseCanvasWins(); // ensures its risen
+			}
 			var promise_fetchWin = ScreenshotWorker.post('getAllWin', [{
 				getPid: true,
 				getBounds: true,
@@ -677,13 +680,13 @@ var EditorFuncs = {
 				function(aVal) {
 					console.log('Fullfilled - promise_fetchWin - ', aVal);
 					// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
-					
+
 					// build hwndPtrStr arr for nativeshot_canvas windows
 					var hwndPtrStrArr = [];
 					for (var i=0; i<colMon.length; i++) {
 						hwndPtrStrArr.push(colMon[i].hwndPtrStr);
 					}
-					
+
 					// remove nativeshot_canvas windows
 					for (var i=0; i<aVal.length; i++) {
 						if (aVal[i].title == 'nativeshot_canvas' || hwndPtrStrArr.indexOf(aVal[i].hwndPtrStr) > -1) {
@@ -696,7 +699,7 @@ var EditorFuncs = {
 							// i--;
 						}
 					}
-					
+
 					for (var i=0; i<colMon.length; i++) {
 						colMon[i].E.DOMWindow.postMessage({
 							topic: 'receiveWinArr',
@@ -712,10 +715,10 @@ var EditorFuncs = {
 
 function reRaiseCanvasWins() {
 	// goes through colMon and raises them again, useful really only for Linux
-	
+
 	var aArrHwndPtr = [];
 	var aArrHwndPtrOsParams = {};
-	
+
 	var l = colMon.length;
 	for (var i=0; i<l; i++) {
 		var hwndPtrStr = colMon[i].hwndPtrStr;
@@ -734,11 +737,11 @@ function reRaiseCanvasWins() {
 	var promise_reTop = ScreenshotWorker.post('gtkRaiseWindow', [aArrHwndPtr]);
 	promise_reTop.then(
 		function(aVal) {
-			console.log('Fullfilled - promise_reTop - ', aVal);			
+			console.log('Fullfilled - promise_reTop - ', aVal);
 		},
 		genericReject.bind(null, 'promise_reTop', 0)
 	).catch(genericCatch.bind(null, 'promise_reTop', 0));
-	
+
 }
 
 function nscomm(aEvent) {
@@ -754,7 +757,7 @@ function nscomm(aEvent) {
 	*/
 
 	var aData = aEvent.detail;
-	
+
 	var requiredKeys = ['topic', 'iMon'];
 	for (var i=0; i<requiredKeys.length; i++) {
 		if (!(requiredKeys[i] in aData)) {
@@ -762,7 +765,7 @@ function nscomm(aEvent) {
 			throw new Error('missing required keys in nativeshot-editor-request aData arg');
 		}
 	}
-	
+
 	if (!(aData.topic in EditorFuncs)) {
 		console.error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
 		throw new Error('aData.topic of "' + aData.topic + '" is not in EditorFuncs');
@@ -795,7 +798,7 @@ function initAndRegisterAbout() {
 			} else {
 				redirUrl = core.addon.path.content + 'app/main.xhtml';
 			}
-			
+
 			var channel;
 			if (Services.vc.compare(core.firefox.version, '47.*') > 0) {
 				var redirURI = Services.io.newURI(redirUrl, null, null);
@@ -804,14 +807,14 @@ function initAndRegisterAbout() {
 				channel = Services.io.newChannel(redirUrl, null, null);
 			}
 			channel.originalURI = aURI;
-			
+
 			return channel;
 		}
 	});
-	
+
 	// register it
 	aboutFactory_instance = new AboutFactory(AboutPage);
-	
+
 	console.log('aboutFactory_instance:', aboutFactory_instance);
 }
 
@@ -833,7 +836,7 @@ function AboutFactory(component) {
 }
 // end - about module
 
-// START - Addon Functionalities					
+// START - Addon Functionalities
 // global editor values
 var colMon; // rename of collMonInfos
 /* holds
@@ -870,52 +873,52 @@ const fsComServer = {
 				switch (aMsg.json.aTopic) {
 					/* // i dont need this because the sendMessage is sync event though sendAsync, so if i do load and do sendAsync message it will get that message
 					case 'clientRequest_clientBorn':
-							
-							
-							
+
+
+
 						break;
 					*/
 					case 'clientNotify_twitterNotSignedIn':
-							
+
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							for (var imgId in refUAPEntry.imgDatas) {
 								refUAPEntry.imgDatas[imgId].attachedToTweet = false;
 							}
 							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
-							
+
 							// NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Not Signed In - Focus this tab and sign in, or sign into Twitter in another tab then reload this tab', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
 							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-not-signed-in']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'focus-tab'); // :todo: framescript should open the login box, and on succesfull login it should notify all other tabs that were waiting for login, that login happend and they should reload. but if user logs into a non watched twitter tab, then i wont get that automated message
-							
-							
+
+
 						break;
 					case 'clientNotify_tweetClosedWithoutSubmit':
-							
+
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							for (var imgId in refUAPEntry.imgDatas) {
 								refUAPEntry.imgDatas[imgId].attachedToTweet = false;
 							}
 							// set button to reopen tweet with attachments, which should just do fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached()
-							
+
 							// NBs_updateGlobal_updateTwitterBtn(refUAPEntry, 'Tweet Dialog Closed - Twitter auto detached imgs - Click to reopen/reattach', 'nativeshot-twitter-bad', 'reopen-tweet-modal')
 							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-dialog-closed']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'reopen-tweet-modal');
-							
+
 						break;
 					case 'clientNotify_signedInShowAwaitingMsg':
-							
+
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							NBs_updateGlobal_updateTwitterBtn(refUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
-							
+
 						break;
 					case 'clientNotify_imgDeleted':
-							
+
 							// :todo: not yet set up as of sept 19 2015
 							// when user clicks the x button from the tweet dialog
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							delete refUAPEntry.imgDatas[aMsg.json.imgId];
-							
+
 						break;
 					case 'clientNotify_clientUnregistered':
-					
+
 
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
 							switch (aMsg.json.unregReason) {
@@ -923,57 +926,57 @@ const fsComServer = {
 								case 'non-twitter-load':
 								case 'tab-closed':
 								case 'twitter-page-unloaded':
-								
+
 										// note that none of the images were attached
 										for (var imgId in refUAPEntry.imgDatas) {
 											refUAPEntry.imgDatas[imgId].attachedToTweet = false;
 										}
-										
+
 										switch (aMsg.json.unregReason) {
 											case 'error-loading':
-													
+
 													// aMsg = 'Error loading Twitter - You may be offline - Click to open new tab and try again';
 													aMsg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-error-loading']);
-													
+
 												break;
 											case 'non-twitter-load':
 											case 'twitter-page-unloaded':
-													
+
 													// aMsg = 'Navigated away from Twitter.com - Click to open new tab with Twitter';
 													aMsg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-twitter-unloaded']);
-													
+
 												break;
 											case 'tab-closed':
-													
+
 													// aMsg = 'Tab Closed - Click to reopen';
 													aMsg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-but-tab-closed']);
-													
+
 												break;
 											default:
 												throw new Error('unrecongized uregReason in sub block - should never get here');
 										}
-										
+
 										NBs_updateGlobal_updateTwitterBtn(refUAPEntry, aMsg + ' (' + Object.keys(refUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-bad', 'open-new-tab');
 
-										
+
 									break;
 								case 'tweet-success':
-										
+
 										refUAPEntry.tweeted = true;
-										
-										// set urls to userAckId so can offer clipboard										
+
+										// set urls to userAckId so can offer clipboard
 										var other_info = aMsg.json.clips.other_info;
 										delete aMsg.json.clips.other_info;
-										
-										refUAPEntry.tweetURL = TWITTER_URL + other_info.permlink.substr(1); // because permlink is preceded by slash
-										
 
-										
+										refUAPEntry.tweetURL = TWITTER_URL + other_info.permlink.substr(1); // because permlink is preceded by slash
+
+
+
 										for (var imgId in refUAPEntry.imgDatas) {
 											delete refUAPEntry.imgDatas[imgId].dataURL;
 											refUAPEntry.imgDatas[imgId].uploadedURL = aMsg.json.clips[imgId];
 										}
-										
+
 										var crossWinId = refUAPEntry.gEditorSessionId + '-twitter';
 										var aBtnInfos = NBs.crossWin[crossWinId].btns;
 										var aBtnInfo;
@@ -992,12 +995,12 @@ const fsComServer = {
 											// NBs.crossWin[crossWinId].msg = 'All images were succesfully tweeted!'; //:l10n:
 											NBs.crossWin[crossWinId].msg = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-msg-imgs-tweeted']);
 										}
-										
+
 										if (!aBtnInfo) {
 
 											throw new Error('this should never happen');
 										}
-										
+
 										// no need to delete aBtnInfo.actionOnBtn as its not type menu so it wont have any affect
 										aBtnInfo.tweeted = true;
 										// aBtnInfo.label = 'Successfully Tweeted - Image URLs Copied';
@@ -1015,15 +1018,15 @@ const fsComServer = {
 											// aBtnInfo.popup.push(['xul:menuitem', {label:'Image ' + arrOfImgUrls.length + ' URL', oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId], null)}]); // :l10n:
 											aBtnInfo.popup.push(['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-menu-copy-single-image-link'], [arrOfImgUrls.length]), oncommand:copyTextToClip.bind(null, aMsg.json.clips[imgId] + TWITTER_IMG_SUFFIX, null)}]);
 										}
-										
+
 										if (arrOfImgUrls.length > 1) {
 											// aBtnInfo.popup.push(['xul:menuitem', {label:'All ' + arrOfImgUrls.length + ' Image URLs', oncommand:copyTextToClip.bind(null, arrOfImgUrls.join('\n'), null)}]); // :l10n:
 											aBtnInfo.popup.push(['xul:menuitem', {label:justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-menu-copy-all-image-links'], [arrOfImgUrls.length]), oncommand:copyTextToClip.bind(null, arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX, null)}]);
 										}
-										
+
 										// copy all img urls to clipboard:
 										copyTextToClip(arrOfImgUrls.join(TWITTER_IMG_SUFFIX + '\n') + TWITTER_IMG_SUFFIX);
-										
+
 										// get those uploaded urls
 										// add in update to log file
 										for (var i=0; i<arrOfImgUrls.length; i++) {
@@ -1034,7 +1037,7 @@ const fsComServer = {
 												l: arrOfImgUrls[i]
 											});
 										}
-										
+
 										NBs.updateGlobal(crossWinId, {
 											lbl:1, // in case it was updated
 											btns:{
@@ -1044,13 +1047,13 @@ const fsComServer = {
 												type: [refUAPEntry.userAckId]
 											}
 										});
-										
+
 									break;
 								case 'server-command':
 								default:
 									// nothing special
 							}
-							
+
 							/*
 							// check if the currently unregistering fs was succesfully tweeted and update notif bar accordingly
 							if (aMsg.json.gTweeted) {
@@ -1065,7 +1068,7 @@ const fsComServer = {
 								refUAPEntry.actionOnBtn = 'open-tab';
 							}
 							*/
-							
+
 							// check if any other twitter fs are active (meaning a succesful tweet is pending), if none found remove the twitterClientMessageListener
 							var refUAP = userAckPending;
 							var untweetedUAPFound = false;
@@ -1079,39 +1082,39 @@ const fsComServer = {
 							}
 							if (!untweetedUAPFound) {
 								fsComServer.twitterListenerRegistered = false;
-								myServices.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener);
+								Services.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener);
 
 							}
-							
+
 						break;
 					case 'clientNotify_FSReadyToAttach':
-							
+
 							// notification that the FS with this UAP is ready to accept another image
 							var refUAPEntry = getUAPEntry_byUserAckId(aMsg.json.userAckId);
-							
+
 							// check if something was attached by this notification, and mark it so
 							if ('justAttachedImgId' in aMsg.json) {
 								refUAPEntry.imgDatas[aMsg.json.justAttachedImgId].attachedToTweet = true;
 							}
-							
+
 							refUAPEntry.FSReadyToAttach = true; // short for frameScript_isReadyToAttachAnother, basically ready to accept another send
 
-							
+
 							fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(aMsg.json.userAckId);
-							
+
 						break;
 					case 'clientResponse_imgAttached':
-							
-							
-							
+
+
+
 						break;
 					case 'clientRequest_clientShutdownComplete':
-							
-							
-							
+
+
+
 						break;
 					// start - devuser edit - add your personal message topics to listen to from clients
-						
+
 					// end - devuser edit - add your personal message topics to listen to from clients
 					default:
 
@@ -1222,20 +1225,20 @@ function gEditorABData_setBtnState(aNewState) { // is binded to gEditorABData_Bt
 	for (var p in aNewState) {
 		this.BtnRef[p] = aNewState[p];
 	}
-	
+
 	// go through and find any bClick and replace it with the callback
 	replaceClickNameWithClickCallback(this.BtnRef, this);
-	
+
 	// go through the menu items to see if any of them have a cClick
 	if (this.BtnRef.bMenu) {
 		iterMenuForNameToCbs(this.BtnRef.bMenu, this);
 	}
-	
+
 	if (gEditorABData_Bar[this.sessionId].shown) {
 		AB.setState(gEditorABData_Bar[this.sessionId].ABRef);
 	}
 	else { console.error('bar not yet shown') }
-	
+
 	// return gEditorABData_Btn[gEditorABData_BtnId];
 }
 
@@ -1258,7 +1261,7 @@ function replaceClickNameWithClickCallback(aObjEntryForRep, a_gEditorABData_BtnE
 		console.error('this should never ever happen, typeof is:', typeof(aObjEntryForRep[keyClick]));
 		return;
 	}
-	
+
 	var keyClickName = aObjEntryForRep[keyClick];
 	var gEditorABData_BtnENTRY = this;
 	aObjEntryForRep[keyClick] = function(sentByABAPI_doClose, sentByABAPI_browser) { gEditorABClickCallbacks_Btn[keyClickName].bind(this, a_gEditorABData_BtnENTRY, sentByABAPI_doClose, sentByABAPI_browser)() };
@@ -1266,7 +1269,7 @@ function replaceClickNameWithClickCallback(aObjEntryForRep, a_gEditorABData_BtnE
 
 function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.sessionId]
 	// returns gEditorABData_Btn object for the added btn
-	
+
 	var cSessionId = this.sessionId;
 	gEditorABData_BtnId++;
 	gEditorABData_Btn[gEditorABData_BtnId] = { // link11114
@@ -1282,23 +1285,23 @@ function gEditorABData_addBtn() { // is binded to gEditorABData_Bar[this.session
 	this.ABRef.aBtns.push(gEditorABData_Btn[gEditorABData_BtnId].BtnRef);
 	this.btnIds.push(gEditorABData_BtnId);
 	gEditorABData_Btn[gEditorABData_BtnId].setBtnState = gEditorABData_setBtnState.bind(gEditorABData_Btn[gEditorABData_BtnId]);
-	
+
 	return gEditorABData_Btn[gEditorABData_BtnId];
 }
 
 function retryForBtnId(aBtnId, aServiceName) {
 	// aServiceName is optional, if it is not provided it uses cBtnStore.meta.service
-	
+
 	var cBtnStore = gEditorABData_Btn[aBtnId];
-	
+
 	aServiceName = aServiceName ? aServiceName : cBtnStore.meta.service;
 	if (!aServiceName) {
 		// then this means cBtnStore.meta.service is undefined, this is a huge error
 		console.error('should never happen deverror - then this means cBtnStore.meta.service is undefined, this is a huge error');
 		throw new Error('should never happen')
 	}
-	
-	
+
+
 	cBtnStore.setBtnState({
 		bTxt: 'Waiting...', // :l10n:
 		bType: 'button',
@@ -1357,12 +1360,12 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		gEditorABData_BtnENTRY.autoretryAborting = true; // set to true, and while true any updates via updateAttnBar are ignored
 		var promise_abortAutoretry = MainWorker.post('abortAutoretryForBtnId', [gEditorABData_BtnENTRY.btnId]); // abort a autoretry in case one was in progress
 		promise_abortAutoretry.then(function() {
-			
+
 			delete gEditorABData_BtnENTRY.autoretryAborting;
-			
+
 			// uses menudata if it is present, else it uses meta.action
 			retryForBtnId(gEditorABData_BtnENTRY.btnId, (this.menuitem ? this.menuitem.menudata : undefined)); // if menudata is undefined, retryForBtnId uses cBtnStore.meta.action so retries itself
-			
+
 		});
 	},
 	focus_tab: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
@@ -1414,23 +1417,23 @@ var gEditor = {
 	cleanUp: function() {
 		// reset all globals
 
-		
+
 		colMon = null;
 
 		gEditor.gBrowserDOMWindow = null;
-				
+
 		gEditor.sessionId = null;
-		
+
 		gEditor.printPrevWins = null;
 		gEditor.forceFocus = null;
 	},
 	shareToTwitter: function(aDataUrl) {
 		// opens new tab, loads twitter, and attaches up to 4 images, after 4 imgs it makes a new tab, tabs are then focused, so user can type tweet, tag photos, then click Tweet
-		
+
 		// this.compositeSelection();
-		
+
 		var refUAP = userAckPending;
-		
+
 		//var refUAPEntry = getUAPEntry_byGEditorSessionId(this.sessionId);
 
 		var refUAPEntry;
@@ -1440,14 +1443,14 @@ var gEditor = {
 				refUAPEntry = refUAP[i];
 			}
 		}
-		
+
 		var cImgDataUri = aDataUrl;
-		
+
 		var crossWinId = gEditor.sessionId + '-twitter'; // note: make every crossWinId start with gEditor.sessionId
-		
+
 		if (!refUAPEntry) {
 			if (!fsComServer.twitterListenerRegistered) {
-				myServices.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
+				Services.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
 				fsComServer.twitterListenerRegistered = true;
 			}
 			var newtab = gEditor.gBrowserDOMWindow.gBrowser.loadOneTab(TWITTER_URL, {
@@ -1469,7 +1472,7 @@ var gEditor = {
 						open-new-tab: opens new tab, loads twitter, and starts the attaching process
 					*/
 			}) - 1];
-			
+
 			fsComServer.twitterInitFS(refUAPEntry.userAckId);
 			if (crossWinId in NBs.crossWin) {
 				NBs.crossWin[crossWinId].btns.push({
@@ -1511,9 +1514,9 @@ var gEditor = {
 				btnEntryInCrossWin.label = justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + (refUAPEntry.imgDatasCount + 1) + ')' + '-ID:' + refUAPEntry.userAckId;
 			}
 		}
-		
-		// twitter allows maximum 4 attachment, so if 
-		
+
+		// twitter allows maximum 4 attachment, so if
+
 		refUAPEntry.imgDatas[refUAPEntry.imgDatasCount] = {
 			dataURL: cImgDataUri,
 			attachedToTweet: false,
@@ -1521,29 +1524,29 @@ var gEditor = {
 		};
 		refUAPEntry.imgDatasCount++;
 		// refUAPEntry.imgDataUris.push(cImgDataUri);
-		
+
 		fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(refUAPEntry.userAckId);
-		
+
 		gEditor.forceFocus = true; // as user needs browser focus so they can tweet it
 		// this.closeOutEditor(e);
 	},
 	uploadOauthDataUrl: function(aOAuthService, aDataUrl) {
 		// print
 		// copy
-		
+
 		// this.compositeSelection();
-		
+
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
-		
+
 		var cBtn = createNewBtnStore(cSessionId, aOAuthService);
-		
+
 		cBtn.data.dataurl = aDataUrl; // this.canComp.toDataURL('image/png', '');
 
 		// gEditor.closeOutEditor(e); // noit 042616 to restore this as needed
-		
+
 		addEntryToLog(aOAuthService);
-		
+
 		doServiceForBtnId(cBtn.btnId, aOAuthService);
 	},
 	uploadOauth: function(aOAuthService, aArrBuf, aWidth, aHeight) {
@@ -1553,22 +1556,22 @@ var gEditor = {
 			// imgur
 			// imguranon
 			// etc see link64098756794556
-			
+
 		// gEditor.closeOutEditor(e); // noit 042616 i have to bring this back as i need it for twitter // as i cant close out yet as i need this.canComp see line above this one: `(this.canComp.toBlobHD || this.canComp.toBlob).call(this.canComp, function(b) {`
-		
+
 		var cDOMWindow = gEditor.gBrowserDOMWindow;
 		var cSessionId = gEditor.sessionId; // sessionId is time of screenshot
-		
+
 		var storeServiceAs = aOAuthService;
 		if (storeServiceAs == 'save-browse-canvas') {
 			storeServiceAs = 'save-browse';
-		} 
+		}
 		var cBtn = createNewBtnStore(cSessionId, storeServiceAs);
-		
+
 		cBtn.data.arrbuf = aArrBuf; // link947444544
 		cBtn.data.width = aWidth;
 		cBtn.data.height = aHeight;
-				
+
 		doServiceForBtnId(cBtn.btnId, aOAuthService);
 
 	}
@@ -1591,9 +1594,9 @@ function createNewBtnStore(aSessionId, aService) {
 function doServiceForBtnId(aBtnId, aOAuthService) {
 	// must have arrbuf or appropriate data in button data store object
 		// if not provided, the service is calculated and set in the meta data
-	
+
 	var cBtnStore = gEditorABData_Btn[aBtnId];
-	
+
 	var cMethodForService;
 	// var saveBrowseCanvas;
 	// if (aOAuthService == 'save-browse-canvas') {
@@ -1606,48 +1609,48 @@ function doServiceForBtnId(aBtnId, aOAuthService) {
 		case 'imgur':
 		case 'gdrive':
 		case 'imguranon':
-			
+
 				cMethodForService = 'uploadImgArrBufForBtnId';
-			
+
 			break;
 		case 'save-quick':
 		case 'save-browse':
 		case 'save-browse-canvas':
-			
+
 				cMethodForService = 'saveToDiskImgArrBufForBtnId';
-			
+
 			break;
 		case 'tineye':
 		case 'google-images':
 		// case 'bingimages':
-			
+
 				cMethodForService = 'reverseSearchImgArrBufForBtnId';
-			
+
 			break;
 		case 'copy':
-			
+
 				cMethodForService = 'bootstrap_copyForBtnId';
-			
+
 			break;
 		case 'print':
-			
+
 				cMethodForService = 'bootstrap_printForBtnId';
-			
+
 			break;
 		case 'ocrall':
 		case 'tesseract':
 		case 'gocr':
 		case 'ocrad':
-			
+
 				cMethodForService = 'bootstrap_ocrForBtnId';
-			
+
 			break;
 		default:
 			console.error('invalid aOAuthService:', aOAuthService);
 			throw new Error('invalid aOAuthService!!');
 	}
 	cBtnStore.meta.action = cMethodForService;
-	
+
 	if (cMethodForService.indexOf('bootstrap_') === 0) {
 		BOOTSTRAP[cMethodForService.substr(10)](cBtnStore.btnId);
 	} else {
@@ -1694,8 +1697,8 @@ function printForBtnId(aBtnId) {
 		iframe.setAttribute('style', 'display:none');
 		doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 	} else {
-		
-		
+
+
 		/*
 		var aPrintPrevWin;
 		// open print preview window on monitor with coords 0,0 wxh 10x10
@@ -1728,7 +1731,7 @@ function printForBtnId(aBtnId) {
 				iframe.removeEventListener('load', arguments.callee, true);
 
 
-				
+
 				var aPPListener = win.PrintPreviewListener;
 				var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
 				var aOrigPPExit = aPPListener.onExit;
@@ -1743,18 +1746,18 @@ function printForBtnId(aBtnId) {
 					return iframe;
 				};
 				win.PrintUtils.printPreview(aPPListener);
-				
+
 			}, true); // if i use false here it doesnt work
 			iframe.setAttribute('type', 'content');
 			iframe.setAttribute('src', cBtnStore.data.dataurl);
 			iframe.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
 			doc.documentElement.appendChild(iframe); // src page wont load until i append to document
 			// end old stuff
-			
-			
+
+
 		}, false);
 	}
-	
+
 	cBtnStore.setBtnState({
 		bTxt: 'Sent to Print - Send Again', // :l10n:
 		bType: 'button',
@@ -1766,7 +1769,7 @@ function printForBtnId(aBtnId) {
 function ocrForBtnId(aBtnId) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
 	var data = cBtnStore.data;
-	
+
 	// cBtnStore.meta.service valid values
 	//	gocr
 	//	ocrad
@@ -1814,7 +1817,7 @@ function ocrForBtnId(aBtnId) {
 		promiseAllArr_ocr.push(serviceTypeFunc[cBtnStore.meta.service]());
 		allArr_serviceTypeStr.push(cBtnStore.meta.service);
 	}
-	
+
 	var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
 	promiseAll_ocr.then(
 		function(aTxtArr) {
@@ -1828,14 +1831,14 @@ function ocrForBtnId(aBtnId) {
 				bType: 'button',
 				bClick: 'showOcrResults'
 			});
-			
+
 			if (ifEditorClosed_andBarHasOnlyOneAction_copyToClip(cBtnStore.sessionId)) {
 				gEditorABClickCallbacks_Btn.showOcrResults(cBtnStore, null, Services.wm.getMostRecentWindow('navigator:browser').gBrowser.selectedBrowser);
 			}
 		},
 		genericReject.bind(null, 'promiseAll_ocr', 0)
 	).catch(genericCatch.bind(null, 'promiseAll_ocr', 0));
-	
+
 	if (cBtnStore.meta.service != 'ocrall') {
 		// addEntryToLog(cBtnStore.meta.service);
 		forBtnIdAndService_addEntryToLog(aBtnId, cBtnStore.meta.service)
@@ -1856,28 +1859,28 @@ function forBtnIdAndService_addEntryToLog(aBtnId, aServiceName) {
 
 function copyForBtnId(aBtnId) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
-	
+
 	// var data = cBtnStore.data.dataurl;
 	CLIPBOARD.set(cBtnStore.data.dataurl, 'image');
-	
+
 	/* to consider and test
 		// have to first set imageURL = createBlob
-	  
-	   // Also put the image's html <img> tag on the clipboard.  This is 
+
+	   // Also put the image's html <img> tag on the clipboard.  This is
 	   // important (at least on OSX): if we copy just jpg image data,
 	   // programs like Photoshop and Thunderbird seem to receive it as
 	   // uncompressed png data, which is very large, bloating emails and
 	   // causing randomly truncated data.  But if we also include a
-	   // text/html flavor referring to the jpg image on the Internet, 
+	   // text/html flavor referring to the jpg image on the Internet,
 	   // those programs retrieve the image directly as the original jpg
 	   // data, so there is no data bloat.
-	  
+
 	  var str = Components.classes['@mozilla.org/supports-string;1'].createInstance(Ci.nsISupportsString);
 	  if (str) {
 		str.data = '<img src="' + imageURL + '" />';
 		trans.addDataFlavor('text/html');
 		trans.setTransferData('text/html', str, str.data.length * 2);
-	  }    
+	  }
 	*/
 	cBtnStore.setBtnState({
 		bTxt: 'Image Copied - Copy Again', // :l10n:
@@ -1889,7 +1892,7 @@ function copyForBtnId(aBtnId) {
 
 function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPostDataObj) {
 	var cBtnStore = gEditorABData_Btn[aBtnId];
-	
+
 	var ansifileFieldFound = false;
 	for (var aPostKey in aPostDataObj) {
 		if (aPostDataObj[aPostKey] == '{{ansifile}}') {
@@ -1898,15 +1901,15 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 			break;
 		}
 	}
-	
+
 	if (!ansifileFieldFound) { console.error('deverror, must have a field in aPostDataObj in where to place the nsi file, this field must be a string when sent from worker and should be {{ansifile}}'); throw new Error('deverror, must have a field in aPostDataObj in where to place the nsi file, this field must be a string when sent from worker and should be {{ansifile}}'); }
 	console.log('aPostDataObj:', aPostDataObj);
-	
+
 	var tab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(aServiceSearchUrl, {
 		inBackground: false,
 		postData: encodeFormData(aPostDataObj, 'iso8859-1')
 	});
-	
+
 	cBtnStore.data.tabWk = Cu.getWeakReference(tab);
 
 	var retryMenu = [
@@ -1915,7 +1918,7 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 			cClick: 'retry'
 		}
 	];
-	
+
 	if (cBtnStore.meta.service != 'tineye') {
 		retryMenu.push({
 			cTxt: 'Retry with Tineye',
@@ -1937,19 +1940,19 @@ function reverseSearchImgPlatPath(aBtnId, aServiceSearchUrl, aPlatPathToImg, aPo
 			// menudata: 'bingimages'
 		// });
 	// }
-	
+
 	MainWorkerMainThreadFuncs.updateAttnBar(aBtnId, {
 		bTxt: 'Focus Tab', // :l10n:
 		bClick: 'focus_tab',
 		bType: 'menu-button',
 		bMenu: retryMenu
 	});
-	
+
 	ifEditorClosed_andBarHasOnlyOneAction_copyToClip(cBtnStore.sessionId);
 }
 
 function gEUnload() {
-	
+
 	// as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
 	if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
 		console.log('need to show notif bar now');
@@ -1961,7 +1964,7 @@ function gEUnload() {
 		console.log('no need to show, delete it');
 		delete gEditorABData_Bar[gEditor.sessionId];
 	}
-	
+
 	// check if need to show twitter notification bars
 	for (var p in NBs.crossWin) {
 		if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
@@ -1977,22 +1980,22 @@ function gEUnload() {
 		}
 	}
 	// colMon[0].E.DOMWindow.close();
-	
+
 	gEditor.cleanUp();
 }
 // end - canvas functions to act across all canvases
 
 
 function shootAllMons(aDOMWindow) {
-	
+
 	gEditor.gBrowserDOMWindow = aDOMWindow;
 	gESelected = false;
-	
+
 	var allMonDim = []; // pushed in order of iMon
-	
+
 	var openWindowOnEachMon = function() {
 		gEditor.sessionId = new Date().getTime(); // in other words, this is time of screenshot of this session
-		
+
 		// notification bar stuff
 		var cSessionId = gEditor.sessionId;
 		gEditorABData_Bar[gEditor.sessionId] = { // link8888776
@@ -2023,12 +2026,12 @@ function shootAllMons(aDOMWindow) {
 		};
 		gEditorABData_Bar[gEditor.sessionId].addBtn = gEditorABData_addBtn.bind(gEditorABData_Bar[gEditor.sessionId]) // link44444455
 		// end notification bar stuff
-		
+
 		gEditor.wasFirefoxWinFocused = isFocused(aDOMWindow);
 
 		var allMonDimStr = JSON.stringify(allMonDim);
 
-		
+
 		for (var i=0; i<colMon.length; i++) {
 			// var sa = Cc['@mozilla.org/supports-array;1'].createInstance(Ci.nsISupportsArray);
 			// var sa_imon = Cc['@mozilla.org/supports-PRUint8;1'].createInstance(Ci.nsISupportsPRUint8);
@@ -2040,7 +2043,7 @@ function shootAllMons(aDOMWindow) {
 			var y = colMon[i].y;
 			var w = colMon[i].w;
 			var h = colMon[i].h;
-			
+
 			var scaleX = colMon[i].win81ScaleX;
 			var scaleY = colMon[i].win81ScaleY;
 			// on win10, the x, y, w and h set here needs scaling, its ridiculous. but from ctypes it doesnt need scaling. so i just set the sclaed here, and whatever was off, then its fixed, the ctypes doesnt need scaling. i tested the ctypes with height width minus 1 and it was perfect ah
@@ -2064,16 +2067,16 @@ function shootAllMons(aDOMWindow) {
 			aEditorDOMWindow.addEventListener('nscomm', nscomm, false);
 		}
 	};
-	
+
 	var promise_shoot = ScreenshotWorker.post('shootAllMons', []);
 	promise_shoot.then(
 		function(aVal) {
 
 			// start - do stuff here - promise_shoot
 			colMon = aVal;
-			
+
 			console.log('colMon from worker:', colMon);
-			
+
 			for (var i=0; i<colMon.length; i++) {
 				allMonDim.push({
 					x: colMon[i].x,
@@ -2084,11 +2087,11 @@ function shootAllMons(aDOMWindow) {
 					// win81ScaleY: colMon[i].win81ScaleY
 				});
 			}
-			
+
 			if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 				gPostPrintRemovalFunc();
 			}
-			
+
 			openWindowOnEachMon();
 			// end - do stuff here - promise_shoot
 		},
@@ -2111,9 +2114,9 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 
 	switch (aUAPEntry.actionOnBtn) {
 		case 'show-clips-popup':
-			
 
-			
+
+
 			break;
 		case 'open-new-tab':
 
@@ -2121,7 +2124,7 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
 				if (!fsComServer.twitterListenerRegistered) {
-					myServices.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
+					Services.mm.addMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener, true);
 					fsComServer.twitterListenerRegistered = true;
 				}
 				var newtab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(TWITTER_URL, {
@@ -2132,11 +2135,11 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 				aUAPEntry.tab = Cu.getWeakReference(newtab);
 				aUAPEntry.tweeted = false; // synonomous with fsActive = false
 				fsComServer.twitterInitFS(aUAPEntry.userAckId);
-			
+
 			break;
 
 		case 'reopen-tweet-modal':
-			
+
 				// NBs_updateGlobal_updateTwitterBtn(aUAPEntry, 'Waiting to for progrmattic attach', 'nativeshot-twitter-neutral', 'focus-tab'); // not showing for right now, i think too much info
 
 				NBs_updateGlobal_updateTwitterBtn(aUAPEntry, justFormatStringFromName(core.addon.l10n.bootstrap['notif-bar_twitter-btn-imgs-awaiting-user-tweet']) + ' (' + Object.keys(aUAPEntry.imgDatas).length + ')', 'nativeshot-twitter-neutral', 'focus-tab');
@@ -2146,17 +2149,17 @@ function twitterNotifBtnCB(aUAPEntry, aElNotification, aObjBtnInfo) {
 				tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get(); // focus tab
 				fsComServer.twitter_focusContentWindow(aUAPEntry.userAckId); // focus content window
 				fsComServer.twitter_IfFSReadyToAttach_sendNextUnattached(aUAPEntry.userAckId);
-			
+
 			break;
 		case 'focus-tab':
 		default:
-			
+
 
 				var tab = aUAPEntry.tab.get();
 				tab.ownerDocument.defaultView.focus(); // focus browser window
 				tab.ownerDocument.defaultView.gBrowser.selectedTab = aUAPEntry.tab.get(); // focus tab
 	}
-	
+
 	throw new Error('throw to preventing close of this notif-bar');
 }
 
@@ -2193,7 +2196,7 @@ var NBs = { // short for "notification bars"
 			// lbl - any
 			// p - any
 			// btns - {removed:[btn_ids],label:[btn_ids],class:[btn_ids],type:[btn_ids],popup:[btn_ids]} // not yet supported added:[btn_ids]
-		
+
 		var cCrossWin = NBs.crossWin[aGroupId];
 		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
 		while (DOMWindows.hasMoreElements()) {
@@ -2224,7 +2227,7 @@ var NBs = { // short for "notification bars"
 					}
 					allBtnsQ = null;
 
-					
+
 					var allBtnsInfo = {};
 					for (var i=0; i<cCrossWin.btns.length; i++) {
 						var cBtnInfo = cCrossWin.btns[i];
@@ -2234,7 +2237,7 @@ var NBs = { // short for "notification bars"
 						}
 					}
 
-					
+
 					if (aHints.btns.removed) {
 						for (var i=0; i<aHints.btns.removed.length; i++) {
 							allBtnsEl[aHints.btns.removed[i]].parentNode.removeChild(btn);
@@ -2278,13 +2281,13 @@ var NBs = { // short for "notification bars"
 
 			}
 		}
-	
+
 		// to update, i close the notif and reopen it
 	},
 	closeGlobal: function(aGroupId) {
-		
+
 		delete NBs.crossWin[aGroupId];
-		
+
 		var DOMWindows = Services.wm.getEnumerator('navigator:browser');
 		while (DOMWindows.hasMoreElements()) {
 			var aDOMWindow = DOMWindows.getNext();
@@ -2312,9 +2315,9 @@ var NBs = { // short for "notification bars"
 			return;
 		};
 		var aDOMDocument = aDOMWindow.document;
-		
-		var cCrossWin = NBs.crossWin[aGroupId];	
-		
+
+		var cCrossWin = NBs.crossWin[aGroupId];
+
 		var deck = aDOMDocument.getElementById('content-deck');
 		var btmDeckBox = aDOMDocument.getElementById('nativeshotDeck' + aGroupId);
 
@@ -2335,7 +2338,7 @@ var NBs = { // short for "notification bars"
 		if (n) {
 
 		} else {
-			
+
 			var cNB;
 			var notifCallback = function(what) {
 
@@ -2351,7 +2354,7 @@ var NBs = { // short for "notification bars"
 					}
 				}
 			}
-			
+
 			// https://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/notification.xml#79
 			cNB = nb.appendNotification(
 				cCrossWin.msg,
@@ -2367,14 +2370,14 @@ var NBs = { // short for "notification bars"
 				var id_index = label_with_id.lastIndexOf('-ID:');
 				var btn_id = label_with_id.substr(id_index + '-ID:'.length);
 				var label = label_with_id.substr(0, id_index);
-				
 
 
-				
+
+
 				btns[i].setAttribute('label', label);
 				btns[i].setAttribute('data-btn-id', btn_id);
 				cCrossWin.afterOfficialInit_completedCustInit = true; // cust init is me takng the btn_id out of the label
-				
+
 				var btn_id_found_in_crossWinBtns = false;
 				for (var j=0; j<cCrossWin.btns.length; j++) {
 					if (cCrossWin.btns[j].btn_id == btn_id) {
@@ -2385,10 +2388,10 @@ var NBs = { // short for "notification bars"
 				if (!btn_id_found_in_crossWinBtns) {
 					throw new Error('btn_id in label post -ID: was not found in crossWinBtns because devuser made typo'); // should never happen devuser dont make typo
 				}
-				
+
 				var cClasses = btns[i].getAttribute('class');
 				btns[i].setAttribute('class', cClasses + ' custom_classes_divider ' + cCrossWin.btns[j].class);
-				
+
 				btns[i].label = label; // after item is appended it doesnt use the '-ID:' anymore so when update it, no need to add in the -ID: link64798787
 			}
 		}
@@ -2410,7 +2413,7 @@ var windowListener = {
 	onCloseWindow: function (aXULWindow) {},
 	onWindowTitleChange: function (aXULWindow, aNewTitle) {},
 	register: function () {
-		
+
 		// Load into any existing windows
 		let DOMWindows = Services.wm.getEnumerator(null);
 		while (DOMWindows.hasMoreElements()) {
@@ -2445,12 +2448,12 @@ var windowListener = {
 	//END - DO NOT EDIT HERE
 	loadIntoWindow: function (aDOMWindow) {
 		if (!aDOMWindow) { return }
-		
+
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + gCuiCssFilename, null, null), domWinUtils.AUTHOR_SHEET);
 			domWinUtils.loadSheet(Services.io.newURI(core.addon.path.styles + 'general.css', null, null), domWinUtils.AUTHOR_SHEET);
-			
+
 			for (aGroupId in NBs.crossWin) {
 				NBs.insertGlobalToWin(aGroupId, aDOMWindow);
 			}
@@ -2467,19 +2470,19 @@ var windowListener = {
 
 			}
 		}*/
-		
+
 		contextMenuSetup(aDOMWindow);
-		
+
 	},
 	unloadFromWindow: function (aDOMWindow) {
 		if (!aDOMWindow) { return }
-		
+
 		if (aDOMWindow.gBrowser) {
 			var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 			domWinUtils.removeSheet(Services.io.newURI(core.addon.path.styles + gCuiCssFilename, null, null), domWinUtils.AUTHOR_SHEET);
 			domWinUtils.removeSheet(Services.io.newURI(core.addon.path.styles + 'general.css', null, null), domWinUtils.AUTHOR_SHEET);
 		}
-		
+
 		contextMenuDestroy(aDOMWindow);
 	}
 };
@@ -2506,7 +2509,7 @@ var gDashboardMenuseperator_jsonTemplate = ['xul:menuseparator', {
 
 function contextMenuBootstrapStartup() {
 	// because i cant access myServices.sb until bootstrap startup triggers i have to set these in here
-	
+
 	gDashboardMenuitem_jsonTemplate[1].label = justFormatStringFromName(core.addon.l10n.bootstrap['dashboard-menuitem']); // link988888887 - needs to go before windowListener is registered
 	gDashboardMenuitem_jsonTemplate[1].onclick = `
 		(function() {
@@ -2521,37 +2524,37 @@ function contextMenuBootstrapStartup() {
 			var newNativeshotTab = gBrowser.loadOneTab(\'about:nativeshot\', {inBackground:false});
 		})();
 	`;
-	
+
 }
 
 function contextMenuHiding(e) {
 	// only triggered when it was shown due to right click on cui_nativeshot
 	console.log('context menu hiding');
-	
+
 	e.target.removeEventListener('popuphiding', contextMenuHiding, false);
-	
+
 	var cToolbarContextMenu_dashboardMenuitem = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix);
 	if (cToolbarContextMenu_dashboardMenuitem) {
 		var cToolbarContextMenu_dashboardSeperator = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix);
 		cToolbarContextMenu_dashboardMenuitem.setAttribute('hidden', 'true');
 		cToolbarContextMenu_dashboardSeperator.setAttribute('hidden', 'true');
 	}
-	
+
 	var cCustomizationPanelItemContextMenu_dashboardMenuitem = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix);
 	if (cCustomizationPanelItemContextMenu_dashboardMenuitem) {
-		var cCustomizationPanelItemContextMenu_dashboardSeperator = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);			
+		var cCustomizationPanelItemContextMenu_dashboardSeperator = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);
 		cCustomizationPanelItemContextMenu_dashboardMenuitem.setAttribute('hidden', 'true');
 		cCustomizationPanelItemContextMenu_dashboardMenuitem.setAttribute('hidden', 'true');
 	}
-	
+
 }
 
 function contextMenuShowing(e) {
 	console.log('context menu showing', 'popupNode:', e.target.ownerDocument.popupNode);
-	
+
 	var cPopupNode = e.target.ownerDocument.popupNode;
 	if (cPopupNode.getAttribute('id') == 'cui_nativeshot') {
-		
+
 		var cToolbarContextMenu_dashboardMenuitem = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix);
 		if (cToolbarContextMenu_dashboardMenuitem) {
 			var cToolbarContextMenu_dashboardSeperator = e.target.querySelector('#' + gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix);
@@ -2559,86 +2562,86 @@ function contextMenuShowing(e) {
 			cToolbarContextMenu_dashboardSeperator.removeAttribute('hidden');
 			e.target.addEventListener('popuphiding', contextMenuHiding, false);
 		}
-		
+
 		var cCustomizationPanelItemContextMenu_dashboardMenuitem = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix);
 		if (cCustomizationPanelItemContextMenu_dashboardMenuitem) {
-			var cCustomizationPanelItemContextMenu_dashboardSeperator = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);			
+			var cCustomizationPanelItemContextMenu_dashboardSeperator = e.target.querySelector('#' + gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);
 			cCustomizationPanelItemContextMenu_dashboardMenuitem.removeAttribute('hidden');
 			cCustomizationPanelItemContextMenu_dashboardSeperator.removeAttribute('hidden');
 			e.target.addEventListener('popuphiding', contextMenuHiding, false);
 		}
-		
+
 	}
 }
 
 function contextMenuSetup(aDOMWindow) {
 	// if this aDOMWindow has the context menus set it up
-		
-		
-		
+
+
+
 	var cToolbarContextMenu = aDOMWindow.document.getElementById(gToolbarContextMenu_domId);
 	if (cToolbarContextMenu) {
 		gDashboardMenuitem_jsonTemplate[1].id = gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix;
 		gDashboardMenuseperator_jsonTemplate[1].id = gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix;
-		
+
 		var cToolbarContextMenu_dashboardMenuitem = jsonToDOM(gDashboardMenuitem_jsonTemplate, aDOMWindow.document, {});
 		var cToolbarContextMenu_dashboardSeperator = jsonToDOM(gDashboardMenuseperator_jsonTemplate, aDOMWindow.document, {});
 
-			
+
 
 		cToolbarContextMenu.insertBefore(cToolbarContextMenu_dashboardSeperator, cToolbarContextMenu.firstChild);
 		cToolbarContextMenu.insertBefore(cToolbarContextMenu_dashboardMenuitem, cToolbarContextMenu.firstChild);
-		
+
 		cToolbarContextMenu.addEventListener('popupshowing', contextMenuShowing, false);
 	}
-	
+
 	var cCustomizationPanelItemContextMenu = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId);
 	if (cCustomizationPanelItemContextMenu) {
-		
+
 		gDashboardMenuitem_jsonTemplate[1].id = gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix;
 		gDashboardMenuseperator_jsonTemplate[1].id = gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix;
-		
+
 		var cCustomizationPanelItemContextMenu_dashboardMenuitem = jsonToDOM(gDashboardMenuitem_jsonTemplate, aDOMWindow.document, {});
 		var cCustomizationPanelItemContextMenu_dashboardSeperator = jsonToDOM(gDashboardMenuseperator_jsonTemplate, aDOMWindow.document, {});
 
-			
+
 
 		cCustomizationPanelItemContextMenu.insertBefore(cCustomizationPanelItemContextMenu_dashboardSeperator, cCustomizationPanelItemContextMenu.firstChild);
 		cCustomizationPanelItemContextMenu.insertBefore(cCustomizationPanelItemContextMenu_dashboardMenuitem, cCustomizationPanelItemContextMenu.firstChild);
-		
+
 		cCustomizationPanelItemContextMenu.addEventListener('popupshowing', contextMenuShowing, false);
 	}
-	
+
 	// console.log('ok good setup');
 }
 
 function contextMenuDestroy(aDOMWindow) {
 	// if this aDOMWindow has the context menus it removes it from it
-	
+
 	var cToolbarContextMenu = aDOMWindow.document.getElementById(gToolbarContextMenu_domId);
 	if (cToolbarContextMenu) {
 		var cToolbarContextMenu_dashboardMenuitem = aDOMWindow.document.getElementById(gToolbarContextMenu_domId + gDashboardMenuitem_domIdSuffix);
 		var cToolbarContextMenu_dashboardSeperator = aDOMWindow.document.getElementById(gToolbarContextMenu_domId + gDashboardSeperator_domIdSuffix);
-		
+
 		cToolbarContextMenu.removeChild(cToolbarContextMenu_dashboardMenuitem);
 		cToolbarContextMenu.removeChild(cToolbarContextMenu_dashboardSeperator);
-		
+
 		cToolbarContextMenu.removeEventListener('popupshowing', contextMenuShowing, false);
 	}
-	
-	var cCustomizationPanelItemContextMenu = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId);	
+
+	var cCustomizationPanelItemContextMenu = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId);
 	if (cCustomizationPanelItemContextMenu) {
 		var cCustomizationPanelItemContextMenu_dashboardMenuitem = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId + gDashboardMenuitem_domIdSuffix);
 		var cCustomizationPanelItemContextMenu_dashboardSeperator = aDOMWindow.document.getElementById(gCustomizationPanelItemContextMenu_domId + gDashboardSeperator_domIdSuffix);
-		
+
 		cCustomizationPanelItemContextMenu.removeChild(cCustomizationPanelItemContextMenu_dashboardMenuitem);
 		cCustomizationPanelItemContextMenu.removeChild(cCustomizationPanelItemContextMenu_dashboardSeperator);
-		
+
 		cCustomizationPanelItemContextMenu.removeEventListener('popupshowing', contextMenuShowing, false);
 	}
-	
+
 	// console.log('ok good destroyed');
-	
+
 }
 // end - context menu items
 
@@ -2719,7 +2722,7 @@ var AB = { // AB stands for attention bar
 	*/
 	setStateDestroy: function(aInstId) {
 		// destroys, and cleans up, this does not worry about callbacks. the nonDevUserSpecifiedCloseCb actually calls this
-		
+
 		// unmount from all windows dom && delete from all windows js
 		var doit = function(aDOMWindow) {
 			// start - copy block link77728110
@@ -2739,7 +2742,7 @@ var AB = { // AB stands for attention bar
 			}
 			// end - copy block link77728110
 		};
-		
+
 		var DOMWindows = Services.wm.getEnumerator(null);
 		while (DOMWindows.hasMoreElements()) {
 			var aDOMWindow = DOMWindows.getNext();
@@ -2752,12 +2755,12 @@ var AB = { // AB stands for attention bar
 				// // }, false);
 			//}
 		}
-		
+
 		// delete callbacks
 		for (var aCallbackId in AB.Insts[aInstId].callbackids) {
 			delete AB.Callbacks[aCallbackId];
 		}
-		
+
 		// delete from bootstrap js
 		delete AB.Insts[aInstId];
 	},
@@ -2765,13 +2768,13 @@ var AB = { // AB stands for attention bar
 		// this function will add to aInstState and all bts in aInstState.aBtns a id based on this.genId()
 		// this function also sends setState message to all windows to update this instances
 		// aInstState should be strings only, as it is sent to all windows
-		
+
 		// :note: to remove a callback you have to set it to an empty function - ```getScope().AB.Insts[0].state.aClose = function() {}; getScope().AB.setState(getScope().AB.Insts[0].state);```
-		
+
 		// RETURNS
 			// updated aInstState
 
-		
+
 		var cInstDefaults = {
 			// aId: this is auto added in
 			aTxt: '', // this is the message body on the toolbar
@@ -2782,7 +2785,7 @@ var AB = { // AB stands for attention bar
 			aHideClose: undefined, // if set to string 'true' or bool true, in dom it will get converted to string as 'true'. setting to 1 int will not work.
 			aClose: undefined
 		};
-		
+
 		/*
 		aBtns: array of objects
 		[
@@ -2803,7 +2806,7 @@ var AB = { // AB stands for attention bar
 			}
 		]
 		*/
-		
+
 		if (!('aId' in aInstState)) {
 			validateOptionsObj(aInstState, cInstDefaults);
 			aInstState.aId = AB.genId();
@@ -2819,17 +2822,17 @@ var AB = { // AB stands for attention bar
 		if (aInstState.aClose) {
 			var aClose = aInstState.aClose.bind({inststate:aInstState});
 			delete aInstState.aClose;
-			
+
 			AB.Callbacks[aInstState.aId] = function(aBrowser) {
 				var rez_aClose = aClose(aBrowser);
 				if (rez_aClose !== false) { // :note: if onClose returns false, it cancels the closing
 					AB.nonDevUserSpecifiedCloseCb(aInstState.aId, aBrowser); // this one doesnt need bind, only devuser callbacks are bound
 				}
 			};
-			
+
 		}
-		
-		// give any newly added btns and menu items an id		
+
+		// give any newly added btns and menu items an id
 		if (aInstState.aBtns) {
 			for (var i=0; i<aInstState.aBtns.length; i++) {
 				if (!('bId' in aInstState.aBtns[i])) {
@@ -2845,16 +2848,16 @@ var AB = { // AB stands for attention bar
 				}
 			}
 		}
-		
+
 		// go through all windows, if this id is not in it, then mount it, if its there then setState on it
-		
+
 		var doit = function(aDOMWindow) {
 			// start - orig block link181888888
 			if (!aDOMWindow.gBrowser) {
 				return; // because i am targeting cDeck, windows without gBrowser won't have it
 			}
 			AB.ensureInitedIntoWindow(aDOMWindow);
-			
+
 			if (aInstState.aId in aDOMWindow[core.addon.id + '-AB'].Insts) {
 				aDOMWindow[core.addon.id + '-AB'].Insts[aInstState.aId].state = aDOMWindow.JSON.parse(aDOMWindow.JSON.stringify(aInstState));
 				aDOMWindow[core.addon.id + '-AB'].Insts[aInstState.aId].setState(JSON.parse(JSON.stringify(aInstState)));
@@ -2876,10 +2879,10 @@ var AB = { // AB stands for attention bar
 			}
 			// end - orig block link181888888
 		};
-		
+
 		// have to do this, because if i call setState with a new object, one that is not AB.Insts[aId] then it wont get updated, and when loadInstancesIntoWindow it will not have the updated one
 		AB.Insts[aInstState.aId].state = aInstState;
-		
+
 		var DOMWindows = Services.wm.getEnumerator(null);
 		while (DOMWindows.hasMoreElements()) {
 			var aDOMWindow = DOMWindows.getNext();
@@ -2892,12 +2895,12 @@ var AB = { // AB stands for attention bar
 				}, false);
 			}
 		}
-		
+
 		return aInstState;
 	},
 	nonDevUserSpecifiedCloseCb: function(aInstId, aBrowser) {
 		// this does the unmounting from all windows, and deletes entry from this.Insts
-		
+
 		// aBrowser.contentWindow.alert('ok this tab sent the close message for aInstId ' + aInstId);
 		// on close go through and get all id's in there and remove all callbacks for it. and then unmount from all windows.
 		AB.setStateDestroy(aInstId, true);
@@ -2967,18 +2970,18 @@ var AB = { // AB stands for attention bar
 	},
 	init: function() {
 		// Services.mm.addMessageListener(core.addon.id + '-AB', AB.msgListener);
-		
+
 		Services.wm.addListener(AB.winListener);
-		
+
 		// i dont iterate all windows now and do ensureInitedIntoWindow, because i only run ensureInitedIntoWindow when there is something to add, so its lazy
-		
+
 		// and its impossible that Insts exists before Init, so no need to iterate through all windows.
 	},
 	uninit: function() {
 		// Services.mm.removeMessageListener(core.addon.id + '-AB', AB.msgListener);
-		
+
 		Services.wm.removeListener(AB.winListener);
-		
+
 		// go through all windows and unmount
 		var DOMWindows = Services.wm.getEnumerator(null);
 		while (DOMWindows.hasMoreElements()) {
@@ -2991,7 +2994,7 @@ var AB = { // AB stands for attention bar
 	msgEventListener: function(e) {
 		console.error('getting aMsgEvent, data:', e.detail);
 		var cCallbackId = e.detail.cbid;
-		var cBrowser = e.detail.browser; 
+		var cBrowser = e.detail.browser;
 		if (AB.Callbacks[cCallbackId]) { // need this check because react components always send message on click, but it may not have a callback
 			AB.Callbacks[cCallbackId](cBrowser);
 		}
@@ -3011,19 +3014,19 @@ var AB = { // AB stands for attention bar
 	loadInstancesIntoWindow: function(aDOMWindow) {
 		// this function is called when there may be instances in AB.Insts but and it needs to be verified that its mounted in window
 		// basically this is called when a new window is opened
-		
+
 		var idsInsts = Object.keys(AB.Insts);
 		if (!idsInsts.length) {
 			return;
 		}
-		
+
 		var doit = function(aDOMWindow) {
 			// check again, in case by the time window loaded, AB.Insts changed
 			var idsInsts = Object.keys(AB.Insts);
 			if (!idsInsts.length) {
 				return;
 			}
-			
+
 			// start - copy of block link181888888
 			if (!aDOMWindow.gBrowser) {
 				return; // because i am targeting cDeck, windows without gBrowser won't have it
@@ -3056,7 +3059,7 @@ var AB = { // AB stands for attention bar
 				// end - copy of block link181888888
 			}
 		};
-		
+
 
 		if (aDOMWindow.document.readyState == 'complete') { //on startup `aDOMWindow.document.readyState` is `uninitialized`
 			doit(aDOMWindow);
@@ -3066,7 +3069,7 @@ var AB = { // AB stands for attention bar
 				doit(aDOMWindow);
 			}, false);
 		}
-		
+
 	},
 	winListener: {
 		onOpenWindow: function (aXULWindow) {
@@ -3101,7 +3104,7 @@ var HotkeyWorkerMainThreadFuncs = {
 function initOstypes() {
 	if (typeof ostypes == 'undefined') {
 		Cu.import('resource://gre/modules/ctypes.jsm');
-		
+
 		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/cutils.jsm', BOOTSTRAP); // need to load cutils first as ostypes_mac uses it for HollowStructure
 		Services.scriptloader.loadSubScript(core.addon.path.modules + 'ostypes/ctypes_math.jsm', BOOTSTRAP);
 		switch (core.os.mname) {
@@ -3134,7 +3137,7 @@ function initHotkey() {
 				promise_initHotkeys.then(
 					function(aHotkeyRegisterError) {
 						console.log('Fullfilled - promise_initHotkeys - ', aHotkeyRegisterError);
-						
+
 						// on error aHotkeyRegisterError is a string
 						if (aHotkeyRegisterError) {
 							Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Error', 'The global hotkey failed to register.\n\n' + aHotkeyRegisterError);
@@ -3142,14 +3145,14 @@ function initHotkey() {
 					},
 					genericReject.bind(null, 'promise_initHotkeys', 0)
 				).catch(genericCatch.bind(null, 'promise_initHotkeys', 0));
-				
+
 			break;
 		case 'darwin':
-			
+
 				initOstypes();
-				
+
 				OSStuff.hotkeyLastTriggered = 0;
-				
+
 				OSStuff.hotkeyCallback = ostypes.TYPE.EventHandlerUPP(function(nextHandler, theEvent, userDataPtr) {
 					// EventHandlerCallRef nextHandler, EventRef theEvent, void *userData
 					console.log('wooohoo ah!! called hotkey!');
@@ -3161,33 +3164,33 @@ function initHotkey() {
 					else { console.warn('will not takeShot as 1sec has not yet elapsed since last triggering hotkey'); }
 					return 0; // must be of type ostypes.TYPE.OSStatus
 				});
-				
+
 				var eventType = ostypes.TYPE.EventTypeSpec();
 				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
 				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
-				
+
 				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
 				// console.log('rez_appTarget GetApplicationEventTarget:', rez_appTarget.toString());
 				console.log('OSStuff.hotkeyCallback:', OSStuff.hotkeyCallback.toString());
 				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.hotkeyCallback, 1, eventType.address(), null, null);
 				console.log('rez_install:', rez_install.toString());
-				
+
 				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
 				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
 				gMyHotKeyID.signature = 1752460081; // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
 				gMyHotKeyID.id = 1876;
-				
+
 				// console.log('gMyHotKeyID:', gMyHotKeyID.toString());
 				// console.log('gMyHotKeyID.address():', gMyHotKeyID.address().toString());
-				
+
 				// console.log('ostypes.CONST.shiftKey + ostypes.CONST.cmdKey:', ostypes.CONST.shiftKey + ostypes.CONST.cmdKey);
 				// console.log('gMyHotKeyRef.address():', gMyHotKeyRef.address().toString());
-				
+
 				var rez_reg = ostypes.API('RegisterEventHotKey')(20, ostypes.CONST.cmdKey, gMyHotKeyID, rez_appTarget, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg.toString(), ostypes.HELPER.convertLongOSStatus(rez_reg));
-				
+
 				OSStuff.gMyHotKeyRef = gMyHotKeyRef;
-			
+
 			break;
 		default:
 			console.error('system hotkey not supported on your os');
@@ -3215,17 +3218,17 @@ function uninitHotkey() {
 
 			break;
 		case 'darwin':
-			
+
 				if (OSStuff.hotkeyCallback) {
-					
+
 					var rez_unreg = ostypes.API('UnregisterEventHotKey')(OSStuff.gMyHotKeyRef);
 					console.log('rez_unreg:', rez_unreg.toString(), ostypes.HELPER.convertLongOSStatus(rez_unreg));
-					
+
 					delete OSStuff.hotkeyCallback;
 					delete OSStuff.gMyHotKeyRef;
 					delete OSStuff.hotkeyLastTriggered;
 				}
-			
+
 			break;
 		default:
 			console.error('system hotkey not supported on your os');
@@ -3237,12 +3240,12 @@ function uninitHotkey() {
 var MainWorkerMainThreadFuncs = {
 	callInPromiseWorker: function(aWorkerName, aArrOfFuncnameThenArgs) {
 		// for use with sendAsyncMessageWithCallback from framescripts
-		
+
 		var mainDeferred_callInPromiseWorker = new Deferred();
-		
+
 		console.log('aWorkerName:', aWorkerName);
 		console.log('aArrOfFuncnameThenArgs:', aArrOfFuncnameThenArgs);
-		
+
 		var rez_pwcall = BOOTSTRAP[aWorkerName].post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
 		rez_pwcall.then(
 			function(aVal) {
@@ -3271,12 +3274,12 @@ var MainWorkerMainThreadFuncs = {
 				mainDeferred_callInPromiseWorkerr.resolve([rejObj]);
 			}
 		);
-		
+
 		return mainDeferred_callInPromiseWorker.promise;
 	},
 	authorizeApp: function(aBtnId, aUrl, aCallbackSetName) {
 		var deferredMain_authorizeApp = new Deferred();
-		
+
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aUrl, null, aCallbackSetName, null);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
@@ -3285,14 +3288,14 @@ var MainWorkerMainThreadFuncs = {
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_authorizeApp)
 		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_authorizeApp));
-		
+
 		return deferredMain_authorizeApp.promise;
 	},
 	clickAllow: function(aBtnId, aClickSetName, aCallbackSetName) {
 		// clicks allow for authorizeApp
-		
+
 		var deferredMain_clickAllow = new Deferred();
-	
+
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName, null);
 		promise_fhrResponse.then(
 			function(aFHRResponse) {
@@ -3301,13 +3304,13 @@ var MainWorkerMainThreadFuncs = {
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_clickAllow)
 		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_clickAllow));
-		
+
 		return deferredMain_clickAllow.promise;
 	},
 	clickPickAcct: function(aBtnId, aClickSetName, aCallbackSetName, aLoadPageData) {
 		// aLoadPageData should be aMultiAcctPickInfo (which is acct entry for one of the multiple accts found) is an object that has three  keys, uid and screenname and domElId or domElSelector . :todo: consider putting in domElSelector or domElId
 		var deferredMain_pickAccount = new Deferred();
-	
+
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(null, aClickSetName, aCallbackSetName, aLoadPageData);
 		console.error('promise_fhrResponse:', promise_fhrResponse);
 		promise_fhrResponse.then(
@@ -3317,13 +3320,13 @@ var MainWorkerMainThreadFuncs = {
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_pickAccount)
 		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_pickAccount));
-		
+
 		return deferredMain_pickAccount.promise;
 	},
 	loadPage: function(aBtnId, aSrc, aClickSetName, aCallbackSetName, aLoadPageData) {
 		// aLoadPageData should be aMultiAcctPickInfo (which is acct entry for one of the multiple accts found) is an object that has three  keys, uid and screenname and domElId or domElSelector . :todo: consider putting in domElSelector or domElId
 		var deferredMain_loadPage = new Deferred();
-	
+
 		var promise_fhrResponse = (fhr_ifBtnIdNodata(aBtnId) || gEditorABData_Btn[aBtnId].getBtnFHR()).loadPage(aSrc, aClickSetName, aCallbackSetName, aLoadPageData);
 		console.log('promise_fhrResponse:', promise_fhrResponse);
 		promise_fhrResponse.then(
@@ -3333,32 +3336,32 @@ var MainWorkerMainThreadFuncs = {
 			},
 			genericReject.bind(null, 'promise_fhrResponse', deferredMain_loadPage)
 		).catch(genericCatch.bind(null, 'promise_fhrResponse', deferredMain_loadPage));
-		
+
 		return deferredMain_loadPage.promise;
 	},
 	extractData: function(aBtnId, aDataKeysArr) {
 		// takes a copy from btn data object and sends to worker
 		// if the key contains "arrbuf" it is transferred to worker
 		// aDataKeysArr is a bunch an array of keys for which you want from data to worker
-		
+
 		var cSendData = {};
 		var cTransfers = [];
-		
+
 		var cBtnData = gEditorABData_Btn[aBtnId].data;
-		
+
 		for (var i=0; i<aDataKeysArr.length; i++) {
-			
+
 			var cKey = aDataKeysArr[i];
-			
+
 			cSendData[cKey] = cBtnData[cKey];
-			
+
 			if (cKey.indexOf('arrbuf') > -1) {
 				cTransfers.push(cBtnData[cKey]);
 				cBtnData[cKey] = 'TRANSFERED'; // i dont have to do this, i just do this in case i look for this and go nuts when things dont work. i remember in past i had an arrbuf but it was transfered and so byteLength was 0 and i didnt realize it and was going nuts
 			}
-			
+
 		}
-		
+
 		if (cTransfers.length) {
 			console.log('extracting with transfer');
 			return [cSendData, cTransfers, SIP_TRANS_WORD];
@@ -3377,7 +3380,7 @@ var MainWorkerMainThreadFuncs = {
 			}
 		}
 		aDataObj = null;
-		
+
 		return ['ok'];
 	},
 	updateAttnBar: function(aBtnId, newBtnRefData) {
@@ -3386,18 +3389,18 @@ var MainWorkerMainThreadFuncs = {
 		if(isBtnIdNoData(aBtnId)) {
 			return false;
 		}
-		
+
 		console.log('newBtnRefData:', newBtnRefData);
-		
+
 		var cBtnObj = gEditorABData_Btn[aBtnId];
 		console.log('cBtnObj:', cBtnObj);
-		
+
 		if (cBtnObj.autoretryAborting) {
 			// maybe a timeout message came through before the abort completed so ignore those
 			return;
 		}
-		
-		cBtnObj.setBtnState(newBtnRefData);		
+
+		cBtnObj.setBtnState(newBtnRefData);
 	}
 };
 // end - MainWorkerMainThreadFuncs
@@ -3411,7 +3414,7 @@ function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 		// only one action done for this so copy it to clipboard,
 		// and close bar within 10sec
 		var onlyBtn = gEditorABData_Btn[cBarData.btnIds[0]];
-		
+
 		// show system notification
 		if (onlyBtn.data.copyTxt) {
 			copyTextToClip(onlyBtn.data.copyTxt);
@@ -3426,7 +3429,7 @@ function ifEditorClosed_andBarHasOnlyOneAction_copyToClip(aSessionId) {
 			var alertNotifBody = 'Processed text copied to your clipboard';
 			myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', justFormatStringFromName(core.addon.l10n.bootstrap['addon_name']) + ' - ' + alertNotifTitle, alertNotifBody, null, null, null, 'NativeShot');
 		}
-		
+
 		// autoclose bar with message
 		if (onlyBtn.data.copyTxt || onlyBtn.data.dataurl) { // these two keys signify completion
 			autocloseBar(aSessionId, 'One action made so copied to clipboard');
@@ -3473,7 +3476,7 @@ function autocloseBar(aSessionId, aClosingMsg) {
 				}
 			}
 		};
-		
+
 		cBarData.ABRef.origATxt = cBarData.ABRef.aTxt;
 		cBarData.ABRef.aBtns.splice(0, 0, {
 			customIdentifier: 'dont-autoclose',
@@ -3525,9 +3528,9 @@ function isBtnIdNoData(aBtnId) {
 var fsFuncs = { // can use whatever, but by default its setup to use this
 	callInPromiseWorker: function(aArrOfFuncnameThenArgs) {
 		// for use with sendAsyncMessageWithCallback from framescripts
-		
+
 		var mainDeferred_callInPromiseWorker = new Deferred();
-		
+
 		var rez_pwcall = MainWorker.post(aArrOfFuncnameThenArgs.shift(), aArrOfFuncnameThenArgs);
 		rez_pwcall.then(
 			function(aVal) {
@@ -3556,14 +3559,14 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 				mainDeferred_callInPromiseWorkerr.resolve([rejObj]);
 			}
 		);
-		
+
 		return mainDeferred_callInPromiseWorker.promise;
 	},
 	callInBootstrap: function(aArrOfFuncnameThenArgs) {
 		// for use with sendAsyncMessageWithCallback from framescripts
-		
+
 		var mainDeferred_callInBootstrap = new Deferred();
-		
+
 		var cBootMethod = aArrOfFuncnameThenArgs.shift();
 		if (!(cBootMethod in BOOTSTRAP)) {
 			console.error('method is not in bootstrap! cBootMethod:', cBootMethod);
@@ -3605,7 +3608,7 @@ var fsFuncs = { // can use whatever, but by default its setup to use this
 				mainDeferred_callInBootstrap.resolve([rez_pwcall]);
 			}
 		}
-		
+
 		return mainDeferred_callInBootstrap.promise;
 	},
 	getOcrResults: function(aBtnId, aMsgEvent) {
@@ -3640,18 +3643,18 @@ var fsMsgListener = {
 		var aMsgEventData = aMsgEvent.data;
 		console.log('fsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
 		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-		
+
 		var callbackPendingId;
 		if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
 			callbackPendingId = aMsgEventData.pop();
 		}
-		
+
 		aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
-		
+
 		var funcName = aMsgEventData.shift();
 		if (funcName in this.funcScope) {
 			var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
-			
+
 			if (callbackPendingId) {
 				// rez_parentscript_call must be an array or promise that resolves with an array
 				if (rez_parentscript_call.constructor.name == 'Promise') {
@@ -3677,7 +3680,7 @@ var fsMsgListener = {
 			}
 		}
 		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
-		
+
 	}
 };
 // end - main framescript communication
@@ -3685,7 +3688,7 @@ var fsMsgListener = {
 function install() {}
 function uninstall(aData, aReason) {
 	// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'uninstall', aReason);
-	
+
 	// delete imgur history file
 	if (aReason == ADDON_UNINSTALL) {
 		Services.prefs.clearUserPref(core.addon.prefbranch + 'quick_save_dir');
@@ -3707,19 +3710,19 @@ function uninstall(aData, aReason) {
 function startup(aData, aReason) {
 	// core.addon.aData = aData;
 	extendCore();
-	
+
 	// start - add stuff to core that worker cannot get
-	
+
 	// end - add stuff to core that worker cannot get
-	
+
 	SIPWorker('ScreenshotWorker', core.addon.path.content + 'modules/screenshot/ScreenshotWorker.js'); // if want instant init, tag on .post() and it will return a promise resolving with value from init
 
 	var do_afterWorkerInit = function(aInitedCore) {
-		
+
 		core = aInitedCore;
 		gEditorStateStr = core.editorstateStr;
 		delete core.editorstateStr;
-		
+
 		CustomizableUI.createWidget({
 			id: 'cui_nativeshot',
 			defaultArea: CustomizableUI.AREA_NAVBAR,
@@ -3752,9 +3755,9 @@ function startup(aData, aReason) {
 				}
 			}
 		});
-		
+
 		contextMenuBootstrapStartup();
-		
+
 		// determine gCuiCssFilename for windowListener.register
 		if (Services.prefs.getCharPref('app.update.channel') == 'aurora') {
 			if (core.os.mname != 'darwin') {
@@ -3778,22 +3781,22 @@ function startup(aData, aReason) {
 				}
 			}
 		}
-		
+
 		//windowlistener more
 		windowListener.register();
 		//end windowlistener more
-		
+
 		initAndRegisterAbout();
-		
+
 		AB.init();
-		
+
 		Services.mm.addMessageListener(core.addon.id, fsMsgListener);
-		
+
 		if (prefGet('system_hotkey')) {
 			initHotkey();
 		}
 	};
-	
+
 	var do_afterPrefsInit = function() {
 		var promise_getInit = SIPWorker('MainWorker', core.addon.path.content + 'modules/main/MainWorker.js', core, MainWorkerMainThreadFuncs).post();
 		promise_getInit.then(
@@ -3804,12 +3807,12 @@ function startup(aData, aReason) {
 			genericReject.bind(null, 'promise_getInit', 0)
 		).catch(genericCatch.bind(null, 'promise_getInit', 0));
 	};
-	
+
 	// set stuff in core, as it is sent to worker
 	core.addon.version = aData.version;
 	var promise_initPrefs = refreshCoreForPrefs();
-	
-	
+
+
 	promise_initPrefs.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_initPrefs - ', aVal);
@@ -3821,31 +3824,31 @@ function startup(aData, aReason) {
 
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
-	
+
 	try {
-		myServices.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
+		Services.mm.removeMessageListener(core.addon.id + '_twitter', fsComServer.twitterClientMessageListener); // in case its still alive which it very well could be, because user may disable during tweet process // :todo: should probably clear all notfication bars maybe
 	} catch (ignore) {}
-	
+
 	CustomizableUI.destroyWidget('cui_nativeshot');
-	
+
 	AB.uninit();
 	AB.Callbacks = {}; // so the autoclosers know not to keep trying
-	
+
 	//windowlistener more
 	windowListener.unregister();
 	//end windowlistener more
-	
+
 	// clear intervals if any are pending
 	if (gDelayedShotObj) {
 		cancelAndCleanupDelayedShot();
 	}
-	
+
 	if (gPostPrintRemovalFunc) { // poor choice of clean up for post print, i need to be able to find a place that triggers after print to file, and also after if they dont print to file, if iframe is not there, then print to file doesnt work
 		gPostPrintRemovalFunc();
 	}
-	
+
 	aboutFactory_instance.unregister();
-	
+
 	// destroy workers
 	if (ScreenshotWorker && ScreenshotWorker.launchTimeStamp) { // as when i went to rev5, its not insantly inited, so there is a chance that it doesnt need terminate
 		ScreenshotWorker._worker.terminate();
@@ -3857,17 +3860,17 @@ function shutdown(aData, aReason) {
 	if (bootstrap.GOCRWorker && GOCRWorker.launchTimeStamp) {
 		GOCRWorker._worker.terminate();
 	}
-	
+
 	if (bootstrap.OCRADWorker && OCRADWorker.launchTimeStamp) {
 		OCRADWorker._worker.terminate();
 	}
-	
+
 	if (bootstrap.TesseractWorker && TesseractWorker.launchTimeStamp) {
 		TesseractWorker._worker.terminate();
 	}
-	
+
 	uninitHotkey();
-	
+
 	// destroy any FHR's that the devuser did not clean up
 	for (var DSTR_I=0; DSTR_I<gFHR.length; DSTR_I++) {
 		if (gFHR[DSTR_I].destroy) {
@@ -3877,9 +3880,9 @@ function shutdown(aData, aReason) {
 			DSTR_I--; // because .destroy splices it out of gFHR i do a .forEach, otherwise i have to do i--. but .destroy uses i so im worried theres scoping issues here so i switched to DSTR_I
 		}
 	}
-	
+
 	Services.mm.removeMessageListener(core.addon.id, fsMsgListener);
-	
+
 	// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'shutdown', aReason);
 
 }
@@ -3898,7 +3901,7 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 	if (aNsiFile) {
 		//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
 		// opens the directory of the aNsiFile
-		
+
 		if (aNsiFile.isDirectory()) {
 			aNsiFile.launch();
 		} else {
@@ -3906,7 +3909,7 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 		}
 	} else {
 		var cNsiFile = new nsIFile(aDirPlatPath);
-		
+
 		if (!aFileName) {
 			// its a directory
 			cNsiFile.launch();
@@ -3926,7 +3929,7 @@ function browseFile(aDialogTitle, aOptions={}) {
 		//		filepath: string,
 		//		replace: bool, // only set if mode is modeSave
 		//	}
-	
+
 	var cOptionsDefaults = {
 		mode: 'modeOpen', // modeSave, modeGetFolder,
 		filters: undefined, // else an array. in sets of two. so one filter would be ['PNG', '*.png'] or two filters woul be ['PNG', '*.png', 'All Files', '*']
@@ -3935,11 +3938,11 @@ function browseFile(aDialogTitle, aOptions={}) {
 		async: false, // if set to true, then it wont block main thread while its open, and it will also return a promise
 		win: undefined // null for no parentWin, string for what you want passed to getMostRecentWindow, or a window object. NEGATIVE is special for NativeShot, it is negative iMon
 	}
-	
+
 	validateOptionsObj(aOptions, cOptionsDefaults);
-	
+
 	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
-	
+
 	var parentWin;
 	if (aOptions.win === undefined) {
 		parentWin = null;
@@ -3952,30 +3955,30 @@ function browseFile(aDialogTitle, aOptions={}) {
 		parentWin = aOptions.win; // they specified a window probably
 	}
 	fp.init(parentWin, aDialogTitle, Ci.nsIFilePicker[aOptions.mode]);
-	
+
 	if (aOptions.filters) {
 		for (var i=0; i<aOptions.filters.length; i=i+2) {
 			fp.appendFilter(aOptions.filters[i], aOptions.filters[i+1]);
 		}
 	}
-	
+
 	if (aOptions.startDirPlatPath) {
 		fp.displayDirectory = new nsIFile(aOptions.startDirPlatPath);
 	}
-	
+
 	var fpDoneCallback = function(rv) {
 		var retFP;
 		if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
-			
+
 			if (aOptions.returnDetails) {
 				var cBrowsedDetails = {
 					filepath: fp.file.path
 				};
-				
+
 				if (aOptions.mode == 'modeSave') {
 					cBrowsedDetails.replace = (rv == Ci.nsIFilePicker.returnReplace);
 				}
-				
+
 				retFP = cBrowsedDetails;
 			} else {
 				retFP = fp.file.path;
@@ -3989,7 +3992,7 @@ function browseFile(aDialogTitle, aOptions={}) {
 			return retFP;
 		}
 	}
-	
+
 	if (aOptions.async) {
 		var mainDeferred_browseFile = new Deferred();
 		fp.open({
@@ -4014,16 +4017,16 @@ function macSetLevelOfBrowseFile() {
 		var cWinTitle = cWin.document.documentElement.getAttribute('title');
 		console.error('cWinTitle:', cWinTitle);
 	} catch(ignore) {}
-	
+
 	var NSWindowString = getNativeHandlePtrStr(Services.wm.getMostRecentWindow(null));
 
-								
+
 	var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
 	*/
-	
+
 	var sharedApp = ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSApplication'), ostypes.HELPER.sel('sharedApplication'));
 	console.log('sharedApp:', sharedApp, sharedApp.toString(), uneval(sharedApp));
-	
+
 	var rez_keyWin = ostypes.API('objc_msgSend')(sharedApp, ostypes.HELPER.sel('keyWindow'));
 	console.log('rez_keyWin:', rez_keyWin, rez_keyWin.toString(), uneval(rez_keyWin));
 	if (rez_keyWin.isNull()) {
@@ -4031,34 +4034,34 @@ function macSetLevelOfBrowseFile() {
 		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(macSetLevelOfBrowseFile, 100);
 		return;
 	}
-	
+
 	var rez_title = ostypes.API('objc_msgSend')(rez_keyWin, ostypes.HELPER.sel('title'));
 	console.log('rez_title:', rez_title, rez_title.toString(), uneval(rez_title));
 
 	var cWinTitle = ostypes.HELPER.readNSString(rez_title); // cCharPtr.readString(); // :note: // link123111119 i do read string, so the text i open browseFile with should be readable by this
 	console.log('cWinTitle:', cWinTitle);
-	
+
 	if (cWinTitle != core.addon.l10n.bootstrap['filepicker-title-save-screenshot']) {
 		console.error('keyWindow is not the browse file picker dialog yet so try again in a bit');
 		Services.wm.getMostRecentWindow('navigator:browser').setTimeout(macSetLevelOfBrowseFile, 100);
 		return;
-	} else {	
+	} else {
 		var rez_setLevel = ostypes.API('objc_msgSend')(rez_keyWin, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // i guess 0 is NSNormalWindowLevel // link98476884 // link847455111
 		console.log('rez_setLevel:', rez_setLevel, rez_setLevel.toString(), uneval(rez_setLevel));
 	}
 	console.error('done macSetLevelOfBrowseFile');
-	
+
 	// in my tests, i didnt need to every wait, as keyWindow was set and it was the picker
 }
 
 function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAction) {
 	// update twitter btn label, class, and action, because i do this so much
-	
+
 	// get notif bar id, as crossWinId
 	var crossWinId = aUAPEntry.gEditorSessionId + '-twitter';
 	// get the buttons infos in this notif bar
 	var aBtnInfos = NBs.crossWin[crossWinId].btns;
-	
+
 	// find our specific btninfo for this tab
 	var aBtnInfo;
 	for (var i=0; i<aBtnInfos.length; i++) {
@@ -4067,11 +4070,11 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 			break;
 		}
 	}
-	
+
 	if (!aBtnInfo) {
 		throw new Error('couldnt find btn info for this tab, this should never happen');
 	}
-	
+
 	if (!NBs.crossWin[crossWinId].afterOfficialInit_completedCustInit) {
 		// item hasnt been inserted to dom yet, so keep the -ID on it
 		newLabel += '-ID:' + aUAPEntry.userAckId;
@@ -4080,7 +4083,7 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 	aBtnInfo.class = newClass;
 	aUAPEntry.actionOnBtn = newAction;
 
-	
+
 	NBs.updateGlobal(crossWinId, {
 		lbl: 1, // label was updated for sure
 		btns:{
@@ -4091,7 +4094,7 @@ function NBs_updateGlobal_updateTwitterBtn(aUAPEntry, newLabel, newClass, newAct
 }
 
 function broadcastToMainGuisToUpdate() {
-	myServices.mm.broadcastAsyncMessage(core.addon.id, ['serverCommand_refreshDashboardGuiFromFile']);
+	Services.mm.broadcastAsyncMessage(core.addon.id, ['serverCommand_refreshDashboardGuiFromFile']);
 }
 
 function addEntryToLog(aTypeStr, aData={}) {
@@ -4171,25 +4174,25 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 		// resolve value: jsBool true
 	// aCore is what you want aCore to be populated with
 	// aPath is something like `core.addon.path.content + 'modules/workers/blah-blah.js'`
-	
+
 	// :todo: add support and detection for regular ChromeWorker // maybe? cuz if i do then ill need to do ChromeWorker with callback
-	
+
 	// var deferredMain_SIPWorker = new Deferred();
 
 	var cWorkerInited = false;
 	var cWorkerPost_orig;
-	
+
 	if (!(workerScopeName in bootstrap)) {
 		bootstrap[workerScopeName] = new PromiseWorker(aPath);
-		
+
 		cWorkerPost_orig = bootstrap[workerScopeName].post;
-		
+
 		bootstrap[workerScopeName].post = function(pFun, pArgs, pCosure, pTransfers) {
 			if (!cWorkerInited) {
 				var deferredMain_post = new Deferred();
-				
+
 				bootstrap[workerScopeName].post = cWorkerPost_orig;
-				
+
 				var doInit = function() {
 					var promise_initWorker = bootstrap[workerScopeName].post('init', [aCore]);
 					promise_initWorker.then(
@@ -4207,7 +4210,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 						genericReject.bind(null, 'promise_initWorker', deferredMain_post)
 					).catch(genericCatch.bind(null, 'promise_initWorker', deferredMain_post));
 				};
-				
+
 				var doOrigPost = function() {
 					var promise_origPosted = bootstrap[workerScopeName].post(pFun, pArgs, pCosure, pTransfers);
 					promise_origPosted.then(
@@ -4218,18 +4221,18 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 						genericReject.bind(null, 'promise_origPosted', deferredMain_post)
 					).catch(genericCatch.bind(null, 'promise_origPosted', deferredMain_post));
 				};
-				
+
 				doInit();
 				return deferredMain_post.promise;
 			}
 		};
-		
+
 		// start 010516 - allow worker to execute functions in bootstrap scope and get value
 		if (aFuncExecScope) {
 			// this triggers instantiation of the worker immediately
 			var origOnmessage = bootstrap[workerScopeName]._worker.onmessage;
 			var origOnerror = bootstrap[workerScopeName]._worker.onerror;
-			
+
 			bootstrap[workerScopeName]._worker.onerror = function(onErrorEvent) {
 				// got an error that PromiseWorker did not know how to serialize. so we didnt get a {fail:.....} postMessage. so in onerror it does pop of the deferred. however with allowing promiseworker to return async, we cant simply pop if there are more then 1 promises pending
 				var cQueue = bootstrap[workerScopeName]._queue._array;
@@ -4242,7 +4245,7 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 					console.error('queue has more then one promises in there, i dont know which one to reject', 'onErrorEvent:', onErrorEvent, 'queue:', bootstrap[workerScopeName]._queue._array);
 				}
 			};
-			
+
 			bootstrap[workerScopeName]._worker.onmessage = function(aMsgEvent) {
 				////// start - my custom stuff
 				var aMsgEventData = aMsgEvent.data;
@@ -4250,16 +4253,16 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 				if (Array.isArray(aMsgEventData)) {
 					// my custom stuff, PromiseWorker did self.postMessage to call a function from here
 					console.log('promsieworker is trying to execute function in mainthread');
-					
+
 					var callbackPendingId;
 					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIP_CB_PREFIX) == 0) {
 						callbackPendingId = aMsgEventData.pop();
 					}
-					
+
 					var funcName = aMsgEventData.shift();
 					if (funcName in aFuncExecScope) {
 						var rez_mainthread_call = aFuncExecScope[funcName].apply(null, aMsgEventData);
-						
+
 						if (callbackPendingId) {
 							if (rez_mainthread_call.constructor.name == 'Promise') { // if get undefined here, that means i didnt return an array from the function in main thread that the worker called
 								rez_mainthread_call.then(
@@ -4323,17 +4326,17 @@ function SIPWorker(workerScopeName, aPath, aCore=core, aFuncExecScope=BOOTSTRAP)
 			}
 		}
 		// end 010516 - allow worker to execute functions in bootstrap scope and get value
-		
+
 		if ('addon' in aCore && 'aData' in aCore.addon) {
 			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it
 		}
 	} else {
 		throw new Error('Something is loaded into bootstrap[workerScopeName] already');
 	}
-	
+
 	// return deferredMain_SIPWorker.promise;
 	return bootstrap[workerScopeName];
-	
+
 }
 
 // SICWorker - rev8 - https://gist.github.com/Noitidart/6a9da3589e88cc3df7e7
@@ -4348,32 +4351,32 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 	// returns promise
 		// resolve value: jsBool true
 	// aCore is what you want aCore to be populated with
-	// aPath is something like `core.addon.path.content + 'modules/workers/blah-blah.js'`	
+	// aPath is something like `core.addon.path.content + 'modules/workers/blah-blah.js'`
 	var deferredMain_SICWorker = new Deferred();
 
 	if (!(workerScopeName in bootstrap)) {
 		bootstrap[workerScopeName] = new ChromeWorker(aPath);
-		
+
 		if ('addon' in aCore && 'aData' in aCore.addon) {
 			delete aCore.addon.aData; // we delete this because it has nsIFile and other crap it, but maybe in future if I need this I can try JSON.stringify'ing it
 		}
-		
+
 		var afterInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
 			console.log('mainthread receiving message:', aMsgEventData);
-			
+
 			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
 			var callbackPendingId;
 			if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
 				callbackPendingId = aMsgEventData.pop();
 			}
-			
+
 			var funcName = aMsgEventData.shift();
-			
+
 			if (funcName in aFuncExecScope) {
 				var rez_mainthread_call = aFuncExecScope[funcName].apply(null, aMsgEventData);
-				
+
 				if (callbackPendingId) {
 					if (rez_mainthread_call.constructor.name == 'Promise') {
 						rez_mainthread_call.then(
@@ -4412,7 +4415,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 			else { console.warn('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
 
 		};
-		
+
 		var beforeInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
@@ -4425,7 +4428,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 				}
 			}
 		};
-		
+
 		// var lastCallbackId = -1; // dont do this, in case multi SICWorker's are sharing the same aFuncExecScope so now using new Date().getTime() in its place // link8888881
 		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 			// lastCallbackId++; // link8888881
@@ -4440,16 +4443,16 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 			// console.log('aPostMessageArr:', aPostMessageArr);
 			bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
 		};
-		
+
 		bootstrap[workerScopeName].addEventListener('message', beforeInitListener);
 		bootstrap[workerScopeName].postMessage(['init', aCore]);
-		
+
 	} else {
 		deferredMain_SICWorker.reject('Something is loaded into bootstrap[workerScopeName] already');
 	}
-	
+
 	return deferredMain_SICWorker.promise;
-	
+
 }
 
 function jsonToDOM(json, doc, nodes) {
@@ -4461,7 +4464,7 @@ function jsonToDOM(json, doc, nodes) {
     var defaultNamespace = namespaces.html;
 
     function namespace(name) {
-        var m = /^(?:(.*):)?(.*)$/.exec(name);        
+        var m = /^(?:(.*):)?(.*)$/.exec(name);
         return [namespaces[m[1]], m[2]];
     }
 
@@ -4540,9 +4543,9 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 	for (var k of Object.keys(data)) {
 		item += "--" + boundary + "\r\n";
 		var v = data[k];
-		
+
 		if (v instanceof Ci.nsIFile) {
-			
+
 			var fstream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
 			fstream.init(v, -1, -1, Ci.nsIFileInputStream.DELETE_ON_CLOSE);
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + encode(v.leafName, true) + "\"\r\n";
@@ -4568,7 +4571,7 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 			console.error('in else');
 			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
 			item += encode(v);
-			
+
 		}
 		item += "\r\n";
 	}
@@ -4577,12 +4580,12 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 	var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
 	ss.data = item;
 	mpis.appendStream(ss);
-  
+
 	var postStream = Cc["@mozilla.org/network/mime-input-stream;1"].createInstance(Ci.nsIMIMEInputStream);
 	postStream.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
 	postStream.setData(mpis);
 	postStream.addContentLength = true;
-  
+
 	return postStream;
 }
 function genericReject(aPromiseName, aPromiseToReject, aReason) {
@@ -4626,15 +4629,15 @@ var gFHR_id = 0;
 function FHR() {
 	// my FrameHttpRequest module which loads pages into frames, and navigates by clicks
 	// my play on XHR
-	
+
 	// must instatiate with loadPageArgs
-	
+
 	gFHR_id++;
-	
+
 	var fhrThis = this;
 	this.id = gFHR_id;
 	gFHR.push(this);
-	
+
 	var fhrFsMsgListenerId = core.addon.id + '-fhr_' + gFHR_id;
 
 	// start - rev3 - https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
@@ -4653,18 +4656,18 @@ function FHR() {
 			var aMsgEventData = aMsgEvent.data;
 			console.log('fhrFsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
 			// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-			
+
 			var callbackPendingId;
 			if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
 				callbackPendingId = aMsgEventData.pop();
 			}
-			
+
 			aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
-			
+
 			var funcName = aMsgEventData.shift();
 			if (funcName in this.funcScope) {
 				var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
-				
+
 				if (callbackPendingId) {
 					// rez_parentscript_call must be an array or promise that resolves with an array
 					if (rez_parentscript_call.constructor.name == 'Promise') {
@@ -4690,24 +4693,24 @@ function FHR() {
 				}
 			}
 			else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
-			
+
 		}
 	};
-	
+
 	Services.mm.addMessageListener(fhrFsMsgListenerId, fhrFsMsgListener);
-	
+
 	// no need to redefine - sendAsyncMessageWithCallback, i can use the globally defined sendAsyncMessageWithCallback fine with this
 	// end - rev3 - https://gist.github.com/Noitidart/03c84a4fc1e566bd0fe5
-	
-	
+
+
 	var aWindow = Services.wm.getMostRecentWindow('navigator:browser');
 	var aDocument = aWindow.document;
 	var fhrPostInitCb;
-	
+
 	var doAfterAppShellDomWinReady = function() {
-		
+
 			this.frame = aDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'browser');
-			
+
 			// this.frame.setAttribute('class', core.addon.id + '_fhr-');
 			// if (OS.Constants.Sys.Name.toLowerCase() != 'darwin') {
 				this.frame.setAttribute('remote', 'true');
@@ -4715,35 +4718,35 @@ function FHR() {
 			this.frame.setAttribute('type', 'content');
 			// this.frame.setAttribute('style', 'height:100px;border:2px solid steelblue;');
 			this.frame.setAttribute('style', 'height:0;border:0;');
-			
+
 			aDocument.documentElement.appendChild(this.frame);
-			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);			
+			this.frame.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);
 			// aWindow.gBrowser.selectedBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'FHRFrameScript.js?fhrFsMsgListenerId=' + fhrFsMsgListenerId + '&v=' + core.addon.cache_key, false);
-			
+
 			this.destroy = function() {
-				
+
 				this.frame.messageManager.sendAsyncMessage(fhrFsMsgListenerId, ['destroySelf']); // not really needed as i remove the element
 
 				Services.mm.removeMessageListener(fhrFsMsgListenerId, fhrFsMsgListener);
 				aDocument.documentElement.removeChild(this.frame);
-				
+
 				delete this.frame; // release reference to it
 				delete this.loadPage;
 				delete this.destroy;
-				
+
 				for (var i=0; i<gFHR.length; i++) {
 					if (gFHR[i].id == this.id) {
 						gFHR.splice(i, 1);
 						break;
 					}
 				}
-				
+
 				this.destroyed = true;
 				console.log('ok destroyed FHR instance with id:', this.id);
 			}.bind(this);
-		
+
 	}.bind(this);
-	
+
 	if (aDocument.readyState == 'complete') {
 		doAfterAppShellDomWinReady();
 	} else {
@@ -4752,39 +4755,39 @@ function FHR() {
 			doAfterAppShellDomWinReady();
 		}, false);
 	}
-	
+
 	this.loadPage = function(aSrc, aClickSetName, aCallbackSetName, aLoadPageData, aDeferredMain_setSrc) {
 		// sets src of frame OR clicks if aClickSetName is set. must either set aSrc OR aClickSetName never both
-		
+
 		// aCbInfoObj is a collection of callbacks, like for on fail load, on error etc etc
 		console.log('ok in loadPage for id:', this.id);
-		
+
 		var deferredMain_setSrc;
-		
+
 		if (aDeferredMain_setSrc) {
 			console.log('ok set to preset deferred');
 			deferredMain_setSrc = aDeferredMain_setSrc;
 		} else {
 			deferredMain_setSrc = new Deferred();
-			
+
 			if (!this.inited) {
 				console.log('not yet inited');
 				fhrPostInitCb = this.loadPage.bind(this, aSrc, aClickSetName, aCallbackSetName, aLoadPageData, deferredMain_setSrc);
-			
+
 				return deferredMain_setSrc.promise;
 			}
 		}
-		
+
 		console.log('sending msg to message manager fhrFsMsgListenerId:', fhrFsMsgListenerId);
 		sendAsyncMessageWithCallback(this.frame.messageManager, fhrFsMsgListenerId, ['loadPage', aSrc, aClickSetName, aCallbackSetName, aLoadPageData], fhrFsMsgListener.funcScope, function(aFhrResponse) {
 			console.log('bootstrap', 'aFhrResponse:', aFhrResponse);
 			deferredMain_setSrc.resolve(aFhrResponse);
 		});
-		
+
 		return deferredMain_setSrc.promise;
-		
+
 	}.bind(this);
-	
+
 }
 
 //rev1 - https://gist.github.com/Noitidart/c4ab4ca10ff5861c720b
@@ -4796,7 +4799,7 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
 		}
 	}
-	
+
 	// if a key is not found in aOptions, but is found in aOptionsDefaults, it sets the key in aOptions to the default value
 	for (var aOptKey in aOptionsDefaults) {
 		if (!(aOptKey in aOptions)) {

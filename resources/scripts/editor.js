@@ -46,7 +46,7 @@ function unload() {
 			}
 			delete immutableEditorstate[p];
 		}
-		
+
 		triggerNSCommEvent({
 			topic: 'updateEditorState',
 			editorstateStr: JSON.stringify(immutableEditorstate),
@@ -80,7 +80,7 @@ function reactSetState(aData) {
 function canSetState(aData) {
 	// console.log('in canSetState, aData:', aData);
 	var newCanState = JSON.parse(aData.cstate);
-	
+
 	if (newCanState.selection) {
 		if (!newCanState.drawables) {
 			console.error('if canSetState includes selection it MUST include drawables with it as well');
@@ -89,7 +89,7 @@ function canSetState(aData) {
 		}
 		newCanState.selection = newCanState.drawables[gCanStore.rconn.dIndexOf(newCanState.selection, newCanState.drawables)];
 	}
-	
+
 	for (var p in newCanState) {
 		// if (p == 'valid') {
 			// continue;
@@ -97,7 +97,7 @@ function canSetState(aData) {
 		gCState[p] = newCanState[p];
 	}
 	// gCState = JSON.parse(aData.cstate);
-	
+
 	// gCanStore.setCanState(false, true);
 }
 
@@ -120,7 +120,7 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 		if (!cutouts.length) {
 			// alert('no selection made!');
 		} else {
-			
+
 			var cutoutsAsRects = [];
 			var l = cutouts.length;
 
@@ -133,9 +133,9 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 					id: i,
 					data: {} // need to set which monitors need to provide this data, and then request those monitors to send it
 				};
-				
+
 				gCompositesArr.push(cEntry);
-				
+
 				// figure out here which monitors to request from
 				var allMonDim = tQS.allMonDim;
 				var cCutoutRect = new Rect(cCutout.x, cCutout.y, cCutout.w, cCutout.h);
@@ -151,14 +151,14 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 					}
 				}
 			}
-			
+
 			console.log('need to request from:', JSON.parse(JSON.stringify(gCompositesArr)));
-			
+
 			// send requests to all the monitors
 			for (var i=0; i<l; i++) {
 				var cEntry = gCompositesArr[i];
 				var cData = cEntry.data;
-				
+
 				for (var p in cData) { // p is iMon
 					var requestLoad = {
 						requestingMon: tQS.iMon,
@@ -180,13 +180,13 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 					}
 				}
 			}
-			
+
 			triggerNSCommEvent({
 				topic: 'addSelectionToHistory',
 				cutoutsArr: cutouts,
 				iMon: tQS.iMon
-			});			
-			
+			});
+
 		}
 	} else {
 		alert('cannot make do another action as previous action is still in progress');
@@ -208,20 +208,20 @@ function requestCompositeData(aData) {
 	// var subImagedata = gCanStore.rconn.oscalectx0.getImageData(x, y, w, h);
 	var requestingMon = aData.requestingMon;
 	var cutoutid = aData.id;
-	
+
 	var subDrawctx;
 	var subDrawdata;
 	subDrawctx = gCanStore.rconn.oscalectx1;
-	
+
 	subDrawctx.clearRect(tQS.x, tQS.y, tQS.w, tQS.h);
 	// subDrawctx.putImageData(subImagedata, subcutout.x, subcutout.y);
 	subDrawctx.drawImage(gCanStore.rconn.oscalecan0, subcutout.x, subcutout.y, subcutout.w, subcutout.h, subcutout.x, subcutout.y, subcutout.w, subcutout.h);
-	
+
 	gCanStore.oscalectx1_draw = true;
 	gCanStore.rconn.draw();
-	
+
 	subDrawdata = subDrawctx.getImageData(subcutout.x, subcutout.y, subcutout.w, subcutout.h);
-	
+
 	// send it back to requesting monitor
 	var fullfillLoad = {
 		id: cutoutid,
@@ -239,7 +239,7 @@ function requestCompositeData(aData) {
 			iMon: tQS.iMon
 		});
 	}
-	
+
 }
 
 var gCompositesArr; // array // each element is an object // when an array, other actions are not allowed
@@ -254,13 +254,13 @@ var gCompositesArr; // array // each element is an object // when an array, othe
 */
 function fullfillCompositeRequest(aData) {
 	console.log('incoming fullfillCompositeRequest, aData:', aData);
-	
+
 	var cId = aData.id;
 	var cMon = aData.fromMon;
 	var cArrBuf = aData.arrBuf;
-	
+
 	var compositesArr = gCompositesArr;
-	
+
 	var l = compositesArr.length;
 	for (var i=0; i<l; i++) {
 		var cEntry = compositesArr[i];
@@ -270,7 +270,7 @@ function fullfillCompositeRequest(aData) {
 			break;
 		}
 	}
-	
+
 	// check if all requests were fullfilled - meaning if any "null arrbuf" entires in data
 	var allRequestsFullfilled = true;
 	commArrLoop:
@@ -284,7 +284,7 @@ function fullfillCompositeRequest(aData) {
 			}
 		}
 	}
-	
+
 	if (allRequestsFullfilled) {
 		gCompositesArr = undefined;
 		var action = gAction;
@@ -293,33 +293,33 @@ function fullfillCompositeRequest(aData) {
 		gAction = undefined;
 		gSub = undefined;
 		gBoolClose = undefined;
-		
+
 		// create composited rect
 		var compositeRect;
 		for (var i=0; i<l; i++) {
 			var cEntry = compositesArr[i];
 			var cCutout = cEntry.cutout;
-			
+
 			// var cutoutClone = this.makeDimsPositive(cCutout, true); // is already positive, so no need here
-			
+
 			var cRect = new Rect(cCutout.x, cCutout.y, cCutout.w, cCutout.h);
-			
-			
+
+
 			if (!compositeRect) {
 				compositeRect = cRect;
 			} else {
 				compositeRect = compositeRect.union(cRect);
 			}
 		}
-			
-		
+
+
 		var can = document.createElement('canvas');
 		var ctx = can.getContext('2d');
 		// can.width = mmtm.w(compositeRect.width);
 		// can.height = mmtm.h(compositeRect.height);
 		can.width = compositeRect.width;
 		can.height = compositeRect.height;
-		
+
 		// put all the image datas in the right spot on this ctx
 		var allMonDim = tQS.allMonDim;
 		for (var i=0; i<l; i++) {
@@ -334,121 +334,121 @@ function fullfillCompositeRequest(aData) {
 				var y = Math.round(subcutout.y - allMonDim[iMon].y);
 				var w = Math.round(subcutout.w);
 				var h = Math.round(subcutout.h);
-				
+
 				var subImagedata = new ImageData(new Uint8ClampedArray(cSubData.arrbuf), w, h);
 				ctx.putImageData(subImagedata, subcutout.x - compositeRect.x, subcutout.y - compositeRect.y);
 			}
 		}
-		
+
 		// send data to bootstrap
-		
-		
+
+
 		// determeint oauthServiceName
 		var oauthServiceName;
-		
+
 		switch (action) {
 			case 'Copy':
 			case 'Print':
-					
+
 					oauthServiceName = action.toLowerCase();
-					
+
 				break;
 			case 'Save':
-				
+
 					oauthServiceName = 'save-' + sub.toLowerCase();
 					if (!boolclose && oauthServiceName == 'save-browse') {
 						oauthServiceName = 'save-browse-canvas';
 					}
-				
+
 				break;
 			case 'Upload':
-			
+
 					switch (sub) {
 						case 'Imgur Anonymous':
-						
+
 								oauthServiceName = 'imguranon';
-						
+
 							break;
 						case 'Imgur':
-						
+
 								oauthServiceName = 'imgur';
-						
+
 							break;
 						case 'Google Drive':
-						
+
 								oauthServiceName = 'gdrive';
-						
+
 							break;
 						case 'Dropbox':
-						
+
 								oauthServiceName = 'dropbox';
-						
+
 							break;
 						default:
 							console.error('should never get here unrecognized sub:', sub);
 					}
-			
+
 				break;
 			case 'Search':
-			
+
 					switch (sub) {
 						case 'Tineye':
-						
+
 								oauthServiceName = 'tineye';
-						
+
 							break;
 						case 'Google':
-						
+
 								oauthServiceName = 'google-images';
-						
+
 							break;
 						case 'Bing':
-						
+
 								oauthServiceName = 'bingimages';
-						
+
 							break;
 						default:
 							console.error('should never get here unrecognized sub:', sub);
 					}
-			
+
 				break;
 			case 'Share':
 			case 'Text Recognition':
-				
+
 					oauthServiceName = sub.toLowerCase();
-					
+
 					if (oauthServiceName == 'all') {
 						// its all ocr
 						oauthServiceName = 'ocrall';
 					}
-				
+
 				break;
 			default:
 				console.error('no bootstrap action specified, action:', action, 'sub:', sub);
 				return;
 		}
-		
-		
+
+
 		var postAction = function() {
 			if (boolclose) {
 				window.close();
 			}
 		};
-		
+
 		// the various actions
 		if (sub == 'Twitter') {
-			
+
 			triggerNSCommEvent({
 				topic: 'callInBootstrap',
 				method: 'shareToTwitter',
 				argsArr: [can.toDataURL('image/png', '')],
 				iMon: tQS.iMon
 			});
-			
+
 			postAction();
-			
+
 		} else if (['Copy', 'Print'].indexOf(action) > -1) {
-			
+
 			// data url actions
 			triggerNSCommEvent({
 				topic: 'callInBootstrap',
@@ -456,11 +456,11 @@ function fullfillCompositeRequest(aData) {
 				argsArr: [oauthServiceName, can.toDataURL('image/png', '')],
 				iMon: tQS.iMon
 			});
-			
+
 			postAction();
-			
+
 		} else if (['Text Recognition'].indexOf(action) > -1) {
-			
+
 			// plain array buffer actions
 			triggerNSCommEvent({
 				topic: 'callInBootstrap',
@@ -468,46 +468,46 @@ function fullfillCompositeRequest(aData) {
 				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height],
 				iMon: tQS.iMon
 			});
-			
+
 			postAction();
-			
+
 		} else {
-			
+
 			// png arrbuf actions
-			(can.toBlobHD || can.toBlob).call(can, function(b) {				
+			(can.toBlobHD || can.toBlob).call(can, function(b) {
 				// var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 				var r = new FileReader();
 				r.onloadend = function() {
-        
+
 					triggerNSCommEvent({
 						topic: 'callInBootstrap',
 						method: 'uploadOauth',
 						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
 						iMon: tQS.iMon
 					});
-		
+
 					postAction();
-					
+
 				};
 				r.readAsArrayBuffer(b);
-				
+
 			}, 'image/png');
-			
+
 		}
-		
+
 		// debug - put this canvas on the document
 		// can.style.position = 'absolute';
 		// can.style.zIndex = '9999';
 		// can.style.top = 0;
 		// can.style.left = 0;
 		// document.body.appendChild(can);
-		
+
 		// gCanStore.rconn.oscalecan1.style.position = 'absolute';
 		// gCanStore.rconn.oscalecan1.style.zIndex = '99999';
 		// gCanStore.rconn.oscalecan1.style.top = 0;
 		// gCanStore.rconn.oscalecan1.style.left = 0;
 		// document.body.appendChild(gCanStore.rconn.oscalecan1);
-		
+
 		// setTimeout(function() {
 			// document.body.removeChild(can);
 			// // document.body.removeChild(gCanStore.rconn.oscalecan1);
@@ -523,22 +523,22 @@ function initPasteDrawable() {
 		// paste already in progress
 		return;
 	}
-	
+
 	// start process
 	if (!gCState.copied_drawable) {
 		console.log('nothing in copied_drawable');
 		return;
 	}
-	
+
 	// ok continue
 	gPasteDrawableResponses = {};
-	
+
 	// populate gPasteDrawableResponses with the monitors i need a response from
 	var allMonDim = tQS.allMonDim;
 	for (var toMon=0; toMon<allMonDim.length; toMon++) {
 		gPasteDrawableResponses[toMon] = null;
 	}
-	
+
 	// ask all monitors for their gMX and gMY and gMTime
 	var requestLoad = {
 		topic: 'respondPasteDrawableRequest',
@@ -562,9 +562,9 @@ function initPasteDrawable() {
 function respondPasteDrawableRequest(aData) {
 	// emits a fullfillPasteDrawableRequest to requestingMon
 	// if all requests fullfilled then it does the paste
-	
+
 	var requestingMon = aData.requestingMon;
-	
+
 	var responseLoad = {
 		topic: 'completePasteDrawableRequest',
 		fromMon: tQS.iMon,
@@ -586,23 +586,23 @@ function respondPasteDrawableRequest(aData) {
 
 function completePasteDrawableRequest(aData) {
 	// called multiple times on the requesting mon, so called by respondPasteDrawableRequest, when all responses are in gPasteDrawableResponses, then it does the paste
-	
+
 	var fromMon = aData.fromMon;
-	
+
 	// update gPasteDrawableResponses
 	gPasteDrawableResponses[fromMon] = {
 		mx: aData.mx,
 		my: aData.my,
 		mtime: aData.mtime
 	};
-	
+
 	// check if all responses fullfilled
 	for (var p in gPasteDrawableResponses) {
 		if (!gPasteDrawableResponses[p]) {
 			return; // all responses not yet fullfilled so exit to not complete
 		}
 	}
-	
+
 	// got here, so all were fullfilled
 	// find the latest time
 	var latestTimeEntry;
@@ -612,11 +612,11 @@ function completePasteDrawableRequest(aData) {
 			latestTimeEntry = gPasteDrawableResponses[p];
 		}
 	}
-	
+
 	// paste drawable
 	var clonedDrawable = JSON.parse(gCState.copied_drawable);
 	clonedDrawable.id = gCState.nextid++;
-	
+
 	// translate the paste to where the mouse is currently
 	if ('w' in clonedDrawable || 'chars' in clonedDrawable) {
 		clonedDrawable.x = latestTimeEntry.mx;
@@ -642,11 +642,11 @@ function completePasteDrawableRequest(aData) {
 		clonedDrawable.y2 += dy;
 	}
 	else { console.error('what the heck??? no translate for this drawable?? clonedDrawable:', clonedDrawable); }
-	
+
 	console.log('clonedDrawable:', clonedDrawable);
-	
+
 	gPasteDrawableResponses = null;
-	
+
 	gCanStore.rconn.dAdd(clonedDrawable);
 	gCanStore.setCanState(false);
 }
@@ -686,7 +686,7 @@ function triggerNSCommEvent(myEventDetail) {
 
 function init(aArrBufAndCore) {
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
-	
+
 	core = aArrBufAndCore.core;
 	gFonts = aArrBufAndCore.fonts;
 	var palLayout = [ // the tools and order they should show in
@@ -1084,12 +1084,12 @@ function init(aArrBufAndCore) {
 				sGenPalH: 0, // height
 				sGenAltKey: false,
 				sGenShiftKey: false,
-				
+
 				// all these keys below should be synced to fill of editor state
-				
+
 				// canvas realted
 				sCanHandleSize: this.props.pCanHandleSize,
-				
+
 				// palette related
 				sPalSize: this.props.pPalSize,
 				sPalSeldSubs: this.props.pPalSeldSubs, // object holding the active sub for each tool label. so key is tool label. value is label of selected sab
@@ -1105,20 +1105,20 @@ function init(aArrBufAndCore) {
 				sPalMarkerAlpha: this.props.pPalMarkerAlpha,
 				sPalMarkerColorHist: this.props.pPalMarkerColorHist,
 				sPalBothColorHist: this.props.pPalBothColorHist,
-				
+
 				sPalBlurBlock: this.props.pPalBlurBlock,
 				sPalBlurRadius: this.props.pPalBlurRadius,
-				
+
 				sPalArrowLength: this.props.pPalArrowLength,
 				sPalArrowEnd: this.props.pPalArrowEnd,
 				sPalArrowStart: this.props.pPalArrowStart,
-				
+
 				sPalZoomViewCoords: this.props.pPalZoomViewCoords,
 				sPalZoomViewLevel: this.props.pPalZoomViewLevel,
-				
+
 				sPalLineWidth: this.props.pPalLineWidth,
 				sPalRectRadius: this.props.pPalRectRadius,
-				
+
 				sPalFontSize: this.props.pPalFontSize,
 				sPalFontFace: this.props.pPalFontFace,
 				sPalFontBold: this.props.pPalFontBold,
@@ -1175,7 +1175,7 @@ function init(aArrBufAndCore) {
 							},
 							iMon: tQS.iMon
 						});
-						
+
 						// triggerNSCommEvent{
 							// topic: 'broadcastToOthers',
 							// postMsgObj: {
@@ -1190,28 +1190,28 @@ function init(aArrBufAndCore) {
 			}.bind(this);
 			gEditorStore.setState = this.setState.bind(this); // need bind here otherwise it doesnt work - last tested in React 0.14.x
 			gColorPickerSetState.NativeShotEditor = this.setState.bind(this);
-			
+
 			gCanStore.setCanState = this.setCanState;
-			
+
 			///////////
 			this.ctx = new MyContext(this.refs.can.getContext('2d'));
-			this.ctx0 = this.refs.can0.getContext('2d');			
-			
+			this.ctx0 = this.refs.can0.getContext('2d');
+
 			var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
-			
+
 			if (this.props.pQS.win81ScaleX || this.props.pQS.win81ScaleY) {
 				var canDum = document.createElement('canvas');
 				canDum.setAttribute('width', tQS.w);
 				canDum.setAttribute('height', tQS.h);
-				
+
 				var ctxDum = canDum.getContext('2d');
 				ctxDum.putImageData(screenshotImageData, 0, 0);
-				
+
 				this.ctx0.scale(1/tQS.win81ScaleX, 1/tQS.win81ScaleY);
 				// this.ctx.scale(1/tQS.win81ScaleX, 1/tQS.win81ScaleY);
-				
+
 				this.ctx0.drawImage(canDum, 0, 0);
-				
+
 				this.oscalecan0 = canDum;
 				this.oscalectx0 = ctxDum;
 			} else {
@@ -1219,7 +1219,7 @@ function init(aArrBufAndCore) {
 				this.oscalecan0 = this.refs.can0;
 				this.oscalectx0 = this.ctx0;
 			}
-			
+
 			// for drawing composite
 			var canDimDum = document.createElement('canvas');
 			var ctxDimDum = canDimDum.getContext('2d');
@@ -1228,25 +1228,25 @@ function init(aArrBufAndCore) {
 			this.oscalecan1 = canDimDum;
 			this.oscalectx1 = new MyContext(ctxDimDum);
 			this.oscalectx1.setScaleOff();
-			
+
 			this.cstate = {}; // state personal to this canvas. meaning not to be shared with other windows
 			gCState = this.cstate;
-			
+
 			gCState.nextid = 0; // next id for drawable
 
 			gCanStore.rconn = this; // connectio to the react component
-			
+
 			this.cstate.copied_drawable = null;
-			
+
 			// start - simon canvas stuff
 			this.cstate.valid = false;
 			gCanStore.oscalectx1_draw = false;
-			
+
 			// this.cstate.width = mmtm.w(this.props.pQS.w);
 			// this.cstate.height = mmtm.h(this.props.pQS.h);
-			
+
 			this.cstate.drawables = []; // the collection of things to be drawn
-			
+
 			this.cstate.dragging = false; // Keep track of when we are dragging
 			this.cstate.resizing = 0; // when mouses down with a tool that can draw
 			this.cstate.lining = false; // when picking new end points for a line
@@ -1254,32 +1254,32 @@ function init(aArrBufAndCore) {
 			this.cstate.typing = false;
 			this.cstate.selection = null;
 			this.cstate.selectionHandles = [];
-			
+
 			this.cstate.dragoffx = 0; // See mousedown and mousemove events for explanation
 			this.cstate.dragoffy = 0;
-			
+
 			this.cstate.downx = 0; // when the user mouses down on canvas
 			this.cstate.downy = 0; // when the user mouses down on canvas
-			
+
 			this.cstate.downedInMon = -1;
-			
+
 			// **** Options! ****
 			// now that Style is setup, i can add Drawable's
-			
+
 			this.cstate.dim = this.newDrawable(null, null, null, null, 'dim');
 			console.log('this.cstate.dim:', this.cstate.dim);
-			
+
 			window.addEventListener('mousemove', this.mousemove, false);
 			window.addEventListener('mousedown', this.mousedown, false);
 			window.addEventListener('mouseup', this.mouseup, false);
 			window.addEventListener('keyup', this.keyup, false);
 			window.addEventListener('keydown', this.keydown, false);
 			window.addEventListener('dblclick', this.dblclick, false);
-			
+
 			gCanStore.interval = setInterval(this.draw, this.props.pCanInterval);
 			// start - simon canvas stuff
 			///////////
-			
+
 			// add listeners
 			window.addEventListener('wheel', this.wheel, false);
 		},
@@ -1293,10 +1293,10 @@ function init(aArrBufAndCore) {
 					if (prevState.sCanHandleSize != this.state.sCanHandleSize) {
 						canValid = false;
 					}
-					
+
 					// did any properties change that affects selected drawable? if so then update the properties of the drawable and invalidate
 					var mySel = this.cstate.selection;
-					
+
 					var affectsStateVars = {
 						fillStyle: ['sPalFillColor', 'sPalFillAlpha'],
 						strokeStyle: mySel.name == 'Marker' ? ['sPalMarkerColor', 'sPalMarkerAlpha'] : ['sPalLineColor', 'sPalLineAlpha'],
@@ -1314,7 +1314,7 @@ function init(aArrBufAndCore) {
 						blurradius: 'sPalBlurRadius',
 						blurblock: 'sPalBlurBlock'
 					};
-					
+
 					// special for line
 					var isText;
 					if (mySel.name == 'Line') {
@@ -1324,13 +1324,13 @@ function init(aArrBufAndCore) {
 					} else if (mySel.name == 'Rectangle') {
 						affectsStateVars.radius = 'sPalRectRadius';
 					}
-					
+
 					// special stuff, for when resizing
 					if (this.cstate.resizing) {
 						delete affectsStateVars.w;
 						delete affectsStateVars.h;
 					}
-					
+
 					// start original block1929293055
 					for (var p in mySel) {
 						// console.log('on sel prop:', p);
@@ -1339,7 +1339,7 @@ function init(aArrBufAndCore) {
 							if (p == 'strokeStyle' || p == 'fillStyle') {
 									var cColorVarName = affectsStateVars[p][0];
 									var cAlphaVarName = affectsStateVars[p][1];
-									
+
 									if (prevState[cColorVarName] != this.state[cColorVarName] || prevState[cAlphaVarName] != this.state[cAlphaVarName]) {
 										// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', this.state[cVarName]);
 										var newColor = colorStrToCssRgba(this.state[cColorVarName], this.state[cAlphaVarName]);
@@ -1368,7 +1368,7 @@ function init(aArrBufAndCore) {
 						}
 					}
 					// end original block1929293055
-					
+
 					// check if need to convert shape. like if rect was selected, and now made it oval. or gaussian and now mosaic - only for tools with a submenu
 					if (prevState.sGenPalTool == this.state.sGenPalTool && prevState.sPalSeldSubs[prevState.sGenPalTool] != this.state.sPalSeldSubs[prevState.sGenPalTool]) {
 						// exclude Freedraw submenu
@@ -1392,9 +1392,9 @@ function init(aArrBufAndCore) {
 							}
 						}
 					}
-					
+
 				}
-			
+
 			// if pal tool changed, clear selection
 			if (this.cstate && prevState.sGenPalTool && this.cstate.selection && prevState.sGenPalTool != this.state.sGenPalTool) {
 				// clear selection
@@ -1403,17 +1403,17 @@ function init(aArrBufAndCore) {
 					canValid = validPostClear;
 				}
 			}
-			
+
 			// if pal tool sub tool changes, and dropping was in progress, then cancel the dropping
 			if (prevState.sGenPalTool != this.state.sGenPalTool || prevState.sPalSeldSubs[prevState.sGenPalTool] != this.state.sPalSeldSubs[prevState.sGenPalTool]) {
 				this.cancelDropping();
 			}
-			
+
 			// clean up when dropper is canceled
 			if (prevState.sGenColorPickerDropping && !this.state.sGenColorPickerDropping) {
 				gDroppingMixCtx = null;
 			}
-			
+
 			//if (this.state.sPalMultiDepresses['Zoom View'] != prevState.sPalMultiDepresses['Zoom View']) {
 			//	if (this.state.sPalMultiDepresses['Zoom View']) {
 			//		alert('adding wheel');
@@ -1423,7 +1423,7 @@ function init(aArrBufAndCore) {
 			//		window.removeEventListener('wheel', this.wheel, false);
 			//	}
 			//}
-			
+
 			// update canvas if it is in need of it
 			gCanStore.setCanState(canValid, true); // dont broadcast this one, as the setting of the react state will trigger componentUpdate there, which will trigger this set can state
 		},
@@ -1431,65 +1431,65 @@ function init(aArrBufAndCore) {
 		newDrawable: function(x, y, w, h, name, aOptions={}) {
 
 			var DRAWABLE = {};
-			
+
 			// set obj props
 			DRAWABLE.name = name;
 			DRAWABLE.id = this.cstate.nextid++;
-			
+
 			// set rest
 			switch (name) {
 				case 'dim':
-					
+
 						// dimensions
 						// DRAWABLE.x = 0;
 						// DRAWABLE.y = 0;
 						// DRAWABLE.w = 100;
 						// DRAWABLE.h = 100;
-						
+
 						// styleables (are a property on ctx like ctx.fillStyle or ctx.setLineDash) if undefined, that it is populated with respect to toolbar
 						DRAWABLE.fillStyle = 'rgba(0, 0, 0, 0.6)';
-					
+
 					break;
 				case 'Line':
-				
+
 						// dimensions
 						DRAWABLE.x = x;
 						DRAWABLE.y = y;
 						DRAWABLE.x2 = 'x2' in aOptions ? aOptions.x2 : x;
 						DRAWABLE.y2 = 'y2' in aOptions ? aOptions.y2 : y;
-						
+
 						// other props
 						DRAWABLE.arrowStart = aOptions.arrowStart || this.state.sPalArrowStart;
 						DRAWABLE.arrowEnd = aOptions.arrowEnd || this.state.sPalArrowEnd;
 						DRAWABLE.arrowLength = aOptions.arrowLength || this.state.sPalArrowLength;
-						
+
 						// styleables - if undefined, then it is set to the default value with respect to pal
 						DRAWABLE.lineWidth = aOptions.lineWidth; // lineWidth is not set, then it is undefined, and then setStyleablesDefaults will set it to the default value, which respects pal
 						DRAWABLE.strokeStyle = aOptions.strokeStyle;
 						DRAWABLE.fillStyle = DRAWABLE.strokeStyle; // needed for drawing arrow
 						DRAWABLE.setLineDash = aOptions.setLineDash;
 						DRAWABLE.lineJoin = aOptions.lineJoin;
-				
+
 					break;
 				case 'Pencil':
 				case 'Marker':
-				
+
 						// has to be drawn, i dont allow constructing DRAWABLE with predefiend path. as in i dont offer aOptions.path
 						DRAWABLE.path = [x, y];
-						
+
 						// styleables
 						DRAWABLE.lineWidth = aOptions.lineWidth;
 						DRAWABLE.strokeStyle = aOptions.strokeStyle;
 						DRAWABLE.setLineDash = aOptions.setLineDash;
 						DRAWABLE.lineJoin = aOptions.lineJoin;
-				
+
 					break;
 				case 'Text':
-				
+
 						// dimensions
 						DRAWABLE.x = x;
 						DRAWABLE.y = y;
-						
+
 						// others
 						DRAWABLE.chars = '';
 						DRAWABLE.index = 0; // the position of the ibeam
@@ -1498,96 +1498,96 @@ function init(aArrBufAndCore) {
 						DRAWABLE.fontbold = aOptions.fontbold;
 						DRAWABLE.fontitalic = aOptions.fontitalic;
 						DRAWABLE.linespacing = 1;
-						
+
 						// styleables
 						DRAWABLE.fillStyle = aOptions.fillStyle;
 						DRAWABLE.textAlign = aOptions.textAlign;
 						DRAWABLE.font = undefined; // i need to set it to undefined otherwise setStyleablesDefaults will not set it // user should only set fontsize,fontface,fontbold,fontitalic. the .font will be calculated by setStyleablesDefaults
-				
+
 					break;
 				case 'Gaussian':
-					
+
 						// dimensions
 						DRAWABLE.x = x;
 						DRAWABLE.y = y;
 						DRAWABLE.w = w;
 						DRAWABLE.h = h;
-						
+
 						// other
 						DRAWABLE.blurradius = aOptions.level || this.state.sPalBlurRadius
-						
+
 					break;
 				case 'Mosaic':
-					
+
 						// dimensions
 						DRAWABLE.x = x;
 						DRAWABLE.y = y;
 						DRAWABLE.w = w;
 						DRAWABLE.h = h;
-						
+
 						// other
 						DRAWABLE.blurblock = aOptions.level || this.state.sPalBlurBlock;
-				
+
 				case 'cutout':
-					
+
 						// dimensions
 						DRAWABLE.x = x;
 						DRAWABLE.y = y;
 						DRAWABLE.w = w;
 						DRAWABLE.h = h;
-						
+
 					break;
 				case 'Rectangle':
 				case 'Oval':
-					
+
 						// dimensions
 						DRAWABLE.x = x;
 						DRAWABLE.y = y;
 						DRAWABLE.w = w;
 						DRAWABLE.h = h;
-						
+
 						// styleables
 						DRAWABLE.fillStyle = undefined;
 						DRAWABLE.strokeStyle = undefined;
 						DRAWABLE.lineWidth = undefined;
 						DRAWABLE.setLineDash = undefined;
 						DRAWABLE.lineJoin = undefined;
-						
+
 						if (name == 'Rectangle') {
 							DRAWABLE.radius = aOptions.radius || this.state.sPalRectRadius;
 						}
-					
+
 					break;
 				default:
 					console.error('no props specified for a drawable with name "' + DRAWABLE.name + '"');
 					throw new Error('no props specified for a drawable with name "' + DRAWABLE.name + '"');
 			}
-			
+
 			// set styleables
 			this.setStyleablesDefaults(DRAWABLE);
-			
+
 			return DRAWABLE;
 		},
 		dDraw: function(aDrawable) {
 			// returns the value i should set this.cstate.valid to
-			
+
 			if (['cutout'].indexOf(aDrawable.name) > -1) {
 				// not drawable
 				console.error('trying to draw an undrawable, aDrawable:', aDrawable);
 				return true;
 			}
-			
+
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
 			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
 				console.error('width or height is 0 so not drawing, aDrawable:', aDrawable);
 				return true;
 			}
-			
+
 			// style the this.ctx
 			// console.log('applying styles of aDrawable:', aDrawable);
 			this.applyCtxStyle(aDrawable); // whatever keys exist that are in styleables will be styled to this.ctx
-			
+
 			// draw it
 			switch (aDrawable.name) {
 				case 'dim':
@@ -1596,7 +1596,7 @@ function init(aArrBufAndCore) {
 						if (!cutouts.length) {
 							this.ctx.fillRect(tQS.x, tQS.y, tQS.w, tQS.h);
 						} else {
-							
+
 							var fullscreenRect = new Rect(tQS.x, tQS.y, tQS.w, tQS.h);
 							var cutoutsAsRects = [];
 							var l = cutouts.length;
@@ -1610,10 +1610,10 @@ function init(aArrBufAndCore) {
 								this.ctx.fillRect(dimRects[i].x, dimRects[i].y, dimRects[i].width, dimRects[i].height);
 							}
 						}
-				
+
 					break;
 				case 'Rectangle':
-				
+
 						if (!aDrawable.radius) {
 							this.ctx.fillRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
 							if (aDrawable.lineWidth > 0) {
@@ -1624,17 +1624,17 @@ function init(aArrBufAndCore) {
 							roundRect(this.ctx, posd.x, posd.y, posd.w, posd.h, aDrawable.radius, true, aDrawable.lineWidth ? true : false);
 							// roundRect(this.ctx, aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h, aDrawable.radius, true, aDrawable.lineWidth ? true : false);
 						}
-					
+
 					break;
 				case 'Oval':
-					
+
 						// per jsbin from here - http://stackoverflow.com/a/2173084/1828637
-						
+
 						var w = aDrawable.w;
 						var h = aDrawable.h;
 						var x = aDrawable.x;
 						var y = aDrawable.y;
-						
+
 						var kappa = .5522848,
 							ox = (w / 2) * kappa, // control point offset horizontal
 							oy = (h / 2) * kappa, // control point offset vertical
@@ -1650,7 +1650,7 @@ function init(aArrBufAndCore) {
 						this.ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
 						this.ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
 						this.ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
-						
+
 						// this.ctx.quadraticCurveTo(x,y,xm,y);
 						// this.ctx.quadraticCurveTo(xe,y,xe,ym);
 						// this.ctx.quadraticCurveTo(xe,ye,xm,ye);
@@ -1660,10 +1660,10 @@ function init(aArrBufAndCore) {
 						if (aDrawable.lineWidth > 0) {
 							this.ctx.stroke();
 						}
-					
+
 					break;
 				case 'Line':
-					
+
 						this.ctx.beginPath();
 						this.ctx.moveTo(aDrawable.x, aDrawable.y);
 						this.ctx.lineTo(aDrawable.x2, aDrawable.y2);
@@ -1673,33 +1673,33 @@ function init(aArrBufAndCore) {
 							// end arrow
 							canvas_arrow(this.ctx, aDrawable.x, aDrawable.y, aDrawable.x2, aDrawable.y2, aDrawable.arrowLength);
 						}
-						
+
 						if (aDrawable.arrowStart) {
 							// start arrow
 							canvas_arrow(this.ctx, aDrawable.x2, aDrawable.y2, aDrawable.x, aDrawable.y, aDrawable.arrowLength)
 						}
-					
+
 					break;
 				case 'Pencil':
 				case 'Marker':
-					
+
 						this.ctx.beginPath();
 						this.ctx.moveTo(aDrawable.path[0], aDrawable.path[1]);
 						for (var i=2; i<aDrawable.path.length; i+=2) {
 							this.ctx.lineTo(aDrawable.path[i], aDrawable.path[i+1]);
 						}
 						this.ctx.stroke();
-					
+
 					break;
 				case 'Text':
-				
+
 						this.ctx.fillText(aDrawable.chars, aDrawable.x, aDrawable.y);
-				
+
 					break;
 				case 'Gaussian':
-					
+
 						var positived = this.makeDimsPositive(aDrawable, true);
-						
+
 						var level = aDrawable.blurradius; // this.state.sPalBlurRadius;
 
 						// get section of screenshot
@@ -1708,7 +1708,7 @@ function init(aArrBufAndCore) {
 						if (gCanStore.oscalectx1_draw) {
 							srcCtx = this.oscalectx0; // this one is not an instance of MyContext
 							srcImgData = srcCtx.getImageData(Math.round(positived.x - tQS.x), Math.round(positived.y - tQS.y), Math.round(positived.w), Math.round(positived.w));
-							
+
 							// apply filter
 							imagedata.gaussian_blur(srcImgData, Math.round(positived.w), Math.round(positived.h), {
 								radius: level
@@ -1716,7 +1716,7 @@ function init(aArrBufAndCore) {
 						} else {
 							srcCtx = this.ctx0;
 							srcImgData = srcCtx.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
-							
+
 							// apply filter
 							imagedata.gaussian_blur(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), { // // no need for rounding as mmtm gets back without the scale
 								radius: Math.round(mmtm.w(level))
@@ -1725,21 +1725,21 @@ function init(aArrBufAndCore) {
 
 						// draw it
 						this.ctx.putImageData(srcImgData, positived.x, positived.y);
-					
+
 					break;
 				case 'Mosaic':
-					
+
 						var positived = this.makeDimsPositive(aDrawable, true);
-						
+
 						var level = aDrawable.blurblock;
-						
+
 						// get section of screenshot
 						var srcCtx;
 						var srcImgData;
 						if (gCanStore.oscalectx1_draw) {
 							srcCtx = this.oscalectx0; // this one is not an instance of MyContext so i need to subtract tQS.# myself and round
 							srcImgData = srcCtx.getImageData(Math.round(positived.x - tQS.x), Math.round(positived.y - tQS.y), Math.round(positived.w), Math.round(positived.w));
-							
+
 							// apply filter
 							imagedata.pixelate(srcImgData, Math.round(positived.w), Math.round(positived.h), {
 								blockSize: level
@@ -1747,7 +1747,7 @@ function init(aArrBufAndCore) {
 						} else {
 							srcCtx = this.ctx0;
 							srcImgData = srcCtx.getImageData(mmtm.x(positived.x), mmtm.y(positived.y), mmtm.w(positived.w), mmtm.h(positived.h)); // no need for rouning as mmtm gets back without the scale
-							
+
 							// apply filter
 							imagedata.pixelate(srcImgData, mmtm.w(positived.w), mmtm.h(positived.h), {
 								blockSize: Math.round(mmtm.w(level))
@@ -1756,62 +1756,62 @@ function init(aArrBufAndCore) {
 
 						// draw it
 						this.ctx.putImageData(srcImgData, positived.x, positived.y);
-					
+
 					break;
 				default:
 					// should never get here, as would have returned earlier, as aDrawable one is not drawable
 			}
-			
+
 			return false;
 		},
 		dSelect: function(aDrawable) {
 			// returns the valid value
-			
+
 			// console.error('doing select for drawable:', aDrawable);
 			// set styles - and determine if its selectable
 			var curStyle;
 			switch (aDrawable.name) {
 				case 'cutout':
-					
+
 						curStyle = {
 							lineWidth: 1,
 							setLineDash: [0, 3, 0],
 							strokeStyle: 'black'
 						};
-					
+
 					break;
 				case 'Rectangle':
 				case 'Oval':
 				case 'Gaussian':
 				case 'Mosaic':
-				
+
 						curStyle = {
 							lineWidth: 1,
 							setLineDash: [0, 3, 0],
 							strokeStyle: 'black'
 						};
-				
+
 					break;
 				case 'Line':
 				case 'Pencil':
 				case 'Marker':
-				
+
 						curStyle = {
 							strokeStyle: '#ffffff',
 							setLineDash: [],
 							lineWidth: 1,
 							fillStyle: '#000000'
 						};
-				
+
 					break;
 				case 'Text':
-					
+
 						curStyle = {
 							strokeStyle: 'black',
 							setLineDash: [0, 3, 0],
 							lineWidth: 1
 						};
-					
+
 					break;
 				default:
 					// not selectable
@@ -1819,17 +1819,17 @@ function init(aArrBufAndCore) {
 					console.warn('aDrawable drawable is NOT selectable! tried to select a drawable with name:', aDrawable.name, 'drawable obj:', aDrawable);
 					return true; // so no need to invalidate
 			}
-			
+
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
 			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
 				console.error('width or height is 0 so not drawing');
 				return true;
 			}
-			
+
 			// got here so curStyle exists meaning it does get drawn - yeah i know the whole "Drawable" is misleading, some "Drawable's" are not drawn
 			this.applyCtxStyle(curStyle);
-			
+
 			// draw the selection of it
 			switch (aDrawable.name) {
 				case 'cutout':
@@ -1837,57 +1837,57 @@ function init(aArrBufAndCore) {
 				case 'Oval':
 				case 'Gaussian':
 				case 'Mosaic':
-				
+
 						if (this.state.sCanHandleSize > 0) {
 							this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
 						}
-						
+
 						// draw handles
 						var handleSize = Math.abs(this.state.sCanHandleSize);
-						
+
 						var half = handleSize / 2;
-						
+
 						var selectionHandles = this.cstate.selectionHandles;
-						
+
 						// top left, middle, right
 						selectionHandles[0] = {
 							x: aDrawable.x-half,
 							y: aDrawable.y-half
 						};
-						
+
 						selectionHandles[1] = {
 							x: aDrawable.x+aDrawable.w/2-half,
 							y: aDrawable.y-half
 						};
-						
+
 						selectionHandles[2] = {
 							x: aDrawable.x+aDrawable.w-half,
 							y: aDrawable.y-half
 						};
-						
+
 						//middle left
 						selectionHandles[3] = {
 							x: aDrawable.x-half,
 							y: aDrawable.y+aDrawable.h/2-half
 						};
-						
+
 						//middle right
 						selectionHandles[4] = {
 							x: aDrawable.x+aDrawable.w-half,
 							y: aDrawable.y+aDrawable.h/2-half
 						};
-						
+
 						//bottom left, middle, right
 						selectionHandles[6] = {
 							x: aDrawable.x+aDrawable.w/2-half,
 							y: aDrawable.y+aDrawable.h-half
 						};
-						
+
 						selectionHandles[5] = {
 							x: aDrawable.x-half,
 							y: aDrawable.y+aDrawable.h-half
 						};
-						
+
 						selectionHandles[7] = {
 							x: aDrawable.x+aDrawable.w-half,
 							y: aDrawable.y+aDrawable.h-half
@@ -1902,18 +1902,18 @@ function init(aArrBufAndCore) {
 								cur = selectionHandles[i];
 								this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
 							};
-						
+
 							this.ctx.fill();
 							this.ctx.stroke();
 						}
-					
+
 					break;
 				case 'Text':
-					
+
 						// var linespacingAsPx = aDrawable.linespacing * aDrawable.size;
-						
+
 						var font = this.calcCtxFont(aDrawable);
-						
+
 						var x;
 						var y;
 						var h;
@@ -1932,11 +1932,11 @@ function init(aArrBufAndCore) {
 							y = aDrawable.y - fontsize;
 						}
 						x = aDrawable.x;
-						
+
 						// if (this.state.sCanHandleSize > 0) {
 							this.ctx.strokeRect(aDrawable.x, y, w, h);
 						// }
-						
+
 						if (this.cstate.typing) {
 							// draw ibeam
 							var ibh = h; // ibeam height
@@ -1950,39 +1950,39 @@ function init(aArrBufAndCore) {
 							this.ctx.fillStyle = 'black'; // ibeam color
 							this.ctx.fillRect(aDrawable.x + ibx, y, ibw, ibh);
 						}
-					
+
 					break;
 				case 'Line':
 
 						// this.ctx.beginPath();
 						// this.ctx.arc(aDrawable.x, aDrawable.y, this.state.sCanHandleSize, 0, 360);
-						
+
 						// this.ctx.fill();
 						// this.ctx.stroke();
-						
+
 						// this.ctx.beginPath();
 						// this.ctx.arc(aDrawable.x2, aDrawable.y2, this.state.sCanHandleSize, 0, 360);
-						
+
 						// this.ctx.fill();
 						// this.ctx.stroke();
-						
+
 						// draw handles
 						var handleSize = Math.abs(this.state.sCanHandleSize);
 						var half = handleSize / 2;
-						
+
 						var selectionHandles = this.cstate.selectionHandles;
 						selectionHandles.length = 2;
-						
+
 						selectionHandles[0] = {
 							x: aDrawable.x-half,
 							y: aDrawable.y-half
 						};
-						
+
 						selectionHandles[1] = {
 							x: aDrawable.x2-half,
 							y: aDrawable.y2-half
 						};
-						
+
 						this.ctx.beginPath();
 						for (i = 0; i < 2; i += 1) {
 							cur = selectionHandles[i];
@@ -1990,29 +1990,29 @@ function init(aArrBufAndCore) {
 						};
 						this.ctx.fill();
 						this.ctx.stroke();
-					
+
 					break;
 				case 'Pencil':
 				case 'Marker':
-				
+
 						// this.ctx.beginPath();
 						// this.ctx.arc(aDrawable.path[0], aDrawable.path[1], this.state.sCanHandleSize, 0, 360);
-						
+
 						// this.ctx.fill();
 						// this.ctx.stroke();
-						
+
 						// this.ctx.beginPath();
 						// this.ctx.arc(aDrawable.path[aDrawable.path.length - 2], aDrawable.path[aDrawable.path.length - 1], this.state.sCanHandleSize, 0, 360);
-						
+
 						// this.ctx.fill();
 						// this.ctx.stroke();
 						// draw handles
 						var handleSize = Math.abs(this.state.sCanHandleSize);
 						var half = handleSize / 2;
-						
+
 						// var selectionHandles = this.cstate.selectionHandles;
 						// selectionHandles.length = 2;
-						
+
 						this.ctx.beginPath();
 						// for (i = 0; i < 2; i += 1) {
 							// cur = selectionHandles[i];
@@ -2022,12 +2022,12 @@ function init(aArrBufAndCore) {
 						this.ctx.rect(aDrawable.path[aDrawable.path.length-2] - half, aDrawable.path[aDrawable.path.length-1] - half, handleSize, handleSize);
 						this.ctx.fill();
 						this.ctx.stroke();
-				
+
 					break;
 				default:
 					console.error('should never get here, as would have returned earlier, as aDrawable one is not drawable');
 			}
-			
+
 			return false;
 		},
 		dContains: function(aDrawable, mx, my) {
@@ -2037,10 +2037,10 @@ function init(aArrBufAndCore) {
 				console.error('tried to test contains on an uncontainable! aDrawable:', aDrawable);
 				return;
 			}
-			
+
 			switch (aDrawable.name) {
 				case 'Line':
-				
+
 						if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 							var selectionHandles = this.cstate.selectionHandles;
 							var handleSize = Math.abs(this.state.sCanHandleSize);
@@ -2051,18 +2051,18 @@ function init(aArrBufAndCore) {
 								}
 							}
 						}
-				
+
 						this.ctx.beginPath();
 						this.ctx.setLineDash([]);
 						this.ctx.lineWidth = aDrawable.lineWidth >= 20 ? aDrawable.lineWidth : 20;
 						this.ctx.moveTo(aDrawable.x, aDrawable.y);
 						this.ctx.lineTo(aDrawable.x2, aDrawable.y2);
 						return this.ctx.isPointInStroke(mx, my) ? 1 : 0;
-				
+
 					break;
 				case 'Pencil':
 				case 'Marker':
-					
+
 						this.ctx.setLineDash([]);
 						this.ctx.lineWidth = aDrawable.lineWidth >= 20 ? aDrawable.lineWidth : 20;
 						this.ctx.beginPath();
@@ -2071,13 +2071,13 @@ function init(aArrBufAndCore) {
 							this.ctx.lineTo(aDrawable.path[i], aDrawable.path[i+1]);
 						}
 						return this.ctx.isPointInStroke(mx, my) ? 1 : 0;
-					
+
 					break;
 				case 'Text':
-				
+
 						var font = this.calcCtxFont(aDrawable);
 						this.ctx.font = font;
-						
+
 						var x;
 						var y;
 						var h;
@@ -2096,48 +2096,48 @@ function init(aArrBufAndCore) {
 							y = aDrawable.y - fontsize;
 						}
 						x = aDrawable.x;
-						
+
 						if ((x <= mx) && (x + w >= mx) &&
 							(y <= my) && (y + h >= my)) {
 								return 1;
 						}
-				
+
 					break;
 				default:
 					// cutout, Rectangle, Oval, Gaussian, Mosaic
-				
+
 					// is aDrawable selected
 					if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 						var selectionHandles = this.cstate.selectionHandles;
 						var handleSize = Math.abs(this.state.sCanHandleSize);
 						for (var i=0; i<8; i++) {
-							if ((selectionHandles[i].x <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
-								(selectionHandles[i].y <= my) && (selectionHandles[i].y + handleSize >= my)) {
+							if ((selectionHandles[i].x - handleSize <= mx) && (selectionHandles[i].x + handleSize >= mx) &&
+								(selectionHandles[i].y - handleSize <= my) && (selectionHandles[i].y + handleSize >= my)) {
 									return i + 2;
 							}
 						}
-						
+
 						// check if mouse is on the border, if it is then do that resize
 						var borderWidth = 10;
-						
+
 						// top border
 						if ((aDrawable.x <= mx) && (aDrawable.x + aDrawable.w >= mx) &&
 							(aDrawable.y - borderWidth <= my) && (aDrawable.y + borderWidth >= my)) {
 								return 3;
 						}
-						
+
 						// left border
 						if ((aDrawable.x - borderWidth <= mx) && (aDrawable.x + borderWidth >= mx) &&
 							(aDrawable.y <= my) && (aDrawable.h + aDrawable.y >= my)) {
 								return 5;
 						}
-						
+
 						// right border
 						if ((aDrawable.w + aDrawable.x - borderWidth <= mx) && (aDrawable.w + aDrawable.x + borderWidth >= mx) &&
 							(aDrawable.y <= my) && (aDrawable.h + aDrawable.y >= my)) {
 								return 6;
 						}
-						
+
 						// bottom border
 						if ((aDrawable.x <= mx) && (aDrawable.x + aDrawable.w >= mx) &&
 							(aDrawable.h + aDrawable.y - borderWidth <= my) && (aDrawable.h + aDrawable.y + borderWidth >= my)) {
@@ -2155,7 +2155,7 @@ function init(aArrBufAndCore) {
 		dAdd: function(aDrawable) {
 			// returns new valid value
 			this.cstate.drawables.push(aDrawable);
-			
+
 			if (aDrawable.w && aDrawable.h) {
 				// this.cstate.valid = false;
 				return false;
@@ -2166,42 +2166,42 @@ function init(aArrBufAndCore) {
 		},
 		dDelete: function(aDrawable) {
 			// returns new valid value
-			
+
 			var drawables = this.cstate.drawables;
 			switch (aDrawable.name) {
 				case 'dim':
-					
+
 						// not added to list
-					
+
 					break;
 				default:
 					drawables.splice(this.dIndexOf(aDrawable), 1);
 			}
-			
+
 			switch (aDrawable.name) {
 				case 'Line':
-				
+
 						if (aDrawable.x == aDrawable.x2 && aDrawable.y == aDrawable.y2) {
 							return true;
 						} else {
 							return false;
 						}
-				
+
 					break;
 				case 'Pencil':
 				case 'Marker':
-				
+
 						if (aDrawable.path.length == 2) {
 							return true;
 						} else {
 							return false;
 						}
-				
+
 					break;
 				case 'Text':
-					
+
 						return aDrawable.chars.length ? false : true;
-					
+
 					break;
 				default:
 					// cutout, Rectangle, Oval, Gaussian, Mosaic
@@ -2262,7 +2262,7 @@ function init(aArrBufAndCore) {
 			return valid;
 		},
 		makeDimsPositive: function(aDrawable, notByRef) {
-			// aDrawObject is Shape, Cutout, 
+			// aDrawObject is Shape, Cutout,
 				// it has x, y, w, h
 			// if the w or h are negative, then it makes the w and h positive and adjusts the x y respectively
 			if (notByRef) {
@@ -2273,7 +2273,7 @@ function init(aArrBufAndCore) {
 					h: aDrawable.h,
 				}
 			}
-			
+
 			if (aDrawable.w < 0) {
 				aDrawable.x += aDrawable.w;
 				aDrawable.w *= -1;
@@ -2283,7 +2283,7 @@ function init(aArrBufAndCore) {
 				aDrawable.y += aDrawable.h;
 				aDrawable.h *= -1;
 			}
-			
+
 			return aDrawable;
 		},
 		applyCtxStyle: function(aObj) {
@@ -2307,12 +2307,12 @@ function init(aArrBufAndCore) {
 						this.ctx[p] = aObj[p];
 					}
 				}
-			}			
+			}
 		},
 		getMouse: function(e) {
 			var mx = mtmm.x(e.clientX);
 			var my = mtmm.y(e.clientY);
-			
+
 			return {
 				x: mx,
 				y: my
@@ -2328,46 +2328,46 @@ function init(aArrBufAndCore) {
 			if (this.cstate.pathing && this.cstate.pathing.length) {
 				this.cstate.selection.path = this.cstate.selection.path.concat(this.cstate.pathing.splice(0, 2));
 			}
-			
+
 			var dropping = this.state.sGenColorPickerDropping;
 			if (dropping && gDroppingCoords.length) {
 				var dy = gDroppingCoords.pop();
 				var dx = gDroppingCoords.pop();
-				
+
 				if (!gDroppingMixCtx) {
 					var mixcan = document.createElement('canvas');
 					mixcan.width = 1;
 					mixcan.height = 1;
 					gDroppingMixCtx = mixcan.getContext('2d');
 				}
-				
+
 				gDroppingMixCtx.drawImage(this.refs.can0, mmtm.x(dx), mmtm.y(dy), 1, 1, 0, 0, 1, 1);
 				gDroppingMixCtx.drawImage(this.refs.can, mmtm.x(dx), mmtm.y(dy), 1, 1, 0, 0, 1, 1);
 				var mixedRGBA = gDroppingMixCtx.getImageData(0, 0, 1, 1).data;
 				var newDropperObj = {};
 				newDropperObj[dropping.pStateColorKey] = 'rgb(' + mixedRGBA[0] + ', ' + mixedRGBA[1] + ', ' + mixedRGBA[2] + ')'; // rgbToHex(true, mixedRGBA[0], mixedRGBA[0], mixedRGBA[2]);
 				gEditorStore.setState(newDropperObj);
-				
+
 
 				// var cDropperColor = this.ctx.getImageData(dx, dy, 1, 1).data;
 				// var cDropperColor0 = this.ctx0.getImageData(dx, dy, 1, 1).data;
 				// var avgRGBA = arraysAvg(cDropperColor, cDropperColor0);
 				// console.log('ok mixed. setting.', 'avgRGBA:', uneval(avgRGBA), 'dim:', uneval(cDropperColor), 'base:', uneval(cDropperColor0), 'mixedRGBA:', uneval(mixedRGBA));
-				
+
 			}
-			
+
 			if(!this.cstate.valid || gCanStore.oscalectx1_draw) {
-				
+
 				if (gCanStore.oscalectx1_draw) {
 					this.actualCtx = this.ctx;
 					this.ctx = this.oscalectx1;
 				}
-				
+
 				var ctx = this.ctx;
 				if (!gCanStore.oscalectx1_draw) {
 					this.clear();
 				}
-				
+
 				// draw all drawables
 				var drawables = this.cstate.drawables;
 				var l = drawables.length;
@@ -2378,7 +2378,7 @@ function init(aArrBufAndCore) {
 						// this is drawn as negative space with `this.dim.draw()`
 						continue;
 					}
-					
+
 					// We can skip the drawing of elements that have moved off the screen:
 					/*
 					switch (drawable.name) {
@@ -2396,7 +2396,7 @@ function init(aArrBufAndCore) {
 							// do nothing
 					}
 					*/
-					
+
 					this.dDraw(drawable);
 				}
 				// console.log('done drawing drawable');
@@ -2420,13 +2420,13 @@ function init(aArrBufAndCore) {
 					this.ctx = this.actualCtx;
 					return;
 				}
-				
+
 				// draw the dim
 				this.dDraw(this.cstate.dim);
-				
+
 				this.cstate.valid = true; // do not use gCanStore.setCanState here
 				if (gZState) { gZState.setInvalid(); }
-				
+
 				// alt method to link38378777577
 				// if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
 					// gWidthRef.value = Math.abs(this.cstate.selection.w);
@@ -2438,39 +2438,39 @@ function init(aArrBufAndCore) {
 			// returns a string which can be used with ctx.font = ''
 			var font = [];
 			var fontables = ['fontitalic', 'fontbold', 'fontsize', 'fontface']; // an array not an object, as the order matters
-			
+
 			var l = fontables.length;
 			for (var i=0; i<l; i++) {
 				var fontable = fontables[i];
 				if (fontable in aDrawable && aDrawable[fontable] !== undefined) {
 					var pushable = aDrawable[fontable];
-					
+
 					// custom processing on pushable
 					switch (fontable) {
 						case 'fontsize':
-							
+
 								pushable += 'px';
-							
+
 							break;
 						case 'fontbold':
-							
+
 								pushable = pushable ? 'bold' : undefined;
-							
+
 							break;
 						case 'fontitalic':
-							
+
 								pushable = pushable ? 'italic' : undefined;
-							
+
 							break;
 						default:
 							// no extra processing on pushable
 					}
-					
+
 					// push it
 					font.push(pushable);
 				}
 			}
-			
+
 			if (font.length) {
 				// console.log('ok cacled font is:', font.join(' '));
 				return font.join(' ');
@@ -2482,7 +2482,7 @@ function init(aArrBufAndCore) {
 			if (!isValid) {
 				this.cstate.valid = false;
 			}
-			
+
 			if (!isValid || forceBroadcast) {
 				if (!dontBroadcast || forceBroadcast) {
 					triggerNSCommEvent({
@@ -2498,8 +2498,8 @@ function init(aArrBufAndCore) {
 		},
 		setStyleablesDefaults: function(aDrawable) {
 			// the styles and the value is their default value
-			
-			// specials			
+
+			// specials
 			var fontablesDefaults = {
 				fontitalic: this.state.sPalFontItalic,
 				fontbold: this.state.sPalFontBold,
@@ -2507,7 +2507,7 @@ function init(aArrBufAndCore) {
 				fontface: this.state.sPalFontFace,
 				fontsize: this.state.sPalFontSize
 			};
-			
+
 			var styleables = {
 				lineWidth: this.state.sPalLineWidth,
 				fillStyle: colorStrToCssRgba(gCanStore.rconn.state.sPalFillColor, this.state.sPalFillAlpha),
@@ -2517,13 +2517,13 @@ function init(aArrBufAndCore) {
 				setLineDash: [],
 				strokeStyle: aDrawable.name == 'Marker' ? colorStrToCssRgba(this.state.sPalMarkerColor, this.state.sPalMarkerAlpha) : colorStrToCssRgba(this.state.sPalLineColor, this.state.sPalLineAlpha)
 			};
-			
+
 			if (aDrawable.name == 'Line') { // non-isomorphic but i gotta
 				styleables.fillStyle = styleables.strokeStyle;
 			}
-			
+
 			// console.log('styleables.font:', styleables.font);
-			
+
 			for (var p in styleables) {
 				if (p in aDrawable) {
 					if (p == 'font') {
@@ -2553,7 +2553,7 @@ function init(aArrBufAndCore) {
 		},
 		wheel: function(e) {
 			// console.log('wheel:', e.deltaMode, e.deltaX, e.deltaY);
-			
+
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				var cLevel = this.state.sPalZoomViewLevel;
 				var nLevel;
@@ -2562,7 +2562,7 @@ function init(aArrBufAndCore) {
 				} else {
 					nLevel = cLevel - 1;
 				}
-				
+
 				if (nLevel >= 1 && nLevel <= 32) {
 					gEditorStore.setState({
 						sPalZoomViewLevel: nLevel
@@ -2577,7 +2577,7 @@ function init(aArrBufAndCore) {
 				console.warn('ignoring mousemove as it is not in monitor downed in');
 				return;
 			}
-			
+
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
@@ -2589,20 +2589,20 @@ function init(aArrBufAndCore) {
 				gZState.mouse = {x:mx, y:my};
 				gZState.setInvalid();
 			}
-			
+
 			if (this.state.sGenColorPickerDropping) {
 				gDroppingCoords[0] = mx;
 				gDroppingCoords[1] = my;
 			} else if (this.state.sGenPalDragStart) {
 				var sPalX = this.state.sGenPalDragStart.sPalX;
 				var sPalY = this.state.sGenPalDragStart.sPalY;
-				
+
 				var win81ScaleX = this.state.sGenPalDragStart.monDim.win81ScaleX || 1;
 				var win81ScaleY = this.state.sGenPalDragStart.monDim.win81ScaleY || 1;
 
 				sPalX += win81ScaleX * (e.clientX - this.state.sGenPalDragStart.clientX);
 				sPalY += win81ScaleY * (e.clientY - this.state.sGenPalDragStart.clientY);
-				
+
 				gEditorStore.setState({
 					sPalX: sPalX,
 					sPalY: sPalY,
@@ -2626,32 +2626,32 @@ function init(aArrBufAndCore) {
 						case 'Gaussian':
 						case 'Mosaic':
 						case 'Text':
-							
+
 								this.cstate.selection.x = mx - this.cstate.dragoffx;
 								this.cstate.selection.y = my - this.cstate.dragoffy;
-							
+
 							break;
 						case 'Line':
-						
+
 								var delx = mx - this.cstate.dragdown.mx;
 								var dely = my - this.cstate.dragdown.my;
-								
+
 								this.cstate.selection.x = this.cstate.dragdown.x + delx;
 								this.cstate.selection.y = this.cstate.dragdown.y + dely;
 								this.cstate.selection.x2 = this.cstate.dragdown.x2 + delx;
 								this.cstate.selection.y2 = this.cstate.dragdown.y2 + dely;
-						
+
 							break;
 						case 'Pencil':
 						case 'Marker':
-						
+
 								var delx = mx - this.cstate.dragdown.mx;
 								var dely = my - this.cstate.dragdown.my;
-								
+
 								this.cstate.selection.path = this.cstate.dragdown.path.map(function(aHalfCoord, aI) {
 									return (aI % 2 ? aHalfCoord + dely : aHalfCoord + delx);
 								});
-						
+
 							break;
 						default:
 							console.error('deverror: no drag mechnaism defined');
@@ -2662,13 +2662,13 @@ function init(aArrBufAndCore) {
 					var oldy = this.cstate.selection.y;
 					console.log('this.cstate.resizing:', this.cstate.resizing, tQS.iMon);
 					switch(this.cstate.resizing) {
-						case 2:							
+						case 2:
 							this.cstate.selection.x = mx;
 							this.cstate.selection.y = my;
 							this.cstate.selection.w += oldx - mx;
 							// this.cstate.selection.h += oldy - my;
-							
-							
+
+
 							if (e.shiftKey) {
 								// draw sqaure
 								var oldh = this.cstate.selection.h + oldy - my;
@@ -2677,7 +2677,7 @@ function init(aArrBufAndCore) {
 							} else {
 								this.cstate.selection.h += oldy - my;
 							}
-							
+
 							break;
 						case 3:
 							this.cstate.selection.y = my;
@@ -2687,7 +2687,7 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.y = my;
 							this.cstate.selection.w = mx - oldx;
 							// this.cstate.selection.h += oldy - my;
-							
+
 							if (e.shiftKey) {
 								// draw sqaure
 								var oldh = this.cstate.selection.h + oldy - my;
@@ -2708,7 +2708,7 @@ function init(aArrBufAndCore) {
 							this.cstate.selection.x = mx;
 							this.cstate.selection.w += oldx - mx;
 							this.cstate.selection.h = my - oldy;
-							
+
 							if (e.shiftKey) {
 								// draw sqaure
 								this.cstate.selection.h = this.cstate.selection.w;
@@ -2720,7 +2720,7 @@ function init(aArrBufAndCore) {
 						case 9:
 							this.cstate.selection.w = mx - oldx;
 							this.cstate.selection.h = my - oldy;
-							
+
 							if (e.shiftKey) {
 								// draw sqaure
 								this.cstate.selection.h = this.cstate.selection.w;
@@ -2739,7 +2739,7 @@ function init(aArrBufAndCore) {
 						default:
 							console.error('should never get here');
 					}
-					
+
 					// link38378777577
 					gEditorStore.setState({
 						sGenPalW: Math.abs(this.cstate.selection.w),
@@ -2768,23 +2768,23 @@ function init(aArrBufAndCore) {
 						var sx = this.cstate.selection[sxkey];
 						var sy = this.cstate.selection[sykey];
 						var length = pointsDistance(sx, sy, mx, my);
-						
+
 						// find nearest angle by 45deg
 						var angle = degrees(pointsAngle(sx, sy, mx, my));
 						var useAngle = closestNumber(angle, [-180, -135, -90, -45, 0, 45, 90, 135, 180]);
-						
+
 						ex = sx + (length * Math.cos(radians(useAngle)));
 						ey = sy + (length * Math.sin(radians(useAngle)));
-						
+
 						// console.log('length:', length, 'angle:', angle, 'useAngle:', useAngle, 'sx:', sx, 'sy:', sy, 'ex:', ex, 'ey:', ey);
 					} else {
 						ex = mx;
 						ey = my;
 					}
-					
+
 					this.cstate.selection[exkey] = ex;
 					this.cstate.selection[eykey] = ey;
-					
+
 					gCanStore.setCanState(false);
 				} else if (this.cstate.pathing) {
 					this.cstate.pathing[0] = mx;
@@ -2799,42 +2799,42 @@ function init(aArrBufAndCore) {
 					var dragFilterFunc;
 					switch (toolsub) {
 						case 'Select-':
-						
+
 								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
-							
+
 							break;
 						case 'Shapes-Rectangle':
 						case 'Shapes-Oval':
-							
+
 								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
-							
+
 							break;
 						case 'Text-':
-							
+
 								dragFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
-							
+
 							break;
 						case 'Line-':
-							
+
 								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
-							
+
 							break;
 						case 'Freedraw-Pencil':
 						case 'Freedraw-Marker':
-							
+
 								dragFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
-							
+
 							break;
 						case 'Blur-Gaussian':
 						case 'Blur-Mosaic':
-							
+
 								dragFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
-							
+
 							break;
 						default:
 							// do nothing
 					}
-					
+
 					if (dragFilterFunc) {
 						var draggableFound = false;
 						var drawables = this.cstate.drawables.filter(dragFilterFunc);
@@ -2853,63 +2853,63 @@ function init(aArrBufAndCore) {
 							var cursor;
 							switch (isContained) {
 								case 1:
-								
+
 										if (drawable.name == 'Text' && gCState.typing && gCState.selection == drawable) {
 											cursor = 'text'; // typing
 										} else {
 											cursor = 'move'; // draggable
 										}
-									
+
 									break;
 								case 2:
-								
+
 										cursor = 'nw-resize'; // rect resize
-								
+
 									break;
 								case 3:
-								
+
 										cursor = 'n-resize'; // rect resize
-									
+
 									break;
 								case 4:
-								
+
 										cursor='ne-resize'; // rect resize
-									
+
 									break;
 								case 5:
-								
+
 										cursor = 'w-resize'; // rect resize
-								
+
 									break;
 								case 6:
-								
+
 										cursor = 'e-resize';
-								
+
 									break;
 								case 7:
-									
+
 										cursor = 'sw-resize';
-									
+
 									break;
 								case 8:
-									
+
 										cursor = 's-resize';
-									
+
 									break;
 								case 9:
-								
+
 										cursor = 'se-resize';
-								
+
 									break;
 								case 10:
-								
+
 										cursor = 'grab'; // lining start
-								
+
 									break;
 								case 11:
-								
+
 										cursor = 'grab'; // lining end
-								
+
 									break;
 								default:
 									console.error('should never get here');
@@ -2931,7 +2931,7 @@ function init(aArrBufAndCore) {
 					}
 				}
 			}
-			
+
 		},
 		clearSelection: function() {
 			// returns new "valid" value
@@ -2939,16 +2939,16 @@ function init(aArrBufAndCore) {
 			if (!wasSel) {
 				// nothing selected
 				return true;
-			} else {			
+			} else {
 				this.cstate.selection = null;
-				
+
 				if ('w' in wasSel) {
 					gEditorStore.setState({
 						sGenPalW: 0,
 						sGenPalH: 0
 					});
 				}
-				
+
 				return false;
 			}
 		},
@@ -2958,97 +2958,97 @@ function init(aArrBufAndCore) {
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
-			
+
 			this.cstate.downx = mx;
 			this.cstate.downy = my;
-			
+
 			this.cstate.downedInMon = tQS.iMon;
 			if (e.target == this.refs.can) {
-				
+
 				var dropping = this.state.sGenColorPickerDropping;
 				if (dropping) {
 					var acceptDroppingObj = {};
 					acceptDroppingObj.sGenColorPickerDropping = null;
-					
+
 					var addColorSetStateObj = {};
 					if (this.cstate.selection) {
 						switch (this.cstate.selection.name) {
 							case 'Marker':
-							
+
 									addColorSetStateObj = this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', true);
-									
+
 								break;
 							case 'Line':
 							case 'Pencil':
-							
+
 									addColorSetStateObj = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
-							
+
 								break;
 							case 'Text':
-							
+
 									addColorSetStateObj = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
-							
+
 								break;
 							case 'Rectangle':
 							case 'Oval':
-							
+
 									addColorSetStateObj = this.addColorToHistory(dropping.pStateColorKey, 'sPalBothColorHist', true);
-									
+
 								break;
 							default:
 								// no related color picker
 						}
 					}
-					
+
 					gEditorStore.setState(overwriteObjWithObj(acceptDroppingObj, addColorSetStateObj));
 					gDroppingMixCtx = null;
-					
+
 					return; // so we dont do the stuff below
 				}
-				
+
 				var toolsub = this.state.sGenPalTool + '-' + (this.state.sPalSeldSubs[this.state.sGenPalTool] || '');
-				
+
 				// if selectable, set a selectFilterFunc
 				var selectFilterFunc;
 				switch (toolsub) {
 					case 'Select-':
-					
+
 							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
-						
+
 						break;
 					case 'Shapes-Rectangle':
 					case 'Shapes-Oval':
-						
+
 							selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
-						
+
 						break;
 					case 'Line-':
-						
+
 							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
-						
+
 						break;
 					case 'Freedraw-Pencil':
 					case 'Freedraw-Marker':
-						
+
 							selectFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
-						
+
 						break;
 					case 'Blur-Gaussian':
 					case 'Blur-Mosaic':
-						
+
 							selectFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
-						
+
 						break;
 					case 'Text-':
-						
+
 							console.log('ok filtering Text');
 							selectFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
-						
+
 						break;
 					default:
 						// do nothing
 				}
-				
+
 				// if selectFilterFunc then lets test if should select or deselect
 				if (selectFilterFunc) {
 					var drawables = gCState.drawables.filter(selectFilterFunc);
@@ -3059,9 +3059,9 @@ function init(aArrBufAndCore) {
 						if (isContained) {
 							console.log('ok you clicked in this drawable:', drawables[i]);
 							var mySel = drawables[i];
-							
+
 							this.dBringToFront(mySel);
-							
+
 							if (isContained === 1) {
 								// introduced for line dragging
 								if (mySel.name == 'Line') {
@@ -3076,7 +3076,7 @@ function init(aArrBufAndCore) {
 										x2: mySel.x2,
 										y2: mySel.y2
 									};
-								} else 
+								} else
 								// introduced for pencil/marker dragging
 								if (['Pencil', 'Marker'].indexOf(mySel.name) > -1) {
 									this.cstate.dragdown = {
@@ -3090,13 +3090,13 @@ function init(aArrBufAndCore) {
 								// end introduced
 								 else {
 									// cutout, Rectangle, Oval, Gaussian, Mosaic, Text
-									
+
 									// Keep track of where in the object we clicked
 									// so we can move it smoothly (see mousemove)
 									this.cstate.dragoffx = mx - mySel.x;
 									this.cstate.dragoffy = my - mySel.y;
 								}
-								
+
 								// non-isomorphic stuff needed for if selecting another text element
 								if (this.cstate.selection && this.cstate.selection.name == 'Text') {
 									if (this.cstate.selection == mySel) {
@@ -3114,7 +3114,7 @@ function init(aArrBufAndCore) {
 								this.cstate.dragging = true;
 								this.cstate.selection = mySel;
 								gCanStore.setCanState(false); // this is needed, as if its a newly selected object, then if i dont set this, the selection border wont be drawn
-								
+
 								if ('w' in this.cstate.selection) {
 									this.setState({
 										sGenPalW: this.cstate.selection.w,
@@ -3130,11 +3130,11 @@ function init(aArrBufAndCore) {
 								// lining resizing
 								this.cstate.lining = isContained;
 							}
-							
+
 							return;
 						}
 					}
-					
+
 					if (this.cstate.selection) {
 						console.log('ok removing from selection this:', this.cstate.selection);
 						this.clearSelection();
@@ -3147,41 +3147,41 @@ function init(aArrBufAndCore) {
 						}
 					}
 				}
-				
+
 				// test if we should create a new Drawable and set it to resizing
 				if (!this.cstate.selection) {
 					switch (toolsub) {
 						case 'Select-':
-						
+
 								if (!e.altKey) {
 									// remove all previous cutouts
 									this.dDeleteAll(['cutout']);
 								}
-								
+
 								this.cstate.selection = this.newDrawable(mx, my, 0, 0, 'cutout');
-							
+
 							break;
 						case 'Shapes-Rectangle':
 						case 'Shapes-Oval':
 						case 'Blur-Gaussian':
 						case 'Blur-Mosaic':
-							
+
 								this.cstate.selection = this.newDrawable(mx, my, 0, 0, this.state.sPalSeldSubs[this.state.sGenPalTool]);
-							
+
 							break;
 						case 'Line-':
-						
+
 								this.cstate.selection = this.newDrawable(mx, my, null, null, 'Line');
-						
+
 							break;
 						case 'Freedraw-Pencil':
 						case 'Freedraw-Marker':
-						
+
 								this.cstate.selection = this.newDrawable(mx, my, null, null, this.state.sPalSeldSubs[this.state.sGenPalTool]);
-						
+
 							break;
 						case 'Text-':
-							
+
 								// if (this.cstate.typing) {
 									// console.log('exiting typing, this was selection:', this.cstate.selection);
 									// this.clearSelection();
@@ -3190,47 +3190,47 @@ function init(aArrBufAndCore) {
 								// } else {
 									this.cstate.selection = this.newDrawable(mx, my, null, null, 'Text');
 								// }
-							
+
 							break;
 						default:
 							// do nothing
 					}
-					
+
 					// if selection exists, then it was newly created, lets add it
 					if (this.cstate.selection) {
 						this.dAdd(this.cstate.selection);
-						
+
 						// add color to history as it was just added
 						switch (this.cstate.selection.name) {
 							case 'Marker':
-							
+
 									this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);
-									
+
 								break;
 							case 'Line':
 							case 'Pencil':
-							
+
 									this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
-							
+
 								break;
 							case 'Text':
-							
+
 									this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
-							
+
 								break;
 							case 'Rectangle':
 							case 'Oval':
-							
+
 									var setStateObjLine = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
 									var setStateObjFill = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
-									
+
 									gEditorStore.setState(overwriteObjWithObj(setStateObjLine, setStateObjFill));
-									
+
 								break;
 							default:
 								// no related color picker
 						}
-						
+
 						// set the proper cstate action bool
 						switch (this.cstate.selection.name) {
 							case 'cutout':
@@ -3238,29 +3238,29 @@ function init(aArrBufAndCore) {
 							case 'Oval':
 							case 'Gaussian':
 							case 'Mosaic':
-								
+
 									this.cstate.resizing = 9;
 									gCanStore.setCanState(false); // to update on mouse down? for updating other windows?
-									
+
 								break;
 							case 'Line':
-								
+
 									this.cstate.lining = 11;
 									gCanStore.setCanState(false); // as i have to draw the selection point
-								
+
 								break;
 							case 'Pencil':
 							case 'Marker':
-								
+
 									this.cstate.pathing = [];
 									gCanStore.setCanState(false); // :todo: consider: as i have to draw the selection point
-								
+
 								break;
 							case 'Text':
-								
+
 									this.cstate.typing = true; // special, because i just added it, i enter typing mode link11911111
 									gCanStore.setCanState(false);
-									
+
 								break;
 							default:
 								console.error('should never get here, well unless maybe i dont know think about it, this.cstate.selection.name:', this.cstate.selection.name);
@@ -3305,7 +3305,7 @@ function init(aArrBufAndCore) {
 				immutedHistory = cHistory.slice();
 				immutedHistory.splice(0, 0, immutedHistory.splice(idxCoInHist, 1)[0]);
 			} // else idxCoInHist is 0 so its already in most recent position so do nothing
-			
+
 			if (immutedHistory) {
 				var setStateObj = {};
 				setStateObj[aStateHistoryVar] = immutedHistory;
@@ -3352,14 +3352,14 @@ function init(aArrBufAndCore) {
 								switch (p) {
 									case 'fillStyle':
 									case 'strokeStyle':
-										
+
 											if (mySel.name == 'Line' && p == 'fillStyle') {
 												continue; // skip this one, as for line fillStyle is matched strokeStyle
 											}
-											
+
 											var stateVarColor = stateVar + 'Color';
 											var stateVarAlpha = stateVar + 'Alpha';
-											
+
 											console.log('mySel[p]:', mySel[p], 'where p:', p);
 											console.log('sending aAlpha as:', mySel[p]);
 											var selRgba = colorStrToCssRgba(mySel[p], mySel[p], true);
@@ -3368,14 +3368,14 @@ function init(aArrBufAndCore) {
 											var stateColorRGB = colorStrToCssRgba(this.state[stateVarColor], 0, true);
 											console.log('stateColorRGB:', stateColorRGB);
 											var stateAlpha = this.state[stateVarAlpha];
-											
+
 											if (selRgba.r !== stateColorRGB.r || selRgba.g !== stateColorRGB.g || selRgba.b !== stateColorRGB.b) {
 												setStateObj[stateVarColor] = 'rgb(' + selRgba.r + ', ' + selRgba.g + ', ' + selRgba.b + ')';
 											}
 											if (selRgba.a !== stateAlpha) {
 												setStateObj[stateVarAlpha] = selRgba.a;
 											}
-										
+
 										break;
 									default:
 										if (this.state[stateVar] !== mySel[p]) {
@@ -3397,7 +3397,7 @@ function init(aArrBufAndCore) {
 							this.setState(setStateObj);
 						}
 					}
-					
+
 					// put into typing mode
 					if (mySel.name == 'Text') {
 						if (!this.cstate.typing) {
@@ -3410,10 +3410,10 @@ function init(aArrBufAndCore) {
 		},
 		mouseup: function(e) {
 			if (e.button != 0) { return }
-			
+
 			console.log('mouseup in imon:', tQS.iMon);
 			this.cstate.downedInMon = -1;
-			
+
 			var mouse = this.getMouse(e);
 			var mx = mouse.x;
 			var my = mouse.y;
@@ -3470,15 +3470,15 @@ function init(aArrBufAndCore) {
 						// do nothing special
 					}
 				// }
-				
+
 				if (e.target == this.refs.can) {
 					if (this.state.sGenPalTool == 'Window Wand') {
-						var x = mtmm.x(e.clientX); 
+						var x = mtmm.x(e.clientX);
 						var y = mtmm.y(e.clientY);
 						// alert('look for window at coords: ' + x + ', ' + y);
-						
+
 						// discontinued the first_nativeshot_canvas_found method because it seems on Windows, even though i execute fetchAllWin after last window is opened, sometimes it runs and completes before these windows become visible
-						
+
 						// var first_nativeshot_canvas_found = false;
 						var l = gWinArr.length;
 						// console.log('now going through l:', l, 'gWinArr:', gWinArr);
@@ -3488,11 +3488,11 @@ function init(aArrBufAndCore) {
 								// first_nativeshot_canvas_found = true;
 								// continue;
 							// }
-							
+
 							// if (!first_nativeshot_canvas_found) {
 								// continue; // find nativeshot_canvas first then start paying attention to windows, as context menu is above, on osx also the cursor gets a window and its element 0
 							// }
-							
+
 							if (x >= cwin.left && x <= cwin.right && y >= cwin.top && y <= cwin.bottom) {
 
 
@@ -3509,41 +3509,41 @@ function init(aArrBufAndCore) {
 								// 	});
 								// }
 								gCanStore.setCanState(false); // as i for sure added a new cutout
-								
-								
+
+
 								break;
 							}
 							// else { console.log(x, ',', y, 'not in win:', cwin); }
 						}
-						
+
 						// if (!cCutout) {
 							// alert('didnt click window');
 						// }
 					}
 				}
 			}
-			
-			
+
+
 		},
 		keyup: function(e) {
 			switch (e.key) {
 				case 'Alt':
-					
+
 						if (this.state.sGenAltKey) {
 							this.setState({
 								sGenAltKey: false
 							});
 						}
-					
+
 					break;
 				case 'Shift':
-					
+
 						if (this.state.sGenShiftKey) {
 							this.setState({
 								sGenShiftKey: false
 							});
 						}
-					
+
 					break;
 			}
 		},
@@ -3554,49 +3554,49 @@ function init(aArrBufAndCore) {
 				var cancelDroppingObj = {};
 				cancelDroppingObj[dropping.pStateColorKey] = dropping.initColor;
 				cancelDroppingObj.sGenColorPickerDropping = null;
-				gEditorStore.setState(cancelDroppingObj);							
-				
+				gEditorStore.setState(cancelDroppingObj);
+
 				return true; // so we dont close the window
 			}
 		},
 		keydown: function(e) {
 			var newValid = true;
-			
+
 			var mySel = this.cstate.selection;
-			
+
 			// high priority "returning" keydown's
 			switch (e.key) {
 				case 'Alt':
-					
+
 						if (!e.repeat && !this.state.sGenAltKey) {
 							this.setState({
 								sGenAltKey: true
 							});
 						}
-					
+
 					break;
 				case 'Shift':
-					
+
 						if (!e.repeat && !this.state.sGenShiftKey) {
 							this.setState({
 								sGenShiftKey: true
 							});
 						}
-					
+
 					break;
 				case 'Escape':
-						
+
 						var canceledDropping = this.cancelDropping();
 						if (canceledDropping) {
 							return; // so we dont close the window
 						}
-						
+
 						window.close();
 						return;
-				
+
 					break;
 			}
-			
+
 			if (this.cstate.typing) {
 				if (e.key.length == 1) {
 					// support pasting
@@ -3622,57 +3622,57 @@ function init(aArrBufAndCore) {
 				} else {
 					switch (e.key) {
 						case 'Backspace':
-							
+
 								if (mySel.index > 0) {
 									mySel.index--;
 									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
 									newValid = false;
 								}
-							
+
 							break;
 						case 'Delete':
-							
+
 								if (mySel.index < mySel.chars.length) {
 									mySel.chars = spliceSlice(mySel.chars, mySel.index, 1);
 									newValid = false;
 								}
-							
+
 							break;
 						case 'ArrowLeft':
-							
+
 								if (mySel.index > 0) {
 									mySel.index--;
 									newValid = false;
 								}
-							
+
 							break;
 						case 'ArrowRight':
-							
+
 								if (mySel.index < mySel.chars.length) {
 									mySel.index++;
 									newValid = false;
 								}
-							
+
 							break;
 						case 'Home':
-							
+
 								if (!e.repeat) {
 									if (mySel.index > 0) {
 										mySel.index = 0;
 										newValid = false;
 									}
 								}
-							
+
 							break;
 						case 'End':
-							
+
 								if (!e.repeat) {
 									if (mySel.index < mySel.chars.length) {
 										mySel.index = mySel.chars.length;
 										newValid = false;
 									}
 								}
-							
+
 							break;
 						default:
 							// do nothing special
@@ -3693,24 +3693,24 @@ function init(aArrBufAndCore) {
 							var newH = mySel.h;
 							switch (e.key) {
 								case 'ArrowDown':
-									
+
 										newH -= resizeBy;
-									
+
 									break;
 								case 'ArrowUp':
-									
+
 										newH += resizeBy;
-									
+
 									break;
 								case 'ArrowRight':
-									
+
 										newW += resizeBy;
-									
+
 									break;
 								case 'ArrowLeft':
-									
+
 										newW -= resizeBy;
-									
+
 									break;
 							}
 							if (newW !== mySel.w || newH !== mySel.h) {
@@ -3746,38 +3746,38 @@ function init(aArrBufAndCore) {
 						var moveDirY = 0;
 						switch (e.key) {
 							case 'ArrowDown':
-								
+
 									moveDirY = 1;
-								
+
 								break;
 							case 'ArrowUp':
-								
+
 									moveDirY = -1;
-								
+
 								break;
 							case 'ArrowRight':
-								
+
 									moveDirX = 1;
-								
+
 								break;
 							case 'ArrowLeft':
-								
+
 									moveDirX = -1;
-								
+
 								break;
 							case 'Delete':
-							
+
 									if (!e.repeat) {
 										if (!this.dDelete(mySel)) {
 											this.clearSelection();
 											newValid = false;
 										}
 									}
-							
+
 								break;
 							case 'D':
 							case 'd':
-								
+
 									if (!e.repeat) {
 										if ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey)) {
 											if (!this.clearSelection()) {
@@ -3785,14 +3785,14 @@ function init(aArrBufAndCore) {
 											}
 										}
 									}
-								
+
 								break;
 						}
-						
+
 						if (moveDirX || moveDirY) {
 							var moveByX = moveBy * moveDirX;
 							var moveByY = moveBy * moveDirY;
-							
+
 							// determine move type
 							if ('x2' in mySel) {
 								mySel.x += moveByX;
@@ -3814,18 +3814,18 @@ function init(aArrBufAndCore) {
 								mySel.x += moveByX;
 								mySel.y += moveByY;
 							}
-							
+
 							newValid = false;
 						}
 					}
-					
+
 					// other hotkeys during selection
 					switch (e.key) {
 						case 'C':
 						case 'c':
 						case 'ç': // mac with caps lock off
 						case 'Ç': // mac with caps lock on
-							
+
 								// ac - alt+c
 								// console.log('c hit', 'repeat:', e.repeat, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey, 'alt:', e.altKey);
 								if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.altKey) {
@@ -3833,30 +3833,30 @@ function init(aArrBufAndCore) {
 									this.cstate.copied_drawable = JSON.stringify(mySel);
 									this.setCanState(true, false, true);
 								}
-							
+
 							break;
 						// default:
 							// console.log('key during sel hit:', e.key, 'keyCode:', e.keyCode, 'repeat:', e.repeat, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey, 'alt:', e.altKey);
 					}
 				}
-				
+
 				// other hotkeys
 				switch (e.key) {
 					case 'V':
 					case 'v':
 					case '√': // mac with caps lock on or off
-					
+
 							// av - alt+v
 							if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.altKey) {
 								initPasteDrawable();
 							}
-					
+
 						break;
 				}
-				
+
 				// hotkeys tied to buttons in palette
 				// console.log('e:', e);
-				if (!e.repeat) {					
+				if (!e.repeat) {
 					// test hotkeys
 					var key = e.key;
 					if (key) {
@@ -3868,7 +3868,7 @@ function init(aArrBufAndCore) {
 								evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, e.altKey, e.shiftKey, false, 0, null); // a.altKey needed for reduce/englarge
 								gHotkeyRef[aHotkey].dispatchEvent(evt);
 							};
-							
+
 							// shift modifier is ignored, as i use that for multi action
 							if (aHotkey.length == 2) {
 								// first letter is a modifier
@@ -3900,7 +3900,7 @@ function init(aArrBufAndCore) {
 								}
 							}
 						}
-						
+
 						var layout = [
 							...this.props.pPalLayout,
 							{ hotkey: 'c+' },
@@ -3912,9 +3912,9 @@ function init(aArrBufAndCore) {
 							{ hotkey: 'a–' }, // mac alt- caps off or on
 							{ hotkey: 'a≠' }, // mac alt+ caps off or on
 						];
-						
+
 						var l = layout.length;
-						
+
 						// if aa in hotkey, then add the mac alt a stuff
 						for (var i=0; i<l; i++) {
 							var entry = layout[i];
@@ -3927,7 +3927,7 @@ function init(aArrBufAndCore) {
 								break;
 							}
 						}
-						
+
 						for (var i=0; i<l; i++) {
 							var entry = layout[i];
 							if (entry.hotkey) {
@@ -3948,20 +3948,20 @@ function init(aArrBufAndCore) {
 					}
 				}
 			}
-			
+
 			gCanStore.setCanState(newValid);
 		},
 		////// end - canvas functions
 		render: function() {
 			// props
 			//		see link1818181
-			
+
 			var editorWrapProps = {
 				className: 'editor'
 			};
-			
+
 			var cPalProps = overwriteObjWithObj(this.state, this.props);
-			
+
 			var cCanProps = {
 				id: 'canDim',
 				draggable: 'false',
@@ -3970,7 +3970,7 @@ function init(aArrBufAndCore) {
 				ref: 'can',
 				style: {}
 			};
-		
+
 			var cPalPalProps = {
 				id:'palette',
 				style: {
@@ -3979,11 +3979,11 @@ function init(aArrBufAndCore) {
 				},
 				ref: 'pal'
 			};
-			
+
 			// determine cursor
 			if (this.state.sGenInputNumberMousing) {
 				cCanProps.style.cursor = this.state.sGenInputNumberMousing;
-				cPalPalProps.style.cursor = this.state.sGenInputNumberMousing;				
+				cPalPalProps.style.cursor = this.state.sGenInputNumberMousing;
 				cPalProps.pPalSubwrapCursor = this.state.sGenInputNumberMousing;
 				editorWrapProps.className += ' inputnumber-component-mousing';
 			} else if (this.state.sGenPalDragStart) {
@@ -3999,27 +3999,27 @@ function init(aArrBufAndCore) {
 						case 'Line':
 						case 'Freedraw':
 						case 'Blur':
-						
+
 								cCanProps.style.cursor = 'crosshair';
-						
+
 							break;
 						case 'Window Wand':
-						
+
 								cCanProps.style.cursor = 'pointer';
-						
+
 							break;
 						default:
 							// nothing
 					}
 				}
 			}
-			
+
 			var zoomViewREl;
 			if (this.state.sPalMultiDepresses['Zoom View']) {
 				cPalPalProps.mPalZoomViewHandleMousedown = this.mPalZoomViewHandleMousedown;
 				zoomViewREl = React.createElement(ZoomView, cPalProps);
-			}			
-			
+			}
+
 			return React.createElement('div', editorWrapProps,
 				React.createElement('div', cPalPalProps,
 					React.createElement(Subwrap, cPalProps)
@@ -4033,26 +4033,26 @@ function init(aArrBufAndCore) {
 			);
 		},
 	});
-	
+
 	var gZoomViewW = mtmm.w(200); // in mon, so without scaling. so thats why i use mtmm.w // i cant use mtmm.x as that will put the screenX and screenY offset of 0, 0 equivalent
 	var gZoomViewH = mtmm.h(200);
-	
+
 	var ZoomView = React.createClass({
 		displayName: 'ZoomView',
 		componentDidMount: function() {
-			
+
 			this.zstate = {}
 			gZState = this.zstate;
-			
+
 			this.zstate.rconn = this;
-			
+
 			this.ctx = ReactDOM.findDOMNode(this).getContext('2d');
 			this.zstate.visible = false;
 			this.zstate.valid = false;
 			this.zstate.mouse = {x:0, y:0};
 			this.ctx.mozImageSmoothingEnabled = false;
 			this.ctx.imageSmoothingEnabled = false;
-			
+
 			this.zstate.setInvalid = function(isBroadcast) {
 				if (!isBroadcast) {
 					triggerNSCommEvent({
@@ -4066,7 +4066,7 @@ function init(aArrBufAndCore) {
 				}
 				this.zstate.valid = false;
 			}.bind(this);
-			
+
 			this.offsets = {
 				// x: this.refs.view.offsetLeft,
 				// y: this.refs.view.offsetTop,
@@ -4077,7 +4077,7 @@ function init(aArrBufAndCore) {
 			};
 			console.log('viewOffsets:', this.offsets);
 			this.zstate.interval = setInterval(this.draw, 30);
-			
+
 			var bgimg = new Image();
 			bgimg.onload = function() {
 				this.bgpatt = this.ctx.createPattern(bgimg, 'repeat');
@@ -4093,38 +4093,38 @@ function init(aArrBufAndCore) {
 				var ctx = this.ctx;
 				var width = gZoomViewW; // of zoomview canvas
 				var height = gZoomViewH;  // of zoomview canvas
-				
+
 				// background
 
-				
+
 				var fontHeight = 24;
 				var fontHeightPlusPad = fontHeight + 3 + 3; // as i have offset of fillText on height by 3, and then i want 3 on top
-				
+
 				var zoomLevel = this.props.sPalZoomViewLevel;
-				
+
 				var dWidth = width;
 				var dHeight = height - fontHeightPlusPad;
-				
+
 				// fill bg of view part
 				ctx.fillStyle = this.bgpatt || '#eee';
 				ctx.fillRect(0, 0, width, dHeight);
-				
+
 				// fill bg of text part
 				ctx.fillStyle = '#eee';
 				ctx.fillRect(0, dHeight, width, height - dHeight);
-				
+
 				// bring in view
 				var sx = this.zstate.mouse.x - ((width / 2) * (1 / zoomLevel));
 				var sy = this.zstate.mouse.y - ((dHeight / 2) * (1 / zoomLevel));
 				var sWidth = width * (1 / zoomLevel);
 				var sHeight = dHeight * (1 / zoomLevel);
-				
+
 				ctx.drawImage(gCanStore.rconn.refs.can0, mmtm.x(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), 0, 0, dWidth, dHeight);
 				ctx.drawImage(gCanStore.rconn.refs.can, mmtm.x(sx), mmtm.y(sy), mmtm.w(sWidth), mmtm.h(sHeight), 0, 0, dWidth, dHeight);
-				
+
 				// draw grid
 				ctx.strokeStyle = '#4A90E2';
-				
+
 				ctx.beginPath();
 				ctx.lineWidth = 2;
 				ctx.moveTo(width/2, 0);
@@ -4136,58 +4136,58 @@ function init(aArrBufAndCore) {
 				ctx.moveTo(0, dHeight/2);
 				ctx.lineTo(width, dHeight/2);
 				ctx.stroke();
-				
+
 				// write text
 				ctx.font = '24px Arial';
 				ctx.textAlign = 'left';
 				ctx.fillStyle = '#000';
 				ctx.fillText((this.zstate.mouse.x - tQS.x) + ', ' + (this.zstate.mouse.y - tQS.y), 5, height - 5);
-				
+
 				var zoomPercent = Math.round(zoomLevel * 100) + '%';
 				ctx.textAlign = 'right';
 				ctx.fillText(zoomPercent, width - 5, height - 5);
-				
+
 				// mark valid
 				this.zstate.valid = true;
-								
+
 				// dom visibility
 				var shouldBeVisible = false;
 				// console.log('offsets:', this.offsets, 'mouse:', this.zstate.mouse);
 				if ((tQS.x <= this.zstate.mouse.x) && (tQS.x + tQS.w >= this.zstate.mouse.x) &&
 					(tQS.y <= this.zstate.mouse.y) && (tQS.y + tQS.h >= this.zstate.mouse.y)) {
-						shouldBeVisible = true;						
+						shouldBeVisible = true;
 				}
 				// console.log('shouldBeVisible', tQS.iMon, shouldBeVisible, 'this.zstate.visible:', this.zstate.visible);
 				if (this.zstate.visible != shouldBeVisible) {
 					this.zstate.visible = shouldBeVisible;
 					this.refs.view.style.display = shouldBeVisible ? '' : 'none';
 				}
-				
+
 				if (shouldBeVisible) {
 					// dom positioning of the view
-					
+
 					if (this.offsets.invalidxy) {
 						delete this.offsets.invalidxy;
 						this.offsets.x = this.refs.view.offsetLeft;
 						this.offsets.y = this.refs.view.offsetTop;
-						
+
 						if (!this.offsets.w) {
 							this.offsets.w = this.refs.view.offsetWidth;
 							this.offsets.h = this.refs.view.offsetHeight;
 						}
 					}
-					
+
 					var cX = mmtm.x(this.zstate.mouse.x);
 					var cY = mmtm.y(this.zstate.mouse.y);
 					var pad = 50;
 					var padX = mtmm.w(pad);
 					var padY = mtmm.h(pad);
-					
+
 					var viewMinX = this.offsets.x - padX;
 					var viewMaxX = this.offsets.x + this.offsets.w + padX;
 					var viewMinY = this.offsets.y - padY;
 					var viewMaxY = this.offsets.y + this.offsets.h + padY;
-					
+
 					console.log('view is in x of:', viewMinX, '-', viewMaxX, 'and y of:', viewMinY, '-', viewMaxY, 'AND MON MOUSE IS IN:', cX, cY);
 
 					if ((this.offsets.x - padX <= cX) && (this.offsets.x + this.offsets.w + padX >= cX) &&
@@ -4220,7 +4220,7 @@ function init(aArrBufAndCore) {
 			return React.createElement('canvas', {ref:'view', className:'pzoomview', width:gZoomViewW, height:gZoomViewH, style:{display:'none', bottom:'5%', left: '5%'} });
 		}
 	});
-	
+
 	////////// start - palette components
 	var Accessibility = React.createClass({
 		// the zoom controls that affect the toolbar
@@ -4231,7 +4231,7 @@ function init(aArrBufAndCore) {
 				var max = 34;
 				var del = 2;
 				var cHandleSize = this.props.sCanHandleSize;
-				
+
 				var nHandleSize = cHandleSize;
 				if (cHandleSize + del <= max) {
 					if (nHandleSize < 0) {
@@ -4264,9 +4264,9 @@ function init(aArrBufAndCore) {
 				var min = 6;
 				var del = 2;
 				var cHandleSize = this.props.sCanHandleSize;
-				
+
 				var nHandleSize = cHandleSize;
-				
+
 				if (nHandleSize == min) {
 					// i decided only one step below 0 and thats when nothing drawn
 					nHandleSize = min * -1;
@@ -4307,7 +4307,7 @@ function init(aArrBufAndCore) {
 			//		sCanHandleSize
 			//		sGenAltKey
 			var { sGenAltKey } = this.props;
-			
+
 			return React.createElement('div', {className:'paccessibility'},
 				React.createElement('div', {className: 'pbutton', onClick:this.enlarge, ref:'enlarge'},
 					React.createElement('div', {className:'plabel'},
@@ -4328,13 +4328,13 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
-	
+
 	var Handle = React.createClass({
 		// user can drag around the palette with this
 		displayName: 'Handle',
 		mousedown: function(e) {
 			if (e.button != 0) { return }
-			
+
 			gEditorStore.setState({
 				sGenPalDragStart: {clientX:e.clientX, clientY:e.clientY, sPalX:this.props.sPalX, sPalY:this.props.sPalY, monDim:{win81ScaleX:tQS.win81ScaleX, win81ScaleY:tQS.win81ScaleY} }
 			});
@@ -4349,22 +4349,22 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
-	
+
 	var Divider = React.createClass({
 		displayName: 'Divider',
 		render: function() {
 			return React.createElement('div', {className:'pdivider'});
 		}
 	});
-	
+
 	var gChangingSubToolTo;
 	var Button = React.createClass({
 		displayName: 'Button',
 		click: function(e) {
-			
+
 			var affectsStateVars = {};
 			var affectsSelNames = [];
-			
+
 			switch (this.props.pButton.label) {
 				// start - actions
 				case 'Save':
@@ -4374,15 +4374,15 @@ function init(aArrBufAndCore) {
 				case 'Share':
 				case 'Search':
 				case 'Text Recognition':
-				
+
 					var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.pButton.label];
 					initCompositeForAction(this.props.pButton.label, cSubTool, !e.shiftKey);
-				
+
 					break;
 				// end - actions
 				// start - on click reapply styles
 				case 'Blur':
-					
+
 						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
 						if (cSubTool == 'Gaussian') {
 							affectsSelNames.push('Gaussian');
@@ -4391,20 +4391,20 @@ function init(aArrBufAndCore) {
 							affectsSelNames.push('Mosaic');
 							affectsStateVars.blurblock = 'sPalBlurBlock';
 						}
-					
+
 					break;
 				case 'Line':
-					
+
 						affectsSelNames.push('Line');
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						affectsStateVars.arrowStart = 'sPalArrowStart';
 						affectsStateVars.arrowEnd = 'sPalArrowEnd';
 						affectsStateVars.arrowLength = 'sPalArrowLength';
-					
+
 					break;
 				case 'Freedraw':
-					
+
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
 						if (cSubTool == 'Pencil') {
@@ -4414,62 +4414,62 @@ function init(aArrBufAndCore) {
 							affectsSelNames.push('Marker');
 							affectsStateVars.strokeStyle = ['sPalMarkerColor', 'sPalMarkerAlpha'];
 						}
-					
+
 					break;
 				case 'Shapes':
-					
+
 						affectsSelNames.push('Rectangle');
 						affectsSelNames.push('Oval');
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
-						
+
 						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
 						if (cSubTool == 'Rectangle') {
 							affectsStateVars.radius = 'sPalRectRadius';
 						}
 					break;
 				case 'Text':
-					
+
 						affectsSelNames.push('Text');
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
 						affectsStateVars.fontface = 'sPalFontFace';
 						affectsStateVars.fontbold = 'sPalFontBold';
 						affectsStateVars.fontitalic = 'sPalFontItalic';
 						affectsStateVars.fontsize = 'sPalFontSize';
-					
+
 					break;
 				case 'Marker Color':
-				
+
 						affectsSelNames.push('Marker');
 						affectsStateVars.strokeStyle = ['sPalMarkerColor', 'sPalMarkerAlpha'];
-				
+
 					break;
 				case 'Color':
-				
+
 						affectsSelNames.push('Rectangle');
 						affectsSelNames.push('Oval');
 						affectsSelNames.push('Pencil');
 						affectsSelNames.push('Line');
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
-				
+
 					break;
 				case 'Fill Color':
-				
+
 						affectsSelNames.push('Rectangle');
 						affectsSelNames.push('Oval');
 						affectsSelNames.push('Text');
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
-				
+
 					break;
 				// end - on click reapply styles
 				case 'Close':
-						
+
 						window.close();
-						
+
 					break;
 				case 'Select':
-					
+
 						// if (gCState.cutouts.length) {
 						// 	if (!gCState.selection || gCState.selection != gCState.cutouts[0]) {
 						// 		// gCState.cutouts[0].select(); // :note::important: i should never call .select on a shape/cutout/etc only the CanvasState.prototype.draw calls .select
@@ -4477,12 +4477,12 @@ function init(aArrBufAndCore) {
 						// 		gCState.valid = false;
 						// 	}
 						// }
-					
+
 					break;
 				case 'Clear Selection':
-						
+
 						gCanStore.setCanState(gCanStore.rconn.dDeleteAll(['cutout']));
-						
+
 					break;
 				case 'Fullscreen':
 
@@ -4499,24 +4499,24 @@ function init(aArrBufAndCore) {
 							});
 						}
 						gCanStore.setCanState(false); // as i for sure added a new cutout
-						
+
 					break;
 				default:
 					// do nothing
 			}
-			
+
 			// if selection, do affectsStateVars stuff
 			if (!gChangingSubToolTo && affectsSelNames.length) {
 				var canValid = true;
-				
+
 				if (gCState && gCState.selection && affectsSelNames.indexOf(gCState.selection.name) > -1) {
 					var mySel = gCState.selection;
-					
+
 					var isText;
 					if (mySel.name == 'Text') {
 						isText = true;
 					}
-					
+
 					// start copy of block1929293055
 					for (var p in mySel) {
 						// console.log('on sel prop:', p);
@@ -4525,7 +4525,7 @@ function init(aArrBufAndCore) {
 							if (p == 'strokeStyle' || p == 'fillStyle') {
 									var cColorVarName = affectsStateVars[p][0];
 									var cAlphaVarName = affectsStateVars[p][1];
-									
+
 									// console.log('mismatch on', cVarName, 'old:', prevState[cVarName], 'new:', gCanStore.rconn.state[cVarName]);
 									var newColor = colorStrToCssRgba(gCanStore.rconn.state[cColorVarName], gCanStore.rconn.state[cAlphaVarName]);
 									if (mySel[p] !== newColor) {
@@ -4549,11 +4549,11 @@ function init(aArrBufAndCore) {
 						}
 					}
 					// end copy of block1929293055
-					
+
 					gCanStore.setCanState(canValid);
 				}
 			}
-			
+
 			if (this.props.pButton.multiDepress) {
 				var sPalMultiDepresses = cloneObject(this.props.sPalMultiDepresses);
 				if (sPalMultiDepresses[this.props.pButton.label]) {
@@ -4565,7 +4565,7 @@ function init(aArrBufAndCore) {
 					sPalMultiDepresses: sPalMultiDepresses
 				});
 			} else if (this.props.pButton.justClick) {
-				
+
 			} else {
 				// depress it and undepress other non-multiDepress
 				gEditorStore.setState({
@@ -4598,7 +4598,7 @@ function init(aArrBufAndCore) {
 			}
 		},
 		componentDidMount: function() {
-			
+
 			// if its an action button, then append to label " & Close" - i can do this in did mount, because when mount for sure alt is not pressed, well pretty sure so yea no big
 			if (['Save', 'Print', 'Copy', 'Upload', 'Share', 'Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
 				this.isActionButton = true;
@@ -4618,18 +4618,18 @@ function init(aArrBufAndCore) {
 			//		sPalMarkerColor
 			//		sGenColorPickerDropping
 			//		sGenShiftKey - should only if its an action type button. but right now i send it to all, no plans to make it not send to all.
-			
+
 			var cProps = {
 				className:'pbutton',
 				onClick: this.click
 			};
-			
+
 			if (this.props.pButton.hotkey) {
 				cProps.ref = function(domEl) {
 					gHotkeyRef[this.props.pButton.hotkey] = domEl;
 				}.bind(this);
 			}
-			
+
 			if (this.props.sPalSeldSubs[this.props.pButton.label]) {
 				for (var i=0; i<this.props.pButton.sub.length; i++) {
 					if (this.props.pButton.sub[i].label == this.props.sPalSeldSubs[this.props.pButton.label]) {
@@ -4642,13 +4642,13 @@ function init(aArrBufAndCore) {
 					cProps.className += ' pbutton-pressed';
 				}
 			} else if (this.props.pButton.justClick) {
-				
+
 			} else {
 				if (this.props.sGenPalTool == this.props.pButton.label) {
 					cProps.className += ' pbutton-pressed';
 				}
 			}
-			
+
 			var cButtonIcon;
 			if (['Color', 'Fill Color', 'Marker Color'].indexOf(this.props.pButton.label) > -1) {
 				var rgbaStr;
@@ -4675,7 +4675,7 @@ function init(aArrBufAndCore) {
 			} else {
 				cButtonIcon = this.props.pButton.icon;
 			}
-			
+
 			// determine submenu
 			var cSubmenu;
 			if (this.props.pButton.sub) {
@@ -4683,12 +4683,12 @@ function init(aArrBufAndCore) {
 					this.props.pButton.label
 				);
 			}
-			
+
 			var origLabel = this.props.pButton.label;
 			if (this.isActionButton && !this.props.sGenShiftKey) {
 				origLabel += ' & Close';
 			}
-			
+
 			return React.createElement('div', cProps,
 				React.createElement('div', {className:'plabel'},
 					React.createElement('span', {ref:'plabel'},
@@ -4700,7 +4700,7 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
-	
+
 	var SubButton = React.createClass({
 		hoverout: function() {
 			console.log('hover outted');
@@ -4722,7 +4722,7 @@ function init(aArrBufAndCore) {
 		},
 		click: function(e) {
 			var dontStopPropagation = false;
-			
+
 			if (this.props.pButton.label == 'Fullscreen') {
 				// alert(this.props.pSubButton.label);
 				if (!e.shiftKey) {
@@ -4731,7 +4731,7 @@ function init(aArrBufAndCore) {
 				var cCutout;
 				var cSubLabel = this.props.pSubButton.label;
 				var allMonDim = tQS.allMonDim;
-				if (this.props.pSubButton.label == 'All Monitors') {					
+				if (this.props.pSubButton.label == 'All Monitors') {
 					var allmonRect = new Rect(0, 0, 0, 0);
 					var imonRects = [];
 					var l = allMonDim.length;
@@ -4755,7 +4755,7 @@ function init(aArrBufAndCore) {
 				}
 				gCanStore.setCanState(false); // as i for sure added a new cutout
 			}
-			
+
 			if (['Save', 'Upload', 'Share', 'Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
@@ -4768,7 +4768,7 @@ function init(aArrBufAndCore) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
 			}
-			
+
 			if (this.props.pSubButton.label == 'Last Selection') {
 				var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 				triggerNSCommEvent({
@@ -4777,22 +4777,22 @@ function init(aArrBufAndCore) {
 					iMon: tQS.iMon
 				});
 			}
-			
+
 			if (!this.props.pSubButton.unfixable) {
 				var sPalSeldSubs = cloneObject(this.props.sPalSeldSubs);
 				sPalSeldSubs[this.props.pButton.label] = this.props.pSubButton.label;
-			
+
 				var setStateObj = {
 					sPalSeldSubs: sPalSeldSubs
 				};
-				
+
 				if (!this.props.pButton.justClick) {
 					setStateObj.sGenPalTool = this.props.pButton.label;
 				}
-			
+
 				gEditorStore.setState(setStateObj);
 			}
-			
+
 			if (!dontStopPropagation) {
 				e.stopPropagation();
 			}
@@ -4816,17 +4816,17 @@ function init(aArrBufAndCore) {
 				onClick: this.click,
 				onTransitionEnd: this.hoverlistener
 			};
-			
+
 			if (this.props.pSubButton.icontext) {
 				// cProps['data-icontext'] = this.props.pSubButton.icontext;
 			}
-			
+
 			if (this.props.pSubButton.hotkey) {
 				cProps.ref = function(domEl) {
 					gHotkeyRef[this.props.pSubButton.hotkey] = domEl;
 				}.bind(this);
 			}
-			
+
 			if (this.props.pSubButton.special) {
 				if (this.props.pSubButton.special in Specials) { // temp as all specials not yet defined
 					var cSpecialProps = {};
@@ -4861,13 +4861,13 @@ function init(aArrBufAndCore) {
 			if (!this.props.pSubButton.special && this.props.sPalSeldSubs[this.props.pButton.label] == this.props.pSubButton.label) {
 				cProps.className += ' pbutton-pressed';
 			}
-			
+
 			return React.createElement('div', cProps,
 				this.props.pSubButton.icon
 			);
 		}
 	});
-	
+
 	var LineTools = React.createClass({
 		displayName: 'LineTools',
 		render: function() {
@@ -4881,7 +4881,7 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
-	
+
 	var BlurTools = React.createClass({
 		displayName: 'BlurTools',
 		render: function() {
@@ -4890,15 +4890,15 @@ function init(aArrBufAndCore) {
 			//		sPalBlurBlock
 			//		sGenPalTool
 			//		sPalSeldSubs
-			
+
 			var subtool = this.props.sPalSeldSubs[this.props.sGenPalTool]
-			
+
 			var cInputNumberProps = {
 				pMin: 1,
 				pCStateSel: {'Gaussian':'blurradius', 'Mosaic':'blurblock'},
 				key: subtool
 			};
-			
+
 			if (subtool == 'Mosaic') {
 				// Mosaic
 				cInputNumberProps.sPalBlurBlock = this.props.sPalBlurBlock;
@@ -4910,27 +4910,27 @@ function init(aArrBufAndCore) {
 				cInputNumberProps.pStateVarName = 'sPalBlurRadius';
 				cInputNumberProps.pLabel = 'Radius (px)';
 			}
-			
+
 			return React.createElement('div', {className:'pblurlevel'},
 				React.createElement(InputNumber, cInputNumberProps)
 			);
 		}
 	});
-	
+
 	var DimensionTools = React.createClass({
 		displayName: 'DimensionTools',
 		render: function() {
 			// props
 			//		sPalWidth
 			//		sPalHeight
-			
+
 			return React.createElement('div', {className:'pdimtools'},
 				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', 'Rectangle':'w', 'Oval':'w', 'Gaussian':'w', 'Mosaic':'w'}, pCrement:mtmm.w(1) }),
 				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', 'Rectangle':'h', 'Oval':'h', 'Gaussian':'w', 'Mosaic':'w'}, pCrement:mtmm.h(1) })
 			)
 		}
 	});
-	
+
 	var TextTools = React.createClass({
 		displayName: 'TextTools',
 		componentDidUpdate: function(prevProps, prevState) {
@@ -4976,13 +4976,13 @@ function init(aArrBufAndCore) {
 			//		sPalFontItalic
 			//		sPalFontUnderline
 			//		sPalFontWrap - word warp. null if wrap on word. or string for the ellipsis to use.
-			
+
 			var cFontFamilies = gFonts.map(function(aFamily) {
 				return React.createElement('option', {style:{fontFamily:aFamily}, value:aFamily},
 					aFamily
 				);
 			});
-			
+
 			return React.createElement('div', {className:'ptexttools'},
 				React.createElement('div', {className:'ptexttools-row'},
 					React.createElement('div', {},
@@ -5009,7 +5009,7 @@ function init(aArrBufAndCore) {
 			)
 		}
 	});
-	
+
 	var ArrowTools = React.createClass({
 		displayName: 'ArrowTools',
 		checkStart: function() {
@@ -5051,7 +5051,7 @@ function init(aArrBufAndCore) {
 			//		sPalArrowLength
 			// //		sPalArrowWidth
 			// //		sPalArrowAngle - the concavity feature of photoshop
-			
+
 			return React.createElement('div', {className:'parrowtools'},
 				React.createElement('div', {className:'parrowtools-checks'},
 					React.createElement('div', {},
@@ -5089,7 +5089,7 @@ function init(aArrBufAndCore) {
 			)
 		}
 	});
-	
+
 	var ColorPicker = React.createClass({
 		// to use this, must create a global object called `gColorPickerSetState`. key must be same as what you pass to pSetStateName, this is only place it is used.
 		displayName: 'ColorPicker',
@@ -5103,10 +5103,10 @@ function init(aArrBufAndCore) {
 			//// 				case 'Rectangle':
 			//// 				case 'Oval':
 			//// 				case 'Text':
-			//// 					
+			////
 			//// 						gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						gCanStore.setCanState(false);
-			//// 					
+			////
 			//// 					break;
 			//// 				default:
 			//// 					// this selection is not affected
@@ -5118,13 +5118,13 @@ function init(aArrBufAndCore) {
 			//// 				case 'Oval':
 			//// 				case 'Line':
 			//// 				case 'Pencil':
-			//// 					
+			////
 			//// 						gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						if (gCState.selection.name == 'Line') { // as fillStyle for line is set equal to that of its strokeStyle
 			//// 							gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						}
 			//// 						gCanStore.setCanState(false);
-			//// 					
+			////
 			//// 					break;
 			//// 				default:
 			//// 					// this selection is not affected
@@ -5133,10 +5133,10 @@ function init(aArrBufAndCore) {
 			//// 			// if currently selection object obeys markercolor, then apply this new markercolor
 			//// 			switch (gCState.selection.name) {
 			//// 				case 'Marker':
-			//// 					
+			////
 			//// 						gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						gCanStore.setCanState(false);
-			//// 					
+			////
 			//// 					break;
 			//// 				default:
 			//// 					// this selection is not affected
@@ -5157,10 +5157,10 @@ function init(aArrBufAndCore) {
 			//		sHistory - array of strings for sColor
 			//		pStateHistoryKey
 			//		sGenInputNumberMousing
-			
+
 			// only supports rgb mode
 			var {sColor, sAlpha, pStateColorKey, pStateAlphaKey, pSetStateName, sGenColorPickerDropping, sHistory, pStateHistoryKey, sGenInputNumberMousing} = this.props;
-			
+
 			// convert sColor into object of rgb
 			sColor = this.props.sColor + ''; // make it a string
 			// console.error('this.props:', this.props);
@@ -5179,13 +5179,13 @@ function init(aArrBufAndCore) {
 				rgb = hexToRgb(hex);
 				// console.log('rgb2:', rgb);
 			}
-			
+
 			var pRgba = rgb;
 			pRgba.a = parseInt(this.props.sAlpha);
 			var pHex = hex;
-			
+
 			var pHsv = rgb2hsv(pRgba.r, pRgba.g, pRgba.b);
-			
+
 			return React.createElement('div', { className:'colorpicker' + (sGenInputNumberMousing ? ' mousing' : '') },
 				React.createElement('div', {className:'colorpicker-inner'},
 					React.createElement(ColorPickerChoices, {pStateColorKey, pSetStateName, sGenColorPickerDropping, sColor, pStateHistoryKey, sHistory}),
@@ -5196,17 +5196,17 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
-	
+
 	var ColorPickerBoard = React.createClass({
 		displayName: 'ColorPickerBoard',
 		mousedown: function(e) {
 			if (e.button !== 0) { return }
-			
+
 			if (!this.brect) {
 				this.brect = ReactDOM.findDOMNode(this).getBoundingClientRect();
 			}
 			console.log('brect:', this.brect);
-			
+
 			var x = e.clientX - this.brect.left;
 			var y = e.clientY - this.brect.top;
 			var newHsv = {
@@ -5215,7 +5215,7 @@ function init(aArrBufAndCore) {
 				v: parseInt((1 - y / this.brect.height) * 100, 10),
 			};
 			// console.log('newHsv:', newHsv);
-			
+
 			var newRgb = HSVtoRGB(newHsv.h/360, newHsv.s/100, newHsv.v/100);
 			var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
 			gEditorStore.setState({
@@ -5227,7 +5227,7 @@ function init(aArrBufAndCore) {
 			window.addEventListener('mousemove', this.mousemove, false);
 		},
 		mousemove: function(e) {
-			
+
 			var x = e.clientX - this.brect.left;
 			var y = e.clientY - this.brect.top;
 			var newHsv = {
@@ -5236,7 +5236,7 @@ function init(aArrBufAndCore) {
 				v: parseInt((1 - y / this.brect.height) * 100, 10),
 			};
 			// console.log('newHsv:', newHsv);
-			
+
 			if (newHsv.s < 0 || newHsv.s > 100 || newHsv.v < 0 || newHsv.v > 100) {
 				if (this.sGenInputNumberMousing != 'not-allowed') {
 					this.sGenInputNumberMousing = 'not-allowed';
@@ -5245,34 +5245,34 @@ function init(aArrBufAndCore) {
 					});
 				}
 			} else {
-			
+
 				var newRgb = HSVtoRGB(newHsv.h/360, newHsv.s/100, newHsv.v/100);
 				var newHex = rgbToHex(true, newRgb.r, newRgb.g, newRgb.b);
-				
+
 
 				var newStateObj = {
 					[this.props.pStateColorKey]: newHex,
 					setStateFromMouseMove: true
 				};
-				
+
 				if (this.sGenInputNumberMousing != 'crosshair') {
 					this.sGenInputNumberMousing = 'crosshair';
 					newStateObj.sGenInputNumberMousing = 'crosshair';
 				}
-				
+
 				gEditorStore.setState(newStateObj);
 			}
-			
+
 		},
 		mouseup: function(e) {
 			if (e.button != 0) { return }
-			
+
 			gEditorStore.setState({
 				sGenInputNumberMousing: null
 			});
-			
+
 			delete this.sGenInputNumberMousing;
-			
+
 			window.removeEventListener('mouseup', this.mouseup, false);
 			window.removeEventListener('mousemove', this.mousemove, false);
 		},
@@ -5282,11 +5282,11 @@ function init(aArrBufAndCore) {
 
 			var thingyX = pHsv.s;
 			var thingyY = pHsv.v;
-			
+
 			var pBgRgb = HSVtoRGB(pHsv.h/360, 1, 1);
-			
+
 			var hexBg = rgbToHex(true, pBgRgb.r, pBgRgb.g, pBgRgb.b);
-			
+
 			return React.createElement('div', {className:'colorpicker-board', onMouseDown:this.mousedown},
 				React.createElement('div', {className:'colorpicker-board-thingy', style:{left:thingyX+'%', bottom:thingyY+'%'} }),
 				React.createElement('div', {className:'colorpicker-board-color', style:{backgroundColor:hexBg} }),
@@ -5302,11 +5302,11 @@ function init(aArrBufAndCore) {
 			// colorOrAlpha true for color
 			// false for alpha
 			if (e.button != 0) { return }
-			
+
 			console.log('entered mousedown');
-			
+
 			this.colorOrAlpha = colorOrAlpha;
-			
+
 			var brect;
 			if (colorOrAlpha) {
 				brect = this.refs.alpha.getBoundingClientRect();
@@ -5315,35 +5315,35 @@ function init(aArrBufAndCore) {
 			}
 			// brect: DOMRect { x: 597.2166748046875, y: 300.3999938964844, width: 170, height: 12, top: 300.3999938964844, right: 767.2166748046875, bottom: 312.3999938964844, left: 597.2166748046875 }
 			console.log('brect:', brect);
-			
+
 			this.widthx = brect.width;
 			this.minx = brect.x;
 			this.maxx = brect.right;
-			
+
 			var downx = e.clientX - this.minx;
 			var perx = Math.round(downx / this.widthx * 100);
 			// console.log('downx:', downx, '%:', perx);
-			
+
 			this.sGenInputNumberMousing = null;
-			
+
 			this.limitTestThenSet(perx);
-			
+
 			window.addEventListener('mouseup', this.mouseup, false);
 			window.addEventListener('mousemove', this.mousemove, false);
-			
+
 		},
 		mousemove: function(e) {
-			
+
 			var downx = e.clientX - this.minx;
 			var perx = Math.round(downx / this.widthx * 100);
 			// console.log('downx:', downx, '%:', perx);
-			
+
 			this.limitTestThenSet(perx);
-			
+
 		},
 		limitTestThenSet: function(aNewVal) {
 			// returns true if set
-			
+
 			// figure out current value
 			var cval;
 			if (this.colorOrAlpha) {
@@ -5352,13 +5352,13 @@ function init(aArrBufAndCore) {
 			} else {
 				cval = this.props.pRgba.a;
 			}
-			
+
 			if (aNewVal < 0 && cval != 0) { // set to min if not at min
 				aNewVal = 0;
 			} else if (aNewVal > 100 && cval != 100) { // set to max
 				aNewVal = 100;
 			}
-			
+
 			if (aNewVal < 0 || aNewVal > 100) {
 				if (this.sGenInputNumberMousing != 'not-allowed') {
 					this.sGenInputNumberMousing = 'not-allowed';
@@ -5374,7 +5374,7 @@ function init(aArrBufAndCore) {
 					console.log('already!');
 					return true;
 				}
-				
+
 				var newStateObj = {}
 				if (this.colorOrAlpha) {
 					console.log(aNewVal / 100, this.props.pHsv.s / 100, this.props.pHsv.v / 100);
@@ -5386,7 +5386,7 @@ function init(aArrBufAndCore) {
 				} else {
 					newStateObj[this.props.pStateAlphaKey] = aNewVal;
 				}
-				
+
 				// if (this.sGenInputNumberMousing) {
 					if (this.sGenInputNumberMousing != 'ew-resize') {
 						this.sGenInputNumberMousing = 'ew-resize';
@@ -5394,22 +5394,22 @@ function init(aArrBufAndCore) {
 					}
 					newStateObj.setStateFromMouseMove = true;
 				// }
-				
+
 				gEditorStore.setState(newStateObj);
-				
+
 				return true;
 			}
 		},
 		mouseup: function(e) {
 			if (e.button != 0) { return }
-			
+
 			gEditorStore.setState({
 				sGenInputNumberMousing: null
 			});
 			delete this.sGenInputNumberMousing;
 			delete this.downval;
-			
-			
+
+
 			window.removeEventListener('mouseup', this.mouseup, false);
 			window.removeEventListener('mousemove', this.mousemove, false);
 			// gEditorStore.setState({
@@ -5420,15 +5420,15 @@ function init(aArrBufAndCore) {
 			// props
 			// var {pHsv, pRgba, pStateColorKey, pStateAlphaKey, pSetStateName} = this.props;
 			var {pRgba, pHsv} = this.props;
-			
+
 			var rgbaStr = 'rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', ' + (pRgba.a/100) + ')';
 			var colorBgImgStr = 'linear-gradient(to right, ' + rgbaStr + ', ' + rgbaStr + '), url("chrome://nativeshot/content/resources/images/trans5x5.png")';
 
 			var alphaBgImgStr = 'linear-gradient(to right, rgba(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ', 0), rgb(' + pRgba.r + ', ' + pRgba.g + ', ' + pRgba.b + ')), url("chrome://nativeshot/content/resources/images/trans5x5.png")';
-			
-			
+
+
 			var percentHue = Math.round(pHsv.h / 360 * 100);
-			
+
 			return React.createElement('div', {className:'colorpicker-sliders'},
 				React.createElement('div', {className:'colorpicker-sliders-wrap'},
 					React.createElement('div', {className:'colorpicker-slider-rainbow', ref:'hue', onMouseDown:this.mousedown.bind(this, true) },
@@ -5465,7 +5465,7 @@ function init(aArrBufAndCore) {
 			//		pStateAlphaKey
 			//		pSetStateName
 			//		pHex
-			
+
 			var rgba = this.props.pRgba;
 			// var hexColor = rgbToHex(false, rgba.r, rgba.g, rgba.b); // hex color without hash
 
@@ -5479,8 +5479,8 @@ function init(aArrBufAndCore) {
 			var cPropsG = overwriteObjWithObj({}, cPropsCommon);
 			var cPropsB = overwriteObjWithObj({}, cPropsCommon);
 			var cPropsA = overwriteObjWithObj({}, cPropsCommon);
-			
-			
+
+
 			cPropsR.pLabel = 'R';
 			cPropsG.pLabel = 'G';
 			cPropsB.pLabel = 'B';
@@ -5490,24 +5490,24 @@ function init(aArrBufAndCore) {
 			cPropsG.className += 'g';
 			cPropsB.className += 'b';
 			cPropsA.className += 'a';
-			
+
 			cPropsA.pMax = 100;
-			
+
 			cPropsR[this.props.pStateColorKey] = rgba.r;
 			cPropsG[this.props.pStateColorKey] = rgba.g;
 			cPropsB[this.props.pStateColorKey] = rgba.b;
 			cPropsA[this.props.pStateAlphaKey] = rgba.a; // link38711111
-			
+
 			cPropsR.pStateVarName = this.props.pStateColorKey;
 			cPropsG.pStateVarName = this.props.pStateColorKey;
 			cPropsB.pStateVarName = this.props.pStateColorKey;
 			cPropsA.pStateVarName = this.props.pStateAlphaKey;
-			
+
 			cPropsR.pStateVarSpecial = {component:'r', rgba:rgba};
 			cPropsG.pStateVarSpecial = {component:'g', rgba:rgba};
 			cPropsB.pStateVarSpecial = {component:'b', rgba:rgba};
 			// no need for special on cPropsA because rgba.a is same as this.props.sAlpha which is the proper in gEditorStore.state[this.pStateAlphaKey] per link38711111
-			
+
 			return React.createElement('div', {className:'colorpicker-codes'},
 				React.createElement('div', {className:'colorpicker-codes-hex'},
 					'Hex',
@@ -5525,42 +5525,42 @@ function init(aArrBufAndCore) {
 		click: function(aColor) {
 			var setStateObj = {};
 			setStateObj[this.props.pStateColorKey] = aColor;
-			
+
 			var addColorSetStateObj = {};
 			if (gCState.selection) {
 				switch (gCState.selection.name) {
 					case 'Marker':
-					
+
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalMarkerColorHist', true);
-							
+
 						break;
 					case 'Line':
 					case 'Pencil':
-					
+
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
-					
+
 						break;
 					case 'Text':
-					
+
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
-					
+
 						break;
 					case 'Rectangle':
 					case 'Oval':
-					
+
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
-							
+
 						break;
 					default:
 						// no related color picker
 				}
 			}
-			
+
 			console.log('addColorSetStateObj:', addColorSetStateObj);
-			
+
 			gColorPickerSetState[this.props.pSetStateName](overwriteObjWithObj(setStateObj, addColorSetStateObj));
 		},
-		dropperClick: function() {			
+		dropperClick: function() {
 			gColorPickerSetState[this.props.pSetStateName]({
 				sGenColorPickerDropping: {
 					initColor: this.props.sColor, // the original color before picking. so if user hits Esc i cancel the dropping and restore this color
@@ -5574,16 +5574,16 @@ function init(aArrBufAndCore) {
 			//		pStateDroppingKey
 			//		pStateHistoryKey
 			//		sHistory
-			
+
 			var historyColors = this.props.sHistory;
 			var defaultColors = ['#000000', '#ffffff', '#4A90E2', '#D0021B', '#F5A623', '#F8E71C', '#00B050', '#9013FE'];
 			if (this.props.pStateColorKey == 'sPalMarkerColor') {
 				defaultColors = ['#77ef15', '#ffef15']
 			}
-			
+
 			var historyElements = [];
 			var defaultElements = [];
-			
+
 			historyColors.forEach(function(color) {
 				historyElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}, onClick:this.click.bind(this, color)}));
 			}.bind(this));
@@ -5591,7 +5591,7 @@ function init(aArrBufAndCore) {
 			defaultColors.forEach(function(color) {
 				defaultElements.push(React.createElement('div', {className:'colorpicker-choices-opt', style:{backgroundColor:color}, onClick:this.click.bind(this, color)}));
 			}.bind(this));
-			
+
 			return React.createElement('div', {className:'colorpicker-choices'},
 				React.createElement('div', {className:'colorpicker-choices-wrap'},
 					React.createElement('div', {className:'colorpicker-choices-history'},
@@ -5608,7 +5608,7 @@ function init(aArrBufAndCore) {
 			);
 		}
 	});
-	
+
 	var Submenu = React.createClass({
 		displayName: 'Submenu',
 		render: function() {
@@ -5624,36 +5624,36 @@ function init(aArrBufAndCore) {
 			//		sPalMarkerAlpha
 			//		sPalMarkerColor
 			//		setLabelText
-			
+
 			var cChildren = [];
-			
+
 			// iterate through this.props.pSub
 			for (var i=0; i<this.props.pSub.length; i++) {
 				cChildren.push(React.createElement(SubButton, overwriteObjWithObj({pSubButton:this.props.pSub[i], setLabelText:this.props.setLabelText}, this.props)/*{sPalSeldSubs:this.props.sPalSeldSubs, pButton:this.props.pButton, pSubButton:this.props.pSub[i], sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 			}
-			
+
 			return React.createElement('div', {className:'psub'},
 				cChildren
 			);
 		}
 	});
-	
+
 	var Subwrap = React.createClass({
 		displayName: 'Subwrap',
 		render: function() {
 			// props
 			// 		merged this.state and this.props of `Editor` component
-			
+
 			var cChildren = [];
 
 			var pPalLayout = this.props.pPalLayout;
 			var iEnd = pPalLayout.length;
-			
+
 			// start - get active tool options
 			// console.log('this.props.sGenPalTool:', this.props.sGenPalTool);
 			var activeToolOptions;
-			
-			
+
+
 			var activeToolEntry;
 			for (var i=0; i<iEnd; i++) {
 				var cLayoutEntry = pPalLayout[i];
@@ -5668,7 +5668,7 @@ function init(aArrBufAndCore) {
 			var activeToolActiveSubLabel = this.props.sPalSeldSubs[activeToolEntry.label];
 			if (activeToolActiveSubLabel) {
 				// yes it has a sub
-				
+
 				// get activeToolActiveSubEntry
 				var activeToolActiveSubEntry;
 				var activeToolEntrySubs = activeToolEntry.sub;
@@ -5680,23 +5680,23 @@ function init(aArrBufAndCore) {
 						break;
 					}
 				}
-				
+
 				// test if activeToolActiveSubEntry has options
 				if (activeToolActiveSubEntry.options) {
 					activeToolOptions = activeToolOptions.concat(activeToolActiveSubEntry.options);
 				}
 			}
 			// end - get active tool options
-			
+
 			for (var i=0; i<iEnd; i++) {
 				var cLayoutEntry = pPalLayout[i];
-				
+
 				if (cLayoutEntry.isOption) {
 					if (activeToolOptions.indexOf(cLayoutEntry.label || cLayoutEntry.special) == -1) {
 						continue; // dont show this option
 					}
 				}
-				
+
 				if (cLayoutEntry.special) {
 					if (cLayoutEntry.special in Specials) { // temp as all specials not yet defined
 						var cSpecialProps = {};
@@ -5728,11 +5728,11 @@ function init(aArrBufAndCore) {
 						}
 					}
 					*/
-					
+
 					cChildren.push(React.createElement(Button, overwriteObjWithObj({pButton:cLayoutEntry}, this.props)/*{sPalMultiDepresses:this.props.sPalMultiDepresses, sPalSeldSubs:this.props.sPalSeldSubs, pButton:cLayoutEntry, sGenPalTool:this.props.sGenPalTool, sPalLineAlpha:this.props.sPalLineAlpha, sPalLineColor:this.props.sPalLineColor, sPalFillAlpha:this.props.sPalFillAlpha, sPalFillColor:this.props.sPalFillColor, sPalMarkerAlpha:this.props.sPalMarkerAlpha, sPalMarkerColor:this.props.sPalMarkerColor}*/));
 				}
 			}
-			
+
 			var cProps = {
 				className:'psubwrap',
 				style: {
@@ -5740,21 +5740,21 @@ function init(aArrBufAndCore) {
 					cursor: this.props.pPalSubwrapCursor
 				}
 			};
-			
+
 			if (this.props.sGenPalDragStart) {
 				cProps.style.cursor = 'move';
 			}
-			
+
 			if (this.props.sPalSize < 24) {
 				cProps.className += ' minfontsize';
 			}
-			
+
 			return React.createElement('div', cProps,
 				cChildren
 			);
 		}
 	});
-	
+
 	var InputNumber = React.createClass({
 		displayName: 'InputNumber',
 		wheel: function(e) {
@@ -5765,28 +5765,28 @@ function init(aArrBufAndCore) {
 			} else {
 				newVal = this.props[this.props.pStateVarName] - this.crement;
 			}
-			
+
 			this.limitTestThenSet(newVal);
-			
+
 			e.stopPropagation(); // so it doesnt trigger the wheel event on window. otherwise if ZoomView is showing, then it will change that zoom level
 		},
 		keydown: function(e) {
 			var newVal;
-			
+
 			switch (e.key) {
 				case 'ArrowUp':
-				
+
 						newVal = this.props[this.props.pStateVarName] + this.crement;
-				
+
 					break;
 				case 'ArrowDown':
-					
+
 						newVal = this.props[this.props.pStateVarName] - this.crement;
-					
+
 					break;
 				default:
 					// do nothing
-					
+
 					// if its not a number then block it
 					if (e.key.length == 1) {
 						if (isNaN(e.key) || e.key == ' ') {
@@ -5795,10 +5795,10 @@ function init(aArrBufAndCore) {
 							console.log('e.key:', '"' + e.key + '"');
 						}
 					}
-					
+
 					return;
 			}
-			
+
 			this.limitTestThenSet(newVal);
 
 		},
@@ -5809,23 +5809,23 @@ function init(aArrBufAndCore) {
 			} else if (this.props.pMax !== undefined && aNewVal > this.props.pMax) {
 				return false; // above min limit, dont set it
 			} else {
-				
+
 				var newSetValue = this.getSetValue(aNewVal);
 				if (this.props[this.props.pStateVarName] === newSetValue) {
 					// its already that number
 					console.log('already!');
 					return true;
 				}
-				
+
 				var newStateObj = {};
 				newStateObj[this.props.pStateVarName] = newSetValue;
-				
+
 				if (this.sGenInputNumberMousing) {
 					newStateObj.setStateFromMouseMove = true;
 				}
-				
+
 				gEditorStore.setState(newStateObj);
-				
+
 				//// if (this.props.pCStateSel) {
 				//// 	var drawablePropToUpdate = this.props.pCStateSel[gCState.selection.name];
 				//// 	if (gCState && gCState.selection && drawablePropToUpdate) {
@@ -5836,38 +5836,38 @@ function init(aArrBufAndCore) {
 				//// 		gCanStore.setCanState(false); // so new blur level gets applied
 				//// 	}
 				//// }
-				
+
 				return true;
 			}
 		},
 		mousedown: function(e) {
 			if (e.button != 0) { return }
-			
+
 			this.downx = e.clientX;
 			this.downval = this.props[this.props.pStateVarName];
 			window.addEventListener('mouseup', this.mouseup, false);
 			window.addEventListener('mousemove', this.mousemove, false);
-			
+
 			gEditorStore.setState({
 				sGenInputNumberMousing: this.cursor
 			});
-			
-			
-			
+
+
+
 			this.sGenInputNumberMousing = this.cursor; // keep track locally otherwise ill need to have whoever uses InputNumber pass in sGenInputNumberMousing as a prop
-			
+
 		},
 		mousemove: function(e) {
-			
+
 			var delX = e.clientX - this.downx;
-			
+
 			var delSensitivity = Math.round(delX / this.mousesens);
-			
+
 			var newVal = this.downval + (delSensitivity * this.crement);
-			
+
 			// console.log('downx:', this.downx, 'clientX:', e.clientX, 'delX:', delX, 'delSensitivity:', delSensitivity);
-			
-			
+
+
 			// i do this extra limit test here, as mouse move can move greatly so i might miss the minimum/maximum
 			if (this.props.pMin !== undefined && newVal < this.props.pMin) {
 				if (this.props[this.props.pStateVarName] !== this.props.pMin) {
@@ -5878,7 +5878,7 @@ function init(aArrBufAndCore) {
 					newVal = this.props.pMax;
 				}
 			}
-			
+
 			if (this.getSetValue(this.props[this.props.pStateVarName]) != newVal) {
 				if (!this.limitTestThenSet(newVal)) {
 					if (this.sGenInputNumberMousing == this.cursor) {
@@ -5896,11 +5896,11 @@ function init(aArrBufAndCore) {
 					}
 				}
 			}
-			
+
 		},
 		mouseup: function(e) {
 			if (e.button != 0) { return }
-			
+
 			window.removeEventListener('mouseup', this.mouseup, false);
 			window.removeEventListener('mousemove', this.mousemove, false);
 			gEditorStore.setState({
@@ -5918,7 +5918,7 @@ function init(aArrBufAndCore) {
 				return;
 			}
 			var newValue = parseInt(newValueStr);
-			
+
 			this.limitTestThenSet(newValue);
 			this.lastDomElValue = newValueStr;
 		},
@@ -5929,8 +5929,8 @@ function init(aArrBufAndCore) {
 			switch (this.props.pStateVarReadSpecial) {
 				case 'sPalLineColorRED':
 
-						
-				
+
+
 					break;
 				default:
 					return this.props[this.props.pStateVarName];
@@ -5941,9 +5941,9 @@ function init(aArrBufAndCore) {
 			// if pStateVarName needs special processing to read from pStateVarName and/or set to pStateVarName
 			if (this.props.pStateVarSpecial) {
 				// in this switch make sure to return the specially processed value, that should get setState with
-				
+
 				// var NEWVAL = this.props[this.props.pStateVarName];
-				
+
 				switch (this.props.pStateVarName) {
 					case 'sPalLineColor':
 					case 'sPalFillColor':
@@ -5951,7 +5951,7 @@ function init(aArrBufAndCore) {
 
 							var specialData = this.props.pStateVarSpecial;
 							var rgba = specialData.rgba;
-							
+
 							var newRgb = {
 								r: rgba.r,
 								g: rgba.g,
@@ -5959,7 +5959,7 @@ function init(aArrBufAndCore) {
 							};
 							newRgb[specialData.component] = NEWVAL;
 							return 'rgb(' + newRgb.r + ', ' + newRgb.g + ', ' + newRgb.b + ')';
-					
+
 						break;
 					default:
 						console.error('pStateVarName of "' + this.props.pStateVarName +'" is marked as special but no special getSetValue mechanism defined');
@@ -5968,7 +5968,7 @@ function init(aArrBufAndCore) {
 			} else {
 				return NEWVAL;
 			}
-			
+
 		},
 		componentDidMount: function() {
 			this.lastDomElValue = this.props[this.props.pStateVarName];
@@ -6013,12 +6013,12 @@ function init(aArrBufAndCore) {
 			//		pCursor - css cursor when mouse moving. default is ew-resize
 			//		pStateVarSpecial - set it to anything other then false/undefined/null so it get get the special set value with getSetValue. i figured NO NEED for getReadValue as i pass in the special read value as [pStateVarName] so it updates the input properly link8844444
 			//		pCStateSel - optional. array.
-			//		
-			
+			//
+
 			this.crement = this.props.pCrement || 1;
 			this.mousesens = this.props.pMouseSens || 10;
 			this.cursor = this.props.pCursor || 'ew-resize';
-			
+
 			if (!this.domId) { // this is why gInputNumberId cant be -1. i cant have a id of 0
 				gInputNumberId++;
 				this.domId = gInputNumberId;
@@ -6032,13 +6032,13 @@ function init(aArrBufAndCore) {
 		}
 	})
 	////////// end - palette components
-	
+
 	var pQS = tQS; //queryStringAsJson(window.location.search.substr(1));
-	
+
 	// to test no scaling
 	// delete pQS.win81ScaleX;
 	// delete pQS.win81ScaleY;
-	
+
 	var pPhys = {}; // stands for pPhysical - meaning the actually used canvas width and height
 	if (pQS.win81ScaleX || pQS.win81ScaleY) {
 		pPhys.w = Math.ceil(pQS.w / pQS.win81ScaleX);
@@ -6047,7 +6047,7 @@ function init(aArrBufAndCore) {
 		pPhys.w = pQS.w;
 		pPhys.h = pQS.h;
 	}
-	
+
 	var Specials = {
 		Divider: Divider,
 		Accessibility: Accessibility,
@@ -6059,12 +6059,12 @@ function init(aArrBufAndCore) {
 		LineTools: LineTools,
 		BlurTools: BlurTools
 	};
-	
+
 	var editorstateStr = aArrBufAndCore.editorstateStr;
 	var editorstate;
 	if (!editorstateStr) {
 		// need to use defaults
-		
+
 		var palSeldSubs = {};
 		for (var i=0; i<palLayout.length; i++) {
 			if (palLayout[i].sub) {
@@ -6080,12 +6080,12 @@ function init(aArrBufAndCore) {
 				}
 			}
 		}
-		
+
 		editorstate = {
 			pPalSize: 38,
 			pPalSeldSubs: palSeldSubs,
 			pPalMultiDepresses: {}, // if its depressed, then the tool label is the key and the value is true
-			
+
 			pPalLineColor: 'rgb(208, 2, 27)',
 			pPalLineAlpha: 100,
 			pPalBothColorHist: [],
@@ -6094,36 +6094,36 @@ function init(aArrBufAndCore) {
 			pPalMarkerColor: '#ffef15',
 			pPalMarkerAlpha: 50,
 			pPalMarkerColorHist: [],
-			
+
 			pPalBlurBlock: 5,
 			pPalBlurRadius: 10,
-			
+
 			pPalZoomViewCoords: {x:20, y:300},
 			pPalZoomViewLevel: 8,
-			
+
 			pPalArrowLength: 24,
 			pPalArrowEnd: false,
 			pPalArrowStart: false,
-			
+
 			pPalLineWidth: 12,
 			pPalRectRadius: 5,
-			
+
 			pPalFontSize: 24,
 			pPalFontFace: 'Arial',
 			pPalFontBold: undefined,
 			pPalFontItalic: undefined,
 			pPalFontUnderline: undefined,
-			
+
 			pCanHandleSize: 18,
 			pPalSeldSubs: palSeldSubs,
-			
+
 			pPalX: 5, // link239285555
 			pPalY: 50 // link239285555
 		};
 	} else {
 		editorstate = JSON.parse(editorstateStr);
 	}
-	
+
 	// make sure pPalX and pPalY are on a monitor. if that monitor is no longer here, then use the defaults, which is near 0,0 which is on primary monitor which is always there
 	var pPalCoordsOnVisibleMon = false;
 	var pPalX = editorstate.pPalX; // i dont do mmtm here or on `var pPalY` because pal position is relative to 0,0
@@ -6148,7 +6148,7 @@ function init(aArrBufAndCore) {
 		editorstate.pPalX = 5; // link239285555
 		editorstate.pPalY = 50; // link239285555
 	}
-	
+
 	// determine if Fullscreen button should have a submenu
 	if (tQS.allMonDim.length > 1) {
 		var l = palLayout.length;
@@ -6163,11 +6163,11 @@ function init(aArrBufAndCore) {
 							hotkey: 'aa'
 						}
 				];
-				
+
 				// individual monitor subbuttons
 				var allMonDim = tQS.allMonDim;
 				var l2 = allMonDim.length;
-				
+
 				for (var j=0; j<l2; j++) {
 					if (j !== tQS.iMon) {
 						entry.sub.push({
@@ -6178,12 +6178,12 @@ function init(aArrBufAndCore) {
 						});
 					}
 				}
-				
+
 				break;
 			}
 		}
 	}
-	
+
 	var initProps = editorstate;
 	console.log('initProps:', initProps);
 	initProps.pQS = pQS;
@@ -6191,18 +6191,18 @@ function init(aArrBufAndCore) {
 	initProps.pPhys = pPhys;
 	initProps.pCanInterval = 30;
 	initProps.pPalLayout = palLayout; // link1818181
-	
+
 	console.log('initProps:', initProps);
-	
+
 	var initReact = function() {
 		window.addEventListener('unload', unload, false);
-		
+
 		ReactDOM.render(
 			React.createElement(Editor, initProps),
 			document.getElementById('react_wrap') // document.body
 		);
 	};
-	
+
 	// console.log('document.readyState:', document.readyState);
 	if (document.readyState != 'complete') {
 		window.addEventListener('DOMContentLoaded', initReact, false);
@@ -6293,7 +6293,7 @@ function MyContext(ctx) {
 		this.conv = mmtm;
 	}
 	this.conv = mmtm;
-	
+
     // Methods
 
 	this.beginPath = ctx.beginPath.bind(ctx);
@@ -6301,50 +6301,50 @@ function MyContext(ctx) {
 	this.stroke = ctx.stroke.bind(ctx);
 	this.fill = ctx.fill.bind(ctx);
 	this.createPattern = ctx.createPattern.bind(ctx);
-	
+
 	this.measureText = function(text) {
 		var om = ctx.measureText(text);
 		return {
 			width: mtmm.w(om.width)
 		};
 	};
-	
+
 	this.clearRect = function(x, y, w, h) {
 		ctx.clearRect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
-	
+
 	this.drawImage = function(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight) {
 		ctx.drawImage(image, this.conv.x(sx), this.conv.y(sy), this.conv.w(sWidth), this.conv.h(sHeight), this.conv.x(dx), this.conv.y(dy), this.conv.w(dWidth), this.conv.h(dHeight));
 	};
-	
+
 	this.isPointInStroke = function(x, y) {
 		return ctx.isPointInStroke(this.conv.x(x), this.conv.y(y));
 	};
-	
+
 	this.arc = function(x, y, radius, startAngle, endAngle, anticlockwise) {
 		ctx.arc(this.conv.x(x), this.conv.y(y), this.conv.w(radius), startAngle, endAngle, anticlockwise);
 	};
-	
+
 	this.putImageData = function(imagedata, dx, dy) {
 		ctx.putImageData(imagedata, this.conv.x(dx), this.conv.y(dy));
 	};
-	
+
 	this.getImageData = function(x, y, w, h) {
 		return ctx.getImageData(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
-	
+
 	this.fillText = function(text, x, y) {
 		ctx.fillText(text, this.conv.x(x), this.conv.y(y));
 	};
-	
+
     this.lineTo = function(x, y) {
 		ctx.lineTo(this.conv.x(x), this.conv.y(y));
 	};
-	
+
 	this.moveTo = function(x, y) {
 		ctx.moveTo(this.conv.x(x), this.conv.y(y));
 	};
-	
+
 	this.setLineDash = function(segments) {
 		var l = segments.length;
 		for (var i=0; i<l; i++) {
@@ -6352,19 +6352,19 @@ function MyContext(ctx) {
 		}
 		ctx.setLineDash(segments);
 	};
-	
+
 	this.fillRect = function(x, y, w, h) {
 		ctx.fillRect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
-	
+
 	this.strokeRect = function(x, y, w, h) {
 		ctx.strokeRect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
-	
+
 	this.rect = function(x, y, w, h) {
 		ctx.rect(this.conv.x(x), this.conv.y(y), this.conv.w(w), this.conv.h(h));
 	};
-	
+
 	this.bezierCurveTo = function(cp1x, cp1y, cp2x, cp2y, x, y) {
 		ctx.bezierCurveTo(this.conv.x(cp1x), this.conv.y(cp1y), this.conv.x(cp2x), this.conv.y(cp2y), this.conv.x(x), this.conv.y(y));
 	};
@@ -6372,7 +6372,7 @@ function MyContext(ctx) {
 	this.quadraticCurveTo = function(cpx, cpy, x, y) {
 		ctx.quadraticCurveTo(this.conv.x(cpx), this.conv.y(cpy), this.conv.x(x), this.conv.y(y));
 	};
-	
+
     // Properties
 
     Object.defineProperty(this, 'lineWidth', {
@@ -6382,7 +6382,7 @@ function MyContext(ctx) {
 			ctx.lineWidth = this.conv.w(value);
         }
     });
-	
+
 	var fontsizePatt = /\d+px/;
     Object.defineProperty(this, 'font', {
         get: function() { return ctx.font },
@@ -6391,22 +6391,22 @@ function MyContext(ctx) {
 			ctx.font = value.replace(fontsize, this.conv.w(parseInt(fontsize)) + 'px');
 		}
     });
-	
+
     Object.defineProperty(this, 'strokeStyle', {
         get: function() { return ctx.strokeStyle },
         set: function(value) { ctx.strokeStyle = value }
     });
-	
+
     Object.defineProperty(this, 'fillStyle', {
         get: function() { return ctx.fillStyle },
         set: function(value) { ctx.fillStyle = value }
     });
-	
+
     Object.defineProperty(this, 'mozImageSmoothingEnabled', {
         get: function() { return ctx.mozImageSmoothingEnabled },
         set: function(value) { ctx.mozImageSmoothingEnabled = value }
     });
-	
+
     Object.defineProperty(this, 'imageSmoothingEnabled', {
         get: function() { return ctx.imageSmoothingEnabled },
         set: function(value) { ctx.imageSmoothingEnabled = value }
@@ -6492,14 +6492,14 @@ var imagedata = {
 	},
 	pixelate: function(aImageData, w, h, aOptions={}) {
 		// http://stackoverflow.com/a/36678815/1828637
-		
+
 		var optionsDefaults = {
 			blockSize: 10
 		};
 		validateOptionsObj(aOptions, optionsDefaults);
-		
+
 		var data = aImageData.data;
-		
+
 		var wmax = ((w / aOptions.blockSize) | 0) * aOptions.blockSize;
 		var wrest = w - wmax;
 
@@ -6537,27 +6537,27 @@ var imagedata = {
 	gaussian_blur: function(aImageData, width, height, aOptions={}) {
 		// http://www.quasimondo.com/StackBlurForCanvas/StackBlurDemo.html
 		// http://www.quasimondo.com/StackBlurForCanvas/StackBlur.js
-		
+
 		var optionsDefaults = {
 			radius: 10
 		};
 		validateOptionsObj(aOptions, optionsDefaults);
-		
+
 		var pixels = aImageData.data;
 		var radius = aOptions.radius;
-				
+
 		var x, y, i, p, yp, yi, yw, r_sum, g_sum, b_sum,
 		r_out_sum, g_out_sum, b_out_sum,
 		r_in_sum, g_in_sum, b_in_sum,
 		pr, pg, pb, rbs;
-				
+
 		var div = radius + radius + 1;
 		var w4 = width << 2;
 		var widthMinus1  = width - 1;
 		var heightMinus1 = height - 1;
 		var radiusPlus1  = radius + 1;
 		var sumFactor = radiusPlus1 * ( radiusPlus1 + 1 ) / 2;
-		
+
 		var stackStart = new BlurStack();
 		var stack = stackStart;
 		for ( i = 1; i < div; i++ )
@@ -6568,26 +6568,26 @@ var imagedata = {
 		stack.next = stackStart;
 		var stackIn = null;
 		var stackOut = null;
-		
+
 		yw = yi = 0;
-		
+
 		var mul_sum = mul_table[radius];
 		var shg_sum = shg_table[radius];
-		
+
 		for ( y = 0; y < height; y++ )
 		{
 			r_in_sum = g_in_sum = b_in_sum = r_sum = g_sum = b_sum = 0;
-			
+
 			r_out_sum = radiusPlus1 * ( pr = pixels[yi] );
 			g_out_sum = radiusPlus1 * ( pg = pixels[yi+1] );
 			b_out_sum = radiusPlus1 * ( pb = pixels[yi+2] );
-			
+
 			r_sum += sumFactor * pr;
 			g_sum += sumFactor * pg;
 			b_sum += sumFactor * pb;
-			
+
 			stack = stackStart;
-			
+
 			for( i = 0; i < radiusPlus1; i++ )
 			{
 				stack.r = pr;
@@ -6595,22 +6595,22 @@ var imagedata = {
 				stack.b = pb;
 				stack = stack.next;
 			}
-			
+
 			for( i = 1; i < radiusPlus1; i++ )
 			{
 				p = yi + (( widthMinus1 < i ? widthMinus1 : i ) << 2 );
 				r_sum += ( stack.r = ( pr = pixels[p])) * ( rbs = radiusPlus1 - i );
 				g_sum += ( stack.g = ( pg = pixels[p+1])) * rbs;
 				b_sum += ( stack.b = ( pb = pixels[p+2])) * rbs;
-				
+
 				r_in_sum += pr;
 				g_in_sum += pg;
 				b_in_sum += pb;
-				
+
 				stack = stack.next;
 			}
-			
-			
+
+
 			stackIn = stackStart;
 			stackOut = stackEnd;
 			for ( x = 0; x < width; x++ )
@@ -6618,35 +6618,35 @@ var imagedata = {
 				pixels[yi]   = (r_sum * mul_sum) >> shg_sum;
 				pixels[yi+1] = (g_sum * mul_sum) >> shg_sum;
 				pixels[yi+2] = (b_sum * mul_sum) >> shg_sum;
-				
+
 				r_sum -= r_out_sum;
 				g_sum -= g_out_sum;
 				b_sum -= b_out_sum;
-				
+
 				r_out_sum -= stackIn.r;
 				g_out_sum -= stackIn.g;
 				b_out_sum -= stackIn.b;
-				
+
 				p =  ( yw + ( ( p = x + radius + 1 ) < widthMinus1 ? p : widthMinus1 ) ) << 2;
-				
+
 				r_in_sum += ( stackIn.r = pixels[p]);
 				g_in_sum += ( stackIn.g = pixels[p+1]);
 				b_in_sum += ( stackIn.b = pixels[p+2]);
-				
+
 				r_sum += r_in_sum;
 				g_sum += g_in_sum;
 				b_sum += b_in_sum;
-				
+
 				stackIn = stackIn.next;
-				
+
 				r_out_sum += ( pr = stackOut.r );
 				g_out_sum += ( pg = stackOut.g );
 				b_out_sum += ( pb = stackOut.b );
-				
+
 				r_in_sum -= pr;
 				g_in_sum -= pg;
 				b_in_sum -= pb;
-				
+
 				stackOut = stackOut.next;
 
 				yi += 4;
@@ -6654,22 +6654,22 @@ var imagedata = {
 			yw += width;
 		}
 
-		
+
 		for ( x = 0; x < width; x++ )
 		{
 			g_in_sum = b_in_sum = r_in_sum = g_sum = b_sum = r_sum = 0;
-			
+
 			yi = x << 2;
 			r_out_sum = radiusPlus1 * ( pr = pixels[yi]);
 			g_out_sum = radiusPlus1 * ( pg = pixels[yi+1]);
 			b_out_sum = radiusPlus1 * ( pb = pixels[yi+2]);
-			
+
 			r_sum += sumFactor * pr;
 			g_sum += sumFactor * pg;
 			b_sum += sumFactor * pb;
-			
+
 			stack = stackStart;
-			
+
 			for( i = 0; i < radiusPlus1; i++ )
 			{
 				stack.r = pr;
@@ -6677,29 +6677,29 @@ var imagedata = {
 				stack.b = pb;
 				stack = stack.next;
 			}
-			
+
 			yp = width;
-			
+
 			for( i = 1; i <= radius; i++ )
 			{
 				yi = ( yp + x ) << 2;
-				
+
 				r_sum += ( stack.r = ( pr = pixels[yi])) * ( rbs = radiusPlus1 - i );
 				g_sum += ( stack.g = ( pg = pixels[yi+1])) * rbs;
 				b_sum += ( stack.b = ( pb = pixels[yi+2])) * rbs;
-				
+
 				r_in_sum += pr;
 				g_in_sum += pg;
 				b_in_sum += pb;
-				
+
 				stack = stack.next;
-			
+
 				if( i < heightMinus1 )
 				{
 					yp += width;
 				}
 			}
-			
+
 			yi = x;
 			stackIn = stackStart;
 			stackOut = stackEnd;
@@ -6709,37 +6709,37 @@ var imagedata = {
 				pixels[p]   = (r_sum * mul_sum) >> shg_sum;
 				pixels[p+1] = (g_sum * mul_sum) >> shg_sum;
 				pixels[p+2] = (b_sum * mul_sum) >> shg_sum;
-				
+
 				r_sum -= r_out_sum;
 				g_sum -= g_out_sum;
 				b_sum -= b_out_sum;
-				
+
 				r_out_sum -= stackIn.r;
 				g_out_sum -= stackIn.g;
 				b_out_sum -= stackIn.b;
-				
+
 				p = ( x + (( ( p = y + radiusPlus1) < heightMinus1 ? p : heightMinus1 ) * width )) << 2;
-				
+
 				r_sum += ( r_in_sum += ( stackIn.r = pixels[p]));
 				g_sum += ( g_in_sum += ( stackIn.g = pixels[p+1]));
 				b_sum += ( b_in_sum += ( stackIn.b = pixels[p+2]));
-				
+
 				stackIn = stackIn.next;
-				
+
 				r_out_sum += ( pr = stackOut.r );
 				g_out_sum += ( pg = stackOut.g );
 				b_out_sum += ( pb = stackOut.b );
-				
+
 				r_in_sum -= pr;
 				g_in_sum -= pg;
 				b_in_sum -= pb;
-				
+
 				stackOut = stackOut.next;
-				
+
 				yi += width;
 			}
 		}
-		
+
 	}
 };
 
@@ -6752,7 +6752,7 @@ function queryStringAsJson(aQueryString) {
 	asJsonStringify = asJsonStringify.replace(/=/g, '":"');
 	asJsonStringify = '{"' + asJsonStringify + '"}';
 	asJsonStringify = asJsonStringify.replace(/"(-?\d+(?:.\d+)?|true|false)"/g, function($0, $1) { return $1; });
-	
+
 	return JSON.parse(asJsonStringify);
 }
 
@@ -6787,7 +6787,7 @@ function rgbToHex(withHash, rOrStr, g, b) {
 	} else {
 		r = rOrStr;
 	}
-	
+
 	var withoutHash = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 	if (withHash) {
 		return '#' + withoutHash;
@@ -6800,9 +6800,9 @@ function colorStrToCssRgba(aColorStr, aAlpha, retObj) {
 	// if regObj false, then returns 'rgba(#, #, #, #)', else returns object of rgba
 	// if aAlpha is a number -- CANNOT be 0 to 1 IT MUST BE 0 to 100 OR a string like rgba(2, 2, 2, 100)
 	// HOWEVER if aAlpha is a str then must be 0 to 1
-	
+
 	var sColor = aColorStr;
-	
+
 	var rgb;
 	if (sColor[0] == '#' || sColor.length == 3 || sColor.length == 6) {
 		rgb = hexToRgb(sColor);
@@ -6813,7 +6813,7 @@ function colorStrToCssRgba(aColorStr, aAlpha, retObj) {
 		rgb = hexToRgb(hexFirst);
 		// console.log('rgb2:', rgb);
 	}
-	
+
 	var sAlpha;
 	if (isNaN(aAlpha)) {
 		// then its a string
@@ -6825,10 +6825,10 @@ function colorStrToCssRgba(aColorStr, aAlpha, retObj) {
 		aAlpha = aAlpha[0] * 100;
 	}
 	sAlpha = aAlpha / 100;
-	
+
 	var pRgba = rgb;
 	pRgba.a = sAlpha;
-	
+
 	if (retObj) {
 		return pRgba;
 	} else {
@@ -6863,7 +6863,7 @@ function overwriteObjWithObj(obj1, obj2){
 
 function subtractMulti(aTargetRect, aSubtractRectsArr) {
 	// http://stackoverflow.com/a/36641104/1828637
-	
+
     var keptParts = [aTargetRect];
     for (var i = 0; i < aSubtractRectsArr.length; i++) {
         var keptPartsPartial = [];
@@ -6889,7 +6889,7 @@ function validateOptionsObj(aOptions, aOptionsDefaults) {
 			throw new Error('aOptKey of ' + aOptKey + ' is an invalid key, as it has no default value');
 		}
 	}
-	
+
 	// if a key is not found in aOptions, but is found in aOptionsDefaults, it sets the key in aOptions to the default value
 	for (var aOptKey in aOptionsDefaults) {
 		if (!(aOptKey in aOptions)) {
@@ -6909,19 +6909,19 @@ function arraysAvg(...intarr) {
 			sumarr[j] += cIntarr[j];
 		}
 	}
-	
+
 	var ial = intarr.length;
 	for (var i=0; i<l; i++) {
 		sumarr[i] /= ial;
 	}
-	
+
 	return sumarr;
 }
 
 function arraysSum(...intarr) {
 	// intarr should all be same lenght
 	// returns an array that is the sum of each element
-	
+
 	var sumarr = intarr[0];
 	var l = sumarr.length;
 	for (var i=1; i<intarr.length; i++) {
@@ -6948,9 +6948,9 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		canAndCtx: undefined, // set it to object {can:,ctx:} // if not provided, i will make one
 		range: 3
 	};
-	
+
 	aOptions.range = aOptions.range || 3; // multiples the aSize by this much
-	
+
 	if (aChars === '') {
 		// no characters, so obviously everything is 0
 		return {
@@ -6961,16 +6961,16 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		};
 		// otherwise i will get IndexSizeError: Index or size is negative or greater than the allowed amount error somewhere below
 	}
-	
+
 	// validateOptionsObj(aOptions, defaultOptions); // not needed because all defaults are undefined
-	
+
 	var can;
-	var ctx; 
+	var ctx;
 	if (!aOptions.canAndCtx) {
 		can = document.createElement('canvas');;
 		can.mozOpaque = 'true'; // improved performanceo on firefox i guess
 		ctx = can.getContext('2d');
-		
+
 		// can.style.position = 'absolute';
 		// can.style.zIndex = 10000;
 		// can.style.left = 0;
@@ -6980,43 +6980,43 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 		can = aOptions.canAndCtx.can;
 		ctx = aOptions.canAndCtx.ctx;
 	}
-	
+
 	var w = aOptions.width;
 	if (!w) {
 		ctx.textBaseline = 'alphabetic';
-		ctx.textAlign = 'left';	
+		ctx.textAlign = 'left';
 		ctx.font = aFont;
 		w = ctx.measureText(aChars).width;
 	}
-	
+
 	w = Math.ceil(w); // needed as i use w in the calc for the loop, it needs to be a whole number
-	
+
 	// must set width/height, as it wont paint outside of the bounds
 	can.width = w;
 	can.height = aSize * aOptions.range;
-	
+
 	ctx.font = aFont; // need to set the .font again, because after changing width/height it makes it forget for some reason
 	ctx.textBaseline = 'alphabetic';
-	ctx.textAlign = 'left';	
-	
+	ctx.textAlign = 'left';
+
 	ctx.fillStyle = 'white';
-	
+
 	// console.log('w:', w);
-	
+
 	var avgOfRange = (aOptions.range + 1) / 2;
 	var yBaseline = Math.ceil(aSize * avgOfRange);
 	// console.log('yBaseline:', yBaseline);
-	
+
 	ctx.fillText(aChars, 0, yBaseline);
-	
+
 	var yEnd = aSize * aOptions.range;
-	
+
 	var data = ctx.getImageData(0, 0, w, yEnd).data;
 	// console.log('data:', data)
-	
+
 	var botBound = -1;
 	var topBound = -1;
-	
+
 	// measureHeightY:
 	for (var y=0; y<=yEnd; y++) {
 		for (var x = 0; x < w; x += 1) {
@@ -7025,9 +7025,9 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 			var g = data[n + 1];
 			var b = data[n + 2];
 			// var a = data[n + 3];
-			
+
 			if (r+g+b > 0) { // non black px found
-				if (topBound == -1) { 
+				if (topBound == -1) {
 					topBound = y;
 				}
 				botBound = y; // break measureHeightY; // dont break measureHeightY ever, keep going, we till yEnd. so we get proper height for strings like "`." or ":" or "!"
@@ -7035,7 +7035,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 			}
 		}
 	}
-	
+
 	return {
 		relativeBot: botBound - yBaseline, // relative to baseline of 0 // bottom most row having non-black
 		relativeTop: topBound - yBaseline, // relative to baseline of 0 // top most row having non-black
@@ -7053,7 +7053,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
  * @param {Number} y The top left y coordinate
  * @param {Number} width The width of the rectangle
  * @param {Number} height The height of the rectangle
- * @param {Number} [radius = 5] The corner radius; It can also be an object 
+ * @param {Number} [radius = 5] The corner radius; It can also be an object
  *                 to specify different radii for corners
  * @param {Number} [radius.tl = 0] Top left
  * @param {Number} [radius.tr = 0] Top right
@@ -7112,48 +7112,48 @@ function canvas_arrow(context, fromx, fromy, tox, toy, headlen){
     // var angle = Math.atan2(toy-fromy,tox-fromx);
     // context.moveTo(fromx, fromy);
     // context.lineTo(tox, toy);
-    // 
+    //
 	// // context.moveTo(tox, toy);
 	// // context.lineTo(tox, toy);
-	// 
+	//
 	// // context.moveTo(tox, toy);
     // context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
     // context.moveTo(tox, toy);
     // context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
-	
+
 	// below is based on http://stackoverflow.com/a/36805543/1828637
 	var x_center = tox;
 	var y_center = toy;
-	
+
 	var r = headlen;
-	
+
 	var angle = Math.atan2(toy-fromy,tox-fromx); // this angle calc is taken from http://stackoverflow.com/a/6333775/1828637
 
 	context.beginPath();
-	
+
 	// do these if you want to stroke it without a baseline
 	// angle += (1/3)*(2*Math.PI);
 	// angle += (1/3)*(2*Math.PI);
-	
+
 	var x = r*Math.cos(angle) + x_center;
 	var y = r*Math.sin(angle) + y_center;
 
 	context.moveTo(x, y);
-	
+
 	angle += (1/3)*(2*Math.PI)
 	x = r*Math.cos(angle) + x_center;
 	y = r*Math.sin(angle) + y_center;
-	
+
 	context.lineTo(x, y);
-	
+
 	angle += (1/3)*(2*Math.PI)
 	x = r*Math.cos(angle) + x_center;
 	y = r*Math.sin(angle) + y_center;
-	
+
 	context.lineTo(x, y);
-	
+
 	context.closePath();
-	
+
 	context.fill();
 	// context.stroke();
 }
@@ -7162,7 +7162,7 @@ function canvas_arrow(context, fromx, fromy, tox, toy, headlen){
 function radians(degrees) {
   return degrees * Math.PI / 180;
 };
- 
+
 // Converts from radians to degrees.
 function degrees(radians) {
   return radians * 180 / Math.PI;
@@ -7218,7 +7218,7 @@ function rgb2hsv (r, g, b) {
 
 /* accepts parameters
  * h  Object = {h:x, s:y, v:z}
- * OR 
+ * OR
  * h, s, v
 */
 function HSVtoRGB(h, s, v) {
@@ -7328,21 +7328,21 @@ var mul_table = [
         385,381,377,374,370,367,363,360,357,354,350,347,344,341,338,335,
         332,329,326,323,320,318,315,312,310,307,304,302,299,297,294,292,
         289,287,285,282,280,278,275,273,271,269,267,265,263,261,259];
-        
-   
+
+
 var shg_table = [
-	     9, 11, 12, 13, 13, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17, 
-		17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19, 
+	     9, 11, 12, 13, 13, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17,
+		17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19,
 		19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20, 20,
 		20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21,
 		21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-		21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 
+		21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22,
 		22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-		22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23, 
+		22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23,
 		23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
 		23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-		23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 
-		23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 
+		23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+		23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
 		24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
 		24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
 		24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
