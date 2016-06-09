@@ -346,29 +346,12 @@ function refreshCoreForPrefs() {
 // end - pref stuff
 
 // start - beutify stuff
-var beautifyInited = false;
-function BEAUTIFY() {
-	if (beautifyInited) {
-		var devtools;
-		try {
-			var { devtools } = Cu.import('resource://devtools/shared/Loader.jsm', {});
-		} catch(ex) {
-			var { devtools } = Cu.import('resource://gre/modules/devtools/Loader.jsm', {});
-		}
-		var beautify1 = {};
-		var beautify2 = {};
-		devtools.lazyRequireGetter(beautify1, 'beautify', 'devtools/jsbeautify');
-		devtools.lazyRequireGetter(beautify2, 'beautify', 'devtools/shared/jsbeautify/beautify');
-	}
-	try {
-		beautify1.beautify.js('""');
-		return beautify1.beautify;
-	} catch (ignore) {}
-	try {
-		beautify2.beautify.js('""');
-		return beautify2.beautify;
-	} catch (ignore) {}
-}
+var gBeautify = {};
+(function() {
+	var { require } = Cu.import('resource://devtools/shared/Loader.jsm', {});
+	var { jsBeautify } = require('devtools/shared/jsbeautify/src/beautify-js');
+	gBeautify.js = jsBeautify;
+}());
 // end - beutify stuff
 
 function extendCore() {
@@ -1374,7 +1357,7 @@ var gEditorABClickCallbacks_Btn = { // each callback gets passed a param to its 
 		tabToFocus.ownerDocument.defaultView.gBrowser.selectedTab = tabToFocus; // focus tab
 	},
 	showerror: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
-		Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Error', BEAUTIFY().js(JSON.stringify(gEditorABData_BtnENTRY.data.errordets)));
+		Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Error', gBeautify.js(JSON.stringify(gEditorABData_BtnENTRY.data.errordets)));
 	},
 	pick_acct: function(gEditorABData_BtnENTRY, doClose, aBrowser) {
 		// Services.prompt.alert(aBrowser.ownerDocument.defaultView, 'NativeShot - Pick Acct', JSON.stringify(this.menuitem.menudata));
