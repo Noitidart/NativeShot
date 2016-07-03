@@ -1636,7 +1636,8 @@ function getAllWin(aOptions) {
 
 }
 
-function setWinAlwaysOnTop(aArrHwndPtrStr, aOptions) {
+function setWinAlwaysOnTop(aArg) {
+	var { aArrHwndPtrStr, aOptions } = aArg;
 	// aArrHwndPtrStr is an array of multiple hwnds, each of them will get set to always on top
 	// aOptions holds keys that are hwndPtrStr in aArr and hold params like, left, right, top, left needed for x11 strut partial stuff OR for SetWindowPos for winapi
 	/* example:

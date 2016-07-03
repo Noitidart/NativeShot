@@ -73,6 +73,10 @@ var gEditorSession = {
 	// id: null - set when a session is in progress
 };
 
+var ostypes;
+var gFonts;
+var gEditorStateStr;
+
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 
@@ -92,6 +96,9 @@ function startup(aData, aReason) {
 
     gWkComm = new Comm.server.worker(core.addon.path.scripts + 'MainWorker.js?' + core.addon.cache_key, ()=>core, function(aArg, aComm) {
         core = aArg;
+
+		gEditorStateStr = core.editorstateStr;
+		delete core.editorstateStr;
 
 		gFsComm = new Comm.server.framescript(core.addon.id);
 
@@ -309,10 +316,170 @@ function takeShot() {
 			// console.log('query_str:', query_str);
 
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			shot.domwin_wk = Cu.getWeakReference(editor_domwin);
 		}
 
 		console.log('collMonInfos:', collMonInfos);
 	});
+}
+
+function editorInitShot(aIMon) {
+	// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
+	// also transfer the screenshot data to the window
+
+	var iMon = aIMon; // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
+	var shots = gEditorSession.shots;
+	var shot = shots[iMon];
+	// var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
+	//
+	// if (!aEditorDOMWindow || aEditorDOMWindow.closed) {
+	// 	throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
+	// }
+
+	var domwin = shot.domwin_wk.get();
+	var aHwndPtrStr = getNativeHandlePtrStr(domwin);
+	shot.hwndPtrStr = aHwndPtrStr;
+
+	// if (core.os.name != 'darwin') {
+		// aEditorDOMWindow.moveTo(colMon[iMon].x, colMon[iMon].y);
+		// aEditorDOMWindow.resizeTo(colMon[iMon].w, colMon[iMon].h);
+	// }
+
+	domwin.focus();
+
+	// if (core.os.name != 'darwin') {
+		// aEditorDOMWindow.fullScreen = true;
+	// }
+
+	// set window on top:
+	var aArrHwndPtrStr = [aHwndPtrStr];
+	var aArrHwndPtrOsParams = {};
+	aArrHwndPtrOsParams[aHwndPtrStr] = {
+		left: shot.x,
+		top: shot.y,
+		right: shot.x + shot.w,
+		bottom: shot.y + shot.h,
+		width: shot.w,
+		height: shot.h
+	};
+
+	// if (core.os.name != 'darwinAAAA') {
+	callInMainworker('setWinAlwaysOnTop', { aArrHwndPtrStr, aOptions:aArrHwndPtrOsParams }, function(aArg) {
+		if (core.os.name == 'darwin') {
+			initOstypes();
+			// link98476884
+			OSStuff.NSMainMenuWindowLevel = aVal;
+
+			var NSWindowString = getNativeHandlePtrStr(domwin);
+			var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
+
+			var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
+			console.log('rez_setLevel:', rez_setLevel.toString());
+
+			var newSize = ostypes.TYPE.NSSize(shot.w, shot.h);
+			var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
+			console.log('rez_setContentSize:', rez_setContentSize.toString());
+
+			domwin.moveTo(shot.x, shot.y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
+		}
+	});
+
+	if (!gFonts) {
+			var fontsEnumerator = Cc['@mozilla.org/gfx/fontenumerator;1'].getService(Ci.nsIFontEnumerator);
+			gFonts = fontsEnumerator.EnumerateAllFonts({});
+	}
+
+	shot.comm.putMessage('init', {
+		screenshotArrBuf: shot.arrbuf,
+		core: core,
+		fonts: gFonts,
+		editorstateStr: gEditorStateStr,
+		_XFER: ['screenshotArrBuf']
+	});
+
+	// set windowtype attribute
+	// colMon[aData.iMon].E.DOMWindow.document.documentElement.setAttribute('windowtype', 'nativeshot:canvas');
+
+	// check to see if all monitors inited, if they have been, the fetch all win
+	var allWinInited = true;
+	for (var shoty of shots) {
+		if (!shoty.hwndPtrStr) {
+			allWinInited = false;
+			break;
+		}
+	}
+	if (allWinInited) {
+		if (core.os.mname == 'winnt') {
+			// reRaiseCanvasWins(); // ensures its risen
+		}
+		sendWinArrToEditors();
+	}
+}
+
+function sendWinArrToEditors() {
+	var shots = gEditorSession.shots;
+
+	callInMainworker(
+		'getAllWin',
+		{
+			getPid: true,
+			getBounds: true,
+			getTitle: true,
+			filterVisible: true
+		},
+		function(aArg) {
+			console.log('Fullfilled - promise_fetchWin - ', aVal);
+			// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
+
+			// build hwndPtrStr arr for nativeshot_canvas windows
+			var hwndPtrStrArr = [];
+			for (var shot of shots) {
+				hwndPtrStrArr.push(shot.hwndPtrStr);
+			}
+
+			// remove nativeshot_canvas windows
+			for (var i=0; i<aVal.length; i++) {
+				if (aVal[i].title == 'nativeshot_canvas' || hwndPtrStrArr.indexOf(aVal[i].hwndPtrStr) > -1) {
+					// need to do the hwndPtrStr check as on windows, sometimes the page isnt loaded yet, so the title of the window isnt there yet
+					// aVal.splice(i, 1);
+					aVal[i].left = -10000;
+					aVal[i].right = -10000;
+					aVal[i].width = 0;
+					aVal[i].NATIVESHOT_CANVAS = true;
+					// i--;
+				}
+			}
+
+			for (var shot of shots) {
+				shot.putMessage('receiveWinArr', {
+					winArr: aVal
+				});
+			}
+		}
+	);
+}
+function initOstypes() {
+	if (!ostypes) {
+		Cu.import('resource://gre/modules/ctypes.jsm');
+
+		Services.scriptloader.loadSubScript(core.addon.path.scripts + 'ostypes/cutils.jsm', gBootstrap); // need to load cutils first as ostypes_mac uses it for HollowStructure
+		Services.scriptloader.loadSubScript(core.addon.path.scripts + 'ostypes/ctypes_math.jsm', gBootstrap);
+		switch (core.os.mname) {
+			case 'winnt':
+			case 'winmo':
+			case 'wince':
+				Services.scriptloader.loadSubScript(core.addon.path.scripts + 'ostypes/ostypes_win.jsm', gBootstrap);
+				break;
+			case 'gtk':
+				Services.scriptloader.loadSubScript(core.addon.path.scripts + 'ostypes/ostypes_x11.jsm', gBootstrap);
+				break;
+			case 'darwin':
+				Services.scriptloader.loadSubScript(core.addon.path.scripts + 'ostypes/ostypes_mac.jsm', gBootstrap);
+				break;
+			default:
+				throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
+		}
+	}
 }
 
 // start - context menu items
@@ -483,13 +650,14 @@ var windowListener = {
 		// console.error('title changed to:', aNewTitle);
 		if (aNewTitle == 'nativeshot_canvas') {
 			var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow);
+			// aDOMWindow.document.documentElement.style.backgroundColor = 'transparent';
 			aDOMWindow.addEventListener('nscomm', function(e) {
 				aDOMWindow.removeEventListener('nscomm', arguments.callee, false);
 				// console.log('got nscomm', e.detail);
 				var detail = e.detail;
 				var iMon = detail;
 				var shot = gEditorSession.shots[iMon];
-				shot.comm = new Comm.server.content(aDOMWindow, ()=>console.log('handshake done server side'), shot.port1, shot.port2);
+				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon), shot.port1, shot.port2);
 			}, false, true);
 		}
 	},
@@ -717,3 +885,12 @@ var jQLike = { // my stand alone jquery like functions
 		return serializedStrArr.join('&');
 	}
 };
+function getNativeHandlePtrStr(aDOMWindow) {
+	var aDOMBaseWindow = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+								   .getInterface(Ci.nsIWebNavigation)
+								   .QueryInterface(Ci.nsIDocShellTreeItem)
+								   .treeOwner
+								   .QueryInterface(Ci.nsIInterfaceRequestor)
+								   .getInterface(Ci.nsIBaseWindow);
+	return aDOMBaseWindow.nativeHandle;
+}

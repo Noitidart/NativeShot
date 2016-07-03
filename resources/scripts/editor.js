@@ -682,7 +682,6 @@ function triggerNSCommEvent(myEventDetail) {
 }
 
 function init(aArrBufAndCore) {
-	return;
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
 
 	core = aArrBufAndCore.core;
@@ -6432,33 +6431,15 @@ if (!('win81ScaleX' in tQS)) {
 console.log('tQS:', tQS);
 var gQS = tQS;
 
-var callInMainworker, callInBootstrap;
-var gBsComm;
-// function initComm() {
-console.log('kicking of client');
-	gBsComm = new Comm.client.content( ()=>console.log('handshake done client side') );
-	({ callInMainworker, callInBootstrap } = CommHelper.content);
-	triggerNSCommEvent(gQS.iMon);
-console.log('kicked off client');
-// }
-//
-// if (document.readyState != 'complete') {
-// 	window.addEventListener('DOMContentLoaded', initComm, false);
-// } else {
-// 	initComm();
-// }
+var gBsComm = new Comm.client.content( ()=>console.log('handshake done client side') );
+var { callInMainworker, callInBootstrap } = CommHelper.content;
+triggerNSCommEvent(gQS.iMon);
 
 function receiveWinArr(aData) {
 	// for window wand
 	gWinArr = aData.winArr;
 	console.log('got gWinArr:', gWinArr);
 }
-
-// link9999191911111
-triggerNSCommEvent({ // changed away from notifyObservers to triggerNSCommEvent because ---> // this sometimes triggers `uncaught exception: out of memory editor.js:5611:1`
-	topic: 'init',
-	iMon: tQS.iMon
-});
 
 /*
 // while bootstrap is responding to the request from link9999191911111 ill load in other stuff
