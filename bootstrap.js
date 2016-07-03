@@ -323,6 +323,7 @@ function takeShot() {
 	});
 }
 
+// start - functions called by editor
 function editorInitShot(aIMon) {
 	// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
 	// also transfer the screenshot data to the window
@@ -458,6 +459,130 @@ function sendWinArrToEditors() {
 		}
 	);
 }
+function broadcastToOthers(aArg) {
+	var { iMon } = aArg;
+	var shots = gEditorSession.shots;
+	var l = shots.length;
+	for (var i=0; i<l; i++) {
+		if (i !== iMon) {
+			shots[i].comm.putMessage(aArg.topic, aArg);
+		}
+	}
+}
+
+function exitEditors(aArg) {
+	Services.prompt.alert(null, 'in exit editors', 'in');
+	var { iMon } = aArg;
+	var shots = gEditorSession.shots;
+	var l = shots.length;
+	for (var i=0; i<l; i++) {
+		if (i !== iMon) {
+			shots[i].comm.putMessage('removeUnload', undefined, function(domwin) {
+				domwin.close();
+			}.bind(null, shots[i].domwin_wk.get()));
+		}
+	}
+}
+function broadcastToSpecific(aArg) {
+	var { toMon } = aArg;
+	var shot = gEditorSession.shots[toMon];
+	shot.putMessage(aArg.topic, aArg);
+}
+function afterEditorsExited() {
+
+	// // as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
+	// if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {
+	// 	console.log('need to show notif bar now');
+	// 	gEditorABData_Bar[gEditor.sessionId].shown = true; // otherwise setBtnState will not update react states
+	// 	AB.setState(gEditorABData_Bar[gEditor.sessionId].ABRef);
+	// 	ifEditorClosed_andBarHasOnlyOneAction_copyToClip(gEditor.sessionId);
+	// } else {
+	// 	// no need to show, delete it
+	// 	console.log('no need to show, delete it');
+	// 	delete gEditorABData_Bar[gEditor.sessionId];
+	// }
+	//
+	// // check if need to show twitter notification bars
+	// for (var p in NBs.crossWin) {
+	// 	if (p.indexOf(gEditor.sessionId) == 0) { // note: this is why i have to start each crossWin id with gEditor.sessionId
+	// 		NBs.insertGlobalToWin(p, 'all');
+	// 	}
+	// }
+	// if (gEditor.wasFirefoxWinFocused || gEditor.forceFocus) {
+	// 	gEditor.gBrowserDOMWindow.focus();
+	// }
+	// if (gEditor.printPrevWins) {
+	// 	for (var i=0; i<gEditor.printPrevWins.length; i++) {
+	// 		gEditor.printPrevWins[i].focus();
+	// 	}
+	// }
+	// // colMon[0].E.DOMWindow.close();
+
+	gEditorSession = {}; // gEditor.cleanUp();
+}
+
+function addSelectionToHistory(aData) {
+	// aData.cutoutsArr is an array of cutouts
+	console.log('incoming addSelectionToHistory:', aData);
+	var cSel = aData.cutoutsArr;
+	var ix = indexOfSelInG(cSel);
+	if (ix == -1) {
+		gUsedSelections.push(aData.cutoutsArr)
+	} else {
+		// it was found in history, so lets move this to the most recent selection made
+		// most recent selection is the last most element in gUsedSelections array
+		gUsedSelections.push(gUsedSelections.splice(ix, 1)[0]);
+	}
+	console.log('added sel, now gUsedSelections:', gUsedSelections);
+}
+function selectPreviousSelection(aData) {
+	// aData.curSelection is an array of the currently selected cutouts
+
+	if (!gUsedSelections.length) {
+		return;
+	}
+
+	var cSel = aData.cutoutsArr; // cutouts of the current selection
+
+	// figure out the selection to make
+	var selToMake;
+	if (cSel) {
+		// check to see if this sel is in the history, and select the one before this one
+		var ix = indexOfSelInG(cSel);
+		if (ix > 0) {
+			selToMake = gUsedSelections[ix - 1];
+		} else if (ix == -1) {
+			// select the most recent one
+			selToMake = gUsedSelections[gUsedSelections.length - 1];
+		} // else if 0, then no previous selection obviously
+	} else {
+		// select the most recent one
+		selToMake = gUsedSelections[gUsedSelections.length - 1];
+	}
+
+	// send message to make the selection
+	if (selToMake) {
+		gEditorSession.shots[aData.iMon].comm.putMessage('makeSelection', {
+			cutoutsArr: selToMake
+		}, '*');
+	}
+}
+// end - last selection stuff
+function insertTextFromClipboard(aArg) {
+	var { iMon } = aArg;
+	if (CLIPBOARD.currentFlavors.indexOf('text') > -1) {
+		gEditorSession.shots[iMon].comm.putMessage('insertTextFromClipboard', {
+			text: CLIPBOARD.get('text')
+		}, '*');
+	}
+}
+function updateEditorState(aArg) {
+	gEditorStateStr = aArg.editorstateStr;
+	console.log('set gEditorStateStr to:', gEditorStateStr);
+	callInMainworker('updateEditorState', gEditorStateStr);
+}
+// end - functions called by editor
+
 function initOstypes() {
 	if (!ostypes) {
 		Cu.import('resource://gre/modules/ctypes.jsm');

@@ -31,42 +31,36 @@ var gMY = 0;
 var gMTime = 0;
 
 function unload() {
-	// if iMon == 0
-	// set the new state object from react to file
-	// if (gQS.iMon === 0) {
-		// console.error('sending state object:', gCanStore.rconn.state);
-		var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
-		for (var p in immutableEditorstate) {
-			if (p.indexOf('sGen') !== 0) {
-				var newP = 'p' + p.substr(1); // change first char
-				immutableEditorstate[newP] = immutableEditorstate[p];
-			}
-			delete immutableEditorstate[p];
+	var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
+	for (var p in immutableEditorstate) {
+		if (p.indexOf('sGen') !== 0) {
+			var newP = 'p' + p.substr(1); // change first char
+			immutableEditorstate[newP] = immutableEditorstate[p];
 		}
+		delete immutableEditorstate[p];
+	}
 
-		triggerNSCommEvent({
-			topic: 'updateEditorState',
-			editorstateStr: JSON.stringify(immutableEditorstate),
-			iMon: tQS.iMon
-		});
-	// }
-	triggerNSCommEvent({
-		topic: 'broadcastToOthers',
-		postMsgObj: {
-			topic: 'removeUnloadAndClose'
-		},
+	callInBootstrap('updateEditorState', {
+		editorstateStr: JSON.stringify(immutableEditorstate)
+	});
+
+	// callInBootstrap('broadcastToOthers', {
+	// 	topic: 'removeUnloadAndClose',
+	// 	iMon: tQS.iMon
+	// });
+
+	callInBootstrap('exitEditors', {
 		iMon: tQS.iMon
 	});
-	triggerNSCommEvent({
-		topic: 'callInBootstrap',
-		method: 'gEUnload',
-		iMon: tQS.iMon
-	});
+	// callInBootstrap('afterEditorsExited');
 }
 
-function removeUnloadAndClose() {
+function removeUnload() {
+	// called before closing, as otherwise the unload of this will trigger
+	// console.error('in removeUnloadAndClose for iMon:', gQS.iMon);
 	window.removeEventListener('unload', unload, false);
-	window.close();
+	// window.close();
+	// console.error('did window  close');
 }
 
 function reactSetState(aData) {
@@ -168,18 +162,15 @@ function initCompositeForAction(aAction, aSub, boolClose) {
 						}.bind(null, requestLoad), false);
 					} else {
 						requestLoad.topic = 'requestCompositeData';
-						triggerNSCommEvent({
-							topic: 'broadcastToSpecific',
-							postMsgObj: requestLoad,
+						callInBootstrap('broadcastToSpecific', Object.assign({
 							toMon: p, // as p is target iMon
 							iMon: tQS.iMon
-						});
+						}, requestLoad));
 					}
 				}
 			}
 
-			triggerNSCommEvent({
-				topic: 'addSelectionToHistory',
+			callInBootstrap('addSelectionToHistory', {
 				cutoutsArr: cutouts,
 				iMon: tQS.iMon
 			});
@@ -229,12 +220,10 @@ function requestCompositeData(aData) {
 		fullfillCompositeRequest(fullfillLoad);
 	} else {
 		fullfillLoad.topic = 'fullfillCompositeRequest';
-		triggerNSCommEvent({
-			topic: 'broadcastToSpecific',
-			postMsgObj: fullfillLoad,
+		callInBootstrap('broadcastToSpecific', Object.assign({
 			toMon: requestingMon,
 			iMon: tQS.iMon
-		});
+		}, fullfillLoad));
 	}
 
 }
@@ -435,23 +424,15 @@ function fullfillCompositeRequest(aData) {
 		// the various actions
 		if (sub == 'Twitter') {
 
-			triggerNSCommEvent({
-				topic: 'callInBootstrap',
-				method: 'shareToTwitter',
-				argsArr: [can.toDataURL('image/png', '')],
-				iMon: tQS.iMon
-			});
+			callInBootstrap('shareToTwitter', can.toDataURL('image/png', ''));
 
 			postAction();
 
 		} else if (['Copy', 'Print'].indexOf(action) > -1) {
 
 			// data url actions
-			triggerNSCommEvent({
-				topic: 'callInBootstrap',
-				method: 'uploadOauthDataUrl',
-				argsArr: [oauthServiceName, can.toDataURL('image/png', '')],
-				iMon: tQS.iMon
+			callInBootstrap('uploadOauthDataUrl', {
+				argsArr: [oauthServiceName, can.toDataURL('image/png', '')]
 			});
 
 			postAction();
@@ -459,11 +440,8 @@ function fullfillCompositeRequest(aData) {
 		} else if (['Text Recognition'].indexOf(action) > -1) {
 
 			// plain array buffer actions
-			triggerNSCommEvent({
-				topic: 'callInBootstrap',
-				method: 'uploadOauth',
-				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height],
-				iMon: tQS.iMon
+			callInBootstrap('uploadOauth', {
+				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height]
 			});
 
 			postAction();
@@ -476,11 +454,8 @@ function fullfillCompositeRequest(aData) {
 				var r = new FileReader();
 				r.onloadend = function() {
 
-					triggerNSCommEvent({
-						topic: 'callInBootstrap',
-						method: 'uploadOauth',
-						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
-						iMon: tQS.iMon
+					callInBootstrap('uploadOauth', {
+						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height]
 					});
 
 					postAction();
@@ -547,12 +522,10 @@ function initPasteDrawable() {
 				respondPasteDrawableRequest(requestLoad);
 			}, 0);
 		} else {
-			triggerNSCommEvent({
-				topic: 'broadcastToSpecific',
-				postMsgObj: requestLoad,
+			callInBootstrap('broadcastToSpecific', Object.assign({
 				toMon,
 				iMon: tQS.iMon
-			});
+			}, requestLoad));
 		}
 	}
 }
@@ -572,12 +545,10 @@ function respondPasteDrawableRequest(aData) {
 	if (requestingMon == tQS.iMon) {
 		completePasteDrawableRequest(responseLoad);
 	} else {
-		triggerNSCommEvent({
-			topic: 'broadcastToSpecific',
-			postMsgObj: responseLoad,
+		callInBootstrap('broadcastToSpecific', Object.assign({
 			toMon: requestingMon,
 			iMon: tQS.iMon
-		});
+		}, responseLoad));
 	}
 }
 
@@ -667,18 +638,6 @@ function makeSelection(aData) {
 	}
 	gCState.selection = null;
 	gCanStore.setCanState(false);
-}
-
-function triggerNSCommEvent(myEventDetail) {
-	var myEvent = document.createEvent('CustomEvent');
-	// var myEventDetail = {
-	// 	topic: 'callInBootstrap',
-	// 	method: 'uploadOauth',
-	// 	argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height],
-	// 	iMon: tQS.iMon
-	// };
-	myEvent.initCustomEvent('nscomm', true, true, myEventDetail);
-	window.dispatchEvent(myEvent);
 }
 
 function init(aArrBufAndCore) {
@@ -1164,12 +1123,9 @@ function init(aArrBufAndCore) {
 					// needsBroadcast = false;
 					// clearTimeout(gBroadcastTimeout);
 					// gBroadcastTimeout = setTimeout(function() {
-						triggerNSCommEvent({
-							topic: 'broadcastToOthers',
-							postMsgObj: {
-								topic: 'reactSetState',
-								updatedStates: JSON.stringify(aObj)
-							},
+						callInBootstrap('broadcastToOthers', {
+							topic: 'reactSetState',
+							updatedStates: JSON.stringify(aObj),
 							iMon: tQS.iMon
 						});
 
@@ -2482,12 +2438,9 @@ function init(aArrBufAndCore) {
 
 			if (!isValid || forceBroadcast) {
 				if (!dontBroadcast || forceBroadcast) {
-					triggerNSCommEvent({
-						topic: 'broadcastToOthers',
-						postMsgObj: {
-							topic: 'canSetState',
-							cstate: JSON.stringify(this.cstate)
-						},
+					callInBootstrap('broadcastToOthers', {
+						topic: 'canSetState',
+						cstate: JSON.stringify(this.cstate),
 						iMon: tQS.iMon
 					});
 				}
@@ -3599,8 +3552,7 @@ function init(aArrBufAndCore) {
 					// support pasting
 					if (e.key.toLowerCase() == 'v' && ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey))) {
 							// request paste
-							triggerNSCommEvent({
-								topic: 'insertTextFromClipboard',
+							callInBootstrap('insertTextFromClipboard', {
 								iMon: tQS.iMon
 							});
 					} else if (e.key.toLowerCase() == 'd' && ((core.os.name == 'darwin' && e.metaKey) || (core.os.name != 'darwin' && e.ctrlKey))) {
@@ -4052,12 +4004,9 @@ function init(aArrBufAndCore) {
 
 			this.zstate.setInvalid = function(isBroadcast) {
 				if (!isBroadcast) {
-					triggerNSCommEvent({
-						topic: 'broadcastToOthers',
-						postMsgObj: {
-							topic: 'zcanInvalidate',
-							mouse: this.zstate.mouse
-						},
+					callInBootstrap('broadcastToOthers', {
+						topic: 'zcanInvalidate',
+						mouse: this.zstate.mouse,
 						iMon: tQS.iMon
 					});
 				}
@@ -4768,8 +4717,7 @@ function init(aArrBufAndCore) {
 
 			if (this.props.pSubButton.label == 'Last Selection') {
 				var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
-				triggerNSCommEvent({
-					topic: 'selectPreviousSelection',
+				callInBootstrap('selectPreviousSelection', {
 					cutoutsArr: cutouts.length ? cutouts : null,
 					iMon: tQS.iMon
 				});
@@ -6433,7 +6381,9 @@ var gQS = tQS;
 
 var gBsComm = new Comm.client.content( ()=>console.log('handshake done client side') );
 var { callInMainworker, callInBootstrap } = CommHelper.content;
-triggerNSCommEvent(gQS.iMon);
+var myEvent = document.createEvent('CustomEvent');
+myEvent.initCustomEvent('nscomm', true, true, gQS.iMon);
+window.dispatchEvent(myEvent);
 
 function receiveWinArr(aData) {
 	// for window wand
