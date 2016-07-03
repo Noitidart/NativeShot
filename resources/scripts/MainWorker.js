@@ -19,7 +19,7 @@ function init(objCore) {
 
 	core = objCore;
 
-	gOcrComm = new Com.server.worker(core.addon.path.scripts + 'OCRWorker.js');
+	gOcrComm = new Comm.server.worker(core.addon.path.scripts + 'OCRWorker.js');
 
 	importScripts(core.addon.path.scripts + 'supplement/MainWorkerSupplement.js');
 
@@ -108,6 +108,13 @@ self.onclose = function() {
 	console.log('ok ready to terminate');
 }
 
+// start - Comm functions
+function fetchCore() {
+	return core;
+}
+// end - Comm functions
+
+// start - platform functions
 function trashFile(aFilePlatPath) {
 	// aFilePlatPath is a js string
 
@@ -235,7 +242,6 @@ function trashFile(aFilePlatPath) {
 	}
 }
 
-// start - platform functions
 function shootAllMons() {
 
 	var collMonInfos = [];
@@ -2384,6 +2390,56 @@ function writeHydrants() {
 		console.error('writing hydrants.json');
 		writeThenDir(OS.Path.join(core.addon.path.storage, 'hydrants.json'), JSON.stringify(gHydrants), OS.Constants.Path.profileDir);
 	}
+}
+
+var gCountdown = undefined; // undefiend when idle. null when cancelled. int of seconds left when in progress
+var gCountdownInterval;
+function countdownStartOrIncrement(aArg, aReportProgress) {
+	// returns true when coutndown done
+	// if call this while a countdown is in progress it will increment the countdown and return false
+	// will send progress update with a number
+	var aSeconds = aArg;
+	if (gCountdown === null) {
+		// it was cancelled
+		gCountdown = undefined;
+	} else if (gCountdown === undefined) {
+		gCountdown = aSeconds;
+		var deferred_done = new Deferred();
+		gCountdownInterval = setInterval(function() {
+			gCountdown--;
+			if (gCountdown === 0) {
+				clearInterval(gCountdownInterval);
+				gCountdown = undefined;
+				deferred_done.resolve({
+					done: true
+				});
+			} else {
+				aReportProgress({
+					sec_left: gCountdown
+				});
+			}
+		}, 1000);
+
+		// set badge to the initial countdown
+		aReportProgress({
+			sec_left: gCountdown
+		});
+
+		return deferred_done.promise;
+	} else {
+		// gCountdown is a number, so increment it
+		gCountdown += aSeconds;
+
+		// update badge to the incremented countdown
+		return {
+			done: false,
+			sec_left: gCountdown
+		};
+	}
+}
+function countdownCancel() {
+	gCountdown = null;
+	clearInterval(gCountdownInterval);
 }
 
 function bootstrapTimeout(milliseconds) {

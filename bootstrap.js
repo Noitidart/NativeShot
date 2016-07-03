@@ -14,6 +14,10 @@ var BEAUTIFY = {};
 	BEAUTIFY.js = jsBeautify;
 }());
 
+// Lazy Imports
+const myServices = {};
+XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
+
 // Globals
 var core = {
 	addon: {
@@ -103,7 +107,6 @@ function startup(aData, aReason) {
     			onCommand: guiClick
     		});
 
-			contextMenuBootstrapStartup();
     	}
 
         // register must go after the above, as i set gCuiCssUri above
@@ -149,6 +152,8 @@ function shutdown(aData, aReason) {
 			domwin.NativeWindow.menu.remove(androidMenu.menuid);
 		}
 	}
+
+	windowListener.unregister();
 }
 
 // start - addon functions
@@ -179,7 +184,41 @@ function getCuiCssFilename() {
 	return cuiCssFilename;
 }
 function guiClick(e) {
-
+	if (e.shiftKey) {
+		// add delay
+		callInMainworker('countdownStartOrIncrement', 5, function(aArg) {
+			var { sec_left, done } = aArg;
+			if (done) {
+				// countdown done
+				guiSetBadge(null);
+			} else {
+				// done is false or undefined
+				// if false it means it was incremented and its closing the pathway. but it sends a sec_left with it, which is the newly incremented countdown
+				// if undefined then sec_left is there, and they are providing progress updates
+				// if (sec_left !== undefined) {
+					// progress, or increment close
+					guiSetBadge(sec_left);
+				// }
+			}
+		});
+	} else {
+		// clear delay if there was one
+	}
+}
+function guiSetBadge(aTxt) {
+	// set aTxt to null if you want to remove badge
+	var widgetInstances = CustomizableUI.getWidget('cui_' + core.addon.path.name).instances;
+	for (var i=0; i<widgetInstances.length; i++) {
+		var inst = widgetInstances[i];
+		var node = inst.node;
+		if (aTxt === null) {
+			node.classList.remove('badged-button');
+			node.removeAttribute('badge');
+		} else {
+			node.setAttribute('badge', aTxt);
+			node.classList.add('badged-button'); // classList.add does not add duplicate classes
+		}
+	}
 }
 
 function fetchCore(aArg, aComm) {
@@ -195,34 +234,28 @@ var gDashboardSeperator_domIdSuffix = '_nativeshot-seperator';
 
 var gDashboardMenuitem_jsonTemplate = ['xul:menuitem', {
 	// id: 'toolbar-context-menu_nativeshot-menuitem',
-	// label: justFormatStringFromName(core.addon.l10n.bootstrap['dashboard-menuitem']), // cant access myServices.sb till startup, so this is set on startup // link988888887
+	// label: formatStringFromNameCore('dashboard-menuitem', 'main'), // cant access myServices.sb till startup, so this is set on startup // link988888887
 	class: 'menuitem-iconic',
 	image: core.addon.path.images + 'icon16.png',
-	hidden: 'true'
+	hidden: 'true',
+	oncommand: function(e) {
+		var gbrowser = e.target.ownerDocument.defaultView.gBrowser;
+		var tabs = gbrowser.tabs;
+		var l = gbrowser.tabs.length;
+		for (var i=0; i<l; i++) {
+			// e10s safe way to check content of tab
+			if (tabs[i].linkedBrowser.currentURI.spec.toLowerCase().includes('about:nativeshot')) { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
+				gbrowser.selectedTab = tabs[i];
+				return;
+			}
+		}
+		gbrowser.loadOneTab('about:nativeshot', {inBackground:false});
+	}
 }];
 var gDashboardMenuseperator_jsonTemplate = ['xul:menuseparator', {
 	// id: 'toolbar-context-menu_nativeshot-menuseparator', // id is set when inserting into dom
 	hidden: 'true'
 }];
-
-function contextMenuBootstrapStartup() {
-	// because i cant access myServices.sb until bootstrap startup triggers i have to set these in here
-
-	gDashboardMenuitem_jsonTemplate[1].label = justFormatStringFromName(core.addon.l10n.bootstrap['dashboard-menuitem']); // link988888887 - needs to go before windowListener is registered
-	gDashboardMenuitem_jsonTemplate[1].onclick = function(e) {
-		var gbrowser = e.target.document.defaultView.gBrowser;
-		var cntTabs = gbrowser.tabs.length;
-		for (var i=0; i<cntTabs; i++) {
-			// e10s safe way to check content of tab
-			if (gbrowser.tabs[i].getAttribute('label') == justFormatStringFromName(core.addon.l10n.bootstrap['nativeshot.app-main.title'])) { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
-				gbrowser.selectedTab = gbrowser.tabs[i];
-				return;
-			}
-		}
-		var newNativeshotTab = gbrowser.loadOneTab('about:nativeshot', {inBackground:false});
-	};
-
-}
 
 function contextMenuHiding(e) {
 	// only triggered when it was shown due to right click on cui_nativeshot
@@ -275,6 +308,9 @@ function contextMenuSetup(aDOMWindow) {
 	// if this aDOMWindow has the context menus set it up
 
 
+	if (!gDashboardMenuitem_jsonTemplate[1].label) {
+		gDashboardMenuitem_jsonTemplate[1].label = formatStringFromNameCore('menuitem_opendashboard', 'main'); // link988888887 - needs to go before windowListener is registered
+	}
 
 	var cToolbarContextMenu = aDOMWindow.document.getElementById(gToolbarContextMenu_domId);
 	if (cToolbarContextMenu) {
@@ -396,8 +432,8 @@ var windowListener = {
                 // desktop:insert_gui
 				if (aDOMWindow.gBrowser) {
 					var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
-					console.log('gCuiCssUri:', gCuiCssUri);
 					domWinUtils.loadSheet(gCuiCssUri, domWinUtils.AUTHOR_SHEET);
+					domWinUtils.loadSheet(gGenCssUri, domWinUtils.AUTHOR_SHEET);
 				}
 
 				contextMenuSetup(aDOMWindow);
@@ -420,12 +456,17 @@ var windowListener = {
             if (aDOMWindow.gBrowser) {
 				var domWinUtils = aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 				domWinUtils.removeSheet(gCuiCssUri, domWinUtils.AUTHOR_SHEET);
+				domWinUtils.removeSheet(gGenCssUri, domWinUtils.AUTHOR_SHEET);
 			}
 
 			contextMenuDestroy(aDOMWindow);
         }
 	}
 };
+
+// start - Comm functions
+
+// end - Comm functions
 
 // start - common helper functions
 function Deferred() {
@@ -476,4 +517,69 @@ function formatStringFromNameCore(aLocalizableStr, aLoalizedKeyInCoreAddonL10n, 
 function getSystemDirectory_bootstrap(type) {
 	// progrmatic helper for getSystemDirectory in MainWorker - devuser should NEVER call this himself
 	return Services.dirsvc.get(type, Ci.nsIFile).path;
+}
+
+// specific to nativeshot helper functions
+function jsonToDOM(json, doc, nodes) {
+
+    var namespaces = {
+        html: 'http://www.w3.org/1999/xhtml',
+        xul: 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul'
+    };
+    var defaultNamespace = namespaces.html;
+
+    function namespace(name) {
+        var m = /^(?:(.*):)?(.*)$/.exec(name);
+        return [namespaces[m[1]], m[2]];
+    }
+
+    function tag(name, attr) {
+        if (Array.isArray(name)) {
+            var frag = doc.createDocumentFragment();
+            Array.forEach(arguments, function (arg) {
+                if (!Array.isArray(arg[0]))
+                    frag.appendChild(tag.apply(null, arg));
+                else
+                    arg.forEach(function (arg) {
+                        frag.appendChild(tag.apply(null, arg));
+                    });
+            });
+            return frag;
+        }
+
+        var args = Array.slice(arguments, 2);
+        var vals = namespace(name);
+        var elem = doc.createElementNS(vals[0] || defaultNamespace, vals[1]);
+
+        for (var key in attr) {
+            var val = attr[key];
+            if (nodes && key == 'id')
+                nodes[val] = elem;
+
+            vals = namespace(key);
+            if (typeof val == 'function')
+                elem.addEventListener(key.replace(/^on/, ''), val, false);
+            else
+                elem.setAttributeNS(vals[0] || '', vals[1], val);
+        }
+        args.forEach(function(e) {
+            try {
+                elem.appendChild(
+                                    Object.prototype.toString.call(e) == '[object Array]'
+                                    ?
+                                        tag.apply(null, e)
+                                    :
+                                        e instanceof doc.defaultView.Node
+                                        ?
+                                            e
+                                        :
+                                            doc.createTextNode(e)
+                                );
+            } catch (ex) {
+                elem.appendChild(doc.createTextNode(ex));
+            }
+        });
+        return elem;
+    }
+    return tag.apply(null, json);
 }
