@@ -2399,24 +2399,30 @@ function countdownStartOrIncrement(aArg, aReportProgress) {
 	// if call this while a countdown is in progress it will increment the countdown and return false
 	// will send progress update with a number
 	var aSeconds = aArg;
-	if (gCountdown === null) {
-		// it was cancelled
-		gCountdown = undefined;
-	} else if (gCountdown === undefined) {
+	if (gCountdown === undefined) {
 		gCountdown = aSeconds;
 		var deferred_done = new Deferred();
 		gCountdownInterval = setInterval(function() {
-			gCountdown--;
-			if (gCountdown === 0) {
-				clearInterval(gCountdownInterval);
+			if (gCountdown === null) {
+				// cancelled
 				gCountdown = undefined;
+				clearInterval(gCountdownInterval);
 				deferred_done.resolve({
-					done: true
+					done: false
 				});
 			} else {
-				aReportProgress({
-					sec_left: gCountdown
-				});
+				gCountdown--;
+				if (gCountdown === 0) {
+					clearInterval(gCountdownInterval);
+					gCountdown = undefined;
+					deferred_done.resolve({
+						done: true
+					});
+				} else {
+					aReportProgress({
+						sec_left: gCountdown
+					});
+				}
 			}
 		}, 1000);
 
@@ -2438,8 +2444,14 @@ function countdownStartOrIncrement(aArg, aReportProgress) {
 	}
 }
 function countdownCancel() {
-	gCountdown = null;
-	clearInterval(gCountdownInterval);
+	// returns true if cancelled - so bootstrap knows to clear badge
+	if (gCountdown) {
+		gCountdown = null;
+		// dont clear interval here, so on next fire it will clean up the pathway
+		return true;
+	} else {
+		return false;
+	}
 }
 
 function bootstrapTimeout(milliseconds) {
@@ -2451,13 +2463,13 @@ function bootstrapTimeout(milliseconds) {
 }
 
 function processAction(aArg, aReportProgress, aComm) {
-	var { actionid, serviceid, duration, arrbuf, time, mimetype, action_options } = aArg;
+	// var { actionid, sessionid, serviceid, arrbuf, time, action_options } = aArg;
+	var shot = aArg;
+	shot.shotid = shot.time; // shotid can be time, as time is down to millisecond and thus should be unique per shot
 
 	var deferredMain_processAction = new Deferred();
 
 	console.log('worker - processAction - aArg:', aArg);
-	var rec = { serviceid, actionid, duration, arrbuf, time, mimetype, action_options };
-	// time - is time it was taken, i use that as videoid
 
 	gWorker['action_' + serviceid](rec, function(status) {
 		console.log('worker - processAction complete, status:', status);

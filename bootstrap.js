@@ -1,6 +1,8 @@
 // Imports
 const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
+Cu.import('resource://gre/modules/AddonManager.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
+Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 Cu.importGlobalProperties(['Blob', 'URL']);
 
 const COMMONJS_URI = 'resource://gre/modules/commonjs';
@@ -16,7 +18,7 @@ var BEAUTIFY = {};
 
 // Lazy Imports
 const myServices = {};
-XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) });
+XPCOMUtils.defineLazyGetter(myServices, 'as', () => Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) );
 
 // Globals
 var core = {
@@ -66,6 +68,10 @@ var gCuiCssUri;
 var gGenCssUri;
 
 var OSStuff = {};
+
+var gEditorSession = {
+	// id: null - set when a session is in progress
+};
 
 const NS_HTML = 'http://www.w3.org/1999/xhtml';
 const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
@@ -184,26 +190,39 @@ function getCuiCssFilename() {
 	return cuiCssFilename;
 }
 function guiClick(e) {
-	if (e.shiftKey) {
-		// add delay
-		callInMainworker('countdownStartOrIncrement', 5, function(aArg) {
-			var { sec_left, done } = aArg;
-			if (done) {
-				// countdown done
-				guiSetBadge(null);
-			} else {
-				// done is false or undefined
-				// if false it means it was incremented and its closing the pathway. but it sends a sec_left with it, which is the newly incremented countdown
-				// if undefined then sec_left is there, and they are providing progress updates
-				// if (sec_left !== undefined) {
-					// progress, or increment close
-					guiSetBadge(sec_left);
-				// }
-			}
-		});
-	} else {
-		// clear delay if there was one
+	if (!gEditorSession.id) {
+		if (e.shiftKey) {
+			// add delay
+			callInMainworker('countdownStartOrIncrement', 5, function(aArg) {
+				var { sec_left, done } = aArg;
+				if (done) {
+					// countdown done
+					guiSetBadge(null);
+					guiClick({});
+				} else {
+					// done is false or undefined
+					// if false it means it was incremented and its closing the pathway. but it sends a sec_left with it, which is the newly incremented countdown
+						//	OR it means it was cancelled. when cancelled there is no sec_left
+					// if undefined then sec_left is there, and they are providing progress updates
+					if (sec_left !== undefined) {
+						// progress, or increment close
+						guiSetBadge(sec_left);
+					}
+					else { console.log('cancelled - pathway cleaned up') }
+				}
+			});
+		} else {
+			// clear delay if there was one
+			callInMainworker('countdownCancel', undefined, function(aArg) {
+				var cancelled = aArg;
+				if (cancelled) {
+					guiSetBadge(null);
+				}
+			});
+			Services.prompt.alert(null, 'shot', 'take');
+		}
 	}
+	else { console.warn('editor is currently open, so do nothing') }
 }
 function guiSetBadge(aTxt) {
 	// set aTxt to null if you want to remove badge
