@@ -1,6 +1,6 @@
-// Imports
-importScripts('resource://gre/modules/osfile.jsm');
-importScripts('resource://gre/modules/workers/require.js');
+importScripts('chrome://nativeshot/content/resources/scripts/comm/Comm.js');
+var {callInBootstrap, callInMainworker} = CommHelper.childworker;
+var gWkComm = new Comm.client.worker();
 
 // Globals
 var core = { // have to set up the main keys that you want when aCore is merged from mainthread in init
@@ -16,136 +16,21 @@ var core = { // have to set up the main keys that you want when aCore is merged 
 
 var OSStuff = {}; // global vars populated by init, based on OS
 
-// Imports that use stuff defined in chrome
-// I don't import ostypes_*.jsm yet as I want to init core first, as they use core stuff like core.os.isWinXP etc
-// imported scripts have access to global vars on MainWorker.js
-importScripts(core.addon.path.modules + 'ostypes/cutils.jsm');
-importScripts(core.addon.path.modules + 'ostypes/ctypes_math.jsm');
-
-// Setup PromiseWorker
-// SIPWorker - rev9 - https://gist.github.com/Noitidart/92e55a3f7761ed60f14c
-var PromiseWorker = require('resource://gre/modules/workers/PromiseWorker.js');
-
-// Instantiate AbstractWorker (see below).
-var worker = new PromiseWorker.AbstractWorker()
-
-// worker.dispatch = function(method, args = []) {
-worker.dispatch = function(method, args = []) {// start - noit hook to allow PromiseWorker methods to return promises
-  // Dispatch a call to method `method` with args `args`
-  // start - noit hook to allow PromiseWorker methods to return promises
-  // return self[method](...args);
-  console.log('dispatch args:', args);
-  var earlierResult = gEarlyDispatchResults[args[0]]; // i change args[0] to data.id
-  delete gEarlyDispatchResults[args[0]];
-  if (Array.isArray(earlierResult) && earlierResult[0] == 'noit::throw::') {
-	  console.error('ok need to throw but i want to ensure .constructor.name is in promiseworker.js"s EXCEPTION_NAMES, it is:', earlierResult[1].constructor.name);
-	  throw earlierResult[1];
-  }
-  return earlierResult;
-  // end - noit hook to allow PromiseWorker methods to return promises
-};
-worker.postMessage = function(...args) {
-  // Post a message to the main thread
-  self.postMessage(...args);
-};
-worker.close = function() {
-  // Close the worker
-  self.close();
-};
-worker.log = function(...args) {
-  // Log (or discard) messages (optional)
-  dump('Worker: ' + args.join(' ') + '\n');
-};
-
-// Connect it to message port.
-// self.addEventListener('message', msg => worker.handleMessage(msg)); // this is what you do if you want PromiseWorker without mainthread calling ability
-// start - setup SIPWorker
-var WORKER = this;
-var gEarlyDispatchResults = {};
-self.addEventListener('message', function(aMsgEvent) { // this is what you do if you want SIPWorker mainthread calling ability
-	var aMsgEventData = aMsgEvent.data;
-	if (Array.isArray(aMsgEventData)) {
-		// console.log('worker got response for main thread calling SIPWorker functionality:', aMsgEventData)
-		var funcName = aMsgEventData.shift();
-		if (funcName in WORKER) {
-			var rez_worker_call = WORKER[funcName].apply(null, aMsgEventData);
-		}
-		else { console.error('funcName', funcName, 'not in scope of WORKER') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
-	} else {
-		// console.log('no this is just regular promise worker message');
-		var earlyDispatchErr;
-		var earlyDispatchRes;
-		try {
-			earlyDispatchRes = self[aMsgEvent.data.fun](...aMsgEvent.data.args);
-			console.error('earlyDispatchRes:', earlyDispatchRes);
-		} catch(earlyDispatchErr) {
-			earlyDispatchRes = ['noit::throw::', earlyDispatchErr];
-			console.error('error in earlyDispatchRes:', earlyDispatchErr);
-			// throw new Error('blah');
-		}
-		aMsgEvent.data.args.splice(0, 0, aMsgEvent.data.id)
-		if (earlyDispatchRes && earlyDispatchRes.constructor.name == 'Promise') { // as earlyDispatchRes may be undefined
-			console.log('in earlyDispatchRes as promise block');
-			earlyDispatchRes.then(
-				function(aVal) {
-					console.log('earlyDispatchRes resolved:', aVal);
-					gEarlyDispatchResults[aMsgEvent.data.id] = aVal;
-					worker.handleMessage(aMsgEvent);
-				},
-				function(aReason) {
-					console.warn('earlyDispatchRes rejected:', aReason);
-				}
-			).catch(
-				function(aCatch) {
-					console.error('earlyDispatchRes caught:', aCatch);
-					gEarlyDispatchResults[aMsgEvent.data.id] = ['noit::throw::', aCatch];
-					console.error('aCatch:', aCatch);
-				}
-			);
-		} else {
-			console.log('not a promise so setting it to gEarlyDispatchResults, it is:', earlyDispatchRes);
-			if (earlyDispatchRes) {
-				console.log('not undefined or null so constructor is:', earlyDispatchRes.constructor.name);
-			}
-			gEarlyDispatchResults[aMsgEvent.data.id] = earlyDispatchRes;
-			worker.handleMessage(aMsgEvent);
-		}
-	}
-});
-
-const SIP_CB_PREFIX = '_a_gen_cb_';
-const SIP_TRANS_WORD = '_a_gen_trans_';
-var sip_last_cb_id = -1;
-self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
-	var aFuncExecScope = WORKER;
-	
-	sip_last_cb_id++;
-	var thisCallbackId = SIP_CB_PREFIX + sip_last_cb_id;
-	aFuncExecScope[thisCallbackId] = function(aResponseArgsArr) {
-		delete aFuncExecScope[thisCallbackId];
-		console.log('in worker callback trigger wrap, will apply aCB with these arguments:', aResponseArgsArr);
-		aCB.apply(null, aResponseArgsArr);
-	};
-	aPostMessageArr.push(thisCallbackId);
-	self.postMessage(aPostMessageArr, aPostMessageTransferList);
-};
-// end - setup SIPWorker
-
 function init(objCore) { // function name init required for SIPWorker
 	console.log('in worker init');
-	
+
 	// merge objCore into core
 	// core and objCore is object with main keys, the sub props
-	
+
 	core = objCore;
-	
+
 	core.os.mname = core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name; // mname stands for modified-name
-	
+
 	// setup core that gets sent back to bootstrap.js
 
 	// os
 	core.os.name = OS.Constants.Sys.Name.toLowerCase();
-	
+
 	// I import ostypes_*.jsm in init as they may use things like core.os.isWinXp etc
 	console.log('bringing in ostypes');
 	switch (core.os.mname) {
@@ -164,25 +49,25 @@ function init(objCore) { // function name init required for SIPWorker
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
 	}
 	console.log('brought in ostypes');
-	
+
 	// OS Specific Init
 	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
-				
+
 				OSStuff.msg = ostypes.TYPE.MSG();
-				
+
 			break;
 		case 'gtk':
-		
+
 				OSStuff.xev = ostypes.TYPE.XEvent();
-		
+
 			break;
 		default:
 			// do nothing special
 	}
-	
+
 	// General Init
 	var regError = registerHotkey();
 	if (regError) {
@@ -191,9 +76,9 @@ function init(objCore) { // function name init required for SIPWorker
 	} else {
 		gHotkeyRegistered = true;
 	}
-	
+
 	startEventLoop();
-	
+
 	console.log('HotkeyWorker init success');
 	// return core; // for SIPWorker returnung is not required
 }
@@ -204,28 +89,28 @@ const gEventLoopIntervalMS = 50;
 var gHotkeyRegistered = false;
 
 function prepTerm() {
-	
+
 	stopEventLoop();
-	
+
 	// unregister the hotkey
 	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
-		
+
 				if (gHotkeyRegistered) {
 					var rez_unregKey = ostypes.API('UnregisterHotKey')(null, 1);
 					console.log('rez_unregKey:', rez_unregKey, 'winLastError:', ctypes.winLastError);
 				}
-				
+
 			break
 		case 'gtk':
-		
+
 				////// var rez_ungrab = ostypes.API('XUngrabKey')(ostypes.HELPER.cachedXOpenDisplay(), OSStuff.key, ostypes.CONST.None, ostypes.HELPER.cachedDefaultRootWindow());
 				////// console.log('rez_ungrab:', rez_ungrab);
-				////// 
+				//////
 				////// ostypes.HELPER.ifOpenedXCloseDisplay();
-				
+
 				if (gHotkeyRegistered) {
 					for (var i=0; i<OSStuff.grabWins.length; i++) {
 						console.log('ungrabbing win i:', i, OSStuff.grabWins[i]);
@@ -233,7 +118,7 @@ function prepTerm() {
 							console.log('ungrabbing key:', j, OSStuff.keycodesArr[j])
 							var rez_ungrab = ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_NONE);
 							console.log('rez_ungrab:', rez_ungrab);
-							
+
 							ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_LOCK); // caps lock
 							ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_2); // num lock
 							ostypes.API('xcb_ungrab_key')(OSStuff.conn, OSStuff.keycodesArr[j], OSStuff.grabWins[i], ostypes.CONST.XCB_MOD_MASK_LOCK | ostypes.CONST.XCB_MOD_MASK_2); // caps lock AND num lock
@@ -242,48 +127,48 @@ function prepTerm() {
 
 					var rez_flush = ostypes.API('xcb_flush')(OSStuff.conn);
 					console.log('rez_flush:', rez_flush);
-					
+
 					delete OSStuff.keycodesArr;
 					delete OSStuff.grabWins;
 					delete OSStuff.hotkeyLastTriggered;
 				}
-				
+
 				if (OSStuff.conn) {
 					ostypes.API('xcb_disconnect')(OSStuff.conn);
 					delete OSStuff.conn;
 				}
-				
+
 			break;
 		case 'darwin':
-		
-				// 
-				
+
+				//
+
 			break;
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
 	}
-	
+
 	console.error('ok HotkeyWorker prepped for term');
 }
 
 function registerHotkey() {
 	// return undefined if no error. if error returns a string stating error
-	
+
 	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
-		
+
 				var rez_regKey = ostypes.API('RegisterHotKey')(null, 1, ostypes.CONST.MOD_NOREPEAT, ostypes.CONST.VK_SNAPSHOT);
 				console.log('rez_regKey:', rez_regKey);
-			
+
 			break
 		case 'gtk':
-		
+
 				var conn = ostypes.API('xcb_connect')(null, null);
 				console.log('conn:', conn.toString());
 				OSStuff.conn = conn;
-				
+
 				var keysyms = ostypes.API('xcb_key_symbols_alloc')(conn);
 				console.log('keysyms:', keysyms.toString());
 
@@ -314,7 +199,7 @@ function registerHotkey() {
 					return 'linux no keycodes found';
 					throw new Error('linux no keycodes found');
 				}
-				
+
 				ostypes.API('free')(keycodesPtr);
 
 				ostypes.API('xcb_key_symbols_free')(keysyms);
@@ -343,7 +228,7 @@ function registerHotkey() {
 							return 'The hotkey "PrntScrn" is already in use by another function. Please go to your system control panel and find the "Global Keyboard Shortcuts" section. Then disable whatever shortcut is using "PrntScrn" as a hotkey. Then come back to Firefox, go to NativeShot options page, and toggle the "System Hotkey" setting to "Off" then back to "On".';
 							throw new Error('linux grab failed');
 						}
-						
+
 						ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_LOCK, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC); // caps lock
 						ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_2, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC); // num lock
 						ostypes.API('xcb_grab_key')(conn, 1, screens.data.contents.root, ostypes.CONST.XCB_MOD_MASK_LOCK | ostypes.CONST.XCB_MOD_MASK_2, keycodesArr[j], ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC); // caps lock AND num lock
@@ -361,38 +246,38 @@ function registerHotkey() {
 
 				var rez_flush = ostypes.API('xcb_flush')(conn);
 				console.log('rez_flush:', rez_flush);
-				
+
 				OSStuff.keycodesArr = keycodesArr;
 				OSStuff.grabWins = grabWins;
 				OSStuff.hotkeyLastTriggered = 0;
-				
+
 			break;
 		case 'darwin':
-		
+
 				var eventType = ostypes.TYPE.EventTypeSpec();
 				eventType.eventClass = ostypes.CONST.kEventClassKeyboard;
 				eventType.eventKind = ostypes.CONST.kEventHotKeyPressed;
-				
+
 				var gMyHotKeyID = ostypes.TYPE.EventHotKeyID();
 				var gMyHotKeyRef = ostypes.TYPE.EventHotKeyRef();
-				
+
 				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
 				console.log('rez_appTarget:', rez_appTarget);
 				OSStuff.cHotKeyHandler = ostypes.TYPE.EventHandlerUPP(macHotKeyHandler);
 				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, OSStuff.cHotKeyHandler, 1, eventType.address(), null, null);
 				console.log('rez_install:', rez_install);
-				
+
 				gMyHotKeyID.signature =  ostypes.TYPE.OSType('1752460081'); // has to be a four char code. MACS is http://stackoverflow.com/a/27913951/1828637 0x4d414353 so i just used htk1 as in the example here http://dbachrach.com/blog/2005/11/program-global-hotkeys-in-cocoa-easily/ i just stuck into python what the stackoverflow topic told me and got it struct.unpack(">L", "htk1")[0]
 				gMyHotKeyID.id = 1;
-				
+
 				var rez_appTarget2 = ostypes.API('GetEventDispatcherTarget')();
 				console.log('rez_appTarget2:', rez_appTarget2);
 				var rez_reg = ostypes.API('RegisterEventHotKey')(49, ctypes_math.UInt64.add(ctypes.UInt64(ostypes.CONST.shiftKey), ctypes.UInt64(ostypes.CONST.cmdKey)), gMyHotKeyID, rez_appTarget2, 0, gMyHotKeyRef.address());
 				console.log('rez_reg:', rez_reg);
 				ostypes.HELPER.convertLongOSStatus(rez_reg);
-				
+
 				OSStuff.runLoopMode = ostypes.HELPER.makeCFStr('com.mozilla.firefox.nativeshot');
-				
+
 			break;
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');
@@ -408,14 +293,14 @@ function stopEventLoop() {
 }
 
 function checkEventLoop() {
-	
+
 	// console.log('in check loop');
-	
+
 	switch (core.os.mname) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
-				
+
 				var tookShot = false;
 				while (ostypes.API('PeekMessage')(OSStuff.msg.address(), null, ostypes.CONST.WM_HOTKEY, ostypes.CONST.WM_HOTKEY, ostypes.CONST.PM_REMOVE)) {
 					// console.log('got wParam:', OSStuff.msg.wParam);
@@ -426,10 +311,10 @@ function checkEventLoop() {
 						}
 					}
 				}
-			
+
 			break
 		case 'gtk':
-				
+
 				var evt = ostypes.API('xcb_poll_for_event')(OSStuff.conn);
 				// console.log('evt:', evt);
 				if (!evt.isNull()) {
@@ -451,21 +336,21 @@ function checkEventLoop() {
 					}
 					ostypes.API('free')(evt);
 				}
-				
+
 			break;
 		case 'darwin':
-		
+
 				// var cursorRgn = ostypes.TYPE.RgnHandle();
 				var evRec = ostypes.TYPE.EventRecord();
 				var everyEvent = 0;
-				
+
 				// var rez_waitEv = ostypes.API('WaitNextEvent')(everyEvent, evRec.address(), ostypes.TYPE.UInt32('32767'), cursorRgn);
 				var rez_waitEv = ostypes.API('WaitNextEvent')(everyEvent, evRec.address(), 0, null);
 				console.log('rez_waitEv:', rez_waitEv);
-				
+
 				// var rez_run = ostypes.API('RunCurrentEventLoop')(1);
 				// console.log('rez_run:', rez_run);
-				
+
 			break;
 		default:
 			throw new Error('Operating system, "' + OS.Constants.Sys.Name + '" is not supported');

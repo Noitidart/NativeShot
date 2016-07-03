@@ -1,3 +1,2 @@
-content nativeshot ./
-content nativeshot-accessible ./resources/content-accessible/ contentaccessible=true
+content nativeshot ./ contentaccessible=true
 locale nativeshot en-US locale/en-US/
