@@ -11,6 +11,7 @@ var gWinComm; // need to set this. instead var because otherwise Comm/Comm.js ca
 
 var MATCH_APP = 1;
 var MATCH_TWITTER = 2;
+var MATCH_EDITOR = 3;
 
 // start - about module
 var aboutFactory;
@@ -85,8 +86,12 @@ var pageLoader = {
 	matches: function(aHREF, aLocation) {
 		// do your tests on aHREF, which is aLocation.href.toLowerCase(), return true if it matches
 		var href_lower = aLocation.href.toLowerCase();
-		if (href_lower.startsWith('about:osxmediatap')) {
-			return MATCH_APP;
+		if (href_lower.startsWith('about:nativeshot')) {
+			if (href_lower.includes('imon')) {
+				return MATCH_EDITOR;
+			} else {
+				return MATCH_APP;
+			}
 		} else if (aLocation.host.toLowerCase() == 'twitter.com') {
 			return MATCH_TWITTER;
 		}
@@ -101,6 +106,9 @@ var pageLoader = {
 		switch (pageLoader.matches(contentWindow.location.href, contentWindow.location)) {
 			case MATCH_APP:
 					gWinComm = new Comm.server.content(contentWindow);
+				break;
+			case MATCH_EDITOR:
+					console.error('ok loaded editor');
 				break;
 			case MATCH_TWITTER:
 					var principal = contentWindow.document.nodePrincipal; // contentWindow.location.origin (this is undefined for about: pages) // docShell.chromeEventHandler.contentPrincipal (chromeEventHandler no longer has contentPrincipal)

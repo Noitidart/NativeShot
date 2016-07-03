@@ -6434,16 +6434,19 @@ var gQS = tQS;
 
 var callInMainworker, callInBootstrap;
 var gBsComm;
-function initComm() {
+// function initComm() {
+console.log('kicking of client');
 	gBsComm = new Comm.client.content( ()=>console.log('handshake done client side') );
 	({ callInMainworker, callInBootstrap } = CommHelper.content);
-}
-
-if (document.readyState != 'complete') {
-	window.addEventListener('DOMContentLoaded', initComm, false);
-} else {
-	initComm();
-}
+	triggerNSCommEvent(gQS.iMon);
+console.log('kicked off client');
+// }
+//
+// if (document.readyState != 'complete') {
+// 	window.addEventListener('DOMContentLoaded', initComm, false);
+// } else {
+// 	initComm();
+// }
 
 function receiveWinArr(aData) {
 	// for window wand

@@ -309,13 +309,6 @@ function takeShot() {
 			// console.log('query_str:', query_str);
 
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
-
-			// init Comm.server.content
-			shot.comm = new Comm.server.content(editor_domwin, ()=>console.log('handshake done server side'), shot.port1, shot.port2);
-			// editor_domwin.addEventListener('DOMContentLoaded', function(aDOMWin) {
-			// 	aDOMWin.removeEventListener('DOMContentLoaded', arguments.callee, false);
-			// 	console.log('DOMContentLoaded triggred in editor_domwin');
-			// }.bind(null, editor_domwin), false);
 		}
 
 		console.log('collMonInfos:', collMonInfos);
@@ -486,7 +479,20 @@ var windowListener = {
 		}, false);
 	},
 	onCloseWindow: function (aXULWindow) {},
-	onWindowTitleChange: function (aXULWindow, aNewTitle) {},
+	onWindowTitleChange: function (aXULWindow, aNewTitle) {
+		// console.error('title changed to:', aNewTitle);
+		if (aNewTitle == 'nativeshot_canvas') {
+			var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow);
+			aDOMWindow.addEventListener('nscomm', function(e) {
+				aDOMWindow.removeEventListener('nscomm', arguments.callee, false);
+				// console.log('got nscomm', e.detail);
+				var detail = e.detail;
+				var iMon = detail;
+				var shot = gEditorSession.shots[iMon];
+				shot.comm = new Comm.server.content(aDOMWindow, ()=>console.log('handshake done server side'), shot.port1, shot.port2);
+			}, false, true);
+		}
+	},
 	register: function () {
 
 		// Load into any existing windows
