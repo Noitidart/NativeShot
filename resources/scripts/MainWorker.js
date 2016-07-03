@@ -245,7 +245,6 @@ function trashFile(aFilePlatPath) {
 function shootAllMons() {
 
 	var collMonInfos = [];
-	var aScreenshotBuffersToTransfer = [];
 
 	// if (core.os.name.indexOf('win') === 0) {
 		// if (!SetProcessDpiAwareness) {
@@ -464,7 +463,6 @@ function shootAllMons() {
 
 
 					collMonInfos[s].screenshotArrBuf = monShotBuf;
-					aScreenshotBuffersToTransfer.push(collMonInfos[s].screenshotArrBuf);
 
 					// release memory of screenshot stuff
 					//delete collMonInfos[s].otherInfo;
@@ -715,7 +713,6 @@ function shootAllMons() {
 					var monUseH = collMonInfos[i].h;
 
 					collMonInfos[i].screenshotArrBuf = portionOutAllToMonFromBgra0ToRgba255(monUseW, monUseH, collMonInfos[i].x, collMonInfos[i].y);
-					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshotArrBuf);
 				}
 
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
@@ -1049,7 +1046,6 @@ function shootAllMons() {
 
 
 					collMonInfos[i].screenshotArrBuf = portionOutAllToMonAnd255(monUseW, monUseH, collMonInfos[i].x - minScreenX, collMonInfos[i].y - minScreenY);
-					aScreenshotBuffersToTransfer.push(collMonInfos[i].screenshotArrBuf);
 				}
 
 				// end - because took a single screenshot of alllll put togather, lets portion out the imagedata
@@ -1059,10 +1055,25 @@ function shootAllMons() {
 			throw new Error('os not supported ' + core.os.name);
 	}
 
-	var rezOfFunc = new PromiseWorker.Meta(collMonInfos, {transfers: aScreenshotBuffersToTransfer});
-	collMonInfos = null;
-	aScreenshotBuffersToTransfer = null;
-	return rezOfFunc;
+	var rez = {
+		collMonInfos,
+		__XFER: []
+	};
+	for (var i=0; i<collMonInfos.length; i++) {
+		rez['arrbuf' + i] = collMonInfos[i].screenshotArrBuf;
+		delete collMonInfos[i].screenshotArrBuf;
+		rez.__XFER.push('arrbuf' + i);
+
+		var msgchan = new MessageChannel();
+		rez['screenshot' + i + '_port1'] = msgchan.port1;
+		rez['screenshot' + i + '_port2'] = msgchan.port2;
+
+		rez.__XFER.push('screenshot' + i + '_port1');
+		rez.__XFER.push('screenshot' + i + '_port2');
+
+	}
+
+	return rez;
 }
 
 function focusSelfApp() {

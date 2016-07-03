@@ -219,7 +219,7 @@ function guiClick(e) {
 					guiSetBadge(null);
 				}
 			});
-			Services.prompt.alert(null, 'shot', 'take');
+			takeShot();
 		}
 	}
 	else { console.warn('editor is currently open, so do nothing') }
@@ -240,8 +240,86 @@ function guiSetBadge(aTxt) {
 	}
 }
 
-function fetchCore(aArg, aComm) {
-    return core;
+function takeShot() {
+	gEditorSession.id = Date.now();
+	callInMainworker('shootAllMons', undefined, function(aArg) {
+		var { collMonInfos } = aArg;
+		for (var i=0; i<collMonInfos.length; i++) {
+			collMonInfos[i].arrbuf = aArg['arrbuf' + i];
+
+			collMonInfos[i].port1 = aArg['screenshot' + i + '_port1'];
+			collMonInfos[i].port2 = aArg['screenshot' + i + '_port2'];
+		}
+
+		// call it shots
+		var shots = collMonInfos;
+		gEditorSession.shots = shots;
+
+		// the most recent browser window when screenshot was taken
+		var domwin = Services.wm.getMostRecentWindow('navigator:browser');
+		gEditorSession.domwin_wk = Cu.getWeakReference(domwin);
+		gEditorSession.domwin_was_focused = isFocused(domwin);
+
+		// create allMonDimStr
+		var allMonDim = [];
+		for (var shot of shots) {
+			allMonDim.push({
+				x: shot.x,
+				y: shot.y,
+				w: shot.w,
+				h: shot.h
+				// win81ScaleX: shot.win81ScaleX,
+				// win81ScaleY: shot.win81ScaleY
+			});
+		}
+		var allMonDimStr = JSON.stringify(allMonDim);
+
+		// open window for each shot
+		var i = -1;
+		for (var shot of shots) {
+			i++;
+
+			var x = shot.x;
+			var y = shot.y;
+			var w = shot.w;
+			var h = shot.h;
+
+			// scale it?
+			var scaleX = shot.win81ScaleX;
+			var scaleY = shot.win81ScaleY;
+			if (scaleX) {
+				x = Math.floor(x / scaleX);
+				w = Math.floor(w / scaleX);
+			}
+			if (scaleY) {
+				y = Math.floor(y / scaleY);
+				h = Math.floor(h / scaleY);
+			}
+
+			// make query string of the number, string, and boolean properties of shot
+			var query_json = Object.assign(
+				{
+					iMon: i,
+					allMonDimStr: allMonDimStr
+				},
+				shot
+			);
+			// console.log('query_json:', query_json);
+			var query_str = jQLike.serialize(query_json);
+			// console.log('query_str:', query_str);
+
+			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+
+			// init Comm.server.content
+			shot.comm = new Comm.server.content(editor_domwin, ()=>console.log('handshake done server side'), shot.port1, shot.port2);
+			// editor_domwin.addEventListener('DOMContentLoaded', function(aDOMWin) {
+			// 	aDOMWin.removeEventListener('DOMContentLoaded', arguments.callee, false);
+			// 	console.log('DOMContentLoaded triggred in editor_domwin');
+			// }.bind(null, editor_domwin), false);
+		}
+
+		console.log('collMonInfos:', collMonInfos);
+	});
 }
 
 // start - context menu items
@@ -602,3 +680,34 @@ function jsonToDOM(json, doc, nodes) {
     }
     return tag.apply(null, json);
 }
+function isFocused(window) {
+    let childTargetWindow = {};
+    Services.focus.getFocusedElementForWindow(window, true, childTargetWindow);
+    childTargetWindow = childTargetWindow.value;
+
+    let focusedChildWindow = {};
+    if (Services.focus.activeWindow) {
+        Services.focus.getFocusedElementForWindow(Services.focus.activeWindow, true, focusedChildWindow);
+        focusedChildWindow = focusedChildWindow.value;
+    }
+
+    return (focusedChildWindow === childTargetWindow);
+}
+
+
+// rev1 - https://gist.github.com/Noitidart/c4ab4ca10ff5861c720b
+var jQLike = { // my stand alone jquery like functions
+	serialize: function(aSerializeObject) {
+		// https://api.jquery.com/serialize/
+
+		// verified this by testing
+			// http://www.w3schools.com/jquery/tryit.asp?filename=tryjquery_ajax_serialize
+			// http://www.the-art-of-web.com/javascript/escape/
+
+		var serializedStrArr = [];
+		for (var cSerializeKey in aSerializeObject) {
+			serializedStrArr.push(encodeURIComponent(cSerializeKey) + '=' + encodeURIComponent(aSerializeObject[cSerializeKey]));
+		}
+		return serializedStrArr.join('&');
+	}
+};

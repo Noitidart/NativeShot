@@ -1,17 +1,14 @@
-Components.utils.import('resource://gre/modules/Services.jsm');
-Components.utils.import('resource://gre/modules/Geometry.jsm');
-
-var core = {
-	addon: {
-		name: 'NativeShot',
-		id: 'NativeShot@jetpack',
-		path: {
-			scripts: 'chrome://nativeshot/content/resources/scripts/',
-			styles: 'chrome://nativeshot/content/resources/styles/'
-		},
-		cache_key: Math.random()
-	}
-};
+// var core = {
+// 	addon: {
+// 		name: 'NativeShot',
+// 		id: 'NativeShot@jetpack',
+// 		path: {
+// 			scripts: 'chrome://nativeshot/content/resources/scripts/',
+// 			styles: 'chrome://nativeshot/content/resources/styles/'
+// 		},
+// 		cache_key: Math.random()
+// 	}
+// };
 
 var gSetStateObj;
 var gEditorStore = {};
@@ -685,6 +682,7 @@ function triggerNSCommEvent(myEventDetail) {
 }
 
 function init(aArrBufAndCore) {
+	return;
 	// console.log('in screenshotXfer, aArrBufAndCore:', aArrBufAndCore);
 
 	core = aArrBufAndCore.core;
@@ -6030,7 +6028,7 @@ function init(aArrBufAndCore) {
 				React.createElement('input', {id:'inputnumber_' + this.domId, ref:'input', type:'text', onWheel:this.wheel, onKeyDown:this.keydown, onChange:this.change, defaultValue:this.props[this.props.pStateVarName], maxLength:(this.props.pMax === undefined ? undefined : (this.props.pMax+'').length) })
 			);
 		}
-	})
+	});
 	////////// end - palette components
 
 	var pQS = tQS; //queryStringAsJson(window.location.search.substr(1));
@@ -6417,8 +6415,9 @@ function MyContext(ctx) {
 
 
 // start - pre-init
-
-var tQS = queryStringAsJson(window.location.search.substr(1)); // temp, as i dont deal with gQS anymore.
+var query_str = window.location.href.substr('about:nativeshot?'.length);
+// console.log('editor.js query_str:', query_str);
+var tQS = queryStringAsJson(query_str);
 tQS.allMonDim = JSON.parse(decodeURIComponent(tQS.allMonDimStr));
 delete tQS.allMonDimStr;
 
@@ -6432,15 +6431,19 @@ if (!('win81ScaleX' in tQS)) {
 
 console.log('tQS:', tQS);
 var gQS = tQS;
-window.addEventListener('message', function(aWinMsgEvent) {
-	// console.error('incoming window message to HTML: iMon:', tQS.iMon, 'aWinMsgEvent:', aWinMsgEvent);
-	var aData = aWinMsgEvent.data;
-	if (aData.topic in window) {
-		window[aData.topic](aData);
-	} else {
-		throw new Error('unknown topic received: ' + aData.topic);
-	}
-}, false);
+
+var callInMainworker, callInBootstrap;
+var gBsComm;
+function initComm() {
+	gBsComm = new Comm.client.content( ()=>console.log('handshake done client side') );
+	({ callInMainworker, callInBootstrap } = CommHelper.content);
+}
+
+if (document.readyState != 'complete') {
+	window.addEventListener('DOMContentLoaded', initComm, false);
+} else {
+	initComm();
+}
 
 function receiveWinArr(aData) {
 	// for window wand
@@ -6752,7 +6755,7 @@ function queryStringAsJson(aQueryString) {
 	asJsonStringify = asJsonStringify.replace(/=/g, '":"');
 	asJsonStringify = '{"' + asJsonStringify + '"}';
 	asJsonStringify = asJsonStringify.replace(/"(-?\d+(?:.\d+)?|true|false)"/g, function($0, $1) { return $1; });
-
+	// console.log('asJsonStringify:', asJsonStringify);
 	return JSON.parse(asJsonStringify);
 }
 

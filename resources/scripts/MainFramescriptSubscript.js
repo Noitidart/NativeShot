@@ -30,9 +30,11 @@ function initAndRegisterAbout() {
 
 		newChannel: function(aURI, aSecurity_or_aLoadInfo) {
 			var redirUrl;
-			if (aURI.path.toLowerCase().indexOf('?options') > -1) {
+			if (aURI.path.includes('iMon')) {
+				redirUrl = core.addon.path.pages + 'editor.xhtml';
+			} else if (aURI.path.toLowerCase().includes('?options')) {
 				redirUrl = core.addon.path.pages + 'options.xhtml';
-			} else if (aURI.path.toLowerCase().indexOf('?text') > -1) {
+			} else if (aURI.path.toLowerCase().includes('?text')) {
 				redirUrl = core.addon.path.pages + 'ocr.xhtml' + aURI.path.substr(aURI.path.indexOf('?text'));
 			} else {
 				redirUrl = core.addon.path.pages + 'main.xhtml';
