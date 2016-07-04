@@ -212,7 +212,8 @@ function requestCompositeData(aData) {
 	var fullfillLoad = {
 		id: cutoutid,
 		arrBuf: subDrawdata.data.buffer,
-		fromMon: tQS.iMon
+		fromMon: tQS.iMon,
+		__XFER: ['arrBuf']
 	};
 	if (requestingMon == tQS.iMon) {
 		fullfillCompositeRequest(fullfillLoad);
@@ -2608,7 +2609,7 @@ function init(aArrBufAndCore) {
 				} else if (this.cstate.resizing) {
 					var oldx = this.cstate.selection.x;
 					var oldy = this.cstate.selection.y;
-					console.log('this.cstate.resizing:', this.cstate.resizing, tQS.iMon);
+					// console.log('this.cstate.resizing:', this.cstate.resizing, tQS.iMon);
 					switch(this.cstate.resizing) {
 						case 2:
 							this.cstate.selection.x = mx;

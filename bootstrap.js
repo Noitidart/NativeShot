@@ -473,7 +473,7 @@ function broadcastToOthers(aArg) {
 function broadcastToSpecific(aArg) {
 	var { toMon } = aArg;
 	var shot = gEditorSession.shots[toMon];
-	shot.putMessage(aArg.topic, aArg);
+	shot.comm.putMessage(aArg.topic, aArg);
 }
 function exitEditors(aArg) {
 	var { iMon } = aArg;
@@ -481,9 +481,13 @@ function exitEditors(aArg) {
 	var l = shots.length;
 	for (var i=0; i<l; i++) {
 		if (i !== iMon) {
+			var domwin = shots[i].domwin_wk.get();
+			if (!domwin) {
+				console.error('no domwin for shot:', i);
+			}
 			shots[i].comm.putMessage('removeUnload', undefined, function(domwin) {
 				domwin.close();
-			}.bind(null, shots[i].domwin_wk.get()));
+			}.bind(null, domwin));
 		}
 	}
 
@@ -518,6 +522,42 @@ function exitEditors(aArg) {
 	gEditorSession = {}; // gEditor.cleanUp();
 }
 
+var gUsedSelections = []; // array of arrays. each child is [subcutout1, subcutout2, ...]
+function indexOfSelInG(aSel) {
+	// aSel is an array of subcutouts
+	// will return the index it is found in gUsedSelections
+	// -1 if not found
+
+	var l = gUsedSelections.length;
+
+	if (!l) {
+		return -1;
+	} else {
+
+		for (var i=l-1; i>=0; i--) {
+			var tSel = gUsedSelections[i]; // testSelection
+			var l2 = tSel.length;
+			if (l2 === aSel.length) {
+				var tSelMatches = true;
+				for (var j=0; j<l2; j++) {
+					var tSubcutout = tSel[j];
+					var cSubcutout = aSel[j];
+					console.log('comparing', 'tSel:', tSel, 'aSel:', aSel);
+					if (tSubcutout.x !== cSubcutout.x || tSubcutout.y !== cSubcutout.y || tSubcutout.w !== cSubcutout.w || tSubcutout.h !== cSubcutout.h) {
+						// tSel does not match aSel
+						tSelMatches = false;
+						break;
+					}
+				}
+				if (tSelMatches) {
+					return i;
+				}
+			}
+		}
+
+		return -1; // not found
+	}
+}
 function addSelectionToHistory(aData) {
 	// aData.cutoutsArr is an array of cutouts
 	console.log('incoming addSelectionToHistory:', aData);
