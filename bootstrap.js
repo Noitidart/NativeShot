@@ -470,8 +470,12 @@ function broadcastToOthers(aArg) {
 	}
 }
 
+function broadcastToSpecific(aArg) {
+	var { toMon } = aArg;
+	var shot = gEditorSession.shots[toMon];
+	shot.putMessage(aArg.topic, aArg);
+}
 function exitEditors(aArg) {
-	Services.prompt.alert(null, 'in exit editors', 'in');
 	var { iMon } = aArg;
 	var shots = gEditorSession.shots;
 	var l = shots.length;
@@ -482,13 +486,6 @@ function exitEditors(aArg) {
 			}.bind(null, shots[i].domwin_wk.get()));
 		}
 	}
-}
-function broadcastToSpecific(aArg) {
-	var { toMon } = aArg;
-	var shot = gEditorSession.shots[toMon];
-	shot.putMessage(aArg.topic, aArg);
-}
-function afterEditorsExited() {
 
 	// // as nativeshot_canvas windows are now closing. check if should show notification bar - if it has any btns then show it
 	// if (gEditorABData_Bar[gEditor.sessionId].ABRef.aBtns.length) {

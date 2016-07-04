@@ -30,7 +30,8 @@ var gMX = 0;
 var gMY = 0;
 var gMTime = 0;
 
-function unload() {
+function unload(aBoolDontCloseSelf) {
+	// when triggered by event listener, aBoolDontCloseSelf is event, which qualifies as true
 	var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
 	for (var p in immutableEditorstate) {
 		if (p.indexOf('sGen') !== 0) {
@@ -50,17 +51,14 @@ function unload() {
 	// });
 
 	callInBootstrap('exitEditors', {
-		iMon: tQS.iMon
+		iMon: aBoolDontCloseSelf ? tQS.iMon : null
 	});
 	// callInBootstrap('afterEditorsExited');
 }
 
 function removeUnload() {
 	// called before closing, as otherwise the unload of this will trigger
-	// console.error('in removeUnloadAndClose for iMon:', gQS.iMon);
 	window.removeEventListener('unload', unload, false);
-	// window.close();
-	// console.error('did window  close');
 }
 
 function reactSetState(aData) {
@@ -417,7 +415,7 @@ function fullfillCompositeRequest(aData) {
 
 		var postAction = function() {
 			if (boolclose) {
-				window.close();
+				unload(false);
 			}
 		};
 
@@ -3541,7 +3539,7 @@ function init(aArrBufAndCore) {
 							return; // so we dont close the window
 						}
 
-						window.close();
+						unload(false);
 						return;
 
 					break;
@@ -4411,7 +4409,7 @@ function init(aArrBufAndCore) {
 				// end - on click reapply styles
 				case 'Close':
 
-						window.close();
+						unload(false);
 
 					break;
 				case 'Select':
