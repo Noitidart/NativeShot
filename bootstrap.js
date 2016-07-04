@@ -95,10 +95,7 @@ function startup(aData, aReason) {
     ({ callInMainworker, callInContentinframescript, callInFramescript, callInContent1 } = CommHelper.bootstrap);
 
     gWkComm = new Comm.server.worker(core.addon.path.scripts + 'MainWorker.js?' + core.addon.cache_key, ()=>core, function(aArg, aComm) {
-        core = aArg;
-
-		gEditorStateStr = core.editorstateStr;
-		delete core.editorstateStr;
+        ({ core, gEditorStateStr} = aArg);
 
 		gFsComm = new Comm.server.framescript(core.addon.id);
 
@@ -151,13 +148,7 @@ function shutdown(aData, aReason) {
 		CustomizableUI.destroyWidget('cui_' + core.addon.path.name);
 	} else {
 		for (var androidMenu of gAndroidMenus) {
-			var domwin;
-			try {
-				domwin = androidMenu.domwin.get();
-			} catch(ex) {
-				// its dead
-				continue;
-			}
+			var domwin = getStrongReference(androidMenu.domwin);
 			if (!domwin) {
 				// its dead
 				continue;
@@ -307,7 +298,8 @@ function takeShot() {
 			var query_json = Object.assign(
 				{
 					iMon: i,
-					allMonDimStr: allMonDimStr
+					allMonDimStr: allMonDimStr,
+					sessionid: gEditorSession.id
 				},
 				shot
 			);
@@ -337,7 +329,7 @@ function editorInitShot(aIMon) {
 	// 	throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
 	// }
 
-	var domwin = shot.domwin_wk.get();
+	var domwin = getStrongReference(shot.domwin_wk);
 	var aHwndPtrStr = getNativeHandlePtrStr(domwin);
 	shot.hwndPtrStr = aHwndPtrStr;
 
@@ -428,7 +420,7 @@ function sendWinArrToEditors() {
 			getTitle: true,
 			filterVisible: true
 		},
-		function(aArg) {
+		function(aVal) {
 			console.log('Fullfilled - promise_fetchWin - ', aVal);
 			// Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper).copyString(JSON.stringify(aVal)); // :debug:
 
@@ -452,7 +444,7 @@ function sendWinArrToEditors() {
 			}
 
 			for (var shot of shots) {
-				shot.putMessage('receiveWinArr', {
+				shot.comm.putMessage('receiveWinArr', {
 					winArr: aVal
 				});
 			}
@@ -462,6 +454,7 @@ function sendWinArrToEditors() {
 function broadcastToOthers(aArg) {
 	var { iMon } = aArg;
 	var shots = gEditorSession.shots;
+	// console.log('gEditorSession:', gEditorSession);
 	var l = shots.length;
 	for (var i=0; i<l; i++) {
 		if (i !== iMon) {
@@ -476,17 +469,19 @@ function broadcastToSpecific(aArg) {
 	shot.comm.putMessage(aArg.topic, aArg);
 }
 function exitEditors(aArg) {
-	var { iMon } = aArg;
+	var { iMon, editorstateStr } = aArg;
+
 	var shots = gEditorSession.shots;
 	var l = shots.length;
 	for (var i=0; i<l; i++) {
 		if (i !== iMon) {
-			var domwin = shots[i].domwin_wk.get();
+			var domwin = getStrongReference(shots[i].domwin_wk);
 			if (!domwin) {
-				console.error('no domwin for shot:', i);
+				console.error('no domwin for shot:', i, 'shots:', shots);
+				Services.prompt.alert(null, 'huh', 'weak ref is dead??');
 			}
-			shots[i].comm.putMessage('removeUnload', undefined, function(domwin) {
-				domwin.close();
+			shots[i].comm.putMessage('removeUnload', undefined, function(adomwin) {
+				adomwin.close();
 			}.bind(null, domwin));
 		}
 	}
@@ -520,6 +515,10 @@ function exitEditors(aArg) {
 	// // colMon[0].E.DOMWindow.close();
 
 	gEditorSession = {}; // gEditor.cleanUp();
+
+	gEditorStateStr = aArg.editorstateStr;
+	console.log('set gEditorStateStr to:', gEditorStateStr);
+	callInMainworker('updateEditorState', gEditorStateStr);
 }
 
 var gUsedSelections = []; // array of arrays. each child is [subcutout1, subcutout2, ...]
@@ -612,11 +611,6 @@ function insertTextFromClipboard(aArg) {
 			text: CLIPBOARD.get('text')
 		}, '*');
 	}
-}
-function updateEditorState(aArg) {
-	gEditorStateStr = aArg.editorstateStr;
-	console.log('set gEditorStateStr to:', gEditorStateStr);
-	callInMainworker('updateEditorState', gEditorStateStr);
 }
 // end - functions called by editor
 
@@ -898,7 +892,21 @@ var windowListener = {
 };
 
 // start - Comm functions
+function processAction(aArg, aReportProgress) {
+	shot = aArg;
 
+	// update attn bar
+
+	callInMainworker('processAction', shot, function(aArg2) {
+		var { __PROGRESS } = aArg2;
+
+		// update attn bar
+		if (__PROGRESS && gEditorSession.id && gEditorSession.id == shot.sessionid) {
+			// editor is still open, so tell it about the progress
+			aReportProgress(aArg2);
+		}
+	});
+}
 // end - Comm functions
 
 // start - common helper functions
@@ -1055,4 +1063,20 @@ function getNativeHandlePtrStr(aDOMWindow) {
 								   .QueryInterface(Ci.nsIInterfaceRequestor)
 								   .getInterface(Ci.nsIBaseWindow);
 	return aDOMBaseWindow.nativeHandle;
+}
+
+function getStrongReference(aWkRef) {
+	// returns null when it doesnt exist
+	var strongRef;
+	try {
+		strongRef = aWkRef.get();
+		if (!strongRef) {
+			// no longer exists
+			return null;
+		}
+	} catch(ex) {
+		// it no longer exists
+		return null;
+	}
+	return strongRef;
 }

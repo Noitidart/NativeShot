@@ -32,6 +32,8 @@ var gMTime = 0;
 
 function unload(aBoolDontCloseSelf) {
 	// when triggered by event listener, aBoolDontCloseSelf is event, which qualifies as true
+	removeUnload(); // because if aBoolDontCloseSelf is true, then unload() will trigger from call, and then when closed it will trigger again
+
 	var immutableEditorstate = JSON.parse(JSON.stringify(gCanStore.rconn.state));
 	for (var p in immutableEditorstate) {
 		if (p.indexOf('sGen') !== 0) {
@@ -41,17 +43,14 @@ function unload(aBoolDontCloseSelf) {
 		delete immutableEditorstate[p];
 	}
 
-	callInBootstrap('updateEditorState', {
-		editorstateStr: JSON.stringify(immutableEditorstate)
-	});
-
 	// callInBootstrap('broadcastToOthers', {
 	// 	topic: 'removeUnloadAndClose',
 	// 	iMon: tQS.iMon
 	// });
 
 	callInBootstrap('exitEditors', {
-		iMon: aBoolDontCloseSelf ? tQS.iMon : null
+		iMon: aBoolDontCloseSelf ? tQS.iMon : null,
+		editorstateStr: JSON.stringify(immutableEditorstate)
 	});
 	// callInBootstrap('afterEditorsExited');
 }
@@ -413,57 +412,56 @@ function fullfillCompositeRequest(aData) {
 				return;
 		}
 
-
 		var postAction = function() {
 			if (boolclose) {
 				unload(false);
 			}
 		};
 
-		// the various actions
-		if (sub == 'Twitter') {
+		// holds oauthServiceName which is serviceid
+		var action_data_type = {
+			png_dataurl: ['twitter', 'copy', 'print'],
+			plain_arrbuf: ['ocrall', 'gocr', 'ocrad', 'tesseract'],
+			png_arrbuf: []
+		};
 
-			callInBootstrap('shareToTwitter', can.toDataURL('image/png', ''));
+		var shot = {
+			sessionid: gQS.sessionid,
+			actionid: Date.now(),
+			serviceid: oauthServiceName,
+			width: compositeRect.width,
+			height: compositeRect.height
+		};
 
-			postAction();
+		var postDataGen = function() {
+			callInBootstrap('processAction', shot, function(aArg2) {
+				var { __PROGRESS } = aArg2;
 
-		} else if (['Copy', 'Print'].indexOf(action) > -1) {
+				if (__PROGRESS) {
+					// update editor about its progress
+				}
 
-			// data url actions
-			callInBootstrap('uploadOauthDataUrl', {
-				argsArr: [oauthServiceName, can.toDataURL('image/png', '')]
 			});
+		};
 
-			postAction();
-
-		} else if (['Text Recognition'].indexOf(action) > -1) {
-
-			// plain array buffer actions
-			callInBootstrap('uploadOauth', {
-				argsArr: [oauthServiceName, ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer, compositeRect.width, compositeRect.height]
-			});
-
-			postAction();
-
+		if (action_data_type.png_dataurl.includes(oauthServiceName)) {
+			shot.dataurl = can.toDataURL('image/png', '');
+			postDataGen();
+		} else if (action_data_type.plain_arrbuf.includes(oauthServiceName)) {
+			shot.arrbuf = ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer;
+			shot.__XFER = ['arrbuf'];
+			postDataGen();
 		} else {
-
 			// png arrbuf actions
 			(can.toBlobHD || can.toBlob).call(can, function(b) {
-				// var r = Ci.nsIDOMFileReader ? Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader) : new FileReader();
 				var r = new FileReader();
 				r.onloadend = function() {
-
-					callInBootstrap('uploadOauth', {
-						argsArr: [oauthServiceName, r.result, compositeRect.width, compositeRect.height]
-					});
-
-					postAction();
-
+					shot.arrbuf = r.result;
+					shot.__XFER = ['arrbuf'];
+					postDataGen();
 				};
 				r.readAsArrayBuffer(b);
-
 			}, 'image/png');
-
 		}
 
 		// debug - put this canvas on the document

@@ -7,11 +7,14 @@ var {callInBootstrap, callInChildworker1} = CommHelper.mainworker;
 // Globals
 var core;
 
+var gWorker = this;
+
 var gBsComm = new Comm.client.worker();
 var gOcrComm;
 var callInOcrComm = Comm.callInX.bind(null, 'gOcrComm', null);
 
 var gHydrants; // keys are getPage() names, like NewRecordingPage and value is an object which is its hydrant
+var gEditorStateStr;
 
 function dummyForInstantInstantiate() {}
 function init(objCore) {
@@ -34,6 +37,14 @@ function init(objCore) {
 	formatStringFromName('blah', 'main');
 	formatStringFromName('blah', 'app');
 	core.addon.l10n = _cache_formatStringFromName_packages;
+
+	// get editor state
+	try {
+		gEditorStateStr = OS.File.read(core.addon.path.editorstate, {encoding:'utf-8'});
+		console.log('editorstateStr:', editorstateStr);
+	} catch(OSFileError) {
+		console.log('OSFileError on read editorstate:', OSFileError);
+	}
 
 	// Import ostypes
 	importScripts(core.addon.path.scripts + 'ostypes/cutils.jsm');
@@ -79,7 +90,10 @@ function init(objCore) {
 
 	// setTimeoutSync(1000); // i want to delay 1sec to allow old framescripts to destroy
 
-	return core;
+	return {
+		core,
+		gEditorStateStr
+	};
 }
 
 // Start - Addon Functionality
@@ -111,6 +125,10 @@ self.onclose = function() {
 // start - Comm functions
 function fetchCore() {
 	return core;
+}
+function updateEditorState(aArg) {
+	gEditorStateStr = aArg;
+	// writeThenDir(core.addon.path.editorstate, gEditorStateStr, OS.Constants.Path.profileDir);
 }
 // end - Comm functions
 
@@ -1218,7 +1236,7 @@ function getAllWin(aOptions) {
 
 					return true; // keep iterating
 				}
-				var SearchPD_ptr = ostypes.TYPE.WNDENUMPROC.ptr(SearchPD);
+				var SearchPD_ptr = ostypes.TYPE.WNDENUMPROC(SearchPD);
 				var wnd = ostypes.TYPE.LPARAM();
 				var rez_EnuMWindows = ostypes.API('EnumWindows')(SearchPD_ptr, wnd);
 
@@ -2261,6 +2279,80 @@ function trashFile(aFilePlatPath) {
 			throw new Error('os not supported ' + core.os.name);
 	}
 }
+function winForceForegroundWindow(aHwndToFocus) { // rev2 - https://gist.github.com/Noitidart/50c7fa116f58836722a1
+	// windows only!
+	// focus a window even if this process, that is calling this function, is not the foreground window
+	// copy of work from here - ForceForegroundWindow - http://www.asyncop.com/MTnPDirEnum.aspx?treeviewPath=[o]+Open-Source\WinModules\Infrastructure\SystemAPI.cpp
+
+	// aHwndToFocus should be ostypes.TYPE.HWND
+	// RETURNS
+		// true - if focused
+		// false - if it could not focus
+
+	if (core.os.name != 'winnt') {
+		throw new Error('winForceForegroundWindow is only for Windows platform');
+	}
+
+	var hTo = aHwndToFocus;
+
+	var hFrom = ostypes.API('GetForegroundWindow')();
+	if (hFrom.isNull()) {
+		console.log('nothing in foreground, so calling process is free to focus anything')
+		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+		return rez_SetSetForegroundWindow ? true : false;
+	}
+
+	if (cutils.comparePointers(hTo, hFrom) === 0) {
+		// window is already focused
+		console.log('window is already focused');
+		return true;
+	}
+
+	var pidFrom = ostypes.TYPE.DWORD();
+	var threadidFrom = ostypes.API('GetWindowThreadProcessId')(hFrom, pidFrom.address());
+	console.info('threadidFrom:', threadidFrom);
+	console.info('pidFrom:', pidFrom);
+
+	var pidTo = ostypes.TYPE.DWORD();
+	var threadidTo = ostypes.API('GetWindowThreadProcessId')(hTo, pidTo.address()); // threadidTo is thread of my firefox id, and hTo is that of my firefox id so this is possible to do
+	console.info('threadidTo:', threadidTo);
+	console.info('pidTo:', pidTo);
+
+	// impossible to get here if `cutils.jscEqual(threadidFrom, threadidTo)` because if thats the case, then the window is already focused!!
+	// if (cutils.jscEqual(threadidFrom, threadidTo) {
+
+	// from testing, it shows that ```cutils.jscEqual(pidFrom, pidTo)``` works only if i allow at least 100ms of wait time between, which is very weird
+	if (/*cutils.jscEqual(pidFrom, pidTo) || */cutils.jscEqual(pidFrom, core.firefox.pid)) {
+		// the pid that needs to be focused, is already focused, so just focus it
+		// or
+		// the pid that needs to be focused is not currently focused, but the calling pid is currently focused. the current pid is allowed to shift focus to anything else it wants
+		// if (cutils.jscEqual(pidFrom, pidTo)) {
+		// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
+		// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
+			console.log('the process, of the window that is currently focused, is of process of this ChromeWorker, so i can go ahead and just focus it - no need for attach');
+		// }
+		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+		return rez_SetSetForegroundWindow ? true : false;
+	}
+
+	var threadidOfChromeWorker = ostypes.API('GetCurrentThreadId')(); // thread id of this ChromeWorker
+	console.log('threadidOfChromeWorker:', threadidOfChromeWorker);
+
+	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, true);
+	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+	if (!rez_AttachThreadInput) {
+		throw new Error('failed to attach thread input');
+	}
+	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+
+	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, false);
+	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+
+	return rez_SetSetForegroundWindow ? true : false;
+}
 // end - platform functions
 
 ////// start - specific helper functions
@@ -2474,10 +2566,48 @@ function bootstrapTimeout(milliseconds) {
 	return mainDeferred_bootstrapTimeout.promise;
 }
 
+// start action functions
+gWorker['action_save-quick'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_save-browse'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_print'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_copy'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_ocrall'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_tesseract'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_gocr'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_ocrad'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_google-images'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_bingimages'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+gWorker['action_tineye'] = function(shot, aActionFinalizer, aReportProgress) {
+
+}
+// end action functions
+
 function processAction(aArg, aReportProgress, aComm) {
-	// var { actionid, sessionid, serviceid, arrbuf, time, action_options } = aArg;
+	// var { actionid, sessionid, serviceid, arrbuf/dataurl, action_options, width, height } = aArg;
+	// actionid is time the action started
+	// sessionid is the time the screenshot was taken
 	var shot = aArg;
-	shot.shotid = shot.time; // shotid can be time, as time is down to millisecond and thus should be unique per shot
+	// shot.shotid = shot.actionid; // shotid can be time, as time is down to millisecond and thus should be unique per shot
 
 	var deferredMain_processAction = new Deferred();
 
