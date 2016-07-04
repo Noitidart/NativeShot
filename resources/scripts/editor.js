@@ -22,8 +22,8 @@ var gDroppingCoords = [0,0];
 var gDroppingMixCtx;
 var gCanMeasureHeight;
 var gCtxMeasureHeight;
-// var gWidthRef;
-// var gHeightRef;
+var gWidthRef;
+var gHeightRef;
 var gWinArr;
 var gHotkeyRef = {};
 var gMX = 0;
@@ -2380,10 +2380,10 @@ function init(aArrBufAndCore) {
 				if (gZState) { gZState.setInvalid(); }
 
 				// alt method to link38378777577
-				// if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
-					// gWidthRef.value = Math.abs(this.cstate.selection.w);
-					// gHeightRef.value = Math.abs(this.cstate.selection.h);
-				// }
+				if (this.cstate.resizing >= 2 && this.cstate.resizing <= 9) {
+					gWidthRef.value = Math.abs(this.cstate.selection.w);
+					gHeightRef.value = Math.abs(this.cstate.selection.h);
+				}
 			}
 		},
 		calcCtxFont: function(aDrawable) {
@@ -2690,11 +2690,11 @@ function init(aArrBufAndCore) {
 					}
 
 					// link38378777577
-					gEditorStore.setState({
-						sGenPalW: Math.abs(this.cstate.selection.w),
-						sGenPalH: Math.abs(this.cstate.selection.h),
-						setStateFromMouseMove: true
-					});
+					// gEditorStore.setState({
+					// 	sGenPalW: Math.abs(this.cstate.selection.w),
+					// 	sGenPalH: Math.abs(this.cstate.selection.h),
+					// 	setStateFromMouseMove: true
+					// });
 					gCanStore.setCanState(false);
 				} else if (this.cstate.lining) {
 					var sxkey, sykey, exkey, eykey;
@@ -3674,12 +3674,12 @@ function init(aArrBufAndCore) {
 								if (widthOrHeightChanged) {
 									newValid = false;
 									// parallel to link38378777577 - not exactly the same but it has similar lagginess
-									// gWidthRef.value = Math.abs(this.cstate.selection.w);
-									// gHeightRef.value = Math.abs(this.cstate.selection.h);
-									gEditorStore.setState({
-										sGenPalW: newW,
-										sGenPalH: newH
-									});
+									gWidthRef.value = Math.abs(this.cstate.selection.w);
+									gHeightRef.value = Math.abs(this.cstate.selection.h);
+									// gEditorStore.setState({
+									// 	sGenPalW: newW,
+									// 	sGenPalH: newH
+									// });
 								}
 							}
 						}
@@ -5916,21 +5916,21 @@ function init(aArrBufAndCore) {
 		},
 		componentDidMount: function() {
 			this.lastDomElValue = this.props[this.props.pStateVarName];
-			// if (this.props.pLabel == 'Width') {
-				// console.error('mounted width');
-				// gWidthRef = this.refs.input;
-			// } else if (this.props.pLabel == 'Height') {
-				// console.error('mounted height');
-				// gHeightRef = this.refs.input;
-			// }
+			if (this.props.pLabel == 'Width') {
+				console.error('mounted width');
+				gWidthRef = this.refs.input;
+			} else if (this.props.pLabel == 'Height') {
+				console.error('mounted height');
+				gHeightRef = this.refs.input;
+			}
 		},
-		// componentWillUnmount: function() {
-			// if (this.props.pLabel == 'Width') {
-				// gWidthRef = null;
-			// } else if (this.props.pLabel == 'Height') {
-				// gHeightRef = null;
-			// }
-		// },
+		componentWillUnmount: function() {
+			if (this.props.pLabel == 'Width') {
+				gWidthRef = null;
+			} else if (this.props.pLabel == 'Height') {
+				gHeightRef = null;
+			}
+		},
 		componentDidUpdate: function(prevProps) {
 			// console.log('did update, prevProps:', prevProps);
 			var newPropVal = this.props[this.props.pStateVarName];
