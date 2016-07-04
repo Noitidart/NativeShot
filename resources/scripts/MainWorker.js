@@ -2568,7 +2568,7 @@ function bootstrapTimeout(milliseconds) {
 
 // start action functions
 gWorker['action_save-quick'] = function(shot, aActionFinalizer, aReportProgress) {
-
+	OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
 }
 gWorker['action_save-browse'] = function(shot, aActionFinalizer, aReportProgress) {
 
@@ -2613,7 +2613,7 @@ function processAction(aArg, aReportProgress, aComm) {
 
 	console.log('worker - processAction - aArg:', aArg);
 
-	gWorker['action_' + serviceid](rec, function(status) {
+	gWorker['action_' + shot.serviceid](shot, function(status) {
 		console.log('worker - processAction complete, status:', status);
 		deferredMain_processAction.resolve(status);
 	}, aReportProgress);

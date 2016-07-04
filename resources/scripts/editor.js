@@ -434,14 +434,19 @@ function fullfillCompositeRequest(aData) {
 		};
 
 		var postDataGen = function() {
-			callInBootstrap('processAction', shot, function(aArg2) {
+			var cb = function(aArg2) {
 				var { __PROGRESS } = aArg2;
 
 				if (__PROGRESS) {
 					// update editor about its progress
 				}
 
-			});
+			};
+			callInBootstrap('processAction', shot, boolclose ? undefined : cb);
+
+			if (boolclose) {
+				unload(false);
+			}
 		};
 
 		if (action_data_type.png_dataurl.includes(oauthServiceName)) {

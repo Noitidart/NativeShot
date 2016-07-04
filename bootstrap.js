@@ -893,19 +893,31 @@ var windowListener = {
 
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
+	// called by content
+	// aReportProgress is undefined if editor is not waiting for progress updates
 	shot = aArg;
 
 	// update attn bar
+
+	var deferred_processed = (aReportProgress ? new Deferred() : undefined);
 
 	callInMainworker('processAction', shot, function(aArg2) {
 		var { __PROGRESS } = aArg2;
 
 		// update attn bar
-		if (__PROGRESS && gEditorSession.id && gEditorSession.id == shot.sessionid) {
-			// editor is still open, so tell it about the progress
-			aReportProgress(aArg2);
+
+		if (aReportProgress) {
+			if (__PROGRESS && gEditorSession.id && gEditorSession.id == shot.sessionid) {
+				// editor is still open, so tell it about the progress
+				aReportProgress(aArg2);
+			} else {
+				deferred_processed.resolve({});
+			}
 		}
+
 	});
+
+	return (aReportProgress ? deferred_processed.promise : undefined);
 }
 // end - Comm functions
 
