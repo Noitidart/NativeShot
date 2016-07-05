@@ -69,9 +69,13 @@ var gGenCssUri;
 
 var OSStuff = {};
 
-var gEditorSession = {
-	// id: null - set when a session is in progress
+var gSession = {
+	// id: null - set when a session is in progress,
+	// shots: collMonInfos,
+	// domwin_wk - most recent browser window when session started
+	// domwin_was_focused - was it focused when session started
 };
+var gAttn = {}; // key is session id
 
 var ostypes;
 var gFonts;
@@ -188,7 +192,7 @@ function getCuiCssFilename() {
 	return cuiCssFilename;
 }
 function guiClick(e) {
-	if (!gEditorSession.id) {
+	if (!gSession.id) {
 		if (e.shiftKey) {
 			// add delay
 			callInMainworker('countdownStartOrIncrement', 5, function(aArg) {
@@ -239,7 +243,7 @@ function guiSetBadge(aTxt) {
 }
 
 function takeShot() {
-	gEditorSession.id = Date.now();
+	gSession.id = Date.now();
 	callInMainworker('shootAllMons', undefined, function(aArg) {
 		var { collMonInfos } = aArg;
 		for (var i=0; i<collMonInfos.length; i++) {
@@ -251,12 +255,12 @@ function takeShot() {
 
 		// call it shots
 		var shots = collMonInfos;
-		gEditorSession.shots = shots;
+		gSession.shots = shots;
 
 		// the most recent browser window when screenshot was taken
 		var domwin = Services.wm.getMostRecentWindow('navigator:browser');
-		gEditorSession.domwin_wk = Cu.getWeakReference(domwin);
-		gEditorSession.domwin_was_focused = isFocused(domwin);
+		gSession.domwin_wk = Cu.getWeakReference(domwin);
+		gSession.domwin_was_focused = isFocused(domwin);
 
 		// create allMonDimStr
 		var allMonDim = [];
@@ -299,7 +303,7 @@ function takeShot() {
 				{
 					iMon: i,
 					allMonDimStr: allMonDimStr,
-					sessionid: gEditorSession.id
+					sessionid: gSession.id
 				},
 				shot
 			);
@@ -321,7 +325,7 @@ function editorInitShot(aIMon) {
 	// also transfer the screenshot data to the window
 
 	var iMon = aIMon; // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
-	var shots = gEditorSession.shots;
+	var shots = gSession.shots;
 	var shot = shots[iMon];
 	// var aEditorDOMWindow = colMon[iMon].E.DOMWindow;
 	//
@@ -410,7 +414,7 @@ function editorInitShot(aIMon) {
 }
 
 function sendWinArrToEditors() {
-	var shots = gEditorSession.shots;
+	var shots = gSession.shots;
 
 	callInMainworker(
 		'getAllWin',
@@ -453,8 +457,8 @@ function sendWinArrToEditors() {
 }
 function broadcastToOthers(aArg) {
 	var { iMon } = aArg;
-	var shots = gEditorSession.shots;
-	// console.log('gEditorSession:', gEditorSession);
+	var shots = gSession.shots;
+	// console.log('gSession:', gSession);
 	var l = shots.length;
 	for (var i=0; i<l; i++) {
 		if (i !== iMon) {
@@ -465,13 +469,13 @@ function broadcastToOthers(aArg) {
 
 function broadcastToSpecific(aArg) {
 	var { toMon } = aArg;
-	var shot = gEditorSession.shots[toMon];
+	var shot = gSession.shots[toMon];
 	shot.comm.putMessage(aArg.topic, aArg);
 }
 function exitEditors(aArg) {
 	var { iMon, editorstateStr } = aArg;
 
-	var shots = gEditorSession.shots;
+	var shots = gSession.shots;
 	var l = shots.length;
 	for (var i=0; i<l; i++) {
 		if (i !== iMon) {
@@ -514,7 +518,7 @@ function exitEditors(aArg) {
 	// }
 	// // colMon[0].E.DOMWindow.close();
 
-	gEditorSession = {}; // gEditor.cleanUp();
+	gSession = {}; // gEditor.cleanUp();
 
 	gEditorStateStr = aArg.editorstateStr;
 	console.log('set gEditorStateStr to:', gEditorStateStr);
@@ -598,7 +602,7 @@ function selectPreviousSelection(aData) {
 
 	// send message to make the selection
 	if (selToMake) {
-		gEditorSession.shots[aData.iMon].comm.putMessage('makeSelection', {
+		gSession.shots[aData.iMon].comm.putMessage('makeSelection', {
 			cutoutsArr: selToMake
 		}, '*');
 	}
@@ -607,7 +611,7 @@ function selectPreviousSelection(aData) {
 function insertTextFromClipboard(aArg) {
 	var { iMon } = aArg;
 	if (CLIPBOARD.currentFlavors.indexOf('text') > -1) {
-		gEditorSession.shots[iMon].comm.putMessage('insertTextFromClipboard', {
+		gSession.shots[iMon].comm.putMessage('insertTextFromClipboard', {
 			text: CLIPBOARD.get('text')
 		}, '*');
 	}
@@ -812,7 +816,7 @@ var windowListener = {
 				// console.log('got nscomm', e.detail);
 				var detail = e.detail;
 				var iMon = detail;
-				var shot = gEditorSession.shots[iMon];
+				var shot = gSession.shots[iMon];
 				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon), shot.port1, shot.port2);
 			}, false, true);
 		}
@@ -907,7 +911,7 @@ function processAction(aArg, aReportProgress) {
 		// update attn bar
 
 		if (aReportProgress) {
-			if (__PROGRESS && gEditorSession.id && gEditorSession.id == shot.sessionid) {
+			if (__PROGRESS && gSession.id && gSession.id == shot.sessionid) {
 				// editor is still open, so tell it about the progress
 				aReportProgress(aArg2);
 			} else {
