@@ -524,7 +524,10 @@ function exitEditors(aArg) {
 	// }
 	// // colMon[0].E.DOMWindow.close();
 
+	var sessionid = gSession.id;
 	gSession = {}; // gEditor.cleanUp();
+
+	attnUpdate(sessionid); // show the attnbar if there is anything to show
 
 	gEditorStateStr = aArg.editorstateStr;
 	console.log('set gEditorStateStr to:', gEditorStateStr);
@@ -907,7 +910,14 @@ function processAction(aArg, aReportProgress) {
 	// aReportProgress is undefined if editor is not waiting for progress updates
 	shot = aArg;
 
-	// update attn bar
+	// create attn bar entry
+	if (core.os.name != 'android') {
+		attnUpdate(shot.sessionid, {
+			actionid: shot.actionid,
+			serviceid: shot.serviceid,
+			reason: 'INIT'
+		});
+	}
 
 	var deferred_processed = (aReportProgress ? new Deferred() : undefined);
 
@@ -915,6 +925,9 @@ function processAction(aArg, aReportProgress) {
 		var { __PROGRESS } = aArg2;
 
 		// update attn bar
+		if (core.os.name != 'android') {
+
+		}
 
 		if (aReportProgress) {
 			if (__PROGRESS && gSession.id && gSession.id == shot.sessionid) {
@@ -930,6 +943,87 @@ function processAction(aArg, aReportProgress) {
 	return (aReportProgress ? deferred_processed.promise : undefined);
 }
 // end - Comm functions
+
+function attnUpdate(aSessionId, aUpdateInfo) {
+	// aUpdateInfo pass as undefined/null if you want to just show attnbar
+	/*
+	aUpdateInfo
+		{
+			actionid, // each actionid gets its own button
+			// no need - sessionid, // redundant as i have first arg of this functi on as aSessionId
+			serviceid,
+			reason,
+			data - arbitrary, like for twitter it can hold array of urls
+		}
+	*/
+	/* reason enum[
+		INIT
+	]
+	*/
+	var entry = gAttn[aSessionId];
+
+	if (aUpdateInfo) {
+		var { actionid, serviceid } = aUpdateInfo;
+
+		// check should create entry?
+		if (!entry) {
+			entry = {
+				state: { // this is live reference being used to AB.setState
+					aTxt: (new Date(aSessionId).toLocaleString()),
+					aPriority: 1,
+					aBtns: [] // each entry is an object. so i give it a key `meta` which is ignored by the AttnBar module
+				},
+				shown: false
+			};
+			gAttn[aSessionId] = entry;
+		}
+
+		// get btn for this actionid - if not there then leave it at undefined
+		var btns = entry.state.aBtns;
+		var btn;
+		for (btn of btns) {
+			if (btn.meta.actionid === actionid) {
+				break;
+			} else {
+				btn = undefined;
+			}
+		}
+
+		// check if should add btn
+		if (!btn) {
+			var btn = {
+				bClick: attnBtnClick,
+				bTxt: 'uninitialized',
+				meta: {
+					actionid
+				}
+			};
+		}
+
+		// always update btn based on serviceid, reason, and data
+		var meta = btn.meta;
+		meta.serviceid = serviceid;
+		switch (serviceid) {
+
+		}
+	}
+
+	// should show it?
+	if (entry && !entry.shown && gSession.id !== aSessionId) { // `entry &&` because if there is no aUpdateInfo was ever provided, then there is no bar to show. and when `exitEditors` calls `updateAttn(sessionid)` meaning without 2nd arg, it will find there is nothing to show
+		AB.setState(entry.state);
+	}
+}
+
+function attnBtnClick(doClose, aBrowser) {
+	// handler for btn click of all btns
+	// this == {inststate:aInstState, btn:aInstState.aBtns[i]}
+	console.log('attn btn clicked');
+}
+
+function attnMenuClick(doClose, aBrowser) {
+	// handler for menuitem click of all menuitem
+	// this == {inststate:AB.Insts[aCloseCallbackId].state, btn:aBtnEntry, menu:jMenu, menuitem:jEntry}
+}
 
 // start - common helper functions
 function Deferred() {
