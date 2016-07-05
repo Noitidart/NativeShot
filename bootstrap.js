@@ -162,6 +162,8 @@ function shutdown(aData, aReason) {
 	}
 
 	windowListener.unregister();
+
+	AB.uninit();
 }
 
 // start - addon functions
@@ -917,6 +919,14 @@ function processAction(aArg, aReportProgress) {
 			serviceid: shot.serviceid,
 			reason: 'INIT'
 		});
+
+		callInMainworker('bootstrapTimeout', 1000, function() {
+			attnUpdate(shot.sessionid, {
+				actionid: shot.actionid,
+				serviceid: shot.serviceid,
+				reason: 'SUCCESS'
+			});
+		});
 	}
 
 	var deferred_processed = (aReportProgress ? new Deferred() : undefined);
@@ -963,7 +973,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 	var entry = gAttn[aSessionId];
 
 	if (aUpdateInfo) {
-		var { actionid, serviceid } = aUpdateInfo;
+		var { actionid, serviceid, reason, data } = aUpdateInfo;
 
 		// check should create entry?
 		if (!entry) {
@@ -971,6 +981,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 				state: { // this is live reference being used to AB.setState
 					aTxt: (new Date(aSessionId).toLocaleString()),
 					aPriority: 1,
+					aIcon: core.addon.path.images + 'icon16.png',
 					aBtns: [] // each entry is an object. so i give it a key `meta` which is ignored by the AttnBar module
 				},
 				shown: false
@@ -991,18 +1002,30 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 
 		// check if should add btn
 		if (!btn) {
+			console.error('btn with actionid', actionid, 'not found in btns:', JSON.parse(JSON.stringify(btns)));
 			var btn = {
 				bClick: attnBtnClick,
 				bTxt: 'uninitialized',
-				meta: {
+				meta: { // for use when attnBtnClick access this.btn.meta
 					actionid
 				}
 			};
+			btns.push(btn);
 		}
 
 		// always update btn based on serviceid, reason, and data
 		var meta = btn.meta;
 		meta.serviceid = serviceid;
+		meta.reason = reason;
+		switch (reason) {
+			case 'INIT':
+					btn.bTxt = formatStringFromNameCore('initializing', 'main');
+					btn.bIcon = core.addon.path.images + meta.serviceid + '16.png';
+					btn.bDisabled = true;
+				break;
+			case 'SUCCESS':
+				btn.bDisabled = undefined;
+		}
 		switch (serviceid) {
 
 		}
@@ -1010,7 +1033,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 
 	// should show it?
 	if (entry && !entry.shown && gSession.id !== aSessionId) { // `entry &&` because if there is no aUpdateInfo was ever provided, then there is no bar to show. and when `exitEditors` calls `updateAttn(sessionid)` meaning without 2nd arg, it will find there is nothing to show
-		AB.setState(entry.state);
+		gAttn[aSessionId].state = AB.setState(entry.state);
 	}
 }
 
