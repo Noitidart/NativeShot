@@ -260,6 +260,7 @@ function takeShot() {
 		// the most recent browser window when screenshot was taken
 		var domwin = Services.wm.getMostRecentWindow('navigator:browser');
 		gSession.domwin_wk = Cu.getWeakReference(domwin);
+		gSession.domwin = domwin;
 		gSession.domwin_was_focused = isFocused(domwin);
 
 		// create allMonDimStr
@@ -313,6 +314,7 @@ function takeShot() {
 
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 			shot.domwin_wk = Cu.getWeakReference(editor_domwin);
+			shot.domwin = editor_domwin;
 		}
 
 		console.log('collMonInfos:', collMonInfos);
@@ -334,6 +336,10 @@ function editorInitShot(aIMon) {
 	// }
 
 	var domwin = getStrongReference(shot.domwin_wk);
+	if (!domwin) {
+		Services.prompt(null, 'domwin of shot is dead', 'dead');
+	}
+	var domwin = shot.domwin;
 	var aHwndPtrStr = getNativeHandlePtrStr(domwin);
 	shot.hwndPtrStr = aHwndPtrStr;
 
@@ -486,7 +492,7 @@ function exitEditors(aArg) {
 			}
 			shots[i].comm.putMessage('removeUnload', undefined, function(adomwin) {
 				adomwin.close();
-			}.bind(null, domwin));
+			}.bind(null, shots[i].domwin));
 		}
 	}
 
@@ -1088,10 +1094,12 @@ function getStrongReference(aWkRef) {
 		strongRef = aWkRef.get();
 		if (!strongRef) {
 			// no longer exists
+			console.error('weak ref is dead due to !:', strongRef);
 			return null;
 		}
 	} catch(ex) {
 		// it no longer exists
+		console.error('weak ref is dead due to exception:', ex);
 		return null;
 	}
 	return strongRef;
