@@ -16,6 +16,81 @@ var callInOcrComm = Comm.callInX.bind(null, 'gOcrComm', null);
 var gHydrants; // keys are getPage() names, like NewRecordingPage and value is an object which is its hydrant
 var gEditorStateStr;
 
+var gHold = {};
+// key is serviceid + '-' + HOLD_CONST OR actionid + '-' + HOLD_CONST
+	// for updating state to gui, run the do not run serviceid gui update callback if the actionid is pending
+	// reason + HOLD_CONST is because we can do the processing up till that HOLD_CONST then hold
+	// for actionid i dont need hte + '-' + HOLD_CONST but to have same flow i include it
+	// all HOLD_CONST should start with HOLD_
+// value is object with keys `reason` and `resumers`
+	// twitter: { reason:'HOLD_NEEDS_OAUTH', resumers:[resume_all, resumer...] }
+	// [actionid]: { reason:'HOLD_ERROR', resumers:[resumer] }
+		// resumers is an array (even for [actionid] but in this case it just has one entry)
+			// resumer is an object:
+				// { shot, aActionFlowReenterer, aActionFinalizer, aReportProgress }
+
+function getHoldKey(actionid_serviceid, reason) {
+	if (!reason.startsWith('HOLD_')) { console.error('deverror, reason should start with HOLD_ it is:', reason); throw new Error('deverror, reason should start with HOLD_ it is: ' + reason); }
+	return actionid_serviceid + '-' + reason;
+}
+function buildResumer(aActionFlowReenterer, aActionFinalizer, aReportProgress) {
+	return { aActionFlowReenterer, aActionFinalizer, aReportProgress };
+}
+const CHECK = 'CHECK'; const FINALIZE = 'FINALIZE'; const PROGRESS = 'PROGRESS'; const CANCEL = 'CANCEL'; const REENTER = 'REENTER'; const PLACE = 'PLACE';
+function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithOrResumer) {
+	// reason is hold_const so meaning must start with HOLD_
+	// aAct enum - FINALIZE, PROGRESS, CANCEL, REENTER, CHECK, PLACE
+	// aFinalizeWithOrProgressWithOrResumer should only be set if aAct is FINALIZE(aFinalizeWith) or PROGRESS(aProgressWith) or CHECK(resumer) or PLACE(resumer)
+	// when doing CHECK, setting aFinalizeWithOrProgressWithOrResumer is optional, as maybe devuser wants to just check. but if it is set it should be the callback to reenter with, and it will queue it up if check yeields that it is on hold. should build one with buildResumer()
+	// return values
+	/*
+		CHECK
+			true - if not on hold
+			false - if on hold
+		CANCEL/FINALIZE/PROGRESS/REENTER
+			true - if anything canceled/finalized/progressed/reentered
+			false - if nothing done
+		PLACE
+			true - if newly placed, resumers is just this resumer
+			false - if already was there, and just added resumer to the array
+	*/
+	if (actionid !== undefined && serviceid !== undefined) { console.error('deverror: must pass either actionid or serviceid, not both!', 'actionid:', actionid, 'serviceid:', serviceid); throw new Error('deverror: must pass either actionid or serviceid, not both!'); }
+	if (!reason.startsWith('HOLD_')) { console.error('deverror, reason should start with HOLD_ it is:', reason); throw new Error('deverror, reason should start with HOLD_ it is: ' + reason); }
+
+	// build hold_key, and set byid
+	var hold_key = actionid_serviceid + '-' + reason;
+
+	var hold = gHold[hold_key];
+	switch (aAct) {
+		PLACE:
+			var resumer = aFinalizeWithOrProgressWithOrResumer;
+			if (hold) {
+				gHold[hold_key].resumers.push(resumer);
+				return false;
+			} else {
+				gHold[hold_key] = {
+					reason,
+					resumers: [resumer]
+				};
+				return true;
+			}
+		CHECK:
+				if (hold) {
+					// its on hold
+					var resumer = aFinalizeWithOrProgressWithOrResumer;
+					if (resumer) {
+						// then add this resumer
+						hold.resumers.push(resumer);
+					}
+					return false;
+				} else {
+					// its not on hold
+					return true;
+				}
+			break;
+	}
+}
+
 function dummyForInstantInstantiate() {}
 function init(objCore) {
 	//console.log('in worker init');
