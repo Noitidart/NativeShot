@@ -33,8 +33,8 @@ function getHoldKey(actionid_serviceid, reason) {
 	if (!reason.startsWith('HOLD_')) { console.error('deverror, reason should start with HOLD_ it is:', reason); throw new Error('deverror, reason should start with HOLD_ it is: ' + reason); }
 	return actionid_serviceid + '-' + reason;
 }
-function buildResumer(aActionFlowReenterer, aActionFinalizer, aReportProgress) {
-	return { aActionFlowReenterer, aActionFinalizer, aReportProgress };
+function buildResumer(shot, aActionFinalizer, aReportProgress, aActionFlowReenterer) {
+	return { shot, aActionFinalizer, aReportProgress, aActionFlowReenterer };
 }
 const CHECK = 'CHECK'; const FINALIZE = 'FINALIZE'; const PROGRESS = 'PROGRESS'; const CANCEL = 'CANCEL'; const REENTER = 'REENTER'; const PLACE = 'PLACE';
 function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithOrResumer) {
@@ -54,7 +54,6 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 			true - if newly placed, resumers is just this resumer
 			false - if already was there, and just added resumer to the array
 	*/
-	if (actionid !== undefined && serviceid !== undefined) { console.error('deverror: must pass either actionid or serviceid, not both!', 'actionid:', actionid, 'serviceid:', serviceid); throw new Error('deverror: must pass either actionid or serviceid, not both!'); }
 	if (!reason.startsWith('HOLD_')) { console.error('deverror, reason should start with HOLD_ it is:', reason); throw new Error('deverror, reason should start with HOLD_ it is: ' + reason); }
 
 	// build hold_key, and set byid
@@ -62,19 +61,35 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 
 	var hold = gHold[hold_key];
 	switch (aAct) {
-		PLACE:
-			var resumer = aFinalizeWithOrProgressWithOrResumer;
-			if (hold) {
-				gHold[hold_key].resumers.push(resumer);
-				return false;
-			} else {
-				gHold[hold_key] = {
-					reason,
-					resumers: [resumer]
-				};
-				return true;
-			}
-		CHECK:
+		case PLACE:
+
+				var resumer = aFinalizeWithOrProgressWithOrResumer;
+				console.log('resumer:', resumer);
+
+				if (hold) {
+					gHold[hold_key].resumers.push(resumer);
+				} else {
+					gHold[hold_key] = {
+						reason,
+						resumers: [resumer]
+					};
+				}
+
+				resumer.aReportProgress({
+					// no need to add in actionid as bootstrap side will handle adding that in crossfile-link393
+					serviceid: resumer.shot.serviceid,
+					reason
+				});
+
+				if (hold) {
+					return false;
+				} else {
+					return true;
+				}
+
+			break;
+		case CHECK:
+
 				if (hold) {
 					// its on hold
 					var resumer = aFinalizeWithOrProgressWithOrResumer;
@@ -87,6 +102,7 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 					// its not on hold
 					return true;
 				}
+
 			break;
 	}
 }
@@ -2530,7 +2546,7 @@ function genericOnUploadProgress(rec, aReportProgress, e) {
 };
 
 ////// start - non-oauth actions
-function action_browse(rec, aActionFinalizer, aReportProgress) {}
+
 ////// start - non-oauth actions
 
 
@@ -2641,9 +2657,20 @@ function bootstrapTimeout(milliseconds) {
 	return mainDeferred_bootstrapTimeout.promise;
 }
 
+// reaons:
+var reason = {
+	HOLD_ERROR: 'HOLD_ERROR'
+};
+
 // start action functions
 gWorker['action_save-quick'] = function(shot, aActionFinalizer, aReportProgress) {
-	OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
+
+	try {
+		throw 'rawr';
+		OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
+	} catch(OSFileError) {
+		withHold(PLACE, shot.actionid, reason.HOLD_ERROR, buildResumer( ...arguments, gWorker['action_save-quick'].bind(...arguments) ));
+	}
 }
 gWorker['action_save-browse'] = function(shot, aActionFinalizer, aReportProgress) {
 

@@ -920,13 +920,13 @@ function processAction(aArg, aReportProgress) {
 			reason: 'INIT'
 		});
 
-		callInMainworker('bootstrapTimeout', 1000, function() {
-			attnUpdate(shot.sessionid, {
-				actionid: shot.actionid,
-				serviceid: shot.serviceid,
-				reason: 'SUCCESS'
-			});
-		});
+		// callInMainworker('bootstrapTimeout', 1000, function() {
+		// 	attnUpdate(shot.sessionid, {
+		// 		actionid: shot.actionid,
+		// 		serviceid: shot.serviceid,
+		// 		reason: 'SUCCESS'
+		// 	});
+		// });
 	}
 
 	var deferred_processed = (aReportProgress ? new Deferred() : undefined);
@@ -936,7 +936,12 @@ function processAction(aArg, aReportProgress) {
 
 		// update attn bar
 		if (core.os.name != 'android') {
-
+			callInMainworker('bootstrapTimeout', 1000, function() {
+				attnUpdate(shot.sessionid, Object.assign(
+					{ actionid:shot.actionid }, // crossfile-link393
+					aArg2
+				));
+			});
 		}
 
 		if (aReportProgress) {
@@ -1022,9 +1027,36 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bTxt = formatStringFromNameCore('initializing', 'main');
 					btn.bIcon = core.addon.path.images + meta.serviceid + '16.png';
 					btn.bDisabled = true;
+					btn.bType = 'button';
 				break;
 			case 'SUCCESS':
-				btn.bDisabled = undefined;
+					btn.bDisabled = undefined;
+					btn.bType = 'button';
+				break;
+			case 'HOLD_ERROR':
+					// HOLD_ means user can resume this error, but user input is needed
+					// if I make a 'ERROR' reason, then that is permanent fail, unrecoverable by user, but i dont plan for this unrecoverable nature
+					btn.bDisabled = undefined;
+					btn.bType = 'menu-button';
+					btn.bTxt = formatStringFromNameCore('hold_error', 'main')
+					// offer menu to display error, or to switch to any of the other services
+					btn.bMenu = [];
+					btn.bMenu.push({
+						cTxt: 'show error details'
+					});
+					btn.bMenu.push({
+						cSeperator: true
+					});
+					btn.bMenu.push({
+						cTxt: 'upload to imgur instead'
+					});
+					for (menuitem of btn.bMenu) {
+						if (!menuitem.cSeperator) {
+							menuitem.onClick = attnMenuClick;
+						}
+					}
+
+				break;
 		}
 		switch (serviceid) {
 
