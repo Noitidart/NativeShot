@@ -120,22 +120,22 @@ function init(objCore) {
 	addOsInfoToCore();
 
 	core.addon.path.storage = OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id, 'simple-storage');
-	core.addon.path.log = OS.Path.join(core.addon.path.storage, 'history-log.unbracketed.json');
-	core.addon.path.editorstate = OS.Path.join(core.addon.path.storage, 'editorstate.json');
-	core.addon.path.prefs = OS.Path.join(core.addon.path.storage, 'prefs.json');
+	core.addon.path.filestore = OS.Path.join(core.addon.path.storage, 'store.json');
+
+	// keys in store:
+		// prefs
+		// hydrants
+		// log
+		// editorstate
+
+	// core.addon.path.log = OS.Path.join(core.addon.path.storage, 'history-log.unbracketed.json');
+	// core.addon.path.editorstate = OS.Path.join(core.addon.path.storage, 'editorstate.json');
+	// core.addon.path.prefs = OS.Path.join(core.addon.path.storage, 'prefs.json');
 
 	// load all localization pacakages
 	formatStringFromName('blah', 'main');
 	formatStringFromName('blah', 'app');
 	core.addon.l10n = _cache_formatStringFromName_packages;
-
-	// get editor state
-	try {
-		gEditorStateStr = OS.File.read(core.addon.path.editorstate, {encoding:'utf-8'});
-		console.log('editorstateStr:', editorstateStr);
-	} catch(OSFileError) {
-		console.log('OSFileError on read editorstate:', OSFileError);
-	}
 
 	// Import ostypes
 	importScripts(core.addon.path.scripts + 'ostypes/cutils.jsm');
@@ -191,7 +191,7 @@ function init(objCore) {
 self.onclose = function() {
 	console.log('doing mainworker term proc');
 
-	writePrefsToFile();
+	writeFilestore();
 
 	Comm.server.unregAll('worker');
 
@@ -216,10 +216,6 @@ self.onclose = function() {
 // start - Comm functions
 function fetchCore() {
 	return core;
-}
-function updateEditorState(aArg) {
-	gEditorStateStr = aArg;
-	// writeThenDir(core.addon.path.editorstate, gEditorStateStr, OS.Constants.Path.profileDir);
 }
 // end - Comm functions
 
@@ -2549,44 +2545,103 @@ function genericOnUploadProgress(rec, aReportProgress, e) {
 
 ////// start - non-oauth actions
 
-
-// start - functions called by bootstrap
-function fetchHydrant(head, aComm) {
-	// returns undefined if no hydrant, otherwise the page will overwrite its hydrant with an empty object which will screw up all the default values for redux
-
-	if (!gHydrants) {
+var gFilestore;
+var gFilestoreDefaultGetters = [ // after default is set, it runs all these functions
+	() => gFilestoreDefault.prefs.quick_save_dir = getSystemDirectory('Pictures')
+];
+var gFilestoreDefault = {
+	prefs: {
+		// quick_save_dir: getSystemDirectory('Pictures'), // getter
+		print_preview: false,
+		system_hotkey: true
+	},
+	log: [],
+	editorstate: undefined,
+	oauth: {}
+	// hydrants: { // redux related
+	// 	options: {}
+	// }
+};
+function readFilestore() {
+	// reads from disk, if not found, it uses the default filestore
+	if (!gFilestore) {
 		try {
-			gHydrants = JSON.parse(OS.File.read(OS.Path.join(core.addon.path.storage, 'hydrants.json'), {encoding:'utf-8'}));
+			gFilestore = JSON.parse(OS.File.read(core.addon.path.filestore, {encoding:'utf-8'}));
 		} catch (OSFileError) {
 			if (OSFileError.becauseNoSuchFile) {
-				gHydrants = {};
+				gFilestore = gFilestoreDefault ? gFilestoreDefault : {};
+				// run default getters
+				for (var getter of getters) {
+					getter();
+				}
 			}
 			else { console.error('OSFileError:', OSFileError); throw new Error('error when trying to ready hydrant:', OSFileError); }
 		}
 	}
 
-	return gHydrants[head];
+	return gFilestore;
 }
 
-var gWriteHydrantsTimeout;
-function updateHydrant(aArg, aComm) {
-	var { head, hydrant } = aArg;
-	gHydrants[head] = hydrant;
+function updateFilestoreEntry(aArg, aComm) {
+	// updates in memory (global), does not write to disk
+	// if gFilestore not yet read, it will readFilestore first
 
-	if (gWriteHydrantsTimeout) {
-		clearTimeout(gWriteHydrantsTimeout);
+	var { mainkey, value, key } = aArg;
+	// key is optional. if key is not set, then gFilestore[mainkey] is set to value
+	// if key is set, then gFilestore[mainkey][key] is set to value
+
+	// REQUIRED: mainkey, value
+
+	if (!gFilestore) {
+		readFilestore();
 	}
-	gWriteHydrantsTimeout = setTimeout(writeHydrants, 30000);
-}
 
-function writeHydrants() {
-	gWriteHydrantsTimeout = null;
-	if (gHydrants) {
-		console.error('writing hydrants.json');
-		writeThenDir(OS.Path.join(core.addon.path.storage, 'hydrants.json'), JSON.stringify(gHydrants), OS.Constants.Path.profileDir);
+	if (key) {
+		gFilestore[mainkey][key] = value;
+	} else {
+		gFilestore[mainkey] = value;
 	}
 }
 
+function fetchFilestoreEntry(aArg) {
+	var { mainkey, key } = aArg;
+	// key is optional. if key is not set, then gFilestore[mainkey] is returned
+	// if key is set, then gFilestore[mainkey][key] is returned
+
+	// REQUIRED: mainkey
+
+	if (!gFilestore) {
+		readFilestore();
+	}
+
+	if (key) {
+		return gFilestore[mainkey][key];
+	} else {
+		gFilestore[mainkey];
+	}
+}
+
+function writeFilestore(aArg, aComm) {
+	// writes gFilestore to file (or if it is undefined, it writes gFilestoreDefault)
+	writeThenDir(core.addon.path.filestore, JSON.stringify(gFilestore || gFilestoreDefault), OS.Constants.Path.profileDir);
+}
+
+// specific to nativeshot filestore functions
+function updateLog(aArg) {
+	var entry = aArg;
+
+	if (!gFilestore) {
+		readFilestore();
+	}
+
+	gFilestore.log.push(entry);
+	// updateFilestore({
+	// 	mainkey: 'log',
+	// 	value: gFilestore.log.push(entry)
+	// });
+
+}
+// start - functions called by bootstrap
 var gCountdown = undefined; // undefiend when idle. null when cancelled. int of seconds left when in progress
 var gCountdownInterval;
 function countdownStartOrIncrement(aArg, aReportProgress) {
@@ -3067,7 +3122,7 @@ function getSystemDirectory(type) {
 	// for each type, guranteed to return a string
 
 	// resolves to string
-	// type - string - enum: Videos
+	// type - string - enum: Videos, Pictures
 	var deferredMain_getSystemDirectory = new Deferred();
 
 	if (_cache_getSystemDirectory[type]) {
@@ -3084,6 +3139,16 @@ function getSystemDirectory(type) {
 						darwin: { type:'Mov', route:TYPE_ROUTE_BOOTSTRAP },
 						gtk: { type:'XDGVids', route:TYPE_ROUTE_BOOTSTRAP },
 						android: { type:'DIRECTORY_MOVIES', route:TYPE_ROUTE_ANDROID }
+					};
+
+				break;
+			case 'Pictures':
+
+					var platform = {
+						winnt: { type:'Pict', route:TYPE_ROUTE_BOOTSTRAP },
+						darwin: { type:'Pct', route:TYPE_ROUTE_BOOTSTRAP },
+						gtk: { type:'XDGPict', route:TYPE_ROUTE_BOOTSTRAP },
+						android: { type:'DIRECTORY_PICTURES', route:TYPE_ROUTE_ANDROID }
 					};
 
 				break;

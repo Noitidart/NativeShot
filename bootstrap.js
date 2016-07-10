@@ -99,7 +99,7 @@ function startup(aData, aReason) {
     ({ callInMainworker, callInContentinframescript, callInFramescript, callInContent1 } = CommHelper.bootstrap);
 
     gWkComm = new Comm.server.worker(core.addon.path.scripts + 'MainWorker.js?' + core.addon.cache_key, ()=>core, function(aArg, aComm) {
-        ({ core, gEditorStateStr} = aArg);
+        ({ core } = aArg);
 
 		gFsComm = new Comm.server.framescript(core.addon.id);
 
@@ -138,7 +138,7 @@ function startup(aData, aReason) {
 
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) {
-		callInMainworker('writePrefsToFile');
+		callInMainworker('writeFilestore');
 		return;
 	}
 
@@ -246,39 +246,60 @@ function guiSetBadge(aTxt) {
 
 function takeShot() {
 	gSession.id = Date.now();
-	callInMainworker('shootAllMons', undefined, function(aArg) {
-		var { collMonInfos } = aArg;
-		for (var i=0; i<collMonInfos.length; i++) {
-			collMonInfos[i].arrbuf = aArg['arrbuf' + i];
+	// start - async-proc939333
+	var shots;
+	var allMonDimStr;
+	var shootAllMons = function() {
+		callInMainworker('shootAllMons', undefined, function(aArg) {
+			({ collMonInfos } = aArg);
 
-			collMonInfos[i].port1 = aArg['screenshot' + i + '_port1'];
-			collMonInfos[i].port2 = aArg['screenshot' + i + '_port2'];
-		}
+			for (var i=0; i<collMonInfos.length; i++) {
+				collMonInfos[i].arrbuf = aArg['arrbuf' + i];
 
-		// call it shots
-		var shots = collMonInfos;
-		gSession.shots = shots;
+				collMonInfos[i].port1 = aArg['screenshot' + i + '_port1'];
+				collMonInfos[i].port2 = aArg['screenshot' + i + '_port2'];
+			}
 
-		// the most recent browser window when screenshot was taken
-		var domwin = Services.wm.getMostRecentWindow('navigator:browser');
-		gSession.domwin_wk = Cu.getWeakReference(domwin);
-		gSession.domwin = domwin;
-		gSession.domwin_was_focused = isFocused(domwin);
+			// call it shots
+			shots = collMonInfos;
+			gSession.shots = shots;
 
-		// create allMonDimStr
-		var allMonDim = [];
-		for (var shot of shots) {
-			allMonDim.push({
-				x: shot.x,
-				y: shot.y,
-				w: shot.w,
-				h: shot.h
-				// win81ScaleX: shot.win81ScaleX,
-				// win81ScaleY: shot.win81ScaleY
+			// the most recent browser window when screenshot was taken
+			var domwin = Services.wm.getMostRecentWindow('navigator:browser');
+			gSession.domwin_wk = Cu.getWeakReference(domwin);
+			gSession.domwin = domwin;
+			gSession.domwin_was_focused = isFocused(domwin);
+
+			// create allMonDimStr
+			var allMonDim = [];
+			for (var shot of shots) {
+				allMonDim.push({
+					x: shot.x,
+					y: shot.y,
+					w: shot.w,
+					h: shot.h
+					// win81ScaleX: shot.win81ScaleX,
+					// win81ScaleY: shot.win81ScaleY
+				});
+			}
+			allMonDimStr = JSON.stringify(allMonDim);
+
+			ensureGlobalEditorstate();
+		});
+	};
+
+	var ensureGlobalEditorstate = function() {
+		if (!gEditorStateStr) {
+			callInMainworker('fetchFilestoreEntry', {mainkey:'editorstate'}, function(aArg) {
+				gEditorStateStr = aArg;
+				openEditorWins();
 			});
+		} else {
+			openEditorWins();
 		}
-		var allMonDimStr = JSON.stringify(allMonDim);
+	};
 
+	var openEditorWins = function() {
 		// open window for each shot
 		var i = -1;
 		for (var shot of shots) {
@@ -320,7 +341,10 @@ function takeShot() {
 		}
 
 		console.log('collMonInfos:', collMonInfos);
-	});
+	};
+
+	shootAllMons();
+	// end - async-proc939333
 }
 
 // start - functions called by editor
@@ -533,7 +557,10 @@ function exitEditors(aArg) {
 
 	gEditorStateStr = aArg.editorstateStr;
 	console.log('set gEditorStateStr to:', gEditorStateStr);
-	callInMainworker('updateEditorState', gEditorStateStr);
+	callInMainworker('updateFilestoreEntry', {
+		mainkey: 'editorstate',
+		value: gEditorStateStr
+	});
 }
 
 var gUsedSelections = []; // array of arrays. each child is [subcutout1, subcutout2, ...]
