@@ -2753,13 +2753,19 @@ function action_ocrad(shot, aActionFinalizer, aReportProgress) {
 
 }
 function action_googleimages(shot, aActionFinalizer, aReportProgress) {
-
+	const GIMAGES_URL = 'https://images.google.com/searchbyimage/upload';
 }
 function action_bing(shot, aActionFinalizer, aReportProgress) {
 
 }
 function action_tineye(shot, aActionFinalizer, aReportProgress) {
 
+}
+function action_twitter(shot, aActionFinalizer, aReportProgress) {
+	const TWITTER_URL = 'https://twitter.com/';
+	const IMG_SUFFIX = ':large';
+	const MAX_FILE_SIZE = 5242880; //  // i got this from doing debugger prettify on twitter javascript files
+	const MAX_UPLOAD_FILE_SIZE = 3145728; //  // i got this from doing debugger prettify on twitter javascript files
 }
 // end action functions
 
