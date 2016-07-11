@@ -40,7 +40,6 @@ var core = {
 			// below are added by worker
 			// storage: OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id, 'simple-storage')
 		},
-		pref_branch: 'extensions.NativeShot@jetpack.',
 		cache_key: Math.random() // set to version on release
 	},
 	os: {
@@ -53,6 +52,85 @@ var core = {
 		pid: Services.appinfo.processID,
 		version: Services.appinfo.version,
 		channel: Services.prefs.getCharPref('app.update.channel')
+	},
+	nativeshot: {
+		services: {
+			imguranon: {
+				code: 0,
+				type: 'upload',
+				datatype: 'png_arrbuf'
+			},
+			twitter: {
+				code: 1,
+				type: 'share',
+				datatype: 'png_dataurl'
+			},
+			copy: {
+				code: 2,
+				type: 'system',
+				datatype: 'png_dataurl'
+			},
+			print: {
+				code: 3,
+				type: 'system',
+				datatype: 'png_dataurl'
+			},
+			savequick: {
+				code: 4,
+				type: 'system',
+				datatype: 'png_arrbuf'
+			},
+			savebrowse: {
+				code: 5,
+				type: 'system',
+				datatype: 'png_arrbuf'
+			},
+			tineye: {
+				code: 7,
+				type: 'search',
+				datatype: 'png_arrbuf'
+			},
+			googleimages: {
+				code: 8,
+				type: 'search',
+				datatype: 'png_arrbuf'
+			},
+			dropbox: {
+				code: 9,
+				type: 'upload',
+				datatype: 'png_arrbuf'
+			},
+			imgur: {
+				code: 10,
+				type: 'upload',
+				datatype: 'png_arrbuf'
+			},
+			gdrive: {
+				code: 11,
+				type: 'upload',
+				datatype: 'png_arrbuf'
+			},
+			gocr: {
+				code: 12,
+				type: 'ocr',
+				datatype: 'plain_arrbuf'
+			},
+			ocrad: {
+				code: 13,
+				type: 'ocr',
+				datatype: 'plain_arrbuf'
+			},
+			tesseract: {
+				code: 14,
+				type: 'ocr',
+				datatype: 'plain_arrbuf'
+			},
+			ocrall: {
+				code: 15,
+				type: 'ocr',
+				datatype: 'plain_arrbuf'
+			}
+		}
 	}
 };
 
@@ -60,7 +138,7 @@ var gBootstrap;
 
 var gWkComm;
 var gFsComm;
-var callInMainworker, callInContentinframescript, callInFramescript, callInContent1;
+var callInMainworker, callInContentinframescript, callInFramescript;
 
 var gAndroidMenuIds = [];
 
@@ -96,7 +174,7 @@ function uninstall(aData, aReason) {
 function startup(aData, aReason) {
 
     Services.scriptloader.loadSubScript(core.addon.path.scripts + 'comm/Comm.js', gBootstrap);
-    ({ callInMainworker, callInContentinframescript, callInFramescript, callInContent1 } = CommHelper.bootstrap);
+    ({ callInMainworker, callInContentinframescript, callInFramescript } = CommHelper.bootstrap);
 
     gWkComm = new Comm.server.worker(core.addon.path.scripts + 'MainWorker.js?' + core.addon.cache_key, ()=>core, function(aArg, aComm) {
         ({ core } = aArg);
@@ -1058,7 +1136,34 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 				break;
 			case 'SUCCESS':
 					btn.bDisabled = undefined;
-					btn.bType = 'button';
+					btn.bType = 'menu-button';
+
+					var success_suffix = core.nativeshot.services[meta.serviceid].type;
+					switch (meta.serviceid) {
+						case 'copy':
+						case 'print':
+							success_suffix = meta.serviceid;
+					}
+					btn.bTxt = formatStringFromName('success_' + success_suffix, 'main');
+
+					if (meta.serviceid == 'print') {
+						btn.bMenu.push({
+							cTxt: formatStringFromName('printagain', 'main')
+						});
+						btn.bMenu.push({
+							cSeperator: true
+						});
+					}
+
+					// add the alternative services
+					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
+
+					// give each menuitem the attnMenuClick
+					for (menuitem of btn.bMenu) {
+						if (!menuitem.cSeperator) {
+							menuitem.onClick = attnMenuClick;
+						}
+					}
 				break;
 			case 'HOLD_ERROR':
 					// HOLD_ means user can resume this error, but user input is needed
@@ -1069,14 +1174,19 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					// offer menu to display error, or to switch to any of the other services
 					btn.bMenu = [];
 					btn.bMenu.push({
-						cTxt: 'show error details'
+						cTxt: formatStringFromNameCore('retry', 'main')
+					});
+					btn.bMenu.push({
+						cTxt: formatStringFromNameCore('show_error_details', 'main')
 					});
 					btn.bMenu.push({
 						cSeperator: true
 					});
-					btn.bMenu.push({
-						cTxt: 'upload to imgur instead'
-					});
+
+					// add the alternative services
+					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
+
+					// give each menuitem the attnMenuClick
 					for (menuitem of btn.bMenu) {
 						if (!menuitem.cSeperator) {
 							menuitem.onClick = attnMenuClick;
@@ -1105,6 +1215,57 @@ function attnBtnClick(doClose, aBrowser) {
 function attnMenuClick(doClose, aBrowser) {
 	// handler for menuitem click of all menuitem
 	// this == {inststate:AB.Insts[aCloseCallbackId].state, btn:aBtnEntry, menu:jMenu, menuitem:jEntry}
+}
+
+function addAltServiceMenuitems(aBtnsArr, aSkipServiceid) {
+	var ignore_menuitem_txt = formatStringFromNameCore(aSkipServiceid, 'main');
+
+	var mainmenu_txts = [];
+	var submenu_txts = {};
+	for (var a_service in core.nativeshot.services) {
+		var menu_txt = formatStringFromNameCore(core.nativeshot.services[a_service].type, 'main');
+		if (!mainmenu_txts.includes(menu_txt)) {
+			mainmenu_txts.push(menu_txt);
+		}
+
+		if (!submenu_txts[menu_txt]) {
+			submenu_txts[menu_txt] = [];
+		}
+		submenu_txts[menu_txt].push(formatStringFromNameCore(a_service, 'main'));
+	}
+	mainmenu_txts.sort();
+
+	for (var menu_txt of mainmenu_txts) {
+		var btns_entry = {
+			cTxt: menu_txt,
+			cMenu: []
+		};
+		var menuitem_txts = submenu_txts[menu_txt];
+		menuitem_txts.sort();
+		for (var txt of menuitem_txts) {
+			if (txt != ignore_menuitem_txt) {
+				btns_entry.cMenu.push({
+					cTxt: txt
+				});
+			}
+		}
+
+		if (btns_entry.cMenu.length) {
+			aBtnsArr.push(btns_entry);
+		}
+	}
+}
+
+function getServiceFromCode(servicecode) {
+	console.log('getting service from id of:', servicecode);
+	for (var a_serviceid in core.nativeshot.services) {
+		if (core.nativeshot.services[a_serviceid].code === servicecode) {
+			return {
+				serviceid: a_serviceid,
+				entry: core.nativeshot.services[a_serviceid]
+			};
+		}
+	}
 }
 
 // start - common helper functions

@@ -339,10 +339,10 @@ function fullfillCompositeRequest(aData) {
 				break;
 			case 'Save':
 
-					oauthServiceName = 'save-' + sub.toLowerCase();
-					if (!boolclose && oauthServiceName == 'save-browse') {
-						oauthServiceName = 'save-browse-canvas';
-					}
+					oauthServiceName = 'save' + sub.toLowerCase();
+					// if (!boolclose && oauthServiceName == 'savebrowse') {
+					// 	oauthServiceName = 'save-browse-canvas';
+					// }
 
 				break;
 			case 'Upload':
@@ -383,12 +383,12 @@ function fullfillCompositeRequest(aData) {
 							break;
 						case 'Google':
 
-								oauthServiceName = 'google-images';
+								oauthServiceName = 'googleimages';
 
 							break;
 						case 'Bing':
 
-								oauthServiceName = 'bingimages';
+								oauthServiceName = 'bing';
 
 							break;
 						default:
@@ -419,12 +419,6 @@ function fullfillCompositeRequest(aData) {
 		};
 
 		// holds oauthServiceName which is serviceid
-		var action_data_type = {
-			png_dataurl: ['twitter', 'copy', 'print'],
-			plain_arrbuf: ['ocrall', 'gocr', 'ocrad', 'tesseract'],
-			png_arrbuf: []
-		};
-
 		var shot = {
 			sessionid: gQS.sessionid,
 			actionid: Date.now(),
@@ -449,24 +443,27 @@ function fullfillCompositeRequest(aData) {
 			}
 		};
 
-		if (action_data_type.png_dataurl.includes(oauthServiceName)) {
-			shot.dataurl = can.toDataURL('image/png', '');
-			postDataGen();
-		} else if (action_data_type.plain_arrbuf.includes(oauthServiceName)) {
-			shot.arrbuf = ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer;
-			shot.__XFER = ['arrbuf'];
-			postDataGen();
-		} else {
-			// png arrbuf actions
-			(can.toBlobHD || can.toBlob).call(can, function(b) {
-				var r = new FileReader();
-				r.onloadend = function() {
-					shot.arrbuf = r.result;
+		switch (core.nativeshot.services[oauthServiceName].datatype) {
+			case 'png_dataurl':
+					shot.dataurl = can.toDataURL('image/png', '');
+					postDataGen();
+				break;
+			case 'plain_arrbuf':
+					shot.arrbuf = ctx.getImageData(0, 0, compositeRect.width, compositeRect.height).data.buffer;
 					shot.__XFER = ['arrbuf'];
 					postDataGen();
-				};
-				r.readAsArrayBuffer(b);
-			}, 'image/png');
+				break;
+			case 'png_arrbuf':
+					(can.toBlobHD || can.toBlob).call(can, function(b) {
+						var r = new FileReader();
+						r.onloadend = function() {
+							shot.arrbuf = r.result;
+							shot.__XFER = ['arrbuf'];
+							postDataGen();
+						};
+						r.readAsArrayBuffer(b);
+					}, 'image/png');
+				break;
 		}
 
 		// debug - put this canvas on the document

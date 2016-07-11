@@ -2718,43 +2718,43 @@ var reason = {
 };
 
 // start action functions
-gWorker['action_save-quick'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_savequick(shot, aActionFinalizer, aReportProgress) {
 
 	try {
 		throw 'rawr';
 		OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
 	} catch(OSFileError) {
-		withHold(PLACE, shot.actionid, reason.HOLD_ERROR, buildResumer( ...arguments, gWorker['action_save-quick'].bind(...arguments) ));
+		withHold(PLACE, shot.actionid, reason.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(...arguments) ));
 	}
 }
-gWorker['action_save-browse'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_print'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_print(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_copy'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_copy(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_ocrall'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_ocrall(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_tesseract'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_tesseract(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_gocr'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_gocr(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_ocrad'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_ocrad(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_google-images'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_googleimages(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_bingimages'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_bing(shot, aActionFinalizer, aReportProgress) {
 
 }
-gWorker['action_tineye'] = function(shot, aActionFinalizer, aReportProgress) {
+function action_tineye(shot, aActionFinalizer, aReportProgress) {
 
 }
 // end action functions
