@@ -2721,8 +2721,12 @@ var reason = {
 function action_savequick(shot, aActionFinalizer, aReportProgress) {
 
 	try {
-		throw 'rawr';
+		// throw 'rawr';
 		OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
+		aActionFinalizer({
+			reason: 'SUCCESS',
+			serviceid: shot.serviceid
+		});
 	} catch(OSFileError) {
 		withHold(PLACE, shot.actionid, reason.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(...arguments) ));
 	}

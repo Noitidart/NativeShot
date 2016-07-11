@@ -1113,7 +1113,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 		// check if should add btn
 		if (!btn) {
 			console.error('btn with actionid', actionid, 'not found in btns:', JSON.parse(JSON.stringify(btns)));
-			var btn = {
+			btn = {
 				bClick: attnBtnClick,
 				bTxt: 'uninitialized',
 				meta: { // for use when attnBtnClick access this.btn.meta
@@ -1121,6 +1121,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 				}
 			};
 			btns.push(btn);
+			console.error('ok pushed btn:', btn);
 		}
 
 		// always update btn based on serviceid, reason, and data
@@ -1133,22 +1134,26 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bIcon = core.addon.path.images + meta.serviceid + '16.png';
 					btn.bDisabled = true;
 					btn.bType = 'button';
+
 				break;
 			case 'SUCCESS':
 					btn.bDisabled = undefined;
 					btn.bType = 'menu-button';
 
+					console.log('meta.serviceid:', meta.serviceid);
 					var success_suffix = core.nativeshot.services[meta.serviceid].type;
 					switch (meta.serviceid) {
 						case 'copy':
 						case 'print':
 							success_suffix = meta.serviceid;
 					}
-					btn.bTxt = formatStringFromName('success_' + success_suffix, 'main');
+					btn.bTxt = formatStringFromNameCore('success_' + success_suffix, 'main');
 
+					btn.bMenu = [];
+					
 					if (meta.serviceid == 'print') {
 						btn.bMenu.push({
-							cTxt: formatStringFromName('printagain', 'main')
+							cTxt: formatStringFromNameCore('printagain', 'main')
 						});
 						btn.bMenu.push({
 							cSeperator: true
@@ -1158,12 +1163,6 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					// add the alternative services
 					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
 
-					// give each menuitem the attnMenuClick
-					for (menuitem of btn.bMenu) {
-						if (!menuitem.cSeperator) {
-							menuitem.onClick = attnMenuClick;
-						}
-					}
 				break;
 			case 'HOLD_ERROR':
 					// HOLD_ means user can resume this error, but user input is needed
@@ -1186,17 +1185,19 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					// add the alternative services
 					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
 
-					// give each menuitem the attnMenuClick
-					for (menuitem of btn.bMenu) {
-						if (!menuitem.cSeperator) {
-							menuitem.onClick = attnMenuClick;
-						}
-					}
-
 				break;
 		}
 		switch (serviceid) {
+			// special stuff for serviceid
+		}
 
+		// give each menuitem the attnMenuClick
+		if (btn.bMenu) {
+			for (var menuitem of btn.bMenu) {
+				if (!menuitem.cSeperator && !menuitem.cMenu) { // seperators and mainmenu (items with submenu) dont get click events
+					menuitem.onClick = attnMenuClick;
+				}
+			}
 		}
 	}
 
@@ -1215,6 +1216,7 @@ function attnBtnClick(doClose, aBrowser) {
 function attnMenuClick(doClose, aBrowser) {
 	// handler for menuitem click of all menuitem
 	// this == {inststate:AB.Insts[aCloseCallbackId].state, btn:aBtnEntry, menu:jMenu, menuitem:jEntry}
+	console.log('attn menu clicked');
 }
 
 function addAltServiceMenuitems(aBtnsArr, aSkipServiceid) {
@@ -1245,7 +1247,8 @@ function addAltServiceMenuitems(aBtnsArr, aSkipServiceid) {
 		for (var txt of menuitem_txts) {
 			if (txt != ignore_menuitem_txt) {
 				btns_entry.cMenu.push({
-					cTxt: txt
+					cTxt: txt,
+					cClick: attnMenuClick
 				});
 			}
 		}
