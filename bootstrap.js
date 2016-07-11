@@ -1149,20 +1149,6 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					}
 					btn.bTxt = formatStringFromNameCore('success_' + success_suffix, 'main');
 
-					btn.bMenu = [];
-					
-					if (meta.serviceid == 'print') {
-						btn.bMenu.push({
-							cTxt: formatStringFromNameCore('printagain', 'main')
-						});
-						btn.bMenu.push({
-							cSeperator: true
-						});
-					}
-
-					// add the alternative services
-					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
-
 				break;
 			case 'HOLD_ERROR':
 					// HOLD_ means user can resume this error, but user input is needed
