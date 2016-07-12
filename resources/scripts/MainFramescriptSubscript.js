@@ -274,58 +274,33 @@ var progressListener = {
 				var window = webProgress.DOMWindow;
 				// console.log('progressListener :: onStateChange, DOMWindow:', window);
 
-				if (url_lower.startsWith('https://screencastify')) {
-					// if (aRequest instanceof Ci.nsIHttpChannel) {
-					// 	var aHttpChannel = aRequest.QueryInterface(Ci.nsIHttpChannel);
-					// 	console.error('progressListener :: onStateChange, aHttpChannel:', aHttpChannel);
-					// 	aHttpChannel.redirectTo(Services.io.newURI('data:text,url_blocked', null, null));
-					// } else {
-					// 	console.error('not instance of');
-					// }
-					/*
-					08:21:47 	<noit>	Aw crud, its saying NS_ERROR_NOT_AVAILABLE: Component returned failure code: 0x80040111 (NS_ERROR_NOT_AVAILABLE) [nsIChannel.contentType]
-					08:21:50 	<noit>	On Qi :(
-					08:24:33 	<palant>	nope, on nsIChannel.contentType - meaning that content type hasn't been received yet.
-					08:24:45 	<noit>	Ah
-					08:25:00 	<noit>	I tried doing aRequest.contentType = 'plain/text'; and then QI'ing nsiHTTP but that didnt work either
-					08:25:27 	<noit>	I am catching this in onStatusChange so I'll have to catch later to use redirectTo probably huh
-					08:25:33 	<palant>	not everything you get there will be an HTTP channel - do `instanceof Ci.nsIHTTPChannel`
-					08:25:47 	<noit>	ah
-					08:25:49 	<noit>	Thanks trying now
-					08:28:27 	<noit>	Wow this is nuts! So instanceof reports true, but the QI fails with that contentType error so nuts
-					08:31:43 	<noit>	I'm gonna try to recreate what redirectTo does. Looking it up
-					08:41:44 	<noit>	Crap I dont know what the heck redirectTo is doing but i figured out my too much recursion. I was setting window.location soon after calling aReqest.cancel. I wasn't waiting for the STATE_STOP. So now I wait for STATE_STOP then set window.locaiton :)
-					*/
-					if (flags & Ci.nsIWebProgressListener.STATE_START) {
-						aRequest.cancel(Cr.NS_BINDING_ABORTED);
-					} else if (flags & Ci.nsIWebProgressListener.STATE_STOP) {
-						// console.log('progressListener :: onStateChange, DOMWindow:', window);
-						if (window) {
-							window.location.href = url.replace(/https\:\/\/screencastify\/?/, 'about:screencastify');
-							console.log('progressListener :: onStateChange, ok replaced');
-						}
-					}
-				} else if (url_lower.startsWith('http://127.0.0.1/screencastify')) {
+				// imgur:
+					// approve
+						// http://127.0.0.1/nativeshot_imgur?state=1468320903449#access_token=5eaec7849849ef33b2301d37a4932e65f3de9770&expires_in=2419200&token_type=bearer&refresh_token=275599cc975f3682746a8d1a42bccdc001bde1f1&account_username=Noitidart&account_id=12688375
+					// reject
+						// http://127.0.0.1/nativeshot_imgur?error=access_denied&state=1468321161637
+				if (url_lower.startsWith('http://127.0.0.1/nativeshot_')) {
 					if (flags & Ci.nsIWebProgressListener.STATE_START) {
 						aRequest.cancel(Cr.NS_BINDING_ABORTED);
 					} else if (flags & Ci.nsIWebProgressListener.STATE_STOP) {
 						if (window) {
 							var access_denied = url_lower.includes('error=access_denied') || url_lower.includes('denied='); // `denied=` is for twitter, `error=access_denied` is for everything else
-							var authorized = !access_denied;
-							var serviceid = url_lower.match(/screencastify_([a-z]+)/)[1];
-							if (authorized) {
+							var allowed = !access_denied;
+							// var serviceid = url_lower.match(/nativeshot_([a-z]+)/)[1];
+							var serviceid = url_lower.substring(url_lower.indexOf('nativeshot_') + 11, url_lower.indexOf('?'));
+							if (allowed) {
 								callInMainworker('oauthAuthorized', {
 									serviceid,
 									href: url
 								})
 							}
-							window.location.href = 'about:screencastify?auth/' + serviceid + '/' + (authorized ? 'approved' : 'denied');
+							window.location.href = 'about:nativeshot?oauth/' + serviceid + '/' + (allowed ? 'approved' : 'denied');
 							console.log('progressListener :: onStateChange, ok replaced');
 						}
 					}
-				} else if (url_lower == 'https://api.twitter.com/oauth/authorize' && (flags & Ci.nsIWebProgressListener.STATE_STOP) && window && window.document.documentElement.innerHTML.includes('screencastify_twitter?denied=')) {
+				} else if (url_lower == 'https://api.twitter.com/oauth/authorize' && (flags & Ci.nsIWebProgressListener.STATE_STOP) && window && window.document.documentElement.innerHTML.includes('nativeshot_twitter?denied=')) {
 					// console.log('twitter auth innerHTML:', window.document.body.innerHTML);
-					window.location.href = 'about:screencastify?auth/twitter/denied';
+					window.location.href = 'about:nativeshot?oauth/twitter/denied';
 				}
 			}
 		},
@@ -349,7 +324,7 @@ function init() {
 		// addEventListener('unload', uninit, false);
 
 		pageLoader.register(); // pageLoader boilerpate
-		// progressListener.register();
+		progressListener.register();
 
 		try {
 			initAndRegisterAbout();
@@ -388,7 +363,7 @@ this.uninit = function() { // link4757484773732
 	Comm.client.unregAll('framescript');
 
 	pageLoader.unregister(); // pageLoader boilerpate
-	// progressListener.unregister();
+	progressListener.unregister();
 
 	if (aboutFactory) {
 		aboutFactory.unregister();

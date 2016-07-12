@@ -1236,7 +1236,7 @@ function attnBtnClick(doClose, aBrowser) {
 
 	switch (this.btn.bTxt) {
 		case formatStringFromNameCore('hold_user_auth_needed', 'main'):
-				Services.prompt.alert(null, '', 'opening oauth page for serviceid: ' + this.btn.meta.serviceid);
+				callInMainworker('openAuthTab', this.btn.meta.serviceid);
 			break;
 	}
 }
@@ -1297,6 +1297,58 @@ function getServiceFromCode(servicecode) {
 			};
 		}
 	}
+}
+
+function launchOrFocusOrReuseTab(aArg, aReportProgress, aComm) {
+	var { url, reuse_criteria } = aArg;
+
+	// search all tabs for url, if found then focus that tab
+	var focused = false;
+	var windows = Services.wm.getEnumerator('navigator:browser');
+	while (windows.hasMoreElements()) {
+		var window = windows.getNext();
+		var tabs = window.gBrowser.tabContainer.childNodes;
+		for (var tab of tabs) {
+			var browser = tab.linkedBrowser;
+			if (browser.currentURI.spec.toLowerCase() == url.toLowerCase()) {
+				window.focus();
+				window.gBrowser.selectedTab = tab;
+				focused = true;
+				return;
+			}
+		}
+	}
+
+	// if not found then search all tabs for reuse_criteria, on first find, use that tab and load this url (if its not already this url)
+	var reused = false;
+	if (!focused && reuse_criteria) {
+		var windows = Services.wm.getEnumerator('navigator:browser');
+		while (windows.hasMoreElements()) {
+			var window = windows.getNext();
+			var tabs = window.gBrowser.tabContainer.childNodes;
+			for (var tab of tabs) {
+				var browser = tab.linkedBrowser;
+				for (var i=0; i<reuse_criteria.length; i++) {
+					if (browser.currentURI.spec.toLowerCase().includes(reuse_criteria[i].toLowerCase())) {
+						window.focus();
+						window.gBrowser.selectedTab = tab;
+						if (browser.currentURI.spec.toLowerCase() != url.toLowerCase()) {
+							browser.loadURI(url);
+						}
+						reused = true;
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	// if nothing found for reuse then launch url in foreground of most recent browser
+	if (!reused) {
+		var window = Services.wm.getMostRecentWindow('navigator:browser');
+		window.gBrowser.loadOneTab(url, { inBackground:false, relatedToCurrent:true });
+	}
+
 }
 
 // start - common helper functions
