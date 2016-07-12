@@ -1036,29 +1036,31 @@ function processAction(aArg, aReportProgress) {
 
 	var deferred_processed = (aReportProgress ? new Deferred() : undefined);
 
-	callInMainworker('processAction', shot, function(aArg2) {
-		var { __PROGRESS } = aArg2;
-		// aArg2 does NOT need serviceid in it everytime, only if changing then it needs serviceid
-		// update attn bar
-		if (core.os.name != 'android') {
-			attnUpdate(shot.sessionid, Object.assign(
-				{ actionid:shot.actionid }, // crossfile-link393
-				aArg2
-			));
-		}
-
-		if (aReportProgress) {
-			if (__PROGRESS && gSession.id && gSession.id == shot.sessionid) {
-				// editor is still open, so tell it about the progress
-				aReportProgress(aArg2);
-			} else {
-				deferred_processed.resolve({});
-			}
-		}
-
-	});
+	callInMainworker('processAction', shot, workerProcessActionCallback.bind(null, shot, deferred_processed, aReportProgress));
 
 	return (aReportProgress ? deferred_processed.promise : undefined);
+}
+
+function workerProcessActionCallback(shot, aDeferredProcess, aReportProgress, aArg2) {
+	var { __PROGRESS } = aArg2;
+	// aArg2 does NOT need serviceid in it everytime, only if changing then it needs serviceid
+	// update attn bar
+	if (core.os.name != 'android') {
+		attnUpdate(shot.sessionid, Object.assign(
+			{ actionid:shot.actionid }, // crossfile-link393
+			aArg2
+		));
+	}
+
+	if (aReportProgress) {
+		if (__PROGRESS && gSession.id && gSession.id == shot.sessionid) {
+			// editor is still open, so tell it about the progress
+			aReportProgress(aArg2);
+		} else {
+			aDeferredProcess.resolve('resolved content processAction progress updates');
+		}
+	}
+
 }
 // end - Comm functions
 
@@ -1082,7 +1084,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 
 	if (aUpdateInfo) {
 		var { actionid, serviceid, reason, data } = aUpdateInfo;
-
+		console.error('got update info!', 'aSessionId:', aSessionId, 'actionid:', actionid, 'serviceid:', serviceid, 'reason:', reason, 'data:', data);
 		// check should create entry?
 		if (!entry) {
 			entry = {
@@ -1110,7 +1112,6 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 
 		// check if should add btn
 		if (!btn) {
-			console.error('btn with actionid', actionid, 'not found in btns:', JSON.parse(JSON.stringify(btns)));
 			btn = {
 				bClick: attnBtnClick,
 				bTxt: 'uninitialized',
@@ -1119,7 +1120,6 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 				}
 			};
 			btns.push(btn);
-			console.error('ok pushed btn:', btn);
 		}
 
 		// always update btn based on serviceid, reason, and data

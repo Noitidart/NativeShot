@@ -45,6 +45,8 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 	// when doing CHECK, setting aFinalizeWithOrProgressWithOrResumer is optional, as maybe devuser wants to just check. but if it is set it should be the callback to reenter with, and it will queue it up if check yeields that it is on hold. should build one with buildResumer()
 	// return values
 	/*
+		RESUME
+			undefined
 		CHECK
 			true - if not on hold
 			false - if on hold
