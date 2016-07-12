@@ -68,7 +68,20 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 				console.log('resumer:', resumer);
 
 				if (hold) {
-					gHold[hold_key].resumers.push(resumer);
+					// make sure this actionid is not already on hold
+					var already_held = false;
+					for (var a_resumer of gHold[hold_key].resumers) {
+						if (a_resumer.shot.actionid === resumer.shot.actionid) {
+							// this actionid is already on hold
+							already_held = true;
+							break;
+						}
+					}
+
+					// its not already on hold so place the resumer
+					if (!already_held) {
+						gHold[hold_key].resumers.push(resumer);
+					}
 				} else {
 					gHold[hold_key] = {
 						reason,
@@ -78,7 +91,7 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 
 				resumer.aReportProgress({
 					// no need to add in actionid as bootstrap side will handle adding that in crossfile-link393
-					serviceid: resumer.shot.serviceid,
+					// serviceid: resumer.shot.serviceid, // no need for serviceid UNLESS i am changing the serviceid, as INIT handles setting the serviceid crossfile-link3399
 					reason
 				});
 
@@ -93,11 +106,6 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 
 				if (hold) {
 					// its on hold
-					var resumer = aFinalizeWithOrProgressWithOrResumer;
-					if (resumer) {
-						// then add this resumer
-						hold.resumers.push(resumer);
-					}
 					return false;
 				} else {
 					// its not on hold
@@ -2751,8 +2759,9 @@ function bootstrapTimeout(milliseconds) {
 }
 
 // reaons:
-var reason = {
-	HOLD_ERROR: 'HOLD_ERROR'
+var reasons = {
+	HOLD_ERROR: 'HOLD_ERROR',
+	HOLD_USER_AUTH_NEEDED: 'HOLD_USER_AUTH_NEEDED' // user needs to grant oauth authorization
 };
 
 // start action functions
@@ -2765,7 +2774,7 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 			reason: 'SUCCESS'
 		});
 	} catch(OSFileError) {
-		withHold(PLACE, shot.actionid, reason.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(...arguments) ));
+		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(...arguments) ));
 	}
 }
 function action_savebrowse(shot, aActionFinalizer, aReportProgress) {

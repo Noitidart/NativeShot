@@ -1021,7 +1021,7 @@ function processAction(aArg, aReportProgress) {
 	if (core.os.name != 'android') {
 		attnUpdate(shot.sessionid, {
 			actionid: shot.actionid,
-			serviceid: shot.serviceid,
+			serviceid: shot.serviceid, // crossfile-link3399
 			reason: 'INIT'
 		});
 
@@ -1201,6 +1201,13 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
 
 				break;
+			case 'HOLD_USER_AUTH_NEEDED':
+
+					btn.bDisabled = undefined;
+					btn.bType = 'button';
+					btn.bTxt = formatStringFromNameCore('hold_user_auth_needed', 'main');
+
+				break;
 		}
 		switch (serviceid) {
 			// special stuff for serviceid
@@ -1225,7 +1232,13 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 function attnBtnClick(doClose, aBrowser) {
 	// handler for btn click of all btns
 	// this == {inststate:aInstState, btn:aInstState.aBtns[i]}
-	console.log('attn btn clicked');
+	console.log('attn btn clicked, this:', this);
+
+	switch (this.btn.bTxt) {
+		case formatStringFromNameCore('hold_user_auth_needed', 'main'):
+				Services.prompt.alert(null, '', 'opening oauth page for serviceid: ' + this.btn.meta.serviceid);
+			break;
+	}
 }
 
 function attnMenuClick(doClose, aBrowser) {
