@@ -1038,7 +1038,7 @@ function processAction(aArg, aReportProgress) {
 
 	callInMainworker('processAction', shot, function(aArg2) {
 		var { __PROGRESS } = aArg2;
-
+		// aArg2 does NOT need serviceid in it everytime, only if changing then it needs serviceid
 		// update attn bar
 		if (core.os.name != 'android') {
 			attnUpdate(shot.sessionid, Object.assign(
@@ -1124,7 +1124,9 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 
 		// always update btn based on serviceid, reason, and data
 		var meta = btn.meta;
-		meta.serviceid = serviceid;
+		if (serviceid) {
+			meta.serviceid = serviceid;
+		}
 		meta.reason = reason;
 		switch (reason) {
 			case 'INIT':
@@ -1165,7 +1167,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 				break;
 			case 'SUCCESS':
 					btn.bDisabled = undefined;
-					btn.bType = 'menu-button';
+					btn.bType = 'button';
 
 					console.log('meta.serviceid:', meta.serviceid);
 					var success_suffix = core.nativeshot.services[meta.serviceid].type;

@@ -2762,8 +2762,7 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 		// throw 'rawr';
 		OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
 		aActionFinalizer({
-			reason: 'SUCCESS',
-			serviceid: shot.serviceid
+			reason: 'SUCCESS'
 		});
 	} catch(OSFileError) {
 		withHold(PLACE, shot.actionid, reason.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(...arguments) ));
@@ -3338,5 +3337,13 @@ function addOsInfoToCore() {
 				}
 			break;
 	}
+}
+function formatBytes(bytes,decimals) {
+   if(bytes == 0) return '0 Byte';
+   var k = 1024; // or 1024 for binary
+   var dm = decimals + 1 || 3;
+   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+   var i = Math.floor(Math.log(bytes) / Math.log(k));
+   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 // end - common worker functions
