@@ -16,6 +16,7 @@ var callInOcrComm = Comm.callInX.bind(null, 'gOcrComm', null);
 var gHydrants; // keys are getPage() names, like NewRecordingPage and value is an object which is its hydrant
 var gEditorStateStr;
 
+var gCancelled = []; // each element is actionid
 var gHold = {};
 // key is serviceid + '-' + HOLD_CONST OR actionid + '-' + HOLD_CONST
 	// for updating state to gui, run the do not run serviceid gui update callback if the actionid is pending
@@ -2520,24 +2521,46 @@ function buildOSFileErrorString(aMethod, aOSFileError) {
 			break;
 	}
 }
+function genericCountdown(countdown, reason, resumer) {
+	// reason - the reason that should be sent in aReportProgress on countdown tick
+	// countdown is a int of seconds
 
-function genericOnUploadProgress(rec, aReportProgress, e) {
+	if (gCancelled.includes(resumer.shot.actionid)) {
+		return;
+	}
 
-	var total_size = formatBytes(rec.arrbuf.byteLength, 1);
+	countdown--;
+	if (!countdown) {
+		// coutndown reached 0
+		resumer.aActionFlowReenterer();
+	} else {
+		resumer.aReportProgress({
+			reason,
+			data: {
+				countdown
+			},
+			serviceid: resumer.shot.serviceid
+		});
+		setTimeout(genericCountdown, 1000);
+	}
+}
+function genericOnUploadProgress(shot, aReportProgress, e) {
+
+	var total_size = formatBytes(shot.arrbuf.byteLength, 1);
 
 
 	var percent;
 	var uploaded_size;
-	if (e.lengthComputable) {
-		percent = Math.round((e.loaded / e.total) * 100);
-		uploaded_size = formatBytes(e.loaded, 1);
-	} else {
-		percent = '?';
-		uploaded_size = '?';
+	var progress_data = {};
+	if (e.loaded) {
+		progress_data.upload_percent = Math.round((e.loaded / e.total) * 100);
+		progress_data.upload_size = formatBytes(e.loaded, 1);
+		progress_data.upload_sizetotal = formatBytes(e.total, 1);
 	}
 
 	aReportProgress({
-		reason: formatStringFromName('uploading_progress', 'app', [percent, uploaded_size, total_size])
+		reason: 'UPLOAD_PROGRESS',
+		data: progress_data
 	});
 };
 
@@ -2586,7 +2609,7 @@ function updateFilestoreEntry(aArg, aComm) {
 	// updates in memory (global), does not write to disk
 	// if gFilestore not yet read, it will readFilestore first
 
-	var { mainkey, value, key } = aArg;
+	var { mainkey, value, key, verb } = aArg;
 	// key is optional. if key is not set, then gFilestore[mainkey] is set to value
 	// if key is set, then gFilestore[mainkey][key] is set to value
 
@@ -2596,11 +2619,26 @@ function updateFilestoreEntry(aArg, aComm) {
 		readFilestore();
 	}
 
+	var affected_entry;
 	if (key) {
-		gFilestore[mainkey][key] = value;
+		affected_entry = gFilestore[mainkey][key]; // = value;
 	} else {
-		gFilestore[mainkey] = value;
+		affected_entry = gFilestore[mainkey]; // = value;
 	}
+
+	switch (verb) {
+		case 'push':
+				affected_entry.push(value);
+			break;
+		default:
+			affected_entry = value;
+	}
+	gFilestore.dirty = true; // meaning not yet written to disk
+
+	if (gWriteFilestoreTimeout !== null) {
+		clearTimeout(gWriteFilestoreTimeout);
+	}
+	gWriteFilestoreTimeout = setTimeout(writeFilestore, 10000);
 }
 
 function fetchFilestoreEntry(aArg) {
@@ -2621,26 +2659,26 @@ function fetchFilestoreEntry(aArg) {
 	}
 }
 
+var gWriteFilestoreTimeout = null;
 function writeFilestore(aArg, aComm) {
 	// writes gFilestore to file (or if it is undefined, it writes gFilestoreDefault)
-	writeThenDir(core.addon.path.filestore, JSON.stringify(gFilestore || gFilestoreDefault), OS.Constants.Path.profileDir);
-}
-
-// specific to nativeshot filestore functions
-function updateLog(aArg) {
-	var entry = aArg;
-
-	if (!gFilestore) {
-		readFilestore();
+	if (!gFilestore.dirty) {
+		console.warn('filestore is not dirty, so no need to write it');
+		return;
 	}
-
-	gFilestore.log.push(entry);
-	// updateFilestore({
-	// 	mainkey: 'log',
-	// 	value: gFilestore.log.push(entry)
-	// });
-
+	if (gWriteFilestoreTimeout !== null) {
+		clearTimeout(gWriteFilestoreTimeout);
+		gWriteFilestoreTimeout = null;
+	}
+	delete gFilestore.dirty;
+	try {
+		writeThenDir(core.addon.path.filestore, JSON.stringify(gFilestore || gFilestoreDefault), OS.Constants.Path.profileDir);
+	} catch(ex) {
+		gFilestore.dirty = true;
+		throw ex;
+	}
 }
+
 // start - functions called by bootstrap
 var gCountdown = undefined; // undefiend when idle. null when cancelled. int of seconds left when in progress
 var gCountdownInterval;

@@ -1041,12 +1041,10 @@ function processAction(aArg, aReportProgress) {
 
 		// update attn bar
 		if (core.os.name != 'android') {
-			callInMainworker('bootstrapTimeout', 1000, function() {
-				attnUpdate(shot.sessionid, Object.assign(
-					{ actionid:shot.actionid }, // crossfile-link393
-					aArg2
-				));
-			});
+			attnUpdate(shot.sessionid, Object.assign(
+				{ actionid:shot.actionid }, // crossfile-link393
+				aArg2
+			));
 		}
 
 		if (aReportProgress) {
@@ -1135,6 +1133,35 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bDisabled = true;
 					btn.bType = 'button';
 
+				break;
+			case 'UPLOAD_INIT':
+					btn.bTxt = 'Initiating Upload - Cancel'; // TODO: l10n
+					btn.bDisabled = false;
+					btn.bType = 'button';
+				break;
+			case 'UPLOAD_RETRY_WAIT':
+					btn.bTxt = 'Upload Failed - Will Retry in ' + data.countdown + 'sec - Cancel'; // TODO: l10n
+					btn.bDisabled = false;
+					btn.bType = 'button';
+				break;
+			case 'UPLOAD_PROGRESS':
+					// set bTxt
+					var has_upload_percent = ('upload_percent' in data);
+					var has_upload_size = ('upload_size' in data);
+					var has_upload_sizetotal = ('upload_sizetotal' in data);
+					if (has_upload_percent && has_upload_size && has_upload_sizetotal) {
+						btn.bTxt = 'Uploading - ' + data.upload_percent + '% - ' + data.upload_size + ' / ' + data.upload_sizetotal + '- Cancel'; // TODO: l10n
+					} else if (has_upload_size && has_upload_sizetotal) {
+						btn.bTxt = 'Uploading - ' + data.upload_size + ' / ' + data.upload_sizetotal + '- Cancel'; // TODO: l10n
+					} else if (has_upload_size) {
+						btn.bTxt = 'Uploading - ' + data.upload_size + ' - Cancel'; // TODO: l10n
+					} else {
+						btn.bTxt = 'Uploading - Cancel';
+					}
+
+					// set other stuff
+					btn.bDisabled = false;
+					btn.bType = 'button';
 				break;
 			case 'SUCCESS':
 					btn.bDisabled = undefined;
