@@ -126,6 +126,10 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 			break;
 	}
 }
+function withHoldResume(aArg) {
+	var { actionid_serviceid, reason } = aArg;
+	withHold(RESUME, actionid_serviceid, reason);
+}
 
 function dummyForInstantInstantiate() {}
 function init(objCore) {
@@ -2560,7 +2564,7 @@ function genericCountdown(countdown, reason, resumer) {
 			},
 			serviceid: resumer.shot.serviceid
 		});
-		setTimeout(genericCountdown, 1000);
+		setTimeout(genericCountdown.bind(null, ...arguments), 1000);
 	}
 }
 function genericOnUploadProgress(shot, aReportProgress, e) {
@@ -2612,8 +2616,8 @@ function readFilestore() {
 		} catch (OSFileError) {
 			if (OSFileError.becauseNoSuchFile) {
 				gFilestore = gFilestoreDefault ? gFilestoreDefault : {};
-				// run default getters
-				for (var getter of getters) {
+				// run default gFilestoreDefaultGetters
+				for (var getter of gFilestoreDefaultGetters) {
 					getter();
 				}
 			}
@@ -2772,7 +2776,8 @@ function bootstrapTimeout(milliseconds) {
 // reaons:
 var reasons = {
 	HOLD_ERROR: 'HOLD_ERROR',
-	HOLD_USER_AUTH_NEEDED: 'HOLD_USER_AUTH_NEEDED' // user needs to grant oauth authorization
+	HOLD_USER_AUTH_NEEDED: 'HOLD_USER_AUTH_NEEDED', // user needs to grant oauth authorization
+	HOLD_UNHANDLED_STATUS_CODE: 'HOLD_UNHANDLED_STATUS_CODE'
 };
 
 // start action functions
@@ -2786,6 +2791,12 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 		});
 	} catch(OSFileError) {
 		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(null, ...arguments) ));
+		aReportProgress({
+			reason: reasons.HOLD_ERROR,
+			data: {
+				error_details: buildOSFileErrorString('writeAtomic', OSFileError)
+			}
+		});
 	}
 }
 function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
@@ -3365,5 +3376,20 @@ function formatBytes(bytes,decimals) {
    var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
    var i = Math.floor(Math.log(bytes) / Math.log(k));
    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+function buildOSFileErrorString(aMethod, aOSFileError) { // rev1 - https://gist.github.com/Noitidart/a67dc6c83ae79aeffe5e3123d42d8f65
+	// aMethod:string - enum[writeAtomic]
+
+	switch (aMethod) {
+		case 'writeAtomic':
+				var explain;
+				if (aOSFileError.becauseNoSuchFile) {
+					explain = formatStringFromName('osfileerror_writeatomic_nosuchfile', 'main');
+				} else {
+					explain = formatStringFromName('osfileerror_unknownreason', 'main');
+				}
+				formatStringFromName('osfileerror_' + aMethod, 'app', [explain, aOSFileError.winLastError || aOSFileError.unixErrno])
+			break;
+	}
 }
 // end - common worker functions

@@ -1201,6 +1201,26 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
 
 				break;
+			case 'HOLD_UNHANDLED_STATUS_CODE':
+					btn.bDisabled = undefined;
+					btn.bType = 'menu-button';
+					btn.bTxt = formatStringFromNameCore('hold_unhandled_status_code', 'main')
+
+					// offer menu to display error, or to switch to any of the other services
+					btn.bMenu = [];
+					btn.bMenu.push({
+						cTxt: formatStringFromNameCore('retry', 'main')
+					});
+					btn.bMenu.push({
+						cTxt: formatStringFromNameCore('show_response_details', 'main')
+					});
+					btn.bMenu.push({
+						cSeperator: true
+					});
+
+					// add the alternative services
+					addAltServiceMenuitems(btn.bMenu, meta.serviceid);
+				break;
 			case 'HOLD_USER_AUTH_NEEDED':
 
 					btn.bDisabled = undefined;
@@ -1237,6 +1257,13 @@ function attnBtnClick(doClose, aBrowser) {
 	switch (this.btn.bTxt) {
 		case formatStringFromNameCore('hold_user_auth_needed', 'main'):
 				callInMainworker('openAuthTab', this.btn.meta.serviceid);
+			break;
+		case formatStringFromNameCore('hold_error', 'main'):
+		case formatStringFromNameCore('hold_unhandled_status_code', 'main'):
+				callInMainworker('withHoldResume', {
+					actionid_serviceid: this.btn.meta.actionid,
+					reason: this.btn.meta.reason
+				});
 			break;
 	}
 }
