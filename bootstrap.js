@@ -1137,7 +1137,17 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 
 				break;
 			case 'UPLOAD_INIT':
-					btn.bTxt = 'Initiating Upload - Cancel'; // TODO: l10n
+					btn.bTxt = formatStringFromNameCore('upload_init', 'main'),
+					btn.bDisabled = false;
+					btn.bType = 'button';
+				break;
+			case 'UPLOAD_GETTING_LINK':
+					btn.bTxt = formatStringFromNameCore('upload_getting_link', 'main'),
+					btn.bDisabled = false;
+					btn.bType = 'button';
+				break;
+			case 'UPLOAD_GETTING_META':
+					btn.bTxt = formatStringFromNameCore('upload_getting_meta', 'main'),
 					btn.bDisabled = false;
 					btn.bType = 'button';
 				break;

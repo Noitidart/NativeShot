@@ -286,8 +286,8 @@ var progressListener = {
 						if (window) {
 							var access_denied = url_lower.includes('error=access_denied') || url_lower.includes('denied='); // `denied=` is for twitter, `error=access_denied` is for everything else
 							var allowed = !access_denied;
-							// var serviceid = url_lower.match(/nativeshot_([a-z]+)/)[1];
-							var serviceid = url_lower.substring(url_lower.indexOf('nativeshot_') + 11, url_lower.indexOf('?'));
+							var serviceid = url_lower.match(/nativeshot_([a-z]+)/)[1];
+							// var serviceid = url_lower.substring(url_lower.indexOf('nativeshot_') + 11, url_lower.indexOf('?'));
 							if (allowed) {
 								callInMainworker('oauthAuthorized', {
 									serviceid,
