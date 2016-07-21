@@ -1238,6 +1238,20 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bTxt = formatStringFromNameCore('hold_user_auth_needed', 'main');
 
 				break;
+			case 'UPLOAD_GETTING_USER':
+
+				btn.bDisabled = undefined;
+				btn.bType = 'button';
+				btn.bTxt = formatStringFromNameCore('upload_getting_user', 'main');
+
+				break;
+			case 'HOLD_GETTING_USER':
+
+					btn.bDisabled = undefined;
+					btn.bType = 'button';
+					btn.bTxt = formatStringFromNameCore('hold_getting_user', 'main');
+
+				break;
 		}
 		switch (serviceid) {
 			// special stuff for serviceid

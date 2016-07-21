@@ -40,8 +40,15 @@ function buildResumer(shot, aActionFinalizer, aReportProgress, aActionFlowReente
 const CHECK = 'CHECK'; const FINALIZE = 'FINALIZE'; const PROGRESS = 'PROGRESS'; const CANCEL = 'CANCEL'; const REENTER = 'REENTER'; const PLACE = 'PLACE'; const RESUME = 'RESUME';
 function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithOrResumer) {
 	// reason is hold_const so meaning must start with HOLD_
-	// aAct enum - FINALIZE, PROGRESS, CANCEL, REENTER, CHECK, PLACE
-	// aFinalizeWithOrProgressWithOrResumer should only be set if aAct is FINALIZE(aFinalizeWith) or PROGRESS(aProgressWith) or CHECK(resumer) or PLACE(resumer) else `null`
+	// aAct enum - FINALIZE, PROGRESS, CANCEL, REENTER, CHECK, PLACE, RESUME
+	// aFinalizeWithOrProgressWithOrResumer is based on aAct:
+		// FINALIZE(aFinalizeWith)
+		// PROGRESS(aProgressWith)
+		// CHECK(resumer)
+		// PLACE(resumer)
+		// CANCEL(null)
+		// REENTER(null)
+		// RESUME(null)
 	// when doing CHECK, setting aFinalizeWithOrProgressWithOrResumer is optional, as maybe devuser wants to just check. but if it is set it should be the callback to reenter with, and it will queue it up if check yeields that it is on hold. should build one with buildResumer()
 	// return values
 	/*
@@ -2777,7 +2784,8 @@ function bootstrapTimeout(milliseconds) {
 var reasons = {
 	HOLD_ERROR: 'HOLD_ERROR',
 	HOLD_USER_AUTH_NEEDED: 'HOLD_USER_AUTH_NEEDED', // user needs to grant oauth authorization
-	HOLD_UNHANDLED_STATUS_CODE: 'HOLD_UNHANDLED_STATUS_CODE'
+	HOLD_UNHANDLED_STATUS_CODE: 'HOLD_UNHANDLED_STATUS_CODE',
+	HOLD_GETTING_USER: 'HOLD_GETTING_USER'
 };
 
 // start action functions
