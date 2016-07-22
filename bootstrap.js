@@ -369,7 +369,7 @@ function takeShot() {
 	var ensureGlobalEditorstate = function() {
 		if (!gEditorStateStr) {
 			callInMainworker('fetchFilestoreEntry', {mainkey:'editorstate'}, function(aArg) {
-				gEditorStateStr = aArg;
+				gEditorStateStr = JSON.stringify(aArg);
 				openEditorWins();
 			});
 		} else {
@@ -633,11 +633,11 @@ function exitEditors(aArg) {
 
 	attnUpdate(sessionid); // show the attnbar if there is anything to show
 
-	gEditorStateStr = aArg.editorstateStr;
+	gEditorStateStr = JSON.stringify(aArg.editorstate);
 	console.log('set gEditorStateStr to:', gEditorStateStr);
 	callInMainworker('updateFilestoreEntry', {
 		mainkey: 'editorstate',
-		value: gEditorStateStr
+		value: aArg.editorstate
 	});
 }
 

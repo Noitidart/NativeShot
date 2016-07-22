@@ -50,7 +50,7 @@ function unload(aBoolDontCloseSelf) {
 
 	callInBootstrap('exitEditors', {
 		iMon: aBoolDontCloseSelf ? tQS.iMon : null,
-		editorstateStr: JSON.stringify(immutableEditorstate)
+		editorstate: immutableEditorstate
 	});
 	// callInBootstrap('afterEditorsExited');
 }

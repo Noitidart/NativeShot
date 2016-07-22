@@ -2651,19 +2651,20 @@ function updateFilestoreEntry(aArg, aComm) {
 		readFilestore();
 	}
 
-	var affected_entry;
-	if (key) {
-		affected_entry = gFilestore[mainkey][key]; // = value;
-	} else {
-		affected_entry = gFilestore[mainkey]; // = value;
-	}
-
 	switch (verb) {
 		case 'push':
-				affected_entry.push(value);
+				if (key) {
+					gFilestore[mainkey][key].push(value);
+				} else {
+					gFilestore[mainkey].push(value);
+				}
 			break;
 		default:
-			affected_entry = value;
+			if (key) {
+				gFilestore[mainkey][key] = value;
+			} else {
+				gFilestore[mainkey] = value;
+			}
 	}
 	gFilestore.dirty = true; // meaning not yet written to disk
 
@@ -2687,7 +2688,7 @@ function fetchFilestoreEntry(aArg) {
 	if (key) {
 		return gFilestore[mainkey][key];
 	} else {
-		gFilestore[mainkey];
+		return gFilestore[mainkey];
 	}
 }
 
