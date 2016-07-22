@@ -1175,6 +1175,11 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bDisabled = false;
 					btn.bType = 'button';
 				break;
+			case 'CANCELLED':
+					btn.bDisabled = undefined;
+					btn.bType = 'button';
+					btn.bTxt = formatStringFromNameCore('cancelled', 'main');
+				break;
 			case 'SUCCESS':
 					btn.bDisabled = undefined;
 					btn.bType = 'button';
@@ -1400,6 +1405,100 @@ function launchOrFocusOrReuseTab(aArg, aReportProgress, aComm) {
 		window.gBrowser.loadOneTab(url, { inBackground:false, relatedToCurrent:true });
 	}
 
+}
+
+function browseFile(aArg, aReportProgress, aComm, aMessageManager, aBrowser) {
+	// rev4 - https://gist.github.com/Noitidart/91b9a7ce5ff6ee7f8329c4d71cc5943b
+
+	// called by worker, or by framescript in which case it has aMessageManager and aBrowser as final params
+	var { aDialogTitle, aOptions } = aArg
+	if (!aOptions) { aOptions={} }
+
+	// uses xpcom file browser and returns path to file selected
+	// returns
+		// filename
+		// if aOptions.returnDetails is true, then it returns object with fields:
+		//	{
+		//		filepath: string,
+		//		replace: bool, // only set if mode is modeSave
+		//	}
+
+	var cOptionsDefaults = {
+		mode: 'modeOpen', // modeSave, modeGetFolder,
+		filters: undefined, // else an array. in sets of two. so one filter would be ['PNG', '*.png'] or two filters woul be ['PNG', '*.png', 'All Files', '*']
+		startDirPlatPath: undefined, // string - platform path to dir the dialog should start in
+		returnDetails: false,
+		async: false, // if set to true, then it wont block main thread while its open, and it will also return a promise
+		win: undefined, // null for no parentWin, string for what you want passed to getMostRecentWindow, or a window object. NEGATIVE is special for NativeShot, it is negative iMon
+		defaultString: undefined
+	}
+
+	aOptions = Object.assign(cOptionsDefaults, aOptions);
+
+	var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+
+	var parentWin;
+	if (aOptions.win === undefined) {
+		parentWin = null;
+	} else if (typeof(aOptions.win) == 'number') {
+		// sepcial for nativeshot
+		// parentWin = colMon[Math.abs(aOptions.win)].E.DOMWindow;
+		parentWin = gSession.shots[aOptions.win].domwin;
+	} else if (aOptions.win === null || typeof(aOptions.win) == 'string') {
+		parentWin = Services.wm.getMostRecentWindow(aOptions.win);
+	} else {
+		parentWin = aOptions.win; // they specified a window probably
+	}
+	fp.init(parentWin, aDialogTitle, Ci.nsIFilePicker[aOptions.mode]);
+
+	if (aOptions.filters) {
+		for (var i=0; i<aOptions.filters.length; i=i+2) {
+			fp.appendFilter(aOptions.filters[i], aOptions.filters[i+1]);
+		}
+	}
+
+	if (aOptions.startDirPlatPath) {
+		fp.displayDirectory = new nsIFile(aOptions.startDirPlatPath);
+	}
+
+	var fpDoneCallback = function(rv) {
+		var retFP;
+		if (rv == Ci.nsIFilePicker.returnOK || rv == Ci.nsIFilePicker.returnReplace) {
+
+			if (aOptions.returnDetails) {
+				var cBrowsedDetails = {
+					filepath: fp.file.path,
+					filter: aOptions.filters ? aOptions.filters[(fp.filterIndex * 2) + 1] : undefined,
+					replace: aOptions.mode == 'modeSave' ? (rv == Ci.nsIFilePicker.returnReplace) : undefined
+				};
+
+				retFP = cBrowsedDetails;
+			} else {
+				retFP = fp.file.path;
+			}
+
+		}// else { // cancelled	}
+		if (aOptions.async) {
+			console.error('async resolving');
+			mainDeferred_browseFile.resolve(retFP);
+		} else {
+			return retFP;
+		}
+	}
+
+	if (aOptions.defaultString) {
+		fp.defaultString = aOptions.defaultString;
+	}
+
+	if (aOptions.async) {
+		var mainDeferred_browseFile = new Deferred();
+		fp.open({
+			done: fpDoneCallback
+		});
+		return mainDeferred_browseFile.promise;
+	} else {
+		return fpDoneCallback(fp.show());
+	}
 }
 
 // start - common helper functions

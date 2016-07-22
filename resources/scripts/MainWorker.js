@@ -2474,18 +2474,6 @@ function winForceForegroundWindow(aHwndToFocus) { // rev2 - https://gist.github.
 // end - platform functions
 
 ////// start - specific helper functions
-function readPrefsFromFile() {
-
-}
-function writePrefsToFile() {
-
-}
-function getPref() {
-
-}
-function setPref() {
-
-}
 function autogenScreenshotFileName(aDateGettime) {
 	// no extension generated
 
@@ -2600,11 +2588,25 @@ function genericOnUploadProgress(shot, aReportProgress, e) {
 
 var gFilestore;
 var gFilestoreDefaultGetters = [ // after default is set, it runs all these functions
-	() => gFilestoreDefault.prefs.quick_save_dir = getSystemDirectory('Pictures')
+	// function prefs__quick_save_dir() {
+	// 	// all getters should be sync, so i need to figure out what to do here
+	// 	console.error('in prefs__quick_save_dir');
+	// 	getSystemDirectory('Pictures').then(val=> {
+	// 		gFilestoreDefault.prefs.quick_save_dir = val;
+	// 	});
+	// 	var st = Date.now();
+	// 	var i = 0;
+	// 	while (!gFilestoreDefault.prefs.quick_save_dir) {
+	// 		i++;
+	// 	}
+	// 	var end = Date.now();
+	// 	console.log('prefs__quick_save_dir: took this long to get quick save dir:', (end - st), 'ms', 'i:', i);
+	// 	console.error('done prefs__quick_save_dir');
+	// }
 ];
 var gFilestoreDefault = {
 	prefs: {
-		// quick_save_dir: getSystemDirectory('Pictures'), // getter
+		quick_save_dir: null,
 		print_preview: false,
 		system_hotkey: true
 	},
@@ -2791,24 +2793,151 @@ var reasons = {
 // start action functions
 function action_savequick(shot, aActionFinalizer, aReportProgress) {
 
-	try {
-		// throw 'rawr';
-		OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'rawr.png'), new Uint8Array(shot.arrbuf));
-		aActionFinalizer({
-			reason: 'SUCCESS'
-		});
-	} catch(OSFileError) {
-		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...arguments, action_savequick.bind(null, ...arguments) ));
-		aReportProgress({
-			reason: reasons.HOLD_ERROR,
-			data: {
-				error_details: buildOSFileErrorString('writeAtomic', OSFileError)
+	var action_arguments = arguments;
+	var n = safedForPlatFS(autogenScreenshotFileName(shot.sessionid) + '.png', {repStr:'.'});
+	var f = fetchFilestoreEntry({ mainkey:'prefs', key:'quick_save_dir' });
+
+	// start async-proc183999
+	var getSetQuickSaveDir = function() {
+		// if `f` is null then it gets the defualt dir and sets it
+		if (!f) {
+			var resumer = buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) );
+			var promise_getdir = getSystemDirectory('Pictures');
+			promise_getdir.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_getdir - ', aVal);
+					f = aVal;
+					updateFilestoreEntry({
+						value: aVal,
+						mainkey: 'prefs',
+						key: 'quick_save_dir'
+					});
+					writeToDisk();
+				},
+				actionReject.bind(null, ...action_arguments, resumer, 'promise_getdir')
+			).catch(actionCatch.bind(null, ...action_arguments, resumer, 'promise_getdir'));
+		} else {
+			writeToDisk();
+		}
+	};
+
+	var write_cnt = 1;
+	var writeToDisk = function() {
+		try {
+			// throw 'rawr';
+
+			console.log('n:', n, 'f:', f);
+			var path;
+			if (write_cnt === 1) {
+				path = OS.Path.join(f, n);
+			} else {
+				var noext_n = n.substr(0, n.lastIndexOf('.'));
+				var dotext_n = n.substr(n.lastIndexOf('.'));
+				var modded_n = noext_n + ' #' + write_cnt + dotext_n;
+				console.log('modded_n:', modded_n);
+				path = OS.Path.join(f, modded_n);
 			}
-		});
-	}
+			OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf), { noOverwrite:true });
+
+			aActionFinalizer({
+				reason: 'SUCCESS'
+			});
+
+			addShotToLog(shot, {
+				n: upload_id, // file name with extension so like blah.png
+				f: share_link // full os path to folder saved in
+			});
+		} catch(OSFileError) {
+			if (OSFileError.becauseExists) {
+				write_cnt++;
+				writeToDisk();
+				return;
+			}
+			console.error('action_savequick -> OSFileError:', OSFileError);
+			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
+			aReportProgress({
+				reason: reasons.HOLD_ERROR,
+				data: {
+					error_details: buildOSFileErrorString('writeAtomic', OSFileError)
+				}
+			});
+		}
+	};
+
+	getSetQuickSaveDir();
+	// end async-proc183999
+
 }
 function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
+	// start async-proc5545
+	var n;
+	var f;
+	var doBrowse = function() {
+		var browsefile_arg = {
+			aDialogTitle: formatStringFromName('filepicker_title_savescreenshot', 'main'),
+			aOptions: {
+				returnDetails: true,
+				mode: 'modeSave',
+				async: true,
+				defaultString: safedForPlatFS(autogenScreenshotFileName(shot.sessionid) + '.png', {repStr:'.'}),
+				filters:[formatStringFromName('filepicker_filter_png', 'main'), '*.png']
+			}
+		};
+		if (shot.action_options && 'imon' in shot.action_options) {
+			browsefile_arg.aOptions.win = shot.action_options.imon;
+		} else {
+			browsefile_arg.aOptions.win = 'navigator:browser';
+		}
 
+		callInBootstrap('browseFile', browsefile_arg, function(aArg) {
+			console.log('back from browseFile, aArg:', aArg);
+			if (aArg) {
+				var { filepath, filter, replace } = aArg;
+				var dotext = filter.substr(filter.indexOf('.')); // includes the dot
+				if (!filepath.toLowerCase().endsWith(dotext)) {
+					filepath += dotext;
+				}
+				n = OS.Path.basename(filepath);
+				f = OS.Path.dirname(filepath);
+				writeToDisk();
+			} else {
+				// cancelled
+				aActionFinalizer({
+					reason: 'CANCELLED'
+				});
+			}
+		});
+	};
+
+	var writeToDisk = function() {
+		try {
+			// throw 'rawr';
+
+			console.log('n:', n, 'f:', f);
+			OS.File.writeAtomic(OS.Path.join(f, n), new Uint8Array(shot.arrbuf));
+
+			aActionFinalizer({
+				reason: 'SUCCESS'
+			});
+
+			addShotToLog(shot, {
+				n: upload_id, // file name with extension so like blah.png
+				f: share_link // full os path to folder saved in
+			});
+		} catch(OSFileError) {
+			console.error('action_savebrowse -> OSFileError:', OSFileError);
+			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
+			aReportProgress({
+				reason: reasons.HOLD_ERROR,
+				data: {
+					error_details: buildOSFileErrorString('writeAtomic', OSFileError)
+				}
+			});
+		}
+	};
+
+	doBrowse();
+	// end async-proc5545
 }
 function action_print(shot, aActionFinalizer, aReportProgress) {
 
@@ -2862,6 +2991,63 @@ function processAction(aArg, aReportProgress, aComm) {
 	}, aReportProgress);
 
 	return deferredMain_processAction.promise;
+}
+
+function addShotToLog(shot, aExtraKeys={}) {
+	var required_extras = { // console.log(remove on prod)
+		imguranon: ['x', 'i'], // console.log(remove on prod)
+		imgur: ['x', 'i', 'u', 's'], // console.log(remove on prod)
+		dropbox: ['l', 'i', 'u', 's'], // console.log(remove on prod)
+		gdrive: ['l', 'i', 'u', 's'], // console.log(remove on prod)
+		twitter: ['l', 'p', 'u', 's'], // console.log(remove on prod)
+		savequick: ['n', 'f'], // console.log(remove on prod)
+		savequick: ['n', 'f'] // console.log(remove on prod)
+	}; // console.log(remove on prod)
+	for (var key of required_extras[shot.serviceid]) { // console.log(remove on prod)
+		if (!(key in aExtraKeys)) { // console.log(remove on prod)
+			console.error('missing key of', key, 'in aExtraKeys for log entry of serviceid:', shot.serviceid); // console.log(remove on prod)
+			throw new Error('missing key of in log entry aExtraKeys'); // console.log(remove on prod)
+		} // console.log(remove on prod)
+	} // console.log(remove on prod)
+
+	var log_entry = Object.assign(aExtraKeys, {
+		d: shot.actionid,
+		t: core.nativeshot.services[shot.serviceid].code
+	});
+	updateFilestoreEntry({
+		value: log_entry,
+		mainkey: 'log',
+		verb: 'push'
+	});
+}
+
+function actionReject(shot, aActionFinalizer, aReportProgress, aResumer, aPromiseName, aReason) {
+	var rejobj = {
+		name: aPromiseName,
+		aReason
+	};
+
+	withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, aResumer );
+	aReportProgress({
+		reason: reasons.HOLD_ERROR,
+		data: {
+			error_details: rejobj
+		}
+	});
+}
+function actionCatch(shot, aActionFinalizer, aReportProgress, aResumer, aPromiseName, aCaught) {
+	var rejobj = {
+		name: aPromiseName,
+		aCaught
+	};
+
+	withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, aResumer );
+	aReportProgress({
+		reason: reasons.HOLD_ERROR,
+		data: {
+			error_details: rejobj
+		}
+	});
 }
 // end - functions called by bootstrap
 

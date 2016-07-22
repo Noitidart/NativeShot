@@ -427,6 +427,15 @@ function fullfillCompositeRequest(aData) {
 			height: compositeRect.height
 		};
 
+		// set up action_options
+		if (oauthServiceName == 'savebrowse') {
+			if (!boolclose) {
+				shot.action_options = {
+					imon: tQS.iMon
+				};
+			}
+		}
+
 		var postDataGen = function() {
 			var cb = function(aArg2) {
 				var { __PROGRESS } = aArg2;
