@@ -2848,8 +2848,8 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 			});
 
 			addShotToLog(shot, {
-				n: upload_id, // file name with extension so like blah.png
-				f: share_link // full os path to folder saved in
+				n, // file name with extension so like blah.png
+				f // full os path to folder saved in
 			});
 		} catch(OSFileError) {
 			if (OSFileError.becauseExists) {
@@ -2929,8 +2929,8 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 			});
 
 			addShotToLog(shot, {
-				n: upload_id, // file name with extension so like blah.png
-				f: share_link // full os path to folder saved in
+				n, // file name with extension so like blah.png
+				f // full os path to folder saved in
 			});
 		} catch(OSFileError) {
 			console.error('action_savebrowse -> OSFileError:', OSFileError);

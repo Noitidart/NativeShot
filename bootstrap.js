@@ -20,6 +20,8 @@ var BEAUTIFY = {};
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', () => Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) );
 
+var nsIFile = CC('@mozilla.org/file/local;1', Ci.nsILocalFile, 'initWithPath');
+
 // Globals
 var core = {
 	addon: {
@@ -1267,7 +1269,16 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					switch (meta.serviceid) {
 						case 'copy':
 						case 'print':
-							success_suffix = meta.serviceid;
+								success_suffix = meta.serviceid;
+							break;
+						case 'savebrowse':
+						case 'savequick':
+								btn.bType = 'menu-button';
+								btn.bMenu = [];
+								btn.bMenu.push({
+									cTxt: formatStringFromNameCore('show_in_explorer', 'main')
+								});
+							break;
 					}
 					btn.bTxt = formatStringFromNameCore('success_' + success_suffix, 'main');
 
@@ -1344,7 +1355,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 		if (btn.bMenu) {
 			for (var menuitem of btn.bMenu) {
 				if (!menuitem.cSeperator && !menuitem.cMenu) { // seperators and mainmenu (items with submenu) dont get click events
-					menuitem.onClick = attnMenuClick;
+					menuitem.cClick = attnMenuClick;
 				}
 			}
 		}
@@ -1398,7 +1409,13 @@ function attnBtnClick(doClose, aBrowser) {
 function attnMenuClick(doClose, aBrowser) {
 	// handler for menuitem click of all menuitem
 	// this == {inststate:AB.Insts[aCloseCallbackId].state, btn:aBtnEntry, menu:jMenu, menuitem:jEntry}
-	console.log('attn menu clicked');
+	console.log('attn menu clicked, this:', this);
+	// do it based on the bTxt
+	switch (this.menuitem.cTxt) {
+		case formatStringFromNameCore('show_in_explorer', 'main'):
+				showFileInOSExplorer(nsIFile(this.btn.meta.data.copytxt));
+			break;
+	}
 }
 
 function addAltServiceMenuitems(aBtnsArr, aSkipServiceid) {
@@ -1503,6 +1520,31 @@ function launchOrFocusOrReuseTab(aArg, aReportProgress, aComm) {
 		window.gBrowser.loadOneTab(url, { inBackground:false, relatedToCurrent:true });
 	}
 
+}
+
+// rev3 - https://gist.github.com/Noitidart/feeec1776c6ee4254a34
+function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
+	// can pass in aNsiFile
+	if (aNsiFile) {
+		//http://mxr.mozilla.org/mozilla-release/source/browser/components/downloads/src/DownloadsCommon.jsm#533
+		// opens the directory of the aNsiFile
+
+		if (aNsiFile.isDirectory()) {
+			aNsiFile.launch();
+		} else {
+			aNsiFile.reveal();
+		}
+	} else {
+		var cNsiFile = new nsIFile(aDirPlatPath);
+
+		if (!aFileName) {
+			// its a directory
+			cNsiFile.launch();
+		} else {
+			cNsiFile.append(aFileName);
+			cNsiFile.reveal();
+		}
+	}
 }
 
 function browseFile(aArg, aReportProgress, aComm, aMessageManager, aBrowser) {
