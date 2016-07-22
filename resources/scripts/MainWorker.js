@@ -2840,7 +2840,10 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 			OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf), { noOverwrite:true });
 
 			aActionFinalizer({
-				reason: 'SUCCESS'
+				reason: 'SUCCESS',
+				data: {
+					copytxt: path
+				}
 			});
 
 			addShotToLog(shot, {
@@ -2914,10 +2917,14 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 			// throw 'rawr';
 
 			console.log('n:', n, 'f:', f);
-			OS.File.writeAtomic(OS.Path.join(f, n), new Uint8Array(shot.arrbuf));
+			var path = OS.Path.join(f, n);
+			OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf));
 
 			aActionFinalizer({
-				reason: 'SUCCESS'
+				reason: 'SUCCESS',
+				data: {
+					copytxt: path
+				}
 			});
 
 			addShotToLog(shot, {
@@ -2940,10 +2947,20 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 	// end async-proc5545
 }
 function action_print(shot, aActionFinalizer, aReportProgress) {
-
+	addShotToLog(shot);
+	aActionFinalizer({
+		reason: 'SUCCESS'
+	});
 }
 function action_copy(shot, aActionFinalizer, aReportProgress) {
-
+	callInBootstrap('copy', shot.dataurl);
+	addShotToLog(shot);
+	aActionFinalizer({
+		reason: 'SUCCESS',
+		data: {
+			copytxt: shot.dataurl
+		}
+	});
 }
 function action_ocrall(shot, aActionFinalizer, aReportProgress) {
 
@@ -3003,12 +3020,15 @@ function addShotToLog(shot, aExtraKeys={}) {
 		savequick: ['n', 'f'], // console.log(remove on prod)
 		savequick: ['n', 'f'] // console.log(remove on prod)
 	}; // console.log(remove on prod)
-	for (var key of required_extras[shot.serviceid]) { // console.log(remove on prod)
-		if (!(key in aExtraKeys)) { // console.log(remove on prod)
-			console.error('missing key of', key, 'in aExtraKeys for log entry of serviceid:', shot.serviceid); // console.log(remove on prod)
-			throw new Error('missing key of in log entry aExtraKeys'); // console.log(remove on prod)
+
+	if (required_extras[shot.serviceid]) {
+		for (var key of required_extras[shot.serviceid]) { // console.log(remove on prod)
+			if (!(key in aExtraKeys)) { // console.log(remove on prod)
+				console.error('missing key of', key, 'in aExtraKeys for log entry of serviceid:', shot.serviceid); // console.log(remove on prod)
+				throw new Error('missing key of in log entry aExtraKeys'); // console.log(remove on prod)
+			} // console.log(remove on prod)
 		} // console.log(remove on prod)
-	} // console.log(remove on prod)
+	}
 
 	var log_entry = Object.assign(aExtraKeys, {
 		d: shot.actionid,

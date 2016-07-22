@@ -1011,6 +1011,17 @@ var windowListener = {
 	}
 };
 
+function copy(aString) {
+	// aString is either dataurl, or string to copy to clipboard
+	if (!aString.startsWith('data:')) {
+		// copy as text
+		CLIPBOARD.set(aString, 'text');
+	} else {
+		// copy as image
+		CLIPBOARD.set(aString, 'image');
+	}
+}
+
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content
@@ -1128,6 +1139,9 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 			meta.serviceid = serviceid;
 		}
 		meta.reason = reason;
+		if (data) {
+			meta.data = data;
+		}
 		switch (reason) {
 			case 'INIT':
 					btn.bTxt = formatStringFromNameCore('initializing', 'main');
@@ -1283,17 +1297,28 @@ function attnBtnClick(doClose, aBrowser) {
 	// this == {inststate:aInstState, btn:aInstState.aBtns[i]}
 	console.log('attn btn clicked, this:', this);
 
-	switch (this.btn.bTxt) {
-		case formatStringFromNameCore('hold_user_auth_needed', 'main'):
-				callInMainworker('openAuthTab', this.btn.meta.serviceid);
+	console.error('this.btn.meta:', this.btn.meta);
+	var { actionid, serviceid, reason, data } = this.btn.meta;
+	switch (reason) {
+		case 'SUCCESS':
+				if (data && data.copytxt) {
+					copy(data.copytxt);
+				}
 			break;
-		case formatStringFromNameCore('hold_error', 'main'):
-		case formatStringFromNameCore('hold_unhandled_status_code', 'main'):
-				callInMainworker('withHoldResume', {
-					actionid_serviceid: this.btn.meta.actionid,
-					reason: this.btn.meta.reason
-				});
-			break;
+		default:
+			// do it based on the bTxt
+			switch (this.btn.bTxt) {
+				case formatStringFromNameCore('hold_user_auth_needed', 'main'):
+						callInMainworker('openAuthTab', this.btn.meta.serviceid);
+					break;
+				case formatStringFromNameCore('hold_error', 'main'):
+				case formatStringFromNameCore('hold_unhandled_status_code', 'main'):
+						callInMainworker('withHoldResume', {
+							actionid_serviceid: this.btn.meta.actionid,
+							reason: this.btn.meta.reason
+						});
+					break;
+			}
 	}
 }
 
