@@ -1022,6 +1022,70 @@ function copy(aString) {
 	}
 }
 
+function print(aArg) {
+	var { aPrintPreview, aDataUrl } = aArg;
+	// aPrintPreview - true for print preview, else false
+
+	var aWin;
+	if (aPrintPreview) {
+		aWin = Services.ww.openWindow(null, 'chrome://browser/content/browser.xul', '_blank', null, null);
+		aWin.addEventListener('load', printWinLoad, false);
+	} else {
+		aWin = Services.wm.getMostRecentWindow('navigator:browser');
+		printWinLoad(Object.assign(aArg, {aWin}));
+	}
+
+	var aFrame;
+	function printWinLoad(e) {
+		console.error('printWinLoad e:', e);
+		if (aPrintPreview) {
+			aWin.removeEventListener('load', printWinLoad, false);
+		}
+		aWin.focus();
+
+		var doc = aWin.document;
+		aFrame = doc.createElementNS(NS_XUL, 'browser');
+		aFrame.addEventListener('load', printFrameLoad, true); // if i use `false` here it doesnt work
+
+		aFrame.setAttribute('type', 'content');
+		aFrame.setAttribute('src', aDataUrl);
+		aFrame.setAttribute('style', 'display:none'); // if dont do display none, then have to give it a height and width enough to show it, otherwise print preview is blank
+		doc.documentElement.appendChild(aFrame); // src page wont load until i append to document
+	}
+
+	function printFrameLoad(e) {
+		console.error('in printFrameLoad, e:', e);
+		aFrame.removeEventListener('load', printFrameLoad, true); // as i added with `true`
+
+		if (aPrintPreview) {
+			var aPPListener = aWin.PrintPreviewListener;
+			var aOrigPPgetSourceBrowser = aPPListener.getSourceBrowser;
+			var aOrigPPExit = aPPListener.onExit;
+			aPPListener.onExit = function() {
+				aOrigPPExit.call(aPPListener);
+				// aFrame.parentNode.removeChild(aFrame);
+				// aPPListener.onExit = aOrigPPExit;
+				// aPPListener.getSourceBrowser = aOrigPPgetSourceBrowser;
+				aWin.close();
+			};
+			aPPListener.getSourceBrowser = function() {
+				return aFrame;
+			};
+			aWin.PrintUtils.printPreview(aPPListener);
+		} else {
+			aFrame.contentWindow.addEventListener('afterprint', printFrameAfterPrint, false);
+			aFrame.contentWindow.print();
+		}
+	}
+
+	function printFrameAfterPrint(e) {
+		// only for if `!aPrintPreview`
+		console.error('in FrameAfterPrint, e:', e);
+		aFrame.setAttribute('src', 'about:blank');
+		// callInMainworker('bootstrapTimeout', 5 * 60 * 1000)
+	}
+}
+
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content
@@ -1301,8 +1365,17 @@ function attnBtnClick(doClose, aBrowser) {
 	var { actionid, serviceid, reason, data } = this.btn.meta;
 	switch (reason) {
 		case 'SUCCESS':
-				if (data && data.copytxt) {
-					copy(data.copytxt);
+				if (data) {
+					if (data.copytxt) {
+						copy(data.copytxt);
+					} else if (data.print_dataurl) {
+						callInMainworker('fetchFilestoreEntry', {mainkey:'prefs', key:'print_preview'}, function(aPrintPreview) {
+							print({
+								aPrintPreview,
+								aDataUrl: data.print_dataurl
+							});
+						});
+					}
 				}
 			break;
 		default:

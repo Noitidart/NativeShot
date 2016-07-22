@@ -2947,9 +2947,16 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 	// end async-proc5545
 }
 function action_print(shot, aActionFinalizer, aReportProgress) {
+	callInBootstrap('print', {
+		aPrintPreview: fetchFilestoreEntry({mainkey:'prefs', key:'print_preview'}),
+		aDataUrl: shot.dataurl
+	});
 	addShotToLog(shot);
 	aActionFinalizer({
-		reason: 'SUCCESS'
+		reason: 'SUCCESS',
+		data: {
+			print_dataurl: shot.dataurl
+		}
 	});
 }
 function action_copy(shot, aActionFinalizer, aReportProgress) {
