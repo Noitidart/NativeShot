@@ -5,6 +5,7 @@ var gWkComm = new Comm.client.worker();
 var gTess;
 var gTessBig = false;
 var gTessIdx = 0;
+var WORKER = this;
 
 function readByteArr(aArg) {
 	var { method, arrbuf, width, height, lang='eng' } = aArg
@@ -15,13 +16,13 @@ function readByteArr(aArg) {
 
 	var image_data = new ImageData(new Uint8ClampedArray(arrbuf), width, height);
 
-	switch (aOcrMethod) { // each block must return, no break's
+	switch (method) { // each block must return, no break's
 		case 'gocr':
 
 			if (typeof(GOCR) == 'undefined') {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/gocr.js');
 			}
-
+			console.error('GOCR?', GOCR);
 			var txt = GOCR(image_data);
 
 			return txt;
@@ -31,7 +32,7 @@ function readByteArr(aArg) {
 			if (typeof(OCRAD) == 'undefined') {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/ocrad.js');
 			}
-
+			console.error('OCRAD?', OCRAD);
 			var txt = OCRAD(image_data);
 
 			return txt;
@@ -41,8 +42,9 @@ function readByteArr(aArg) {
 			if (typeof(gTess) == 'undefined') {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/tesseract.js');
 			}
+			console.error('tesseractinit?', tesseractinit);
 
-			if (['chi_sim', 'chi_tra', 'jpn'].indexOf(aOptions.lang)) {
+			if (['chi_sim', 'chi_tra', 'jpn'].indexOf(lang)) {
 				if (!gTessBig) {
 					gTess = tesseractinit(16777216*10); // worker.postMessage({init: {mem: 16777216*10}})
 					gTessBig = true;
@@ -60,14 +62,9 @@ function readByteArr(aArg) {
 			gTess.recognize(gTessIdx++, image_data, lang, options, function(err, rez){
 				console.log('err:', rez, 'rez:', rez);
 				if (rez) {
-					deferred_recognize.resolve({
-						ok: true,
-						text: rez.text
-					});
+					deferred_recognize.resolve(rez.text);
 				} else {
-					deferred_recognize.resolve({
-						ok: false
-					});
+					deferred_recognize.resolve(null);
 				}
 			});
 

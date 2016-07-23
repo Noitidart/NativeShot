@@ -22,19 +22,19 @@ util.inherits(Level, AbstractLevelDOWN)
 
 Level.prototype._open = function(options, callback) {
   var self = this
-    
+
   var idbOpts = {
     storeName: this.location,
     autoIncrement: false,
     keyPath: null,
     onStoreReady: function () {
       callback && callback(null, self.idb)
-    }, 
+    },
     onError: function(err) {
       callback && callback(err)
     }
   }
-  
+
   xtend(idbOpts, options)
   this.IDBOptions = idbOpts
   this.idb = new IDB(idbOpts)
@@ -101,14 +101,14 @@ Level.prototype._batch = function (array, options, callback) {
   var copiedOp
   var currentOp
   var modified = []
-  
+
   if (array.length === 0) return setTimeout(callback, 0)
-  
+
   for (i = 0; i < array.length; i++) {
     copiedOp = {}
     currentOp = array[i]
     modified[i] = copiedOp
-    
+
     var converted = this.convertEncoding(currentOp.key, currentOp.value, options)
     currentOp.key = converted.key
     currentOp.value = converted.value
@@ -1202,7 +1202,7 @@ function extend() {
 
       var hasSuccess = false,
           result = null;
-      
+
       var getTransaction = this.db.transaction([this.storeName], this.consts.READ_ONLY);
       getTransaction.oncomplete = function () {
         var callback = hasSuccess ? onSuccess : onError;
@@ -1280,7 +1280,7 @@ function extend() {
       };
       batchTransaction.onabort = onError;
       batchTransaction.onerror = onError;
-      
+
       var count = dataArray.length;
       var called = false;
       var hasSuccess = false;
@@ -1468,7 +1468,7 @@ function extend() {
      * @example
      // given that there are two objects in the database with the keypath
      // values 1 and 2, and the call looks like this:
-     myStore.getBatch([1, 5, 2], onError, function (data) { … }, arrayType);
+     myStore.getBatch([1, 5, 2], onError, function (data) { ï¿½ }, arrayType);
 
      // this is what the `data` array will be like:
 
@@ -9410,7 +9410,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 	var loaded_langs = []
 	var loadLanguage = function(lang, index, cb){ // NodeJS style callback
 		if(loaded_langs.indexOf(lang) != -1){
-			cb(null, lang)		
+			cb(null, lang)
 		}
 		else{
 			Module.FS_createPath("/","tessdata",true,true)
@@ -9539,7 +9539,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 
 	            para.words = []
 	            para.symbols = []
-	            
+
 	            para.lines.forEach(function(line){
 	                line.paragraph = para;
 	                line.block = block;
@@ -9558,7 +9558,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 	                        sym.paragraph = para;
 	                        sym.block = block;
 	                        sym.page = page;
-	                        
+
 	                        sym.line.symbols.push(sym)
 	                        sym.paragraph.symbols.push(sym)
 	                        sym.block.symbols.push(sym)
@@ -9603,9 +9603,9 @@ var tesseractinit = (function createTesseractInstance(memory){
 						for(var i = 0; i < n; i++){
 							polygon.push([px.getValue(i), py.getValue(i)]);
 						}
-						Module._ptaDestroy(Module.getPointer(poly));	
+						Module._ptaDestroy(Module.getPointer(poly));
 					}
-					
+
 					block = {
 						paragraphs: [],
 
@@ -9680,7 +9680,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 					Module.destroy(wc)
 					textline.words.push(word)
 				}
-				
+
 				var image = null;
 				// var pix = ri.GetBinaryImage(Module.RIL_SYMBOL)
 				// var image = pix2array(pix);
@@ -9746,18 +9746,18 @@ var tesseractinit = (function createTesseractInstance(memory){
 			width     	  = image.width, height = image.height;
 			var dst       = new Uint8Array(width * height);
 			var srcLength = src.length | 0, srcLength_16 = (srcLength - 16) | 0;
-			
+
 			for (var i = 0, j = 0; i <= srcLength_16; i += 16, j += 4) {
 				// convert to grayscale 4 pixels at a time; eveything with alpha get put in front of 50% gray
 				dst[j]     = (((src[i] * 77 + src[i+1] * 151 + src[i+2] * 28) * src[i+3]) + ((255-src[i+3]) << 15) + 32768) >> 16
 				dst[j+1]   = (((src[i+4] * 77 + src[i+5] * 151 + src[i+6] * 28) * src[i+7]) + ((255-src[i+7]) << 15) + 32768) >> 16
 				dst[j+2]   = (((src[i+8] * 77 + src[i+9] * 151 + src[i+10] * 28) * src[i+11]) + ((255-src[i+11]) << 15) + 32768) >> 16
 				dst[j+3]   = (((src[i+12] * 77 + src[i+13] * 151 + src[i+14] * 28) * src[i+15]) + ((255-src[i+15]) << 15) + 32768) >> 16
-				
+
 			}
 			for (; i < srcLength; i += 4, ++j) //finish up
 				dst[j]     = (((src[i] * 77 + src[i+1] * 151 + src[i+2] * 28) * src[i+3]) + ((255-src[i+3]) << 15) + 32768) >> 16
-			
+
 			image = dst;
 		}
 		else {
@@ -9774,12 +9774,12 @@ var tesseractinit = (function createTesseractInstance(memory){
 		image = desaturate(image)
 
 		var ptr = Module.allocate(image, 'i8', Module.ALLOC_NORMAL);
-		
+
 		loadLanguage(lang, index, function(err, result){
 
 			if(err){
 				console.error("error loading", lang);
-				Module._free(ptr); 
+				Module._free(ptr);
 				cb(err, null)
 			}
 			else {
@@ -9788,7 +9788,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 				base.Init(null, lang)
 
 				// postMessage({
-				// 	index: index,			
+				// 	index: index,
 				// 	'progress': {
 				// 		'initialized_with_lang': true,
 				// 		'lang': lang
@@ -9799,7 +9799,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 				    if (options.hasOwnProperty(option)) {
 				        base.SetVariable(option, options[option]);
 				        // postMessage({
-						// 	index: index,			
+						// 	index: index,
 						// 	'progress': {
 						// 		'set_variable': {
 						// 			variable: option,
@@ -9817,7 +9817,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 				base.Recognize(null)
 				var everything = circularize(DumpLiterallyEverything())
 				base.End();
-				Module._free(ptr); 
+				Module._free(ptr);
 				cb(null, everything)
 
 			}
@@ -9842,7 +9842,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 				base.Init(null, 'osd')
 				base.SetPageSegMode(Module.PSM_OSD_ONLY)
 				console.log('loaded language')
-				
+
 				base.SetImage(Module.wrapPointer(ptr), width, height, 1, width)
 				base.SetRectangle(0, 0, width, height)
 
@@ -9889,15 +9889,15 @@ var tesseractinit = (function createTesseractInstance(memory){
 WORKER.tesseractinit = tesseractinit; // noit edit crossfile-link11151
 
 onmessage = function(e) {
-	
-	
+
+
 	if(e.data.init){
 		T = tesseractinit(e.data.init.mem)
 	}
 	else if(e.data.fun === 'recognize'){
 		T.recognize(e.data.index, e.data.image, e.data.lang, e.data.options, function(err, result){
 			// postMessage({index: e.data.index, err:err, result: result})
-		})		
+		})
 	}
 	else if(e.data.fun === 'detect'){
 		T.detect(e.data.index, e.data.image, function(err, result){

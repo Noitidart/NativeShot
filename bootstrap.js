@@ -1238,6 +1238,11 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bType = 'button';
 
 				break;
+			case 'PROCESSING':
+					btn.bTxt = formatStringFromNameCore('processing', 'main'),
+					btn.bDisabled = true;
+					btn.bType = 'button';
+				break;
 			case 'UPLOAD_INIT':
 					btn.bTxt = formatStringFromNameCore('upload_init', 'main'),
 					btn.bDisabled = false;
@@ -1424,6 +1429,12 @@ function attnBtnClick(doClose, aBrowser) {
 				callInMainworker('withHoldResume', {
 					actionid_serviceid: this.btn.meta.actionid,
 					reason: this.btn.meta.reason
+				});
+			break;
+		case formatStringFromNameCore('success_ocr', 'main'):
+				var window = Services.wm.getMostRecentWindow('navigator:browser');
+				window.gBrowser.loadOneTab('about:nativeshot?text=' + this.btn.meta.actionid, {
+					inBackground: false
 				});
 			break;
 		case formatStringFromNameCore('success_search', 'main'):

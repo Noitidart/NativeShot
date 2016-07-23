@@ -11,7 +11,7 @@ var gWorker = this;
 
 var gBsComm = new Comm.client.worker();
 var gOcrComm;
-var callInOcrComm = Comm.callInX.bind(null, 'gOcrComm', null);
+var callInOcrworker = Comm.callInX.bind(null, 'gOcrComm', null);
 
 var gHydrants; // keys are getPage() names, like NewRecordingPage and value is an object which is its hydrant
 var gEditorStateStr;
@@ -2974,16 +2974,109 @@ function action_copy(shot, aActionFinalizer, aReportProgress) {
 	});
 }
 function action_ocrall(shot, aActionFinalizer, aReportProgress) {
+	var action_arguments = arguments;
+
+	aReportProgress({
+		reason: 'PROCESSING'
+	});
+
+	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
+
+	var finalize_data = {
+		reason: 'SUCCESS',
+		data: {
+			ocr_dataurl: dataurl,
+			txt: {}
+		}
+	};
+
+	var promiseAllArr_ocr = [];
+
+	var processOcr = function(aMethod, aDeferred) {
+		callInOcrworker('readByteArr', {
+			method: aMethod,
+			arrbuf: shot.arrbuf,
+			width: shot.width,
+			height: shot.height
+		}, function(aArg2) {
+			var txt = aArg2;
+			finalize_data.data.txt[aMethod] = txt;
+			aDeferred.resolve();
+		});
+	}
+
+	for (var a_serviceid in core.nativeshot.services) {
+		var entry = core.nativeshot.services[a_serviceid];
+		if (entry.type == 'ocr' && a_serviceid != 'ocrall') {
+			var deferred_processmethod = new Deferred();
+			promiseAllArr_ocr.push(deferred_processmethod.promise);
+			processOcr(a_serviceid, deferred_processmethod);
+		}
+	}
+
+	var resumer = buildResumer( ...action_arguments, action_ocrall.bind(null, ...action_arguments) );
+	var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
+	promiseAll_ocr.then(
+		function() {
+			aActionFinalizer(finalize_data);
+		},
+		actionReject.bind(null, ...action_arguments, resumer, 'promise_getdir')
+	).catch(actionCatch.bind(null, ...action_arguments, resumer, 'promise_getdir'));
 
 }
-function action_tesseract(shot, aActionFinalizer, aReportProgress) {
+var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinalizer, aReportProgress) {
+	var action_arguments = arguments;
 
-}
-function action_gocr(shot, aActionFinalizer, aReportProgress) {
+	var lang;
+	if (shot.action_options && shot.action_options.lang) {
+		lang = shot.action_options.lang;
+	}
 
-}
-function action_ocrad(shot, aActionFinalizer, aReportProgress) {
+	aReportProgress({
+		reason: 'PROCESSING'
+	});
 
+	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
+	console.error('callInOcrworker:', callInOcrworker, '11111');
+	console.error('callInOcrworker:', callInOcrworker, {
+		method: shot.serviceid,
+		arrbuf: shot.arrbuf,
+		width: shot.width,
+		height: shot.height,
+		lang,
+		__XFER: ['arrbuf']
+	});
+	callInOcrworker('readByteArr', {
+		method: shot.serviceid,
+		arrbuf: shot.arrbuf,
+		width: shot.width,
+		height: shot.height,
+		lang,
+		__XFER: ['arrbuf']
+	}, function(aArg2) {
+		var txt = aArg2;
+
+		if (txt === null) {
+			aActionFinalizer({
+				reason: 'HOLD_ERROR',
+				data: {
+					error_details: 'Failed OCR' // TODO:
+				}
+			});
+		} else {
+			aActionFinalizer({
+				reason: 'SUCCESS',
+				data: {
+					ocr_dataurl: dataurl,
+					txt: {
+						[shot.serviceid]: txt
+					}
+				}
+			});
+		}
+	});
+
+	addShotToLog(shot);
 }
 function action_bing(shot, aActionFinalizer, aReportProgress) {
 	// http://www.bing.com/images/search?q=&view=detailv2&iss=sbi&FORM=IRSBIQ&sbifsz=412+x+306+%c2%b7+15+kB+%c2%b7+png&sbifnm=rawr.png&thw=412&thh=306#enterInsights
@@ -3015,7 +3108,7 @@ function action_bing(shot, aActionFinalizer, aReportProgress) {
 
 	addShotToLog(shot);
 }
-function action_googleimages(shot, aActionFinalizer, aReportProgress) {
+var action_tineye = action_googleimages = function(shot, aActionFinalizer, aReportProgress) {
 	var action_arguments = arguments;
 
 	const search_urls = {
@@ -3028,7 +3121,7 @@ function action_googleimages(shot, aActionFinalizer, aReportProgress) {
 	try {
 		OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf));
 	} catch(OSFileError) {
-		console.error('action_tineye -> OSFileError:', OSFileError);
+		console.error('action_' + shot.serviceid + ' -> OSFileError:', OSFileError);
 		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
 		aReportProgress({
 			reason: reasons.HOLD_ERROR,
@@ -3065,7 +3158,6 @@ function action_googleimages(shot, aActionFinalizer, aReportProgress) {
 
 	addShotToLog(shot);
 }
-var action_tineye = action_googleimages;
 function action_twitter(shot, aActionFinalizer, aReportProgress) {
 	const TWITTER_URL = 'https://twitter.com/';
 	const IMG_SUFFIX = ':large';
