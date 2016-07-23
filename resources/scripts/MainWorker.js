@@ -2986,7 +2986,34 @@ function action_ocrad(shot, aActionFinalizer, aReportProgress) {
 
 }
 function action_bing(shot, aActionFinalizer, aReportProgress) {
+	// http://www.bing.com/images/search?q=&view=detailv2&iss=sbi&FORM=IRSBIQ&sbifsz=412+x+306+%c2%b7+15+kB+%c2%b7+png&sbifnm=rawr.png&thw=412&thh=306#enterInsights
+	var action_arguments = arguments;
 
+	var bing_bytes;
+	if (shot.arrbuf.byteLength < 1024) {
+		bing_bytes = '0+kB'
+	} else {
+		bing_bytes = formatBytes(shot.arrbuf.byteLength).replace(/\.\d+ /, '+').replace(/(.)B/, ($0,$1)=>$1.toLowerCase()+'B');
+	}
+	var url = 'http://www.bing.com/images/search?q=&view=detailv2&iss=sbi&FORM=IRSBIQ&sbifsz=' + Math.floor(shot.width) + '+x+' + Math.floor(shot.height) + '+%c2%b7+' + bing_bytes + '+%c2%b7+png&sbifnm=rawr.png&thw=' + Math.floor(shot.width) + '&thh=' + Math.floor(shot.height) + '#enterInsights';
+
+	var postdata = {
+		imgurl: '',
+		cbir: 'sbi',
+		imageBin: base64ArrayBuffer(shot.arrbuf)
+	};
+
+	callInBootstrap('reverseImageSearch', {
+		postdata,
+		url,
+		actionid: shot.actionid
+	});
+
+	aActionFinalizer({
+		reason: 'SUCCESS'
+	});
+
+	addShotToLog(shot);
 }
 function action_googleimages(shot, aActionFinalizer, aReportProgress) {
 	var action_arguments = arguments;
@@ -3035,6 +3062,8 @@ function action_googleimages(shot, aActionFinalizer, aReportProgress) {
 	aActionFinalizer({
 		reason: 'SUCCESS'
 	});
+
+	addShotToLog(shot);
 }
 var action_tineye = action_googleimages;
 function action_twitter(shot, aActionFinalizer, aReportProgress) {

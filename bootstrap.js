@@ -131,6 +131,11 @@ var core = {
 				code: 15,
 				type: 'ocr',
 				datatype: 'plain_arrbuf'
+			},
+			bing: {
+				code: 16,
+				type: 'search',
+				datatype: 'png_arrbuf'
 			}
 		}
 	}
@@ -1090,11 +1095,10 @@ function print(aArg) {
 
 function reverseImageSearch(aArg) {
 	var { path, postdata, url, actionid } = aArg;
-	var nsifile = new nsIFile(path);
 
 	for (var p in postdata) {
 		if (postdata[p] == 'nsifile') {
-			postdata[p] = nsifile;
+			postdata[p] = new nsIFile(path);
 			break;
 		}
 	}

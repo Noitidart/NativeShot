@@ -957,11 +957,11 @@ function init(aArrBufAndCore) {
 				{
 					label: 'Google',
 					icon: '\ue80e'
-				}//,
-				// {
-				// 	label: 'Bing',
-				// 	icon: '\ueaeb'
-				// }
+				},
+				{
+					label: 'Bing',
+					icon: '\ueaeb'
+				}
 			]
 		},
 		{
