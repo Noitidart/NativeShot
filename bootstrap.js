@@ -65,17 +65,17 @@ var core = {
 			twitter: {
 				code: 1,
 				type: 'share',
-				datatype: 'png_dataurl'
+				datatype: 'png_arrbuf'
 			},
 			copy: {
 				code: 2,
 				type: 'system',
-				datatype: 'png_dataurl'
+				datatype: 'png_arrbuf'
 			},
 			print: {
 				code: 3,
 				type: 'system',
-				datatype: 'png_dataurl'
+				datatype: 'png_arrbuf'
 			},
 			savequick: {
 				code: 4,
@@ -1088,6 +1088,24 @@ function print(aArg) {
 	}
 }
 
+function reverseImageSearch(aArg) {
+	var { path, postdata, url, actionid } = aArg;
+	var nsifile = new nsIFile(path);
+
+	for (var p in postdata) {
+		if (postdata[p] == 'nsifile') {
+			postdata[p] = nsifile;
+			break;
+		}
+	}
+
+	var tab = Services.wm.getMostRecentWindow('navigator:browser').gBrowser.loadOneTab(url, {
+		inBackground: false,
+		postData: encodeFormData(postdata, 'iso8859-1')
+	});
+	tab.setAttribute('nativeshot_actionid', actionid);
+}
+
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content
@@ -1389,20 +1407,35 @@ function attnBtnClick(doClose, aBrowser) {
 					}
 				}
 			break;
-		default:
-			// do it based on the bTxt
-			switch (this.btn.bTxt) {
-				case formatStringFromNameCore('hold_user_auth_needed', 'main'):
-						callInMainworker('openAuthTab', this.btn.meta.serviceid);
-					break;
-				case formatStringFromNameCore('hold_error', 'main'):
-				case formatStringFromNameCore('hold_unhandled_status_code', 'main'):
-						callInMainworker('withHoldResume', {
-							actionid_serviceid: this.btn.meta.actionid,
-							reason: this.btn.meta.reason
-						});
-					break;
-			}
+	}
+
+
+	// do it based on the bTxt
+	switch (this.btn.bTxt) {
+		case formatStringFromNameCore('hold_user_auth_needed', 'main'):
+				callInMainworker('openAuthTab', this.btn.meta.serviceid);
+			break;
+		case formatStringFromNameCore('hold_error', 'main'):
+		case formatStringFromNameCore('hold_unhandled_status_code', 'main'):
+				callInMainworker('withHoldResume', {
+					actionid_serviceid: this.btn.meta.actionid,
+					reason: this.btn.meta.reason
+				});
+			break;
+		case formatStringFromNameCore('success_search', 'main'):
+				var windows = Services.wm.getEnumerator('navigator:browser');
+				while (windows.hasMoreElements()) {
+					var window = windows.getNext();
+					var tabs = window.gBrowser.tabContainer.childNodes;
+					for (var tab of tabs) {
+						if (tab.getAttribute('nativeshot_actionid') == this.btn.meta.actionid) {
+							window.focus();
+							window.gBrowser.selectedTab = tab;
+							return;
+						}
+					}
+				}
+			break;
 	}
 }
 
@@ -1413,7 +1446,7 @@ function attnMenuClick(doClose, aBrowser) {
 	// do it based on the bTxt
 	switch (this.menuitem.cTxt) {
 		case formatStringFromNameCore('show_in_explorer', 'main'):
-				showFileInOSExplorer(nsIFile(this.btn.meta.data.copytxt));
+				showFileInOSExplorer(new nsIFile(this.btn.meta.data.copytxt));
 			break;
 	}
 }
@@ -1547,6 +1580,20 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 	}
 }
 
+function loadOneTab(aArg, aReportProgress, aComm) {
+	var window = Services.wm.getMostRecentWindow('navigator:browser');
+	window.gBrowser.loadOneTab(aArg.URL, aArg.params);
+
+	/* example usage
+	callInBootstrap('loadOneTab', {
+		URL: 'https://www.facebook.com',
+		params: {
+			inBackground: false
+		}
+	});
+	*/
+}
+
 function browseFile(aArg, aReportProgress, aComm, aMessageManager, aBrowser) {
 	// rev4 - https://gist.github.com/Noitidart/91b9a7ce5ff6ee7f8329c4d71cc5943b
 
@@ -1640,6 +1687,73 @@ function browseFile(aArg, aReportProgress, aComm, aMessageManager, aBrowser) {
 		return fpDoneCallback(fp.show());
 	}
 }
+
+function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType) {
+	// http://stackoverflow.com/a/25020668/1828637
+
+	var encoder = Cc["@mozilla.org/intl/saveascharset;1"].createInstance(Ci.nsISaveAsCharset);
+	encoder.Init(charset || "utf-8", Ci.nsISaveAsCharset.attr_EntityAfterCharsetConv + Ci.nsISaveAsCharset.attr_FallbackDecimalNCR, 0);
+	var encode = function(val, header) {
+		val = encoder.Convert(val);
+		if (header) {
+			val = val.replace(/\r\n/g, " ").replace(/"/g, "\\\"");
+		}
+		return val;
+	}
+
+	var boundary = "----boundary--" + Date.now();
+	var mpis = Cc['@mozilla.org/io/multiplex-input-stream;1'].createInstance(Ci.nsIMultiplexInputStream);
+
+	var item = "";
+	for (var k of Object.keys(data)) {
+		item += "--" + boundary + "\r\n";
+		var v = data[k];
+
+		if (v instanceof Ci.nsIFile) {
+
+			var fstream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
+			fstream.init(v, -1, -1, Ci.nsIFileInputStream.DELETE_ON_CLOSE);
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\";" + " filename=\"" + encode(v.leafName, true) + "\"\r\n";
+
+			var ctype = "application/octet-stream";
+			try {
+				var mime = Cc["@mozilla.org/mime;1"].getService(Ci.nsIMIMEService);
+				ctype = mime.getTypeFromFile(v) || ctype;
+			} catch (ex) {
+				console.warn("failed to get type", ex);
+			}
+			item += "Content-Type: " + ctype + "\r\n\r\n";
+
+			var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+			ss.data = item;
+
+			mpis.appendStream(ss);
+			mpis.appendStream(fstream);
+
+			item = "";
+
+		} else {
+			console.error('in else');
+			item += "Content-Disposition: form-data; name=\"" + encode(k, true) + "\"\r\n\r\n";
+			item += encode(v);
+
+		}
+		item += "\r\n";
+	}
+
+	item += "--" + boundary + "--\r\n";
+	var ss = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
+	ss.data = item;
+	mpis.appendStream(ss);
+
+	var postStream = Cc["@mozilla.org/network/mime-input-stream;1"].createInstance(Ci.nsIMIMEInputStream);
+	postStream.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
+	postStream.setData(mpis);
+	postStream.addContentLength = true;
+
+	return postStream;
+}
+
 
 // start - common helper functions
 function Deferred() {

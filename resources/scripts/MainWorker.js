@@ -2858,7 +2858,7 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 				return;
 			}
 			console.error('action_savequick -> OSFileError:', OSFileError);
-			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
+			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) ));
 			aReportProgress({
 				reason: reasons.HOLD_ERROR,
 				data: {
@@ -2934,7 +2934,7 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 			});
 		} catch(OSFileError) {
 			console.error('action_savebrowse -> OSFileError:', OSFileError);
-			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
+			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) ));
 			aReportProgress({
 				reason: reasons.HOLD_ERROR,
 				data: {
@@ -2948,25 +2948,28 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 	// end async-proc5545
 }
 function action_print(shot, aActionFinalizer, aReportProgress) {
+	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
 	callInBootstrap('print', {
 		aPrintPreview: fetchFilestoreEntry({mainkey:'prefs', key:'print_preview'}),
-		aDataUrl: shot.dataurl
+		aDataUrl: dataurl
 	});
 	addShotToLog(shot);
 	aActionFinalizer({
 		reason: 'SUCCESS',
 		data: {
-			print_dataurl: shot.dataurl
+			print_dataurl: dataurl
 		}
 	});
 }
 function action_copy(shot, aActionFinalizer, aReportProgress) {
-	callInBootstrap('copy', shot.dataurl);
+	// callInBootstrap('copy', shot.dataurl);
+	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
+	callInBootstrap('copy', dataurl);
 	addShotToLog(shot);
 	aActionFinalizer({
 		reason: 'SUCCESS',
 		data: {
-			copytxt: shot.dataurl
+			copytxt: dataurl
 		}
 	});
 }
@@ -2982,15 +2985,58 @@ function action_gocr(shot, aActionFinalizer, aReportProgress) {
 function action_ocrad(shot, aActionFinalizer, aReportProgress) {
 
 }
-function action_googleimages(shot, aActionFinalizer, aReportProgress) {
-	const GIMAGES_URL = 'https://images.google.com/searchbyimage/upload';
-}
 function action_bing(shot, aActionFinalizer, aReportProgress) {
 
 }
-function action_tineye(shot, aActionFinalizer, aReportProgress) {
+function action_googleimages(shot, aActionFinalizer, aReportProgress) {
+	var action_arguments = arguments;
 
+	const search_urls = {
+		googleimages: 'https://images.google.com/searchbyimage/upload',
+		tineye: 'http://tineye.com/search'
+	};
+
+	var path = OS.Path.join(OS.Constants.Path.tmpDir, 'nativeshot_revsearch-' + shot.actionid + '.png'); // i make file name unique so that it never runs into issue where there is a prexisting file. even if the files have not self deleted from the past link000248
+
+	try {
+		OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf));
+	} catch(OSFileError) {
+		console.error('action_tineye -> OSFileError:', OSFileError);
+		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
+		aReportProgress({
+			reason: reasons.HOLD_ERROR,
+			data: {
+				error_details: buildOSFileErrorString('writeAtomic', OSFileError)
+			}
+		});
+	}
+
+	var postdata = {};
+	switch (shot.serviceid) {
+		case 'tineye':
+				postdata = {
+					image: 'nsifile'
+				};
+			break;
+		case 'googleimages':
+				postdata = {
+					encoded_image: 'nsifile',
+					image_url: 'myimg.png'
+				};
+			break;
+	}
+	callInBootstrap('reverseImageSearch', {
+		path,
+		postdata,
+		url: search_urls[shot.serviceid],
+		actionid: shot.actionid
+	});
+
+	aActionFinalizer({
+		reason: 'SUCCESS'
+	});
 }
+var action_tineye = action_googleimages;
 function action_twitter(shot, aActionFinalizer, aReportProgress) {
 	const TWITTER_URL = 'https://twitter.com/';
 	const IMG_SUFFIX = ':large';
