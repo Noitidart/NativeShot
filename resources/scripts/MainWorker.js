@@ -3037,15 +3037,6 @@ var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinali
 	});
 
 	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
-	console.error('callInOcrworker:', callInOcrworker, '11111');
-	console.error('callInOcrworker:', callInOcrworker, {
-		method: shot.serviceid,
-		arrbuf: shot.arrbuf,
-		width: shot.width,
-		height: shot.height,
-		lang,
-		__XFER: ['arrbuf']
-	});
 	callInOcrworker('readByteArr', {
 		method: shot.serviceid,
 		arrbuf: shot.arrbuf,

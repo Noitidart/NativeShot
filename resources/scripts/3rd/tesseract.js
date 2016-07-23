@@ -9888,23 +9888,23 @@ var tesseractinit = (function createTesseractInstance(memory){
 
 WORKER.tesseractinit = tesseractinit; // noit edit crossfile-link11151
 
-onmessage = function(e) {
-
-
-	if(e.data.init){
-		T = tesseractinit(e.data.init.mem)
-	}
-	else if(e.data.fun === 'recognize'){
-		T.recognize(e.data.index, e.data.image, e.data.lang, e.data.options, function(err, result){
-			// postMessage({index: e.data.index, err:err, result: result})
-		})
-	}
-	else if(e.data.fun === 'detect'){
-		T.detect(e.data.index, e.data.image, function(err, result){
-			// postMessage({index: e.data.index, err:err, result: result})
-		})
-	}
-}
+// onmessage = function(e) {
+//
+//
+// 	if(e.data.init){
+// 		T = tesseractinit(e.data.init.mem)
+// 	}
+// 	else if(e.data.fun === 'recognize'){
+// 		T.recognize(e.data.index, e.data.image, e.data.lang, e.data.options, function(err, result){
+// 			// postMessage({index: e.data.index, err:err, result: result})
+// 		})
+// 	}
+// 	else if(e.data.fun === 'detect'){
+// 		T.detect(e.data.index, e.data.image, function(err, result){
+// 			// postMessage({index: e.data.index, err:err, result: result})
+// 		})
+// 	}
+// }
 },{"level-js":1,"pako":19,"tesseract.js-core":35}],37:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.

@@ -22,7 +22,6 @@ function readByteArr(aArg) {
 			if (typeof(GOCR) == 'undefined') {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/gocr.js');
 			}
-			console.error('GOCR?', GOCR);
 			var txt = GOCR(image_data);
 
 			return txt;
@@ -32,7 +31,6 @@ function readByteArr(aArg) {
 			if (typeof(OCRAD) == 'undefined') {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/ocrad.js');
 			}
-			console.error('OCRAD?', OCRAD);
 			var txt = OCRAD(image_data);
 
 			return txt;
@@ -42,7 +40,6 @@ function readByteArr(aArg) {
 			if (typeof(gTess) == 'undefined') {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/tesseract.js');
 			}
-			console.error('tesseractinit?', tesseractinit);
 
 			if (['chi_sim', 'chi_tra', 'jpn'].indexOf(lang)) {
 				if (!gTessBig) {
