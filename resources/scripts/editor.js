@@ -937,11 +937,11 @@ function init(aArrBufAndCore) {
 				{
 					label: 'Twitter',
 					icon: '\ue802'
-				}//,
-				// {
-					// label: 'Facebook',
-					// icon: '\ue801'
-				// }
+				},
+				{
+					label: 'Facebook',
+					icon: '\ue801'
+				}
 			]
 		},
 		{

@@ -136,6 +136,11 @@ var core = {
 				code: 16,
 				type: 'search',
 				datatype: 'png_arrbuf'
+			},
+			facebook: {
+				code: 17,
+				type: 'share',
+				datatype: 'png_arrbuf'
 			}
 		}
 	}
