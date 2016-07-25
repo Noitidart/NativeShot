@@ -48,7 +48,7 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 		// PLACE(resumer)
 		// CANCEL(null)
 		// REENTER(null)
-		// RESUME(null)
+		// RESUME(null or object to Object.assign to action_options)
 	// when doing CHECK, setting aFinalizeWithOrProgressWithOrResumer is optional, as maybe devuser wants to just check. but if it is set it should be the callback to reenter with, and it will queue it up if check yeields that it is on hold. should build one with buildResumer()
 	// return values
 	/*
@@ -126,7 +126,15 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 				if (hold) {
 					var resumers = hold.resumers;
 					delete gHold[hold_key];
+					var assignto_actionoptions = aFinalizeWithOrProgressWithOrResumer;
 					for (var resumer of resumers) {
+						if (assignto_actionoptions) {
+							if (resumer.shot.action_options) {
+								Object.assign(resumer.shot.action_options, assignto_actionoptions);
+							} else {
+								resumer.shot.action_options = Object.assign({}, assignto_actionoptions);
+							}
+						}
 						resumer.aActionFlowReenterer();
 					}
 				}
@@ -134,8 +142,8 @@ function withHold(aAct, actionid_serviceid, reason, aFinalizeWithOrProgressWithO
 	}
 }
 function withHoldResume(aArg) {
-	var { actionid_serviceid, reason } = aArg;
-	withHold(RESUME, actionid_serviceid, reason);
+	var { actionid_serviceid, reason, action_options } = aArg;
+	withHold(RESUME, actionid_serviceid, reason, action_options);
 }
 
 function dummyForInstantInstantiate() {}
@@ -2790,7 +2798,8 @@ var reasons = {
 	HOLD_ERROR: 'HOLD_ERROR',
 	HOLD_USER_AUTH_NEEDED: 'HOLD_USER_AUTH_NEEDED', // user needs to grant oauth authorization
 	HOLD_UNHANDLED_STATUS_CODE: 'HOLD_UNHANDLED_STATUS_CODE',
-	HOLD_GETTING_USER: 'HOLD_GETTING_USER'
+	HOLD_GETTING_USER: 'HOLD_GETTING_USER',
+	HOLD_USER_TWEET_NEEDED: 'HOLD_USER_TWEET_NEEDED'
 };
 
 // start action functions
@@ -3520,9 +3529,9 @@ function writeThenDir(aPlatPath, aContents, aDirFrom, aOptions={}) {
 
 }
 
-// rev1 - https://gist.github.com/Noitidart/c4ab4ca10ff5861c720b
+// rev2 - https://gist.github.com/Noitidart/c4ab4ca10ff5861c720b
 var jQLike = { // my stand alone jquery like functions
-	serialize: function(aSerializeObject) {
+	serialize: function(aSerializeObject, aEncoder=encodeURIComponent) {
 		// https://api.jquery.com/serialize/
 
 		// verified this by testing
@@ -3531,7 +3540,7 @@ var jQLike = { // my stand alone jquery like functions
 
 		var serializedStrArr = [];
 		for (var cSerializeKey in aSerializeObject) {
-			serializedStrArr.push(encodeURIComponent(cSerializeKey) + '=' + encodeURIComponent(aSerializeObject[cSerializeKey]));
+			serializedStrArr.push(aEncoder(cSerializeKey) + '=' + aEncoder(aSerializeObject[cSerializeKey]));
 		}
 		return serializedStrArr.join('&');
 	}

@@ -1248,6 +1248,11 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bDisabled = false;
 					btn.bType = 'button';
 				break;
+			case 'HOLD_USER_TWEET_NEEDED':
+					btn.bTxt = formatStringFromNameCore('hold_user_tweet_needed', 'main'),
+					btn.bDisabled = false;
+					btn.bType = 'button';
+				break;
 			case 'UPLOAD_INIT':
 					btn.bTxt = formatStringFromNameCore('upload_init', 'main'),
 					btn.bDisabled = false;
@@ -1302,6 +1307,21 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 						case 'copy':
 						case 'print':
 								success_suffix = meta.serviceid;
+							break;
+						case 'twitter':
+								success_suffix = meta.serviceid;
+								btn.bType = 'menu-button';
+								btn.bMenu = [];
+								meta.data.link_images.forEach((img_link, i) => {
+									btn.bMenu.push({
+										cTxt: formatStringFromNameCore('copy_imagelink_num', 'main', [i+1]),
+										meta: {
+											data: {
+												copytxt: img_link
+											}
+										}
+									});
+								});
 							break;
 						case 'savebrowse':
 						case 'savequick':
@@ -1421,6 +1441,19 @@ function attnBtnClick(doClose, aBrowser) {
 					}
 				}
 			break;
+		case 'HOLD_USER_TWEET_NEEDED':
+				var msg = {value:''};
+				var result = Services.prompt.prompt(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Tweet Message', 'Type a message you want to Tweet these images with:', msg, null, {});
+				if (result) {
+					callInMainworker('withHoldResume', {
+						actionid_serviceid: this.btn.meta.actionid,
+						reason: 'HOLD_USER_TWEET_NEEDED',
+						action_options: {
+							tweet_msg: msg.value
+						}
+					});
+				}
+			break;
 	}
 
 
@@ -1464,10 +1497,14 @@ function attnMenuClick(doClose, aBrowser) {
 	// this == {inststate:AB.Insts[aCloseCallbackId].state, btn:aBtnEntry, menu:jMenu, menuitem:jEntry}
 	console.log('attn menu clicked, this:', this);
 	// do it based on the bTxt
-	switch (this.menuitem.cTxt) {
-		case formatStringFromNameCore('show_in_explorer', 'main'):
-				showFileInOSExplorer(new nsIFile(this.btn.meta.data.copytxt));
-			break;
+	if (this.menuitem.meta.data.copytxt) {
+		copy(this.menuitem.meta.data.copytxt);
+	} else {
+		switch (this.menuitem.cTxt) {
+			case formatStringFromNameCore('show_in_explorer', 'main'):
+					showFileInOSExplorer(new nsIFile(this.btn.meta.data.copytxt));
+				break;
+		}
 	}
 }
 
