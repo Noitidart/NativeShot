@@ -403,58 +403,6 @@ function uninit() { // link4757484773732
 	removeEventListener('unload', shutdown, true);
 }
 
-function isTwitterLoaded(aArg) {
-	// returns
-		// true - good and ready
-		// false - not twitter
-		// null - is twitter but error
-	var contentWindow = content;
-
-	var contentDocument = contentWindow.document;
-	console.log('contentDocument.readyState:', contentDocument.readyState);
-
-	if (pageLoader.matches(contentWindow.location.href, contentWindow.location) == MATCH_TWITTER) {
-		var contentDocument = contentWindow.document;
-		if (contentDocument.readyState == 'interactive' || contentDocument.readyState == 'complete') {
-			var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
-			var docuri = webnav.document.documentURI;
-			// console.info('docuri:', docuri);
-
-			if (docuri.indexOf('about:neterror') === 0) {
-				return null;
-			} else {
-				return true;
-			}
-		}
-	} else {
-		return false;
-	}
-}
-
-function injectToTwitter(aArg) {
-	var deferredmain_injecttotwitter = new Deferred();
-
-	var contentWindow = content;
-
-	var principal = contentWindow.document.nodePrincipal; // contentWindow.location.origin (this is undefined for about: pages) // docShell.chromeEventHandler.contentPrincipal (chromeEventHandler no longer has contentPrincipal)
-	// console.log('contentWindow.document.nodePrincipal', contentWindow.document.nodePrincipal);
-	// console.error('principal:', principal);
-	var sandbox = Cu.Sandbox(principal, {
-		sandboxPrototype: contentWindow,
-		wantXrays: true, // only set this to false if you need direct access to the page's javascript. true provides a safer, isolated context.
-		sameZoneAs: contentWindow,
-		wantComponents: false
-	});
-	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'comm/Comm.js?' + core.addon.cache_key, sandbox, 'UTF-8');
-	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'TwitterContentscript.js?' + core.addon.cache_key, sandbox, 'UTF-8');
-
-	gWinComm = new Comm.server.content(contentWindow, function() {
-		deferredmain_injecttotwitter.resolve();
-	});
-
-	return deferredmain_injecttotwitter.promise;
-}
-
 // start - common helper functions
 function Deferred() {
 	this.resolve = null;

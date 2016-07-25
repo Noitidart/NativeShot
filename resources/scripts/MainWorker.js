@@ -147,6 +147,8 @@ function init(objCore) {
 	gOcrComm = new Comm.server.worker(core.addon.path.scripts + 'OCRWorker.js');
 
 	importScripts(core.addon.path.scripts + 'supplement/MainWorkerSupplement.js');
+	importScripts(core.addon.path.scripts + '3rd/hmac-sha1.js'); // for twitter
+	importScripts(core.addon.path.scripts + '3rd/enc-base64-min.js'); // for twitter
 
 	addOsInfoToCore();
 
@@ -3149,24 +3151,6 @@ var action_tineye = action_googleimages = function(shot, aActionFinalizer, aRepo
 
 	addShotToLog(shot);
 }
-function action_twitter(shot, aActionFinalizer, aReportProgress) {
-	const TWITTER_URL = 'https://twitter.com/';
-	const IMG_SUFFIX = ':large';
-	const MAX_FILE_SIZE = 5242880; //  // i got this from doing debugger prettify on twitter javascript files
-	const MAX_UPLOAD_FILE_SIZE = 3145728; //  // i got this from doing debugger prettify on twitter javascript files
-
-	// start async-proc4441
-	var loadTabWithAttachments = function() {
-		callInBootstrap('twitterLoad', {
-
-		}, function(aArg) {
-			console.log('MainWorker, twitterLoad done');
-		});
-	};
-
-	loadTabWithAttachments();
-	// end async-proc4441
-}
 // end action functions
 
 function processAction(aArg, aReportProgress, aComm) {
@@ -3703,6 +3687,42 @@ function queryStringAsJson(aQueryString) {
 	asJsonStringify = asJsonStringify.replace(/"(\d+|true|false)"/, function($0, $1) { return $1; });
 
 	return JSON.parse(asJsonStringify);
+}
+function nonce(length) {
+	// generates a nonce
+	var text = '';
+	var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	for(var i = 0; i < length; i++) {
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return text;
+}
+function to_rfc3986(aStr) {
+	// https://af-design.com/2008/03/14/rfc-3986-compliant-uri-encoding-in-javascript/
+	// i should test with the samples given here - https://dev.twitter.com/oauth/overview/percent-encoding-parameters
+	var tmp =  encodeURIComponent(aStr);
+	tmp = tmp.replace(/\!/g,'%21');
+	tmp = tmp.replace(/\*/g,'%2A');
+	tmp = tmp.replace(/\(/g,'%28');
+	tmp = tmp.replace(/\)/g,'%29');
+	tmp = tmp.replace(/'/g,'%27');
+	return tmp;
+}
+function alphaStrOfObj(aObj, aParseFunc, aJoinStr, aDblQuot) {
+	var arr = Object.keys(aObj);
+	arr.sort();
+
+	if (!aParseFunc) {
+		aParseFunc = function(aToBeParsed) {
+			return aToBeParsed;
+		};
+	}
+
+	for (var i=0; i<arr.length; i++) {
+		arr[i] = aParseFunc(arr[i]) + '=' + (aDblQuot ? '"' : '') + aParseFunc(aObj[arr[i]]) + (aDblQuot ? '"' : '');
+	}
+
+	return arr.join(aJoinStr);
 }
 // end - common helper functions
 // start - common worker functions
