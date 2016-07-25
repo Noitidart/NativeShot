@@ -3154,6 +3154,18 @@ function action_twitter(shot, aActionFinalizer, aReportProgress) {
 	const IMG_SUFFIX = ':large';
 	const MAX_FILE_SIZE = 5242880; //  // i got this from doing debugger prettify on twitter javascript files
 	const MAX_UPLOAD_FILE_SIZE = 3145728; //  // i got this from doing debugger prettify on twitter javascript files
+
+	// start async-proc4441
+	var loadTabWithAttachments = function() {
+		callInBootstrap('twitterLoad', {
+
+		}, function(aArg) {
+			console.log('MainWorker, twitterLoad done');
+		});
+	};
+
+	loadTabWithAttachments();
+	// end async-proc4441
 }
 // end action functions
 

@@ -1769,7 +1769,72 @@ function encodeFormData(data, charset, forArrBuf_nameDotExt, forArrBuf_mimeType)
 	return postStream;
 }
 
+function twitterLoad(aArg) {
+	var maindeferred_twitterload = new Deferred();
 
+	var win = Services.wm.getMostRecentWindow('navigator:browser');
+	var gbrowser = win.gBrowser;
+	var tab = gbrowser.loadOneTab('https://www.twitter.com/', { inBackground:false });
+	var mm = tab.linkedBrowser.messageManager;
+
+	// start async-proc1994
+	var timeoutThenCheck = function() {
+		callInMainworker('bootstrapTimeout', 1000, function() {
+			checkPageInfo();
+		});
+	};
+
+	var checkPageInfo = function() {
+		callInFramescript('isTwitterLoaded', {}, function(aArg) {
+			var ready = aArg;
+			if (ready === null) {
+				// error
+				console.error('twitter errored');
+				maindeferred_twitterload.resolve('error!!!');
+			} else if (ready === false) {
+				console.error('twitter not yet loaded');
+				timeoutThenCheck();
+			} else {
+				// its ready
+				console.error('twitter READY, inject now');
+				callInFramescript('injectToTwitter', undefined, undefined, mm);
+			}
+		}, mm);
+	};
+
+	var afterInject = function() {
+
+	};
+
+	timeoutThenCheck();
+	// end async-proc1994
+	return maindeferred_twitterload.promise;
+}
+
+function closeSelfTab(aArg, aReportProgress, aComm, aMessageManager, aBrowser) {
+	// var domwins = Services.wm.getEnumerator(null);
+	// while (DOMWindows.hasMoreElements()) {
+	// 	var a_domwin = domwins.getNext();
+	// 	var gbrowser = a_domwin.gBrowser;
+	// 	if (gbrowser) {
+	// 		var tab = gbrowser.getTabForBrowser(aBrowser);
+	// 		if (tab) {
+	// 			gbrowser.removeTab(tab);
+	// 			console.error('TAB CLOSE DONE');
+	// 			return true;
+	// 		}
+	// 	}
+	// }
+	var domwin = aBrowser.ownerDocument.defaultView;
+	var gbrowser = domwin.gBrowser;
+	var tab = gbrowser.getTabForBrowser(aBrowser);
+	gbrowser.removeTab(tab);
+	// console.error('TAB NOT FOUND FOR CLOSE');
+}
+
+function prompt(aArg) {
+	Services.prompt.alert(null, 'error', aArg);
+}
 // start - common helper functions
 function Deferred() {
 	this.resolve = null;

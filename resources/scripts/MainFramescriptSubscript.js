@@ -8,6 +8,7 @@ var { callInBootstrap, callInMainworker, callInContent } = CommHelper.framescrip
 var core = {addon: {id:'NativeShot@jetpack'}}; // all that should be needed is core.addon.id, the rest is brought over on init
 var gBsComm; // need to set this. instead var because otherwise Comm/Comm.js cant access it
 var gWinComm; // need to set this. instead var because otherwise Comm/Comm.js cant access it
+var gMM = this;
 
 var MATCH_APP = 1;
 var MATCH_TWITTER = 2;
@@ -83,6 +84,7 @@ var pageLoader = {
 	IGNORE_FRAMES: true,
 	IGNORE_LOAD: true,
 	IGNORE_NONMATCH: true,
+	IGNORE_UNLOAD: false,
 	matches: function(aHREF, aLocation) {
 		// do your tests on aHREF, which is aLocation.href.toLowerCase(), return true if it matches
 		var href_lower = aLocation.href.toLowerCase();
@@ -102,7 +104,7 @@ var pageLoader = {
 		// to test if frame do `if (aContentWindow.frameElement)`
 
 		var contentWindow = aContentWindow;
-
+		console.log('PAGE READYYYYYY:', contentWindow.location.href);
 		switch (pageLoader.matches(contentWindow.location.href, contentWindow.location)) {
 			case MATCH_APP:
 					gWinComm = new Comm.server.content(contentWindow);
@@ -111,22 +113,32 @@ var pageLoader = {
 					console.error('ok loaded editor');
 				break;
 			case MATCH_TWITTER:
-					var principal = contentWindow.document.nodePrincipal; // contentWindow.location.origin (this is undefined for about: pages) // docShell.chromeEventHandler.contentPrincipal (chromeEventHandler no longer has contentPrincipal)
-					// console.log('contentWindow.document.nodePrincipal', contentWindow.document.nodePrincipal);
-					// console.error('principal:', principal);
-					var sandbox = Cu.Sandbox(principal, {
-						sandboxPrototype: contentWindow,
-						wantXrays: true, // only set this to false if you need direct access to the page's javascript. true provides a safer, isolated context.
-						sameZoneAs: contentWindow,
-						wantComponents: false
-					});
-					Services.scriptloader.loadSubScript(core.addon.path.scripts + 'TwitterContentscript.js?' + core.addon.cache_key, sandbox, 'UTF-8');
-
-					gWinComm = new Comm.server.content(contentWindow);
+					// var principal = contentWindow.document.nodePrincipal; // contentWindow.location.origin (this is undefined for about: pages) // docShell.chromeEventHandler.contentPrincipal (chromeEventHandler no longer has contentPrincipal)
+					// // console.log('contentWindow.document.nodePrincipal', contentWindow.document.nodePrincipal);
+					// // console.error('principal:', principal);
+					// var sandbox = Cu.Sandbox(principal, {
+					// 	sandboxPrototype: contentWindow,
+					// 	wantXrays: true, // only set this to false if you need direct access to the page's javascript. true provides a safer, isolated context.
+					// 	sameZoneAs: contentWindow,
+					// 	wantComponents: false
+					// });
+					// Services.scriptloader.loadSubScript(core.addon.path.scripts + 'TwitterContentscript.js?' + core.addon.cache_key, sandbox, 'UTF-8');
+					//
+					// gWinComm = new Comm.server.content(contentWindow);
 				break;
 		}
 	},
 	load: function(aContentWindow) {}, // triggered on page load if IGNORE_LOAD is false
+	unload: function(aContentWindow) { // triggered on page unload if IGNORE_UNLOAD is false
+		var url = aContentWindow.location.href;
+		var ready_state = aContentWindow.document.readyState;
+		console.warn('PAGE UNLOADING!!!!', 'url:', url, 'ready_state:', ready_state);
+		if (gWinComm) {
+			console.log('UNREGISTERING gWinComm AS IT WAS EXISTING');
+			gWinComm.unregister();
+			gWinComm = null;
+		}
+	},
 	error: function(aContentWindow, aDocURI) {
 		// triggered when page fails to load due to error
 		console.warn('hostname page ready, but an error page loaded, so like offline or something, aHref:', aContentWindow.location.href, 'aDocURI:', aDocURI);
@@ -149,10 +161,16 @@ var pageLoader = {
 		// DO NOT EDIT - boilerplate
 		addEventListener('DOMContentLoaded', pageLoader.onPageReady, false);
 		// addEventListener('DOMWindowCreated', pageLoader.onContentCreated, false);
+		if (!pageLoader.IGNORE_UNLOAD) {
+			addEventListener('unload', pageLoader.onPageUnload, true); // needs capturing, so can differentiate between tab close and document page unload
+		}
 	},
 	unregister: function() {
 		// DO NOT EDIT - boilerplate
 		removeEventListener('DOMContentLoaded', pageLoader.onPageReady, false);
+		if (!pageLoader.IGNORE_UNLOAD) {
+			removeEventListener('unload', pageLoader.onPageUnload, true); // needs capturing, so can differentiate between tab close and document page unload
+		}
 		// removeEventListener('DOMWindowCreated', pageLoader.onContentCreated, false);
 	},
 	// onContentCreated: function(e) {
@@ -227,6 +245,13 @@ var pageLoader = {
 		var contentWindow = e.target.defaultView;
 		contentWindow.removeEventListener('load', pageLoader.onPageLoadNonmatch, false);
 		pageLoader.loadNonmatch(contentWindow);
+	},
+	onPageUnload: function(e) {
+		if (e.target != gMM) {
+			var contentWindow = e.target.defaultView;
+			if (pageLoader.IGNORE_FRAMES && contentWindow.frameElement) { return }
+			pageLoader.unload(contentWindow);
+		} // else tab is closing
 	}
 	// end - BOILERLATE - DO NOT EDIT
 };
@@ -251,7 +276,7 @@ var progressListener = {
 	},
 	listener: {
 		onStateChange: function(webProgress, aRequest, flags, status) {
-			console.log('progressListener :: onStateChange:', webProgress, aRequest, flags, status);
+			// console.log('progressListener :: onStateChange:', webProgress, aRequest, flags, status);
 			// // figure out the flags
 			var flagStrs = [];
 			for (var f in Ci.nsIWebProgressListener) {
@@ -261,13 +286,13 @@ var progressListener = {
 					}
 				}
 			}
-			console.info('progressListener :: onStateChange, flagStrs:', flagStrs);
+			// console.info('progressListener :: onStateChange, flagStrs:', flagStrs);
 
 			var url;
 			try {
 				url = aRequest.QueryInterface(Ci.nsIChannel).URI.spec;
 			} catch(ignore) {}
-			console.error('progressListener :: onStateChange, url:', url);
+			// console.error('progressListener :: onStateChange, url:', url);
 
 			if (url) {
 				var url_lower = url.toLowerCase();
@@ -316,12 +341,12 @@ var progressListener = {
 
 function init() {
 	gBsComm = new Comm.client.framescript(core.addon.id);
-
+	console.error('INITING TAB');
 	callInMainworker('fetchCore', undefined, function(aArg, aComm) {
 		core = aArg;
 		console.log('ok updated core to:', core);
 
-		// addEventListener('unload', uninit, false);
+		addEventListener('unload', shutdown, true);
 
 		pageLoader.register(); // pageLoader boilerpate
 		progressListener.register();
@@ -349,26 +374,85 @@ function init() {
 	});
 }
 
-this.uninit = function() { // link4757484773732
+function shutdown(e) {
+	if (e.target == gMM) {
+		// ok this content frame message manager is shutting down
+		uninit();
+	}
+}
+
+function uninit() { // link4757484773732
 	// an issue with this unload is that framescripts are left over, i want to destory them eventually
 
 	console.error('DOING UNINIT');
-	removeEventListener('unload', uninit, false);
 
-	if (gWinComm) {
+	pageLoader.unregister(); // pageLoader boilerpate
+	progressListener.unregister();
+
+	if (gWinComm) { // this only should happen if tab is not closing
 		callInContent('uninit');
 	}
 
 	Comm.server.unregAll('content');
 	Comm.client.unregAll('framescript');
 
-	pageLoader.unregister(); // pageLoader boilerpate
-	progressListener.unregister();
-
 	if (aboutFactory) {
 		aboutFactory.unregister();
 	}
 
+	removeEventListener('unload', shutdown, true);
+}
+
+function isTwitterLoaded(aArg) {
+	// returns
+		// true - good and ready
+		// false - not twitter
+		// null - is twitter but error
+	var contentWindow = content;
+
+	var contentDocument = contentWindow.document;
+	console.log('contentDocument.readyState:', contentDocument.readyState);
+
+	if (pageLoader.matches(contentWindow.location.href, contentWindow.location) == MATCH_TWITTER) {
+		var contentDocument = contentWindow.document;
+		if (contentDocument.readyState == 'interactive' || contentDocument.readyState == 'complete') {
+			var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+			var docuri = webnav.document.documentURI;
+			// console.info('docuri:', docuri);
+
+			if (docuri.indexOf('about:neterror') === 0) {
+				return null;
+			} else {
+				return true;
+			}
+		}
+	} else {
+		return false;
+	}
+}
+
+function injectToTwitter(aArg) {
+	var deferredmain_injecttotwitter = new Deferred();
+
+	var contentWindow = content;
+
+	var principal = contentWindow.document.nodePrincipal; // contentWindow.location.origin (this is undefined for about: pages) // docShell.chromeEventHandler.contentPrincipal (chromeEventHandler no longer has contentPrincipal)
+	// console.log('contentWindow.document.nodePrincipal', contentWindow.document.nodePrincipal);
+	// console.error('principal:', principal);
+	var sandbox = Cu.Sandbox(principal, {
+		sandboxPrototype: contentWindow,
+		wantXrays: true, // only set this to false if you need direct access to the page's javascript. true provides a safer, isolated context.
+		sameZoneAs: contentWindow,
+		wantComponents: false
+	});
+	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'comm/Comm.js?' + core.addon.cache_key, sandbox, 'UTF-8');
+	Services.scriptloader.loadSubScript(core.addon.path.scripts + 'TwitterContentscript.js?' + core.addon.cache_key, sandbox, 'UTF-8');
+
+	gWinComm = new Comm.server.content(contentWindow, function() {
+		deferredmain_injecttotwitter.resolve();
+	});
+
+	return deferredmain_injecttotwitter.promise;
 }
 
 // start - common helper functions
