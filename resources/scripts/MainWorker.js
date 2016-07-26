@@ -152,7 +152,7 @@ function init(objCore) {
 
 	core = objCore;
 
-	gOcrComm = new Comm.server.worker(core.addon.path.scripts + 'OCRWorker.js');
+	gOcrComm = new Comm.server.worker(core.addon.path.scripts + 'OCRWorker.js?' + core.addon.cache_key);
 
 	importScripts(core.addon.path.scripts + 'supplement/MainWorkerSupplement.js');
 	importScripts(core.addon.path.scripts + '3rd/hmac-sha1.js'); // for twitter
@@ -3274,7 +3274,7 @@ function genericCatch(aPromiseName, aPromiseToReject, aCaught) {
 		aPromiseToReject.reject(rejObj);
 	}
 }
-// rev2 - not yet updated to gist.github - https://gist.github.com/Noitidart/ec1e6b9a593ec7e3efed
+// rev2 - https://gist.github.com/Noitidart/ec1e6b9a593ec7e3efed
 function xhr(aUrlOrFileUri, aOptions={}) {
 	// console.error('in xhr!!! aUrlOrFileUri:', aUrlOrFileUri);
 
