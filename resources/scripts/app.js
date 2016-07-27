@@ -10,31 +10,29 @@ function preinit() {
 }
 window.addEventListener('DOMContentLoaded', preinit, false);
 
-window.addEventListener('pageshow', function() {
+function animsitizeOnBackForward() {
 	// this happens when go back/forward and its like a non-fresh page, i saw this behavior in nightly
 	var domel = document.querySelector('.app-wrap');
-	if (domel.classList.contains('animsition-leave')) {
-
-		domel.classList.remove('animsition-leave');
-
-		domel.classList.remove('animsition-leave-active');
-
-		domel.classList.add('animsition-enter');
-
-		setTimeout(function() {
-			domel.classList.add('animsition-enter-active');
-			var removeAfter = function() {
-				domel.removeEventListener('transitionend', removeAfter, false);
-				domel.classList.remove('animsition-enter');
-				domel.classList.remove('animsition-enter-active');
-			};
+	if (domel) {
+		if (domel.classList.contains('animsition-leave') || !domel.classList.add('animsition-enter')) {
+			domel.classList.add('animsition-enter');
+			domel.classList.remove('animsition-leave');
+			domel.classList.remove('animsition-leave-active');
 			setTimeout(function() {
-				domel.addEventListener('transitionend', removeAfter, false);
+				domel.classList.add('animsition-enter-active');
+				var removeAfter = function() {
+					domel.removeEventListener('transitionend', removeAfter, false);
+					domel.classList.remove('animsition-enter');
+					domel.classList.remove('animsition-enter-active');
+				};
+				setTimeout(function() {
+					domel.addEventListener('transitionend', removeAfter, false);
+				}, 0);
 			}, 0);
-		}, 0);
+		}
 	}
-
-}, false);
+}
+window.addEventListener('pageshow', animsitizeOnBackForward, false);
 
 function init() {
 	callInMainworker('fetchCore', undefined, function(aArg) {
