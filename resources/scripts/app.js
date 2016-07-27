@@ -20,7 +20,9 @@ function animsitizeOnBackForward() {
 			domel.classList.remove('animsition-leave-active');
 			setTimeout(function() {
 				domel.classList.add('animsition-enter-active');
-				var removeAfter = function() {
+				var removeAfter = function(e) {
+					if (e.target != domel) { return }
+					e.stopPropagation();
 					domel.removeEventListener('transitionend', removeAfter, false);
 					domel.classList.remove('animsition-enter');
 					domel.classList.remove('animsition-enter-active');
@@ -160,7 +162,9 @@ function getTrans(transitionName, otherProps) {
 // REACT COMPONENTS - PRESENTATIONAL
 var unmountApp = function(aCallback) {
 	var domel = document.querySelector('.app-wrap');
-	var doCallback = function() {
+	var doCallback = function(e) {
+		if (e.target != domel) { return }
+		e.stopPropagation();
 		domel.removeEventListener('transitionend', doCallback, false);
 		aCallback();
 	};
