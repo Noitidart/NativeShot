@@ -300,7 +300,7 @@ function aboutRedirectorizer(aURI) {
 	} else if (aURI.path.toLowerCase().includes('?text')) {
 		return core.addon.path.pages + 'ocr.xhtml' + aURI.path.substr(aURI.path.indexOf('?text'));
 	} else {
-		return core.addon.path.pages + 'main.xhtml';
+		return core.addon.path.pages + 'history.xhtml';
 	}
 }
 

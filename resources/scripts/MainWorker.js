@@ -175,7 +175,7 @@ function init(objCore) {
 
 	// load all localization pacakages
 	formatStringFromName('blah', 'main');
-	formatStringFromName('blah', 'app');
+	// formatStringFromName('blah', 'app');
 	core.addon.l10n = _cache_formatStringFromName_packages;
 
 	// Import ostypes

@@ -1,0 +1,8 @@
+<!ENTITY boostrap_lang 'en'>
+
+<!ENTITY addon_name 'NativeShot'>
+
+<!ENTITY title_history 'History | NativeShot'>
+<!ENTITY title_options 'Options | NativeShot'>
+<!ENTITY title_auth 'Auhtorization | NativeShot'>
+<!ENTITY title_ocr 'Text Results | NativeShot'>
