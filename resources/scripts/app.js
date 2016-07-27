@@ -182,7 +182,7 @@ var App = React.createClass({
 		];
 
 		return React.createElement(ReactCSSTransitionGroup, getTrans('animsition'),
-			React.createElement('div', {key:'trans0', className:'app-wrap'},
+			React.createElement('div', {key:'trans0', className:'app-wrap container' + (gAppPageNarrow ? ' container-narrow' : '')},
 				app_components
 			)
 		);
@@ -215,18 +215,66 @@ const Link = (text, href) => {
 
 var Header = React.createClass({
 	render: function() {
-		/* props
-		type - int;enum 1
-		text
-		*/
-		var { type, text } = this.props;
+		// props
+			// type - int;enum 1 2 3
+		var { type } = this.props;
 
-		var cprops = {};
-
-		switch (type) {
+		switch (this.props.type) {
 			case 1:
-				return React.createElement('header', cprops,
-					text
+				// just logo and text
+
+				/* props
+				text - string;default:undefined
+				logo - should be 32x32 img path defaults:"chrome://nativeshot/content/resources/images/icon32.png"
+				logo_margin - defaults:undefined
+				*/
+				var { text, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
+
+				return React.createElement('header', { className:'type1' },
+					React.createElement('div', { className:'header-text' },
+						React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
+						text
+					)
+				);
+			case 2:
+				// two logos, two texts
+
+				/* props
+				text - string;default:undefined
+				logo - should be 32x32 img path defaults:"chrome://nativeshot/content/resources/images/icon32.png"
+				logo_margin - defaults:undefined
+				minortext
+				minorlogo
+				minorlogo_margin
+				*/
+				var { text, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png', minortext, minorlogo='chrome://nativeshot/content/resources/images/icon16.png', minorlogo_margin } = this.props;
+
+				return React.createElement('header', { className:'type2' },
+					React.createElement('div', { className:'header-text' },
+						React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
+						text
+					),
+					React.createElement('div', { className:'header-text-minor' },
+						React.createElement('img', { className:'logo16', src:minorlogo, style:(minorlogo_margin ? {margin:minorlogo_margin} : undefined) }),
+						minortext
+					)
+				);
+			case 3:
+				// with menu, as scroll menu moves to top right and main text to top left
+				var { text, menu, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
+
+				return React.createElement('header', { className:'type3' },
+					React.createElement('div', { className:'header-text' },
+						React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
+						text
+					),
+					React.createElement('nav', { className:'menu' },
+						React.createElement('ul', undefined,
+							menu.map( item => React.createElement('li', undefined,
+								item.href ? Link(item.text, item.href) : item.text
+							))
+						)
+					)
 				);
 		}
 	}

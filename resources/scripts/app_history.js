@@ -14,9 +14,30 @@ function uninitAppPage() {
 // REACT COMPONENTS - CONTAINER
 
 // material for app.js
+var gAppPageNarrow = false;
+
+// var gAppPageHeaderProps = {
+// 	type: 2,
+// 	get text() { return formatStringFromNameCore('header_text_dashboard', 'main') },
+// 	get minortext() { return formatStringFromNameCore('addon_name', 'main') }
+// };
+
 var gAppPageHeaderProps = {
-	type: 1,
-	get text() { return formatStringFromNameCore('header_text_dashboard', 'main') }
+	type: 3,
+	get text() { return formatStringFromNameCore('header_text_dashboard', 'main') },
+	menu: [
+		{
+			 get text() { return formatStringFromNameCore('history', 'main') },
+		},
+		{
+			 get text() { return formatStringFromNameCore('options', 'main') },
+			 href: 'about:nativeshot?options'
+		},
+		{
+			 get text() { return formatStringFromNameCore('authorizations', 'main') },
+			 href: 'about:nativeshot?auth'
+		}
+	]
 };
 
 var gAppPageComponents = [

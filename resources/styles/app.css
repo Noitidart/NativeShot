@@ -40,6 +40,8 @@ body {
     font-weight: 300;
     font-style: normal;
     backface-visibility: hidden;
+    -moz-user-select: none;
+    cursor: default;
 }
 a {
     text-decoration: none;
@@ -112,8 +114,6 @@ textarea {
 	border: 1px solid #999;
 }
 
-header,nav,article,footer,section,aside,figure,figcaption{display:block}
-
 /* ReactCSSTransitionGroup */
 	/* animsition */
 	.animsition-enter,
@@ -137,7 +137,76 @@ header,nav,article,footer,section,aside,figure,figcaption{display:block}
         transition-property: opacity, transform;
 	}
 
+    .container {
+        margin-right: auto;
+        margin-left: auto;
+    }
+    .container-narrow {
+        max-width: 730px;
+    }
 /* specific */
 .app-wrap {
 
+}
+
+header {
+    align-items: center;
+    background: #fff;
+    display: flex;
+    height: 75px;
+    justify-content: center;
+}
+header.type2 {
+    justify-content: space-around;
+}
+header.type3 {
+    height: 130px;
+    flex-direction: column;
+}
+.logo32 {
+    margin: 5px 12px 0 0;
+}
+.header-text {
+    align-items: center;
+    color: #000;
+    display: flex;
+    font-size: 2em;
+    font-weight: 700;
+    justify-content: center;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.logo16 {
+    margin: 2px 6px 0 0;
+}
+.header-text-minor {
+    align-items: center;
+    align-self: start;
+    color: #000;
+    display: flex;
+    font-size: 1.1em;
+    font-weight: 700;
+    justify-content: center;
+    letter-spacing: 1px;
+    margin: 10px 0 0 0;
+    white-space: nowrap;
+}
+nav ul {
+    padding-top: 20px;
+}
+nav li {
+    color: #1a1a1a;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 1em;
+    list-style: none;
+    letter-spacing: 3px;
+    line-height: 1.1em;
+    display: inline-block;
+    margin: 0 10px;
+}
+nav a:hover {
+    color: #999;
 }
