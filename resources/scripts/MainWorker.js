@@ -2624,7 +2624,7 @@ var gFilestoreDefault = {
 	editorstate: undefined,
 	oauth: {}
 	// hydrants: { // redux related
-	// 	options: {}
+	// 	prefs: {}
 	// }
 };
 function readFilestore() {

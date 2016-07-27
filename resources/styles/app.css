@@ -111,3 +111,33 @@ textarea {
     border-radius: 0px;
 	border: 1px solid #999;
 }
+
+header,nav,article,footer,section,aside,figure,figcaption{display:block}
+
+/* ReactCSSTransitionGroup */
+	/* animsition */
+	.animsition-enter,
+    .animsition-appear {
+		opacity: 0;
+        transform: translateY(50vh);
+	}
+	.animsition-enter.animsition-enter-active,
+    .animsition-appear.animsition-appear-active {
+		opacity: 1;
+        transform: translateY(0);
+		transition-property: opacity, transform;
+	}
+	.animsition-leave {
+		opacity: 1;
+        transform: translateY(0);
+	}
+	.animsition-leave.animsition-leave-active {
+		opacity: 0;
+        transform: translateY(-50vh);
+        transition-property: opacity, transform;
+	}
+
+/* specific */
+.app-wrap {
+
+}

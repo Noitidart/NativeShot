@@ -271,13 +271,13 @@ var progressListener = {
 									href: url
 								})
 							}
-							window.location.href = 'about:nativeshot?oauth/' + serviceid + '/' + (allowed ? 'approved' : 'denied');
+							window.location.href = 'about:nativeshot?' + serviceid + '/' + (allowed ? 'approved' : 'denied');
 							console.log('progressListener :: onStateChange, ok replaced');
 						}
 					}
 				} else if (url_lower == 'https://api.twitter.com/oauth/authorize' && (flags & Ci.nsIWebProgressListener.STATE_STOP) && window && window.document.documentElement.innerHTML.includes('nativeshot_twitter?denied=')) {
 					// console.log('twitter auth innerHTML:', window.document.body.innerHTML);
-					window.location.href = 'about:nativeshot?oauth/twitter/denied';
+					window.location.href = 'about:nativeshot?twitter/denied';
 				}
 			}
 		},
@@ -293,14 +293,21 @@ var progressListener = {
 
 function aboutRedirectorizer(aURI) {
 	// console.log('nativeshot redirectorizer, core.addon.path:', core.addon.path);
+	var uripath_lower = aURI.path.toLowerCase();
 	if (aURI.path.includes('iMon')) {
 		return core.addon.path.pages + 'editor.xhtml';
-	} else if (aURI.path.toLowerCase().includes('?options')) {
-		return core.addon.path.pages + 'options.xhtml';
-	} else if (aURI.path.toLowerCase().includes('?text')) {
-		return core.addon.path.pages + 'ocr.xhtml' + aURI.path.substr(aURI.path.indexOf('?text'));
+	} else if (uripath_lower.includes('/denied') || uripath_lower.includes('/approved')) {
+		return core.addon.path.pages + 'app_auth.xhtml';
+	} else if (uripath_lower.includes('twitter/tweet')) {
+		return core.addon.path.pages + 'app_twitter-tweet.xhtml';
+	}  else if (uripath_lower.includes('facebook/post')) {
+		return core.addon.path.pages + 'app_facebook-post.xhtml';
+	} else if (uripath_lower.includes('?options')) {
+		return core.addon.path.pages + 'app_prefs.xhtml';
+	} else if (uripath_lower.includes('?text')) {
+		return core.addon.path.pages + 'app_ocr.xhtml' + aURI.path.substr(aURI.path.indexOf('?text'));
 	} else {
-		return core.addon.path.pages + 'history.xhtml';
+		return core.addon.path.pages + 'app_history.xhtml';
 	}
 }
 
