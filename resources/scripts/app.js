@@ -59,12 +59,14 @@ function init() {
 		initAppPage(aArg);
 
 		// render react
+		setTimeout(function() {
 		ReactDOM.render(
 			React.createElement(ReactRedux.Provider, { store },
 				React.createElement(App)
 			),
 			document.getElementById('root')
 		);
+	}, 100);
 
 	});
 }
@@ -203,8 +205,10 @@ const Link = (text, href) => {
 	}
 
 	var onClick = function(e) {
-		e.preventDefault(); // so it doesnt follow the href
-		unmountApp( ()=>{window.location.href = href} );
+		if (e.button === 0) {
+			e.preventDefault(); // so it doesnt follow the href
+			unmountApp( ()=>{window.location.href = href} );
+		}
 	};
 
 	return React.createElement('a', { href, onClick },
@@ -263,19 +267,68 @@ var Header = React.createClass({
 				// with menu, as scroll menu moves to top right and main text to top left
 				var { text, menu, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
 
-				return React.createElement('header', { className:'type3' },
-					React.createElement('div', { className:'header-text' },
-						React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
-						text
-					),
-					React.createElement('nav', { className:'menu' },
-						React.createElement('ul', undefined,
-							menu.map( item => React.createElement('li', undefined,
-								item.href ? Link(item.text, item.href) : item.text
-							))
+				return React.createElement('div', { className:'header-fix-wrap' + (this.shouldThinform(window.scrollY, true) ? ' thinform' : '') }, // window.scrollY is 0, until i put in overflowing text so this doesnt work right now
+					React.createElement('div', { className:'header type3' },
+						React.createElement('div', { className:'header-maintext' },
+							React.createElement('div', { className:'trans-left' },
+								React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
+								text
+							)
+						),
+						React.createElement('nav', { className:'menu' },
+							React.createElement('ul', { className:'trans-right' },
+								menu.map( item => React.createElement('li', undefined,
+									item.href ? Link(item.text, item.href) : item.text
+								))
+							)
 						)
 					)
 				);
+		}
+	},
+	componentDidMount: function() {
+		var { type } = this.props;
+		if (type === 3) {
+			this.shouldThinform(window.scrollY);
+			window.addEventListener('scroll', this.scroll, false);
+		}
+	},
+	scroll: function(e) {
+		var { type } = this.props;
+		if (type === 3) {
+			this.shouldThinform(window.scrollY);
+		}
+	},
+	thinform: false,
+	shouldThinform: function(aScrollY, aDontDom) {
+		// transforms if necessary
+		const limit = 3; // inclusive
+		if (aScrollY <= limit) {
+			if (this.thinform) {
+				// make it fatform
+				this.thinform = false;
+
+				if (!aDontDom) {
+					var domel = ReactDOM.findDOMNode(this);
+					domel.classList.remove('thinform'); // to .header-fix-wrap
+					console.log('removed thinform');
+				} else {
+					return this.thinform;
+				}
+			}
+		} else {
+			if (!this.thinform) {
+				// make it thinform
+				this.thinform = true;
+
+				if (!aDontDom) {
+					var domel = ReactDOM.findDOMNode(this);
+					domel.classList.add('thinform'); // to .header-fix-wrap
+					console.log('added thinform');
+				} else {
+					return this.thinform;
+				}
+			}
 		}
 	}
 });

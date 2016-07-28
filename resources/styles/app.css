@@ -157,7 +157,7 @@ header {
     justify-content: center;
 }
 header.type2 {
-    justify-content: space-around;
+    justify-content: space-between;
 }
 header.type3 {
     height: 130px;
@@ -193,20 +193,108 @@ header.type3 {
     margin: 10px 0 0 0;
     white-space: nowrap;
 }
-nav ul {
-    padding-top: 20px;
-}
-nav li {
-    color: #1a1a1a;
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 1em;
-    list-style: none;
-    letter-spacing: 3px;
-    line-height: 1.1em;
-    display: inline-block;
-    margin: 0 10px;
-}
-nav a:hover {
-    color: #999;
-}
+
+/* domgroup:header type3 */
+    /* state:innate */
+    .header-fix-wrap {
+        height: 130px; /* must match `.header.type3` height link89 */
+        /*background-color: yellow;*/
+    }
+    .header.type3 {
+        height: 130px; /* link89 */
+        position: fixed;
+        width: 1140px; /* match container width MINUS the padding-right and left of container (which is 15 15 so 30) link642 */
+        background-color: #ffffff;
+    }
+    .header-maintext {
+        font-size: 2em;
+        height: 1.5em; /* visually matched roboto slab font size 2em of `.header-text` */
+        font-weight: 700;
+        color: #000;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        margin-top: 10px;
+        transition: margin-top 201ms;
+    }
+    nav ul {
+        height: 1.5em; /* visually matched roboto slab font size 1.1em of `nav li` */
+        white-space: nowrap;
+        transition: top 201ms, right 201ms, left 201ms, transform 201ms !important; /* right left transform are from trans-left, but i needed to add top  link48711 */
+        top: 80px;
+    }
+    nav li {
+        color: #1a1a1a;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 1em;
+        list-style: none;
+        letter-spacing: 3px;
+        line-height: 1.1em;
+        display: inline-block;
+        margin: 0 10px;
+    }
+    /* state:container-narrow */
+    .container-narrow .header.type3 {
+        width: 700px; /* match container width link642 */
+    }
+    /* state:hovers */
+    nav a:hover {
+        color: #999;
+    }
+    /* state:thinform */
+    .thinform .header.type3 {
+        height: 50px;
+        /* link89 */
+    }
+    .thinform .trans-left,
+    .thinform .trans-right {
+        /* equivalent of .transed */
+        transform: translateX(0);
+    }
+    .thinform .trans-left {
+        /* equivalent of .transed */
+        left: 0;
+    }
+    .thinform .trans-right {
+        /* equivalent of .transed */
+        right: 0;
+    }
+    .thinform nav ul {
+        top: 1em; /* trying to get baseline of `.header-maintext` */
+    }
+    .thinform .header-maintext {
+        margin-top: 0;
+    }
+    /* state:mediaquery-medium */
+    /* state:mediaquery-small */
+/***/
+
+/* domgroup:.trans-left,.trans-right */
+    /* state:innate */
+    .trans-left,
+    .trans-right {
+        position: absolute;
+        transition: transform 201ms, right 201ms, left 201ms; /*link48711*/
+        /* must set height, at least for trans-right innate element, it should graphically match its font-size, so if 2em, maybe the height should be 1.5em, and not 2em, use background-color to grahcially match it, can do for tras-left just for consistency */
+    }
+    .trans-left {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .trans-right {
+        right: 50%;
+        transform: translateX(50%);
+    }
+    /* state:transed */
+    .trans-left.transed,
+    .trans-right.transed {
+        transform: translateX(0);
+    }
+    .trans-left.transed {
+        left: 0;
+    }
+    .trans-right.transed {
+        right: 0;
+    }
+/***/
