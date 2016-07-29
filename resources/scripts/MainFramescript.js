@@ -29,6 +29,7 @@ var pageLoader = {
 	IGNORE_LOAD: true,
 	IGNORE_NONMATCH: true,
 	IGNORE_UNLOAD: false,
+	IGNORE_CREATED: true,
 	matches: function(aHREF, aLocation) {
 		// do your tests on aHREF, which is aLocation.href.toLowerCase(), return true if it matches
 		var href_lower = aLocation.href.toLowerCase();
@@ -99,6 +100,11 @@ var pageLoader = {
 	readyNonmatch: function(aContentWindow) {},
 	loadNonmatch: function(aContentWindow) {},
 	errorNonmatch: function(aContentWindow, aDocURI) {},
+	created: function(aContentWindow) {
+		// var win = aContentWindow;
+		// var doc = win.document;
+		// doc.documentElement.innerHTML.replace('%S', 'history');
+	},
 	// not yet supported
 	// timeout: function(aContentWindow) {
 	// 	// triggered on timeout
@@ -111,7 +117,9 @@ var pageLoader = {
 	register: function() {
 		// DO NOT EDIT - boilerplate
 		addEventListener('DOMContentLoaded', pageLoader.onPageReady, false);
-		// addEventListener('DOMWindowCreated', pageLoader.onContentCreated, false);
+		if (!pageLoader.IGNORE_CREATED) {
+			addEventListener('DOMWindowCreated', pageLoader.onContentCreated, false);
+		}
 		if (!pageLoader.IGNORE_UNLOAD) {
 			addEventListener('unload', pageLoader.onPageUnload, false); // if use `true` here it will crash, i think only one `addEventListener` with `true` can be in place
 		}
@@ -128,15 +136,29 @@ var pageLoader = {
 		if (!pageLoader.IGNORE_LOAD) {
 			removeEventListener('load', pageLoader.onLoad, false);
 		}
-		// removeEventListener('DOMWindowCreated', pageLoader.onContentCreated, false);
+		if (!pageLoader.IGNORE_CREATED) {
+			removeEventListener('DOMWindowCreated', pageLoader.onContentCreated, false);
+		}
 	},
-	// onContentCreated: function(e) {
-	// 	console.log('onContentCreated - e:', e);
-	// 	var contentWindow = e.target.defaultView;
-	//
-	// 	var readyState = contentWindow.document.readyState;
-	// 	console.log('onContentCreated readyState:', readyState, 'url:', contentWindow.location.href, 'location:', contentWindow.location);
-	// },
+	onContentCreated: function(e) {
+		console.log('onContentCreated - e:', e);
+		var contentWindow = e.target.defaultView;
+
+		var ready_state = contentWindow.document.readyState;
+		var url = contentWindow.location.href;
+		var url_lower = url.toLowerCase();
+		var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+		var docuri = webnav.document.documentURI;
+
+		console.log('onContentCreated ready_state:', ready_state, 'url:', url, 'docuri:', docuri);
+		if (docuri.indexOf('about:neterror') === 0) {
+			// created with error
+		} else {
+			// our page ready without error
+			pageLoader.created(contentWindow);
+		}
+
+	},
 	onPageReady: function(e) {
 		// DO NOT EDIT
 		// boilerpate triggered on DOMContentLoaded

@@ -312,7 +312,6 @@ var Header = React.createClass({
 				if (!aDontDom) {
 					var domel = ReactDOM.findDOMNode(this);
 					domel.classList.remove('thinform'); // to .header-fix-wrap
-					console.log('removed thinform');
 				} else {
 					return this.thinform;
 				}
@@ -325,7 +324,6 @@ var Header = React.createClass({
 				if (!aDontDom) {
 					var domel = ReactDOM.findDOMNode(this);
 					domel.classList.add('thinform'); // to .header-fix-wrap
-					console.log('added thinform');
 				} else {
 					return this.thinform;
 				}
