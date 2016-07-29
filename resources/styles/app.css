@@ -394,7 +394,9 @@ header.type3 {
     top: 0;
     z-index: -1;
 }
-.jumbotron.jumbo-facebook::after,
+.jumbotron.jumbo-facebook::after {
+    opacity: 0.03;
+}
 .jumbotron.jumbo-imgur::after {
     /* these logos are very bold, so need a lower opacity to not interfere with the reading of the jumbotron content */
     opacity: 0.02;
