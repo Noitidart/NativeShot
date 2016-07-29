@@ -203,8 +203,34 @@ header.type3 {
     .header.type3 {
         height: 130px; /* link89 */
         position: fixed;
-        width: 1140px; /* match container width MINUS the padding-right and left of container (which is 15 15 so 30) link642 */
         background-color: #ffffff;
+    }
+    @media (max-width:767px) {
+        .header.type3 {
+            /*link642 - this is my own, the other @media below are from .container of bootstrap.css*/
+            width: calc(100% - 30px); /* match container width MINUS the padding-right and left of container (which is 15 15 so 30) link642 */
+        }
+    }
+    @media (min-width:768px) {
+        /*link642*/
+        .header.type3 {
+            width:720px;
+        }
+    }
+    @media (min-width:992px) {
+        /*link642*/
+        .header.type3 {
+            width:940px;
+        }
+    }
+    @media (min-width:1200px) {
+        /*link642*/
+        .header.type3 {
+            width:1140px;
+        }
+    }
+    .container-narrow .header.type3 {
+        max-width: 690px;
     }
     .header-maintext {
         font-size: 2em;
@@ -220,7 +246,7 @@ header.type3 {
     nav ul {
         height: 1.5em; /* visually matched roboto slab font size 1.1em of `nav li` */
         white-space: nowrap;
-        transition: top 201ms, right 201ms, left 201ms, transform 201ms !important; /* right left transform are from trans-left, but i needed to add top  link48711 */
+        transition: top 201ms, right 201ms, left 201ms, transform 201ms, opacity 202ms !important; /* right left transform are from trans-left, but i needed to add top  link48711 */
         top: 80px;
     }
     nav li {
@@ -233,6 +259,14 @@ header.type3 {
         line-height: 1.1em;
         display: inline-block;
         margin: 0 10px;
+    }
+    .nav-menu-icon {
+        position: absolute;
+        top: 7px; /* trying to get baseline of `.header-maintext` link363666 */
+        right: 0px;
+        transition: opacity 202ms;
+        opacity: 0;
+        pointer-events: none;
     }
     /* state:container-narrow */
     .container-narrow .header.type3 {
@@ -261,13 +295,26 @@ header.type3 {
         right: 0;
     }
     .thinform nav ul {
-        top: 1em; /* trying to get baseline of `.header-maintext` */
+        top: 1em; /* trying to get baseline of `.header-maintext` link363666 */
     }
     .thinform .header-maintext {
         margin-top: 0;
     }
-    /* state:mediaquery-medium */
     /* state:mediaquery-small */
+    @media (max-width:991px) {
+        /*state:thinform*/
+        .thinform .nav-menu-icon {
+            pointer-events: auto;
+            opacity: 1;
+        }
+        .thinform nav ul {
+            top: -1.3em;
+            opacity: 0;
+            right: 50% !important;
+            transform: translateX(50%) !important;
+            transition: top 201ms, right 201ms, left 201ms, transform 201ms, opacity 202ms ease 201ms !important; /* right left transform are from trans-left, but i needed to add top  link48711 */
+        }
+    }
 /***/
 
 /* domgroup:.trans-left,.trans-right */
@@ -297,4 +344,18 @@ header.type3 {
     .trans-right.transed {
         right: 0;
     }
+/***/
+
+/* domgroup:burger */
+.nav-menu-icon {width: 24px; height: 24px; z-index: 600; margin-right: 0px; transition:all .2s ease-out;}
+.nav-menu-icon a {display: inline-block;width:24px;height:24px;cursor: pointer;text-decoration: none;}
+.nav-menu-icon a i {position: relative;display: inline-block;width: 24px;height: 3px;color:#000;text-transform: uppercase;text-indent:-55px;background: #000;transition:all .2s ease-out;}
+.nav-menu-icon a i:before, .nav-menu-icon a i:after {content:''; width: 24px;height: 3px;background: #262626;position: absolute;left:0;transition:all .2s ease-out;}
+.nav-menu-icon a i:before {top: -7px;}
+.nav-menu-icon a i:after {bottom: -7px;}
+.nav-menu-icon a:hover i:before {top: -10px;}
+.nav-menu-icon a:hover i:after {bottom: -10px;}
+.nav-menu-icon.open a i {background: none;}
+.nav-menu-icon.open a i:before {top:0;transform: rotateZ(45deg);}
+.nav-menu-icon.open a i:after {bottom:0;transform: rotateZ(-45deg);}
 /***/

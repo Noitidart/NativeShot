@@ -275,6 +275,7 @@ var Header = React.createClass({
 								text
 							)
 						),
+						React.createElement(BurgerMenu),
 						React.createElement('nav', { className:'menu' },
 							React.createElement('ul', { className:'trans-right' },
 								menu.map( item => React.createElement('li', undefined,
@@ -333,6 +334,22 @@ var Header = React.createClass({
 	}
 });
 
+var BurgerMenu = React.createClass({
+	toggle: function() {
+		this.is_open = !this.is_open;
+		ReactDOM.findDOMNode(this).classList[this.is_open ? 'add' : 'remove']('open');
+	},
+	is_open: false,
+	render: function() {
+		var { style } = this.props;
+
+		return React.createElement('div', { className:'nav-menu-icon', onClick:this.toggle, style },
+			React.createElement('a', { href:'#' },
+				React.createElement('i')
+			)
+		)
+	}
+});
 // REACT COMPONENTS - CONTAINER
 
 // end - react-redux
