@@ -45,15 +45,17 @@ function init() {
 		// window.addEventListener('unload', uninit, false);
 
 		// setup and start redux
-		if (aArg.hydrant) {
-			// dont update hydrant if its undefined, otherwise it will screw up all default values for redux
-			hydrant = aArg.hydrant;
-		}
+		if (app) {
+			if (aArg.hydrant) {
+				// dont update hydrant if its undefined, otherwise it will screw up all default values for redux
+				hydrant = aArg.hydrant;
+			}
 
-		store = Redux.createStore(app);
+			store = Redux.createStore(app);
 
-		if (hydrant) {
-			store.subscribe(shouldUpdateHydrant);
+			if (hydrant) {
+				store.subscribe(shouldUpdateHydrant);
+			}
 		}
 
 		initAppPage(aArg);
@@ -232,11 +234,11 @@ var Header = React.createClass({
 				logo - should be 32x32 img path defaults:"chrome://nativeshot/content/resources/images/icon32.png"
 				logo_margin - defaults:undefined
 				*/
-				var { text, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
+				var { text, logo_margin, logowidth, logoheight, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
 
 				return React.createElement('header', { className:'type1' },
 					React.createElement('div', { className:'header-text' },
-						React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
+						React.createElement('img', { className:'logo32', src:logo, width:logowidth, height:logoheight, style:(logo_margin ? {margin:logo_margin} : undefined) }),
 						text
 					)
 				);
@@ -251,11 +253,11 @@ var Header = React.createClass({
 				minorlogo
 				minorlogo_margin
 				*/
-				var { text, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png', minortext, minorlogo='chrome://nativeshot/content/resources/images/icon16.png', minorlogo_margin } = this.props;
+				var { text, logo_margin, logowidth, logoheight, logo='chrome://nativeshot/content/resources/images/icon32.png', minortext, minorlogo='chrome://nativeshot/content/resources/images/icon16.png', minorlogo_margin } = this.props;
 
 				return React.createElement('header', { className:'type2' },
 					React.createElement('div', { className:'header-text' },
-						React.createElement('img', { className:'logo32', src:logo, style:(logo_margin ? {margin:logo_margin} : undefined) }),
+						React.createElement('img', { className:'logo32', src:logo, width:logowidth, height:logoheight, style:(logo_margin ? {margin:logo_margin} : undefined) }),
 						text
 					),
 					React.createElement('div', { className:'header-text-minor' },

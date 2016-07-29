@@ -90,17 +90,6 @@ button:focus {
     opacity: 1;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p {
-    margin: 0px;
-    padding: 0px;
-}
-
 button {
     outline: none;
     border: none;
@@ -148,7 +137,6 @@ textarea {
 .app-wrap {
 
 }
-
 header {
     align-items: center;
     background: #fff;
@@ -358,4 +346,63 @@ header.type3 {
 .nav-menu-icon.open a i {background: none;}
 .nav-menu-icon.open a i:before {top:0;transform: rotateZ(45deg);}
 .nav-menu-icon.open a i:after {bottom:0;transform: rotateZ(-45deg);}
+/***/
+
+/* domgroup:buttons */
+.butt-style { display: inline-block; }
+.butt-style a {text-transform: uppercase;  display: block; letter-spacing: 1px; font-weight: 300; margin-bottom: 15px; transition: all 0.27s cubic-bezier(0.000, 0.000, 0.580, 1.000);}
+.button-style-1 a { background: none; border: 1px solid #222; color: #222; display: inline-block;}
+.button-style-1 a:hover {background: #222; color: #fff;}
+.button-style-2 a { background: #222; border: 1px solid #222; color: #fff; display: inline-block;}
+.button-style-2 a:hover {background: #fff; color: #222; border: 1px solid #222;}
+.button-style-3 a {background: none; border: 1px solid #222; color: #222; border-radius: 30px; display: inline-block;}
+.button-style-3 a:hover {background: #222; color: #fff; border: 1px solid #222;}
+.button-style-4 a {background: #222; display: inline-block; border: 1px solid #222; border-radius: 30px; color: #fff;}
+.button-style-4 a:hover {background: #fff; color: #222; border: 1px solid #222;}
+.button-style-5 a {background: #ebebeb; display: inline-block; border: 1px solid #ebebeb; border-radius: 30px; color: #222;}
+.button-style-5 a:hover {background: #fff; color: #222; border: 1px solid #222;}
+.button-style-6 a {background: #ebebeb; display: inline-block; border: 1px solid #ebebeb; color: #222;}
+.button-style-6 a:hover {background: #fff; color: #222; border: 1px solid #222;}
+.b-lg {padding: 16px 40px; font-size: 18px;}
+.b-md {padding: 11px 33px; font-size: 16px;}
+.b-sm {padding: 8px 18px; font-size: 13px;}
+.b-xs {padding: 7px 16px; font-size: 12px; letter-spacing: 1px;}
+/***/
+
+/* domgroup:jumbotron */
+.jumbotron {
+    text-align: center;
+
+    /* for transparent image trick */
+    background-repeat: none;
+    background-size: 0;
+    position: relative;
+    z-index: 0;
+}
+.jumbotron::after {
+    /* transparent image trick */
+    background-image: inherit;
+    background-position: -50% -50%;
+    background-repeat: no-repeat;
+    background-size: 500px;
+    bottom: 0;
+    content: '';
+    left: 0;
+    opacity: 0.05;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: -1;
+}
+.jumbotron.jumbo-facebook::after,
+.jumbotron.jumbo-imgur::after {
+    /* these logos are very bold, so need a lower opacity to not interfere with the reading of the jumbotron content */
+    opacity: 0.02;
+}
+.jumbotron p {
+    font-weight: 300; /* cuz bootstrp.css says this is 200, but roboto slab i only have 100 and 300, so it takes 100 which is too light */
+}
+.jumbotron p.lead {
+    margin: 30px;
+}
 /***/
