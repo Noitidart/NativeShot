@@ -3,6 +3,7 @@ var gAuthorized = window.location.href.toLowerCase().includes('approved'); // `t
 
 function initAppPage(aArg) {
 	// aArg is what is received by the call in `init`
+	document.title = formatStringFromNameCore(gServiceid, 'main') + ' ' + document.title;
 	gAppPageComponents = [
 		React.createElement(Jumbotron, { logo:core.addon.path.images + gServiceid + '.svg' })
 	];

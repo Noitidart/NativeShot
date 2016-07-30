@@ -321,15 +321,19 @@ function aboutRedirectorizer(aURI) {
 	} else if (uripath_lower.includes('/denied') || uripath_lower.includes('/approved')) {
 		return core.addon.path.pages + 'app_auth.xhtml';
 	} else if (uripath_lower.includes('twitter/tweet')) {
-		return core.addon.path.pages + 'app_twitter-tweet.xhtml';
+		return core.addon.path.pages + 'app_tweet.xhtml';
 	}  else if (uripath_lower.includes('facebook/post')) {
-		return core.addon.path.pages + 'app_facebook-post.xhtml';
+		return core.addon.path.pages + 'app_fbpost.xhtml';
 	} else if (uripath_lower.includes('?options')) {
-		return core.addon.path.pages + 'app_prefs.xhtml';
+		return core.addon.path.pages + 'app_options.xhtml';
 	} else if (uripath_lower.includes('?text')) {
-		return core.addon.path.pages + 'app_ocr.xhtml' + aURI.path.substr(aURI.path.indexOf('?text'));
-	} else {
+		return core.addon.path.pages + 'app_ocr.xhtml';
+	} else if (uripath_lower.includes('?auth')) {
+		return core.addon.path.pages + 'app_authcp.xhtml';
+	} else if (uripath_lower == 'nativeshot') {
 		return core.addon.path.pages + 'app_history.xhtml';
+	} else {
+		return 'data:text/plain,invalid nativeshot page "' + uripath_lower + '"';
 	}
 }
 

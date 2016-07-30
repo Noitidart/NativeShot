@@ -5,6 +5,7 @@
 <!ENTITY title_history 'History | NativeShot'>
 <!ENTITY title_options 'Options | NativeShot'>
 <!ENTITY title_auth 'Authorization | NativeShot'>
-<!ENTITY title_ocr 'Text Results | NativeShot'>
-<!ENTITY title_twitter-tweet 'Tweet | NativeShot'>
-<!ENTITY title_facebook-post 'Facebook Post | NativeShot'>
+<!ENTITY title_authcp 'Manage Authorizations | NativeShot'>
+<!ENTITY title_ocr 'Text Recognition | NativeShot'>
+<!ENTITY title_tweet 'Tweet | NativeShot'>
+<!ENTITY title_fbpost 'Posting to Facebook | NativeShot'>
