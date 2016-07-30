@@ -37,18 +37,21 @@ function animsitizeOnBackForward() {
 window.addEventListener('pageshow', animsitizeOnBackForward, false);
 
 function init() {
-	callInMainworker('fetchCore', undefined, function(aArg) {
+	callInMainworker('fetchCore', { hydrant, hydrant_ex }, function(aArg) {
 		console.log('aArg in app.js:', aArg);
-		core = aArg;
+		({ core } = aArg);
 
 		// set up some listeners
 		// window.addEventListener('unload', uninit, false);
 
 		// setup and start redux
 		if (app) {
-			if (aArg.hydrant) {
+			if (hydrant) {
 				// dont update hydrant if its undefined, otherwise it will screw up all default values for redux
 				hydrant = aArg.hydrant;
+			}
+			if (hydrant_ex) {
+				hydrant_ex = aArg.hydrant_ex;
 			}
 
 			store = Redux.createStore(app);
@@ -346,6 +349,20 @@ var BurgerMenu = React.createClass({
 		return React.createElement('div', { className:'nav-menu-icon', onClick:this.toggle, style },
 			React.createElement('a', { href:'#' },
 				React.createElement('i')
+			)
+		)
+	}
+});
+
+var Button = React.createClass({
+	render: function() {
+		var { style=1, text, size='md', onClick } = this.props;
+		// size - string;enum:xs,sm,md,lg
+		// style - int;enum:1,2,3,4,5,6
+
+		return React.createElement('div', { className:'butt-style button-style-' + style },
+			React.createElement('a', { className:'b-' + size, href:'#', onClick },
+				text
 			)
 		)
 	}

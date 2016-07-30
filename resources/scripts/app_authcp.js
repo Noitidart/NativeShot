@@ -22,14 +22,14 @@ var gAppPageHeaderProps = {
 	menu: [
 		{
 			 get text() { return formatStringFromNameCore('history', 'main') },
+			 href: 'about:nativeshot'
 		},
 		{
 			 get text() { return formatStringFromNameCore('options', 'main') },
 			 href: 'about:nativeshot?options'
 		},
 		{
-			 get text() { return formatStringFromNameCore('authorization', 'main') },
-			 href: 'about:nativeshot?auth'
+			 get text() { return formatStringFromNameCore('authorization', 'main') }
 		}
 	]
 };
@@ -38,7 +38,7 @@ var gAppPageComponents = [
 
 ];
 
-var hydrant;
+var hydrantvar hydrant, hydrant_ex;
 
 // ACTIONS
 const REMOVE_ALERT = 'REMOVE_ALERT';

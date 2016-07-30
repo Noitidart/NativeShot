@@ -24,19 +24,6 @@ function reauth() {
 // start - react-redux
 
 // REACT COMPONENTS - PRESENTATIONAL
-var Button = React.createClass({
-	render: function() {
-		var { style=1, text, size='md', onClick } = this.props;
-		// size - string;enum:xs,sm,md,lg
-		// style - int;enum:1,2,3,4,5,6
-
-		return React.createElement('div', { className:'butt-style button-style-' + style },
-			React.createElement('a', { className:'b-' + size, href:'#', onClick },
-				text
-			)
-		)
-	}
-});
 var Jumbotron = React.createClass({
 	render: function() {
 		var { logo } = this.props;
@@ -72,7 +59,7 @@ var gAppPageHeaderProps = {
 
 var gAppPageComponents; // setup in initAppPage as need core
 
-var hydrant;
+var hydrant, hydrant_ex;
 
 // ACTIONS
 

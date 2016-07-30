@@ -38,7 +38,7 @@ var gAppPageComponents = [
 
 ];
 
-var hydrant;
+var hydrant, hydrant_ex;
 
 // ACTIONS
 const REMOVE_ALERT = 'REMOVE_ALERT';

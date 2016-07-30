@@ -255,8 +255,52 @@ self.onclose = function() {
 }
 
 // start - Comm functions
-function fetchCore() {
-	return core;
+function fetchCore(aArg) {
+	var { hydrant:hydrant_head, hydrant_ex:hydrant_ex_instructions, nocore } = aArg || {};
+
+	var deferredmain = new Deferred();
+	var promiseallarr = [];
+
+	var rez = { };
+
+	if (!nocore) {
+		rez.core = core;
+	}
+
+	if (hydrant_head) {
+		rez.hydrant = fetchFilestoreEntry({ mainkey:'hydrants', key:hydrant_head });
+	}
+
+	if (hydrant_ex_instructions) {
+		// hydrant_ex_instructions is object with keys:
+			// filestore_entries - optional;array - of strings, each is a key found in filestore
+			//
+		rez.hydrant_ex = {};
+
+		if (hydrant_ex_instructions.filestore_entries) {
+			for (var filestore_entry of hydrant_ex_instructions.filestore_entries) {
+				rez.hydrant_ex[filestore_entry] = fetchFilestoreEntry({ mainkey:filestore_entry });
+			}
+		}
+
+		if (hydrant_ex_instructions.addon_info) {
+			let deferred = new Deferred();
+			promiseallarr.push(deferred.promise);
+			callInBootstrap('getAddonInfo', undefined, function(aAddonInfo) {
+				rez.hydrant_ex.addon_info = aAddonInfo;
+				deferred.resolve();
+			});
+		}
+	}
+
+	if (promiseallarr.length) {
+		Promise.all(promiseallarr).then(function() {
+			deferredmain.resolve(rez);
+		});
+		return deferredmain.promise;
+	} else {
+		return rez;
+	}
 }
 // end - Comm functions
 
@@ -2618,7 +2662,8 @@ var gFilestoreDefault = {
 	prefs: {
 		quick_save_dir: null,
 		print_preview: false,
-		system_hotkey: true
+		system_hotkey: true,
+		default_tesseract_lang: 'eng'
 	},
 	log: [],
 	editorstate: undefined,

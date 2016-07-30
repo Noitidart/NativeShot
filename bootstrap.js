@@ -1115,6 +1115,18 @@ function reverseImageSearch(aArg) {
 	tab.setAttribute('nativeshot_actionid', actionid);
 }
 
+function getAddonInfo(aAddonId=core.addon.id) {
+	var deferredmain_getaddoninfo = new Deferred();
+	AddonManager.getAddonByID(aAddonId, addon =>
+		deferredmain_getaddoninfo.resolve({
+			applyBackgroundUpdates: addon.applyBackgroundUpdates,
+			updateDate: addon.updateDate,
+			version: addon.version
+		})
+	);
+
+	return deferredmain_getaddoninfo.promise;
+}
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content

@@ -128,7 +128,7 @@ var gAppPageComponents = [
 	Link('rawr', 'data:text/html,rawr')
 ];
 
-var hydrant;
+var hydrant, hydrant_ex;
 
 // ACTIONS
 const REMOVE_ALERT = 'REMOVE_ALERT';

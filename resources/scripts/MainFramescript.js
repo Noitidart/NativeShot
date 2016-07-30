@@ -343,7 +343,7 @@ function init() {
 
 	console.error('INITING TAB');
 	callInMainworker('fetchCore', undefined, function(aArg, aComm) {
-		core = aArg;
+		({ core } = aArg);
 		console.log('ok updated core to:', core);
 
 		addEventListener('unload', shutdown, true);
