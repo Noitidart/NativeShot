@@ -1119,7 +1119,7 @@ function getAddonInfo(aAddonId=core.addon.id) {
 	var deferredmain_getaddoninfo = new Deferred();
 	AddonManager.getAddonByID(aAddonId, addon =>
 		deferredmain_getaddoninfo.resolve({
-			applyBackgroundUpdates: addon.applyBackgroundUpdates,
+			applyBackgroundUpdates: addon.applyBackgroundUpdates === 1 ? (AddonManager.autoUpdateDefault ? 2 : 0) : addon.applyBackgroundUpdates,
 			updateDate: addon.updateDate,
 			version: addon.version
 		})
@@ -1130,7 +1130,7 @@ function getAddonInfo(aAddonId=core.addon.id) {
 
 function setApplyBackgroundUpdates(aNewApplyBackgroundUpdates) {
 	// 0 - off, 1 - respect global setting, 2 - on
-	AddonManager.getAddonByID(aAddonId, addon =>
+	AddonManager.getAddonByID(core.addon.id, addon =>
 		addon.applyBackgroundUpdates = aNewApplyBackgroundUpdates
 	);
 }

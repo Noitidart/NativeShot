@@ -384,16 +384,23 @@ var Dropdown = React.createClass({
 		if (this.state.open) { return }
 		this.setState({ open:true });
 		document.addEventListener('click', this.hide, false);
-		document.addEventListener('keydown', this.hide, false);
+		document.addEventListener('keyup', this.keyup, false);
 	},
 	hide: function() {
 		if (!this.state.open) { return }
 		this.setState({ open:false });
 		document.removeEventListener('click', this.hide, false);
-		document.removeEventListener('keydown', this.hide, false);
+		document.removeEventListener('keyup', this.keyup, false);
+	},
+	keyup: function(e) {
+		switch (e.key) {
+			case 'Escape':
+					this.hide();
+				break;
+		}
 	},
 	select: function(e) {
-		var { options } = this.props;
+		var { options, onChange } = this.props;
 
 		console.log('e.target.parentNode:', e.target.parentNode);
 		var ix = 0;
@@ -401,10 +408,15 @@ var Dropdown = React.createClass({
 		while (node = node.previousSibling) {
 			ix++;
 		}
-		this.setState({ selected:options[ix] })
+
+		this.setState({ selected:options[ix] });
+
+		if (onChange) {
+			onChange(options[ix].value);
+		}
 	},
 	render: function() {
-		var { style=1, size, onChange, label, options } = this.props;
+		var { style=1, size, onChange, label, alwaysShowLabel, options } = this.props;
 		var { selected } = this.state;
 		// style right now is unused
 		// selected is reference to object in options
@@ -414,7 +426,7 @@ var Dropdown = React.createClass({
 		return React.createElement('div', { className:'dropdown-container d-' + size + ' dropdown-style-' + style + (this.state.open ? ' dropdown-open' : '')},
 			React.createElement('div', { className:'dropdown-display', onClick:this.show },
 				React.createElement('span', undefined,
-					!selected ? label : selected.label
+					!selected || alwaysShowLabel ? label : selected.label
 				),
 				' ',
 				React.createElement('i', { className:'glyphs-angle-down' },

@@ -7,6 +7,15 @@ function initAppPage(aArg) {
 			type: 'buttons',
 			options: createSortedOnOffOptionsArr(2, 0)
 		},
+		quick_save_dir: {
+			type: 'action',
+			actions: [
+				{
+					onClick: function() { alert('hi') },
+					label: formatStringFromNameCore('change', 'main')
+				}
+			]
+		},
 		print_preview: {
 			type: 'buttons',
 			options: createSortedOnOffOptionsArr(true, false)
@@ -157,14 +166,41 @@ var Row = React.createClass({
 
 var Block = React.createClass({
 	displayName: 'Block',
+	setPref: function(value) {
+		var { pref, special } = this.props;
+		if (special) {
+			if (special == 'autoupdate') {
+				store.dispatch(setAddonInfo('applyBackgroundUpdates', value));
+			}
+		} else {
+			store.dispatch(setPref(pref, value));
+		}
+	},
 	render: function() {
-		var { title, type, value, value_label, details } = this.props;
+		var { title, type, value, pref, special, value_label, details } = this.props;
 		// type - string enum:buttons, select, action
 			// action means on click it does custom, like browse directory
 
-		if (type == 'buttons') {
-
+		var controls = [];
+		switch (details.type) {
+			case 'buttons':
+					var options = details.options;
+					for (var option of options) {
+						if (option.value !== value) {
+							controls.push( React.createElement(Button, { style:2, size:'md', text:option.label, onClick:this.setPref.bind(null, option.value) }) );
+						}
+					}
+				break;
+			case 'dropdown':
+					controls.push( React.createElement(Dropdown, { style:2, size:'md', label:formatStringFromNameCore('change', 'main'), alwaysShowLabel:true, options:details.options, onChange:this.setPref }) );
+				break;
+			case 'action':
+					for (var action of details.actions) {
+						controls.push( React.createElement(Button, { style:2, size:'md', text:action.label, onClick:action.onClick }) );
+					}
+				break;
 		}
+		pushAlternatingRepeating(controls, ' ');
 
 		return React.createElement('div', { className:'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12' },
 				React.createElement('div', { className:'pref-block' },
@@ -187,9 +223,7 @@ var Block = React.createClass({
 					)
 				),
 				React.createElement('div', { className:'pref-block-btns' },
-					React.createElement(Button, { style:2, size:'md', text:'rawr' }),
-					' ',
-					React.createElement(Dropdown, { style:2, size:'md', label:'dd', options:[{label:'On'}, {label:'Off'}] })
+					controls
 				)
 			)
 		);
@@ -220,7 +254,8 @@ var BlockContainer = ReactRedux.connect(
 				value_label,
 				value,
 				title: formatStringFromNameCore(ownProps.pref, 'main'),
-				details: gBlockDetails[ownProps.pref]
+				details: gBlockDetails[ownProps.pref],
+				pref: ownProps.pref
 			};
 		} else if (ownProps.special) {
 
@@ -236,7 +271,8 @@ var BlockContainer = ReactRedux.connect(
 				value,
 				value_label,
 				title: formatStringFromNameCore(ownProps.special, 'main'),
-				details: gBlockDetails[ownProps.special]
+				details: gBlockDetails[ownProps.special],
+				special: ownProps.special
 			};
 		}
 		else { console.error('DEVERROR: must have pref OR special prop'); throw new Error('DEVERROR: must have pref OR special prop'); }
@@ -308,10 +344,10 @@ function shouldUpdateHydrantEx() {
 					callInBootstrap('setApplyBackgroundUpdates', state.addon_info.applyBackgroundUpdates);
 				}
 			}
+			console.log('compared', p, 'is_different:', is_different, 'state:', state[p], 'hydrant_ex:', hydrant_ex[p]);
 			hydrant_ex[p] = state[p];
 			// break; // dont break because we want to update the hydrant_ex in this global scope for future comparing in this function.
 		}
-		console.log('compared', p, 'is_different:', is_different, 'state:', state[p], 'hydrant_ex:', hydrant_ex[p]);
 	}
 
 	console.log('done shouldUpdateHydrantEx');
@@ -329,7 +365,7 @@ function setPref(pref, value) {
 		value
 	}
 }
-function setAddonInfo() {
+function setAddonInfo(info, value) {
 	return {
 		type: SET_ADDON_INFO,
 		info,
@@ -342,8 +378,9 @@ function prefs(state=hydrant_ex.prefs, action) {
 	switch (action.type) {
 		case SET_PREF:
 			var { pref, value } = action;
-			state[pref] = value;
-			return state;
+			return Object.assign({}, state, {
+				[pref]: value
+			});
 		default:
 			return state;
 	}
@@ -352,8 +389,9 @@ function addon_info(state=hydrant_ex.addon_info, action) {
 	switch (action.type) {
 		case SET_ADDON_INFO:
 			var { info, value } = action;
-			state[info] = value;
-			return state;
+			return Object.assign({}, state, {
+				[info]: value
+			});
 		default:
 			return state;
 	}
