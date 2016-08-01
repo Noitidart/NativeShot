@@ -5,16 +5,16 @@ function initAppPage(aArg) {
 	gAppPageComponents = [];
 
 	// push rows
-	var crow = [React.createElement(Block)];
+	var crow = [React.createElement(Block, { title:'auto updates' })];
 	const MAX_BLOCKS_PER_ROW = 3;
 	for (var a_pref in hydrant_ex.prefs) {
-		crow.push(React.createElement(Block));
+		crow.push(React.createElement(Block, { title:a_pref }));
 
 		if (crow.length == MAX_BLOCKS_PER_ROW) {
 			gAppPageComponents.push(React.createElement(Row, undefined,
 				crow
 			));
-			crow.length = 0;
+			crow = [];
 		}
 	}
 	if (crow.length) {
@@ -47,14 +47,16 @@ var Row = React.createClass({
 var Block = React.createClass({
 	displayName: 'Block',
 	render: function() {
-		return React.createElement('div', undefined,
-			React.createElement('div', { className:'price-block' },
-				React.createElement('div', { className:'price-price' },
+		var { title } = this.props;
+
+		return React.createElement('div', { className:'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12' },
+				React.createElement('div', { className:'pref-block' },
+				React.createElement('div', { className:'pref-block-title' },
 					React.createElement('h4', {},
-						'block title'
+						title
 					)
 				),
-				React.createElement('div', { className:'price-title' },
+				React.createElement('div', { className:'pref-block-value' },
 					React.createElement('span', {},
 						'block value'
 					)
@@ -67,13 +69,15 @@ var Block = React.createClass({
 						'desc2'
 					)
 				),
-				React.createElement('div', {className:'button-style-2'},
-					React.createElement(Button)
+				React.createElement('div', { className:'pref-block-btns' },
+					React.createElement(Button, { style:2, size:'md', text:'rawr' }),
+					' ',
+					React.createElement(Dropdown, { style:2, size:'md', label:'dd', options:[{label:'On'}, {label:'Off'}] })
 				)
 			)
 		);
 	}
-})
+});
 // var Block = React.createClass({
 //     displayName: 'Block',
 // 	render: function() {

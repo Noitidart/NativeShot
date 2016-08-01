@@ -364,7 +364,63 @@ var Button = React.createClass({
 			React.createElement('a', { className:'b-' + size, href:'#', onClick },
 				text
 			)
-		)
+		);
+	}
+});
+
+var Dropdown = React.createClass({
+	getInitialState: function() {
+		var { selected } = this.props;
+		return {
+			open: false,
+			selected: selected
+		};
+	},
+	show: function() {
+		if (this.state.open) { return }
+		this.setState({ open:true });
+		document.addEventListener('click', this.hide, false);
+		document.addEventListener('keydown', this.hide, false);
+	},
+	hide: function() {
+		if (!this.state.open) { return }
+		this.setState({ open:false });
+		document.removeEventListener('click', this.hide, false);
+		document.removeEventListener('keydown', this.hide, false);
+	},
+	select: function(e) {
+		var { options } = this.props;
+
+		console.log('e.target.parentNode:', e.target.parentNode);
+		var ix = 0;
+		var node = e.target;
+		while (node = node.previousSibling) {
+			ix++;
+		}
+		this.setState({ selected:options[ix] })
+	},
+	render: function() {
+		var { style=1, size, onChange, label, options } = this.props;
+		var { selected } = this.state;
+		// style right now is unused
+		// selected is reference to object in options
+		// options is an array of objects. object has { label:string, value:any }
+		// defaultLabel is what text to show when nothing selected, key must be unique
+
+		return React.createElement('div', { className:'dropdown-container d-' + size + ' dropdown-style-' + style + (this.state.open ? ' dropdown-open' : '')},
+			React.createElement('div', { className:'dropdown-display', onClick:this.show },
+				React.createElement('span', undefined,
+					!selected ? label : selected.label
+				),
+				' ',
+				React.createElement('i', { className:'glyphs-angle-down' },
+					'\ue802'
+				)
+			),
+			React.createElement('div', { className:'dropdown-list' },
+				options.map( el => React.createElement('div', { className:'dropdown-list-item', onClick:this.select }, el.label) )
+			)
+		);
 	}
 });
 // REACT COMPONENTS - CONTAINER
