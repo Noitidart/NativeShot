@@ -37,7 +37,8 @@ function animsitizeOnBackForward() {
 window.addEventListener('pageshow', animsitizeOnBackForward, false);
 
 function init() {
-	callInMainworker('fetchCore', { hydrant, hydrant_ex }, function(aArg) {
+	console.error('calling fetchCore with hydrant_ex_instructions:', hydrant_ex_instructions);
+	callInMainworker('fetchCore', { hydrant, hydrant_ex_instructions }, function(aArg) {
 		console.log('aArg in app.js:', aArg);
 		({ core } = aArg);
 
@@ -50,7 +51,7 @@ function init() {
 				// dont update hydrant if its undefined, otherwise it will screw up all default values for redux
 				hydrant = aArg.hydrant;
 			}
-			if (hydrant_ex) {
+			if (hydrant_ex_instructions) {
 				hydrant_ex = aArg.hydrant_ex;
 			}
 
@@ -58,6 +59,9 @@ function init() {
 
 			if (hydrant) {
 				store.subscribe(shouldUpdateHydrant);
+			}
+			if (hydrant_ex_instructions) {
+				store.subscribe(shouldUpdateHydrantEx);
 			}
 		}
 

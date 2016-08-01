@@ -59,7 +59,7 @@ var gAppPageHeaderProps = {
 
 var gAppPageComponents; // setup in initAppPage as need core
 
-var hydrant, hydrant_ex;
+var hydrant, hydrant_ex, hydrant_ex_instructions;
 
 // ACTIONS
 

@@ -256,7 +256,7 @@ self.onclose = function() {
 
 // start - Comm functions
 function fetchCore(aArg) {
-	var { hydrant:hydrant_head, hydrant_ex:hydrant_ex_instructions, nocore } = aArg || {};
+	var { hydrant:hydrant_head, hydrant_ex_instructions, nocore } = aArg || {};
 
 	var deferredmain = new Deferred();
 	var promiseallarr = [];
@@ -2642,21 +2642,21 @@ function genericOnUploadProgress(shot, aReportProgress, e) {
 
 var gFilestore;
 var gFilestoreDefaultGetters = [ // after default is set, it runs all these functions
-	// function prefs__quick_save_dir() {
-	// 	// all getters should be sync, so i need to figure out what to do here
-	// 	console.error('in prefs__quick_save_dir');
-	// 	getSystemDirectory('Pictures').then(val=> {
-	// 		gFilestoreDefault.prefs.quick_save_dir = val;
-	// 	});
-	// 	var st = Date.now();
-	// 	var i = 0;
-	// 	while (!gFilestoreDefault.prefs.quick_save_dir) {
-	// 		i++;
-	// 	}
-	// 	var end = Date.now();
-	// 	console.log('prefs__quick_save_dir: took this long to get quick save dir:', (end - st), 'ms', 'i:', i);
-	// 	console.error('done prefs__quick_save_dir');
-	// }
+	function prefs__quick_save_dir() {
+		// all getters should be sync, so i need to figure out what to do here
+		console.error('in prefs__quick_save_dir');
+		getSystemDirectory('Pictures').then(val=> {
+			gFilestoreDefault.prefs.quick_save_dir = val;
+		});
+		// var st = Date.now();
+		// var i = 0;
+		// while (!gFilestoreDefault.prefs.quick_save_dir) {
+		// 	i++;
+		// }
+		// var end = Date.now();
+		// console.log('prefs__quick_save_dir: took this long to get quick save dir:', (end - st), 'ms', 'i:', i);
+		console.error('done prefs__quick_save_dir');
+	}
 ];
 var gFilestoreDefault = {
 	prefs: {

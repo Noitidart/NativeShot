@@ -1127,6 +1127,13 @@ function getAddonInfo(aAddonId=core.addon.id) {
 
 	return deferredmain_getaddoninfo.promise;
 }
+
+function setApplyBackgroundUpdates(aNewApplyBackgroundUpdates) {
+	// 0 - off, 1 - respect global setting, 2 - on
+	AddonManager.getAddonByID(aAddonId, addon =>
+		addon.applyBackgroundUpdates = aNewApplyBackgroundUpdates
+	);
+}
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content
