@@ -3240,6 +3240,7 @@ function processAction(aArg, aReportProgress, aComm) {
 }
 
 function addShotToLog(shot, aExtraKeys={}) {
+	var { serviceid, actionid } = shot;
 	var required_extras = { // console.log(remove on prod)
 		imguranon: ['x', 'i'], // console.log(remove on prod)
 		imgur: ['x', 'i', 'u', 's'], // console.log(remove on prod)
@@ -3250,18 +3251,28 @@ function addShotToLog(shot, aExtraKeys={}) {
 		savequick: ['n', 'f'] // console.log(remove on prod)
 	}; // console.log(remove on prod)
 
-	if (required_extras[shot.serviceid]) {
-		for (var key of required_extras[shot.serviceid]) { // console.log(remove on prod)
+	if (required_extras[serviceid]) { // console.log(remove on prod)
+		for (var key of required_extras[serviceid]) { // console.log(remove on prod)
 			if (!(key in aExtraKeys)) { // console.log(remove on prod)
-				console.error('missing key of', key, 'in aExtraKeys for log entry of serviceid:', shot.serviceid); // console.log(remove on prod)
+				console.error('missing key of', key, 'in aExtraKeys for log entry of serviceid:', serviceid); // console.log(remove on prod)
 				throw new Error('missing key of in log entry aExtraKeys'); // console.log(remove on prod)
 			} // console.log(remove on prod)
 		} // console.log(remove on prod)
-	}
+	} // console.log(remove on prod)
+
+	// if (['tesseract', 'gocr', 'ocrad'].includes(serviceid)) {
+	// 	// lets make sure its not already there
+	// 	for (var entry of fetchFilestoreEntry({mainkey:'log'})) {
+	// 		if (entry.d === actionid && entry.t === core.nativeshot.services[serviceid].code) {
+	// 			console.warn('this entry is already in the log, so dont add');
+	// 			return;
+	// 		}
+	// 	}
+	// }
 
 	var log_entry = Object.assign(aExtraKeys, {
-		d: shot.actionid,
-		t: core.nativeshot.services[shot.serviceid].code
+		d: actionid,
+		t: core.nativeshot.services[serviceid].code
 	});
 	updateFilestoreEntry({
 		value: log_entry,

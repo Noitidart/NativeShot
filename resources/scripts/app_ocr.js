@@ -1,4 +1,6 @@
 var gImageData;
+var gActionId;
+var gAlreadyLogged = {};
 
 function initAppPage(aArg) {
 	// aArg is what is received by the call in `init`
@@ -8,7 +10,7 @@ function initAppPage(aArg) {
 		gAppPageComponents.push('ERROR: Could not identify action');
 	} else {
 		var deferred = new Deferred();
-		actionid = parseInt(actionid);
+		gActionId = actionid = parseInt(actionid);
 		callInBootstrap('extractData', actionid, function(data) {
 			if (!data) {
 				gAppPageComponents.push('ERROR: Data for this action no longer exists. The data bar was probably closed.');
@@ -16,13 +18,25 @@ function initAppPage(aArg) {
 
 				gImageData = new ImageData(new Uint8ClampedArray(data.arrbuf), data.width, data.height);
 
-				for (var serviceid in data.txt) {
+				var serviceids = Object.keys(data.txt);
+				serviceids.sort();
+				var l = serviceids.length;
+				for (var i=0; i<l; i++) {
+					var serviceid = serviceids[i];
+					var result = data.txt[serviceid];
+					var br = i === l-1 ? false : true;
 					gAppPageComponents.push(
 						React.createElement(SectionContainer, {
 							serviceid,
-							result: data.txt[serviceid]
+							result,
+							br
 						})
 					);
+				}
+
+				if (l === 1) {
+					// already logged it
+					gAlreadyLogged[serviceid] = true;
 				}
 			}
 			deferred.resolve();
@@ -34,6 +48,31 @@ function initAppPage(aArg) {
 function uninitAppPage() {
 
 }
+
+function copyListener(e) {
+	console.log('copied, e:', e);
+	var parentNodes = document.querySelectorAll('[data-serviceid]'); // parent el of the pTxt textNodes
+	var l = parentNodes.length;
+
+	var sel = window.getSelection();
+	if (sel.toString().trim().length) {
+		for (var i=0; i<l; i++) {
+			var textNode = parentNodes[i].childNodes[0]; // the pTxt containing node. its always a signle text element ah
+			if (textNode && textNode.textContent.trim().length) {
+				console.error(i, 'textNode.textContent.trim():', textNode.textContent.trim());
+				if (sel.containsNode(textNode, true)) {
+					var serviceid = parentNodes[i].getAttribute('data-serviceid').toLowerCase();
+					if (!gAlreadyLogged[serviceid]) {
+						callInMainworker('addShotToLog', { serviceid, actionid:gActionId });
+						gAlreadyLogged[serviceid] = true;
+					}
+					else { console.warn('already logged this service:', { serviceid, actionid:gActionId }) }
+				}
+			}
+		}
+	}
+}
+document.addEventListener('copy', copyListener, false);
 
 // start - react-redux
 
@@ -62,7 +101,7 @@ var Section = React.createClass({
 	displayName: 'Section',
 	render: function() {
 
-		var { serviceid, result } = this.props; // attr defind
+		var { serviceid, result, br } = this.props; // attr defind
 		var { juxtaposed, whitespaced } = this.props; // mapped state
 		var { copy, toggleJuxtaposition, toggleWhitespace } = this.props; // dispatchers
 
@@ -93,12 +132,8 @@ var Section = React.createClass({
 			),
 			React.createElement('div', {className:'row'},
 				React.createElement('div', { className:(!juxtaposed ? 'col-lg-12 col-md-12 col-sm-12 col-xs-12' : 'col-lg-6 col-md-6 col-sm-6 col-xs-6') },
-					React.createElement('div', { className:'second-caption' },
-						React.createElement('p', null,
-							React.createElement('span', { 'data-service-name':serviceid, style:(!whitespaced ? undefined : {whiteSpace:'pre'}) },
-								result
-							)
-						)
+					React.createElement('span', { 'data-serviceid':serviceid, style:(!whitespaced ? undefined : {whiteSpace:'pre'}) },
+						result
 					)
 				),
 				!juxtaposed ? undefined : React.createElement('div', {className:'col-lg-6 col-md-6 col-sm-6 col-xs-6'},
@@ -110,19 +145,18 @@ var Section = React.createClass({
 						)
 					)
 				)
-			)
+			),
+			br ? React.DOM.br() : undefined
 		);
 	}
 });
 // REACT COMPONENTS - CONTAINER
 var SectionContainer = ReactRedux.connect(
 	function mapStateToProps(state, ownProps) {
-		var { serviceid, result } = ownProps;
+		var { serviceid } = ownProps;
 		return {
 			juxtaposed: state.juxtapositions[serviceid],
-			whitespaced: state.whitespaces[serviceid],
-			serviceid,
-			result
+			whitespaced: state.whitespaces[serviceid]
 		}
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
@@ -130,7 +164,14 @@ var SectionContainer = ReactRedux.connect(
 		return {
 			toggleJuxtaposition: () => dispatch(toggleJuxtaposition(serviceid)),
 			toggleWhitespace: () => dispatch(toggleWhitespace(serviceid)),
-			copy: callInBootstrap.bind(null, 'copy', result)
+			copy: () => {
+				callInBootstrap('copy', result);
+				if (!gAlreadyLogged[serviceid]) {
+					callInMainworker('addShotToLog', { serviceid, actionid:gActionId });
+					gAlreadyLogged[serviceid] = true;
+				}
+				else { console.warn('already logged this service:', { serviceid, actionid:gActionId }) }
+			}
 		}
 	}
 )(Section);

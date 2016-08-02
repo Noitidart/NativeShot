@@ -491,4 +491,12 @@ span[data-service-name] {
     -moz-user-select: element;
     cursor: auto;
 }
+
+.ocrpage {
+    -moz-user-select: auto;
+}
+.ocrpage .header-text,
+.ocrpage .det-tags .tags-button {
+    -moz-user-select: none;
+}
 /***/
