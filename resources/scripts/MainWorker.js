@@ -224,6 +224,8 @@ function init(objCore) {
 
 	// setTimeoutSync(1000); // i want to delay 1sec to allow old framescripts to destroy
 
+	setTimeout(readFilestore, 0); // init this as gFilestoreDefaultGetters should be sync, but `prefs__quick_save_dir` not right now, so i have to init it
+
 	return {
 		core,
 		gEditorStateStr
@@ -2662,7 +2664,7 @@ var gFilestoreDefaultGetters = [ // after default is set, it runs all these func
 ];
 var gFilestoreDefault = {
 	prefs: {
-		quick_save_dir: null,
+		// quick_save_dir: null, // set by `gFilestoreDefaultGetters`
 		print_preview: false,
 		system_hotkey: true,
 		default_tesseract_lang: 'eng'
@@ -3088,6 +3090,9 @@ var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinali
 	var lang;
 	if (shot.action_options && shot.action_options.lang) {
 		lang = shot.action_options.lang;
+	} else {
+		// use default
+		lang = fetchFilestoreEntry({ mainkey:'prefs', key:'default_tesseract_lang' });
 	}
 
 	aReportProgress({

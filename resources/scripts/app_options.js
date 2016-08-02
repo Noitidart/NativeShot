@@ -203,7 +203,7 @@ var Block = React.createClass({
 					var options = details.options;
 					for (var option of options) {
 						if (option.value !== value) {
-							controls.push( React.createElement(Button, { style:2, size:'md', text:option.label, onClick:this.setPref.bind(null, option.value) }) );
+							controls.push( React.createElement(Button, { key:option.label, style:2, size:'md', text:option.label, onClick:this.setPref.bind(null, option.value) }) );
 						}
 					}
 				break;
