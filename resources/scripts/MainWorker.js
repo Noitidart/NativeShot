@@ -163,6 +163,8 @@ function init(objCore) {
 	core.addon.path.storage = OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id, 'simple-storage');
 	core.addon.path.filestore = OS.Path.join(core.addon.path.storage, 'store.json');
 
+	core.os.filesystem_seperator = platformFilePathSeperator();
+
 	// keys in store:
 		// prefs
 		// hydrants
@@ -3914,5 +3916,12 @@ function base64ArrayBuffer(arrayBuffer) {
   }
 
   return base64
+}
+function platformFilePathSeperator() {
+	// if (!_cache_platformFilePathSeperator) {
+	// 	_cache_platformFilePathSeperator = OS.Path.join(' ', ' ').replace(/ /g, '');
+	// }
+	// return _cache_platformFilePathSeperator;
+	return OS.Path.join(' ', ' ').replace(/ /g, '');
 }
 // end - common worker functions

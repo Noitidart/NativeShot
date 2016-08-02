@@ -471,4 +471,11 @@ function formatStringFromNameCore(aLocalizableStr, aLoalizedKeyInCoreAddonL10n, 
 
     return cLocalizedStr;
 }
+function escapeRegExp(text) {
+	if (!arguments.callee.sRE) {
+		var specials = ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'];
+		arguments.callee.sRE = new RegExp('(\\' + specials.join('|\\') + ')', 'g'); // doesnt work in strict mode ```'use strict';```
+	}
+	return text.replace(arguments.callee.sRE, '\\$1');
+}
 // end - common helper functions

@@ -11,7 +11,23 @@ function initAppPage(aArg) {
 			type: 'action',
 			actions: [
 				{
-					onClick: function() { alert('hi') },
+					onClick: function() {
+						callInBootstrap(
+							'browseFile',
+							{
+								aDialogTitle: formatStringFromNameCore('filepicker_title_changequicksavedir', 'main'),
+								aOptions: {
+									mode: 'modeGetFolder',
+									win: 'navigator:browser'
+								}
+							},
+							function(aArg) {
+								if (aArg) {
+									store.dispatch(setPref('quick_save_dir', aArg));
+								}
+							}
+						);
+					},
 					label: formatStringFromNameCore('change', 'main')
 				}
 			]
@@ -177,7 +193,7 @@ var Block = React.createClass({
 		}
 	},
 	render: function() {
-		var { title, type, value, pref, special, value_label, details } = this.props;
+		var { title, type, value, pref, special, value_label, value_label_sup, details } = this.props;
 		// type - string enum:buttons, select, action
 			// action means on click it does custom, like browse directory
 
@@ -210,6 +226,7 @@ var Block = React.createClass({
 					)
 				),
 				React.createElement('div', { className:'pref-block-value' },
+					!value_label_sup ?  undefined : React.createElement('sup', undefined, value_label_sup),
 					React.createElement('span', {},
 						value_label
 					)
@@ -250,9 +267,22 @@ var BlockContainer = ReactRedux.connect(
 				}
 			}
 
+			// special
+			var value_label_sup;
+			if (ownProps.pref == 'quick_save_dir') {
+				var parts = value.match(new RegExp('(.*)' + escapeRegExp(core.os.filesystem_seperator) + '(.*)'));
+				console.log('parts:', parts);
+				if (parts) {
+					value_label_sup = parts[1];
+					value_label = parts[2];
+				}
+				// dont set value_label_sup
+			}
+
 			return {
 				value_label,
 				value,
+				value_label_sup,
 				title: formatStringFromNameCore(ownProps.pref, 'main'),
 				details: gBlockDetails[ownProps.pref],
 				pref: ownProps.pref
