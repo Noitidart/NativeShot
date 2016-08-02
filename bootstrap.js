@@ -1215,7 +1215,10 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					aTxt: (new Date(aSessionId).toLocaleString()),
 					aPriority: 1,
 					aIcon: core.addon.path.images + 'icon16.png',
-					aBtns: [] // each entry is an object. so i give it a key `meta` which is ignored by the AttnBar module
+					aBtns: [], // each entry is an object. so i give it a key `meta` which is ignored by the AttnBar module
+					aClose: function() {
+						delete gAttn[aSessionId];
+					}
 				},
 				shown: false
 			};
@@ -1854,6 +1857,33 @@ function closeSelfTab(aArg, aReportProgress, aComm, aMessageManager, aBrowser) {
 	var tab = gbrowser.getTabForBrowser(aBrowser);
 	gbrowser.removeTab(tab);
 	// console.error('TAB NOT FOUND FOR CLOSE');
+}
+
+function extractData(aActionId) {
+	// returns null if not available
+	console.log('aActionId:', aActionId);
+
+	entries_loop:
+	for (var a_sessionid in gAttn) {
+		var btns = gAttn[a_sessionid].state.aBtns;
+		if (btns) {
+			for (var btn of btns) {
+				if (btn.meta.actionid === aActionId) {
+					break entries_loop;
+				}
+			}
+		}
+	}
+
+	if (!btn || btn.meta.actionid !== aActionId) {
+		return null;
+	} else {
+		if (btn.meta.data.arrbuf) {
+			// btn.meta.data.__XFER = 'arrbuf';
+		}
+		console.log('cloning:', btn.meta.data);
+		return btn.meta.data;
+	}
 }
 
 // start - common helper functions

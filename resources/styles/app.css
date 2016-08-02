@@ -482,3 +482,13 @@ header.type3 {
 .padd-120 {padding-bottom: 120px;}
 /*.padd-80:last-child {padding-bottom: 0px;}*/
 /***/
+
+/* domgroup:ocr page elements */
+.det-tags h4 { display: inline-block; -moz-user-select: element; }
+.det-tags .tags-button { display: inline-block; margin: 0 10px; }
+
+span[data-service-name] {
+    -moz-user-select: element;
+    cursor: auto;
+}
+/***/

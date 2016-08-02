@@ -3040,12 +3040,13 @@ function action_ocrall(shot, aActionFinalizer, aReportProgress) {
 		reason: 'PROCESSING'
 	});
 
-	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
+	// var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
 
 	var finalize_data = {
 		reason: 'SUCCESS',
 		data: {
-			ocr_dataurl: dataurl,
+			// dataurl: dataurl,
+			arrbuf: shot.arrbuf,
 			txt: {}
 		}
 	};
@@ -3061,6 +3062,8 @@ function action_ocrall(shot, aActionFinalizer, aReportProgress) {
 		}, function(aArg2) {
 			var txt = aArg2;
 			finalize_data.data.txt[aMethod] = txt;
+			finalize_data.data.width = shot.width;
+			finalize_data.data.height = shot.height;
 			aDeferred.resolve();
 		});
 	}
@@ -3099,14 +3102,14 @@ var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinali
 		reason: 'PROCESSING'
 	});
 
-	var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
+	// var dataurl = 'data:image/png;base64,' + base64ArrayBuffer(shot.arrbuf);
 	callInOcrworker('readByteArr', {
 		method: shot.serviceid,
 		arrbuf: shot.arrbuf,
 		width: shot.width,
 		height: shot.height,
-		lang,
-		__XFER: ['arrbuf']
+		lang
+		// __XFER: ['arrbuf']
 	}, function(aArg2) {
 		var txt = aArg2;
 
@@ -3121,7 +3124,10 @@ var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinali
 			aActionFinalizer({
 				reason: 'SUCCESS',
 				data: {
-					ocr_dataurl: dataurl,
+					// dataurl: dataurl,
+					arrbuf: shot.arrbuf,
+					width: shot.width,
+					height: shot.height,
 					txt: {
 						[shot.serviceid]: txt
 					}

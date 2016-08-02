@@ -65,17 +65,28 @@ function init() {
 			}
 		}
 
-		initAppPage(aArg);
+		var page_inited = initAppPage(aArg);
 
-		// render react
-		setTimeout(function() {
-		ReactDOM.render(
-			React.createElement(ReactRedux.Provider, { store },
-				React.createElement(App)
-			),
-			document.getElementById('root')
-		);
-	}, 100);
+
+		if (page_inited && page_inited.constructor.name == 'Promise') {
+			page_inited.then(function() {
+				// render react
+				ReactDOM.render(
+					React.createElement(ReactRedux.Provider, { store },
+						React.createElement(App)
+					),
+					document.getElementById('root')
+				);
+			});
+		} else {
+			// render react
+			ReactDOM.render(
+				React.createElement(ReactRedux.Provider, { store },
+					React.createElement(App)
+				),
+				document.getElementById('root')
+			);
+		}
 
 	});
 }
