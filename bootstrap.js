@@ -1881,7 +1881,6 @@ function extractData(aActionId) {
 		if (btn.meta.data.arrbuf) {
 			// btn.meta.data.__XFER = 'arrbuf';
 		}
-		console.log('cloning:', btn.meta.data);
 		return btn.meta.data;
 	}
 }

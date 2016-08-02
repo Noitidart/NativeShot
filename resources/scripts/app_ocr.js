@@ -13,13 +13,12 @@ function initAppPage(aArg) {
 			if (!data) {
 				gAppPageComponents.push('ERROR: Data for this action no longer exists. The data bar was probably closed.');
 			} else {
-				console.log('ok got data:', data);
 
 				gImageData = new ImageData(new Uint8ClampedArray(data.arrbuf), data.width, data.height);
 
-				for (serviceid in data.txt) {
+				for (var serviceid in data.txt) {
 					gAppPageComponents.push(
-						React.createElement(Section, {
+						React.createElement(SectionContainer, {
 							serviceid,
 							result: data.txt[serviceid]
 						})
@@ -63,7 +62,9 @@ var Section = React.createClass({
 	displayName: 'Section',
 	render: function() {
 
-		var { serviceid, result, sJuxt, sNoPre } = this.props;
+		var { serviceid, result } = this.props; // attr defind
+		var { juxtaposed, whitespaced } = this.props; // mapped state
+		var { copy, toggleJuxtaposition, toggleWhitespace } = this.props; // dispatchers
 
 		var canRef = function(can) {
 			console.log('can:', can);
@@ -77,30 +78,30 @@ var Section = React.createClass({
 			React.createElement('div', {className:'row'},
 				React.createElement('div', {className:'col-md-12'},
 					React.createElement('div', {className:'det-tags'},
-						React.createElement('h4', null,
+						React.createElement('h4', undefined,
 							formatStringFromNameCore(serviceid, 'main').toUpperCase()
 						),
 						React.createElement('div', {className:'tags-button'},
-							React.createElement(Button, { style:6, size:'xs', onClick:this.copy, text:formatStringFromNameCore('just_copy', 'main') }),
+							React.createElement(Button, { style:6, size:'xs', onClick:copy, text:formatStringFromNameCore('just_copy', 'main') }),
 							' ',
-							React.createElement(Button, { style:6, size:'xs', onClick:this.pre, text:formatStringFromNameCore(sNoPre ? 'orig_whitespace' : 'min_whitespace', 'main') }),
+							React.createElement(Button, { style:6, size:'xs', onClick:toggleWhitespace, text:formatStringFromNameCore(!whitespaced ? 'orig_whitespace' : 'min_whitespace', 'main'), key:(!whitespaced ? 'orig_whitespace' : 'min_whitespace') }),
 							' ',
-							React.createElement(Button, { style:6, size:'xs', onClick:this.juxtapose, text:formatStringFromNameCore(sJuxt ? 'hide_image' : 'image_compare', 'main') })
+							React.createElement(Button, { style:6, size:'xs', onClick:toggleJuxtaposition, text:formatStringFromNameCore(juxtaposed ? 'hide_image' : 'image_compare', 'main'), key:(juxtaposed ? 'hide_image' : 'image_compare') })
 						)
 					)
 				)
 			),
 			React.createElement('div', {className:'row'},
-				React.createElement('div', { className:(!sJuxt ? 'col-lg-12 col-md-12 col-sm-12 col-xs-12' : 'col-lg-6 col-md-6 col-sm-6 col-xs-6') },
+				React.createElement('div', { className:(!juxtaposed ? 'col-lg-12 col-md-12 col-sm-12 col-xs-12' : 'col-lg-6 col-md-6 col-sm-6 col-xs-6') },
 					React.createElement('div', { className:'second-caption' },
 						React.createElement('p', null,
-							React.createElement('span', { 'data-service-name':serviceid, style:(sNoPre ? undefined : {whiteSpace:'pre'}) },
+							React.createElement('span', { 'data-service-name':serviceid, style:(!whitespaced ? undefined : {whiteSpace:'pre'}) },
 								result
 							)
 						)
 					)
 				),
-				!sJuxt ? undefined : React.createElement('div', {className:'col-lg-6 col-md-6 col-sm-6 col-xs-6'},
+				!juxtaposed ? undefined : React.createElement('div', {className:'col-lg-6 col-md-6 col-sm-6 col-xs-6'},
 					React.createElement('div', {className:'second-caption'},
 						React.createElement('p', null,
 							React.createElement('span', null,
@@ -114,6 +115,25 @@ var Section = React.createClass({
 	}
 });
 // REACT COMPONENTS - CONTAINER
+var SectionContainer = ReactRedux.connect(
+	function mapStateToProps(state, ownProps) {
+		var { serviceid, result } = ownProps;
+		return {
+			juxtaposed: state.juxtapositions[serviceid],
+			whitespaced: state.whitespaces[serviceid],
+			serviceid,
+			result
+		}
+	},
+	function mapDispatchToProps(dispatch, ownProps) {
+		var { serviceid, result } = ownProps;
+		return {
+			toggleJuxtaposition: () => dispatch(toggleJuxtaposition(serviceid)),
+			toggleWhitespace: () => dispatch(toggleWhitespace(serviceid)),
+			copy: callInBootstrap.bind(null, 'copy', result)
+		}
+	}
+)(Section);
 
 // material for app.js
 var gAppPageNarrow = false;
@@ -123,32 +143,47 @@ var gAppPageHeaderProps = {
 	get text() { return formatStringFromNameCore('header_text_ocr', 'main') }
 };
 
-var gAppPageComponents = [
-
-];
+var gAppPageComponents = [];
 
 var hydrant, hydrant_ex, hydrant_ex_instructions;
 
 // ACTIONS
-const REMOVE_ALERT = 'REMOVE_ALERT';
+const TOGGLE_JUXTAPOSITION = 'TOGGLE_JUXTAPOSITION';
+const TOGGLE_WHITESPACE = 'TOGGLE_WHITESPACE';
 
 // ACTION CREATORS
-function removeAlert(alertid, obj) {
-	// obj can contain a mix of these keys
-		// acceptable keys: { body, body_prefix, body_suffix, color, dismissible, glyph, title }
-
+function toggleJuxtaposition(serviceid) {
 	return {
-		type: ADD_ALERT,
-		alertid,
-		obj
+		type: TOGGLE_JUXTAPOSITION,
+		serviceid
+	}
+}
+function toggleWhitespace(serviceid) {
+	return {
+		type: TOGGLE_WHITESPACE,
+		serviceid
 	}
 }
 
 // REDUCERS
-function alerts(state=[], action) {
+function juxtapositions(state={}, action) {
 	switch (action.type) {
-		case REMOVE_ALERT:
-			return state.filter( alert => alert.alertid !== action.alertid );
+		case TOGGLE_JUXTAPOSITION:
+			var { serviceid } = action;
+			return Object.assign({}, state, {
+				[serviceid]: !state[serviceid]
+			});
+		default:
+			return state;
+	}
+}
+function whitespaces(state={}, action) {
+	switch (action.type) {
+		case TOGGLE_WHITESPACE:
+			var { serviceid } = action;
+			return Object.assign({}, state, {
+				[serviceid]: !state[serviceid]
+			});
 		default:
 			return state;
 	}
@@ -156,7 +191,8 @@ function alerts(state=[], action) {
 
 // `var` so app.js can access it
 var app = Redux.combineReducers({
-	alerts
+	juxtapositions,
+	whitespaces
 });
 
 // end - react-redux
