@@ -72,6 +72,27 @@ function uninitAppPage() {
 
 }
 
+function focusAppPage() {
+	console.error('focused!!!!!!');
+	callInMainworker('fetchCore', { nocore:true, hydrant_ex_instructions }, function(aArg) {
+		var differents; // key is mainkey
+		for (var p in aArg.hydrant_ex) {
+			var is_different = React.addons.shallowCompare({props:hydrant_ex[p]}, aArg.hydrant_ex[p]);
+			console.error('hydrant_ex.' + p + ' is_different:', is_different);
+			if (is_different) {
+				if (!differents) {
+					differents = {};
+				}
+				differents[p] = aArg.hydrant_ex[p];
+			}
+		}
+
+		if (differents) {
+			store.dispatch(setMainKeys(differents));
+		}
+	});
+}
+
 function createSortedOnOffOptionsArr(aOnVal, aOffVal) {
 	var arr = [
 		{
@@ -350,7 +371,7 @@ var hydrant_ex_instructions = { // stuff that shouldnt get written to hydrants e
 };
 
 function shouldUpdateHydrantEx() {
-	console.log('in shouldUpdateHydrant');
+	console.log('in shouldUpdateHydrantEx');
 
 	var state = store.getState();
 
@@ -362,16 +383,18 @@ function shouldUpdateHydrantEx() {
 			console.log('something in', p, 'of hydrant_ex was updated');
 			hydrant_ex_updated = true;
 
-			// update file stores or whatever store this key in hydrant_ex is connected to
-			if (hydrant_ex_instructions.filestore_entries && hydrant_ex_instructions.filestore_entries.includes(p)) {
-				callInMainworker('updateFilestoreEntry', {
-					mainkey: p,
-					value: state[p]
-				})
-			} else if (p == 'addon_info') {
-				// make sure it is just applyBackgroundUpdates, as i only support changing applyBackgroundUpdates
-				if (hydrant_ex.addon_info.applyBackgroundUpdates !== state.addon_info.applyBackgroundUpdates) {
-					callInBootstrap('setApplyBackgroundUpdates', state.addon_info.applyBackgroundUpdates);
+			if (!gSupressUpdateHydrantExOnce) {
+				// update file stores or whatever store this key in hydrant_ex is connected to
+				if (hydrant_ex_instructions.filestore_entries && hydrant_ex_instructions.filestore_entries.includes(p)) {
+					callInMainworker('updateFilestoreEntry', {
+						mainkey: p,
+						value: state[p]
+					})
+				} else if (p == 'addon_info') {
+					// make sure it is just applyBackgroundUpdates, as i only support changing applyBackgroundUpdates
+					if (hydrant_ex.addon_info.applyBackgroundUpdates !== state.addon_info.applyBackgroundUpdates) {
+						callInBootstrap('setApplyBackgroundUpdates', state.addon_info.applyBackgroundUpdates);
+					}
 				}
 			}
 			console.log('compared', p, 'is_different:', is_different, 'state:', state[p], 'hydrant_ex:', hydrant_ex[p]);
@@ -380,12 +403,19 @@ function shouldUpdateHydrantEx() {
 		}
 	}
 
+	if (gSupressUpdateHydrantExOnce) {
+		console.log('hydrant_ex update supressed once');
+		gSupressUpdateHydrantExOnce = false;
+		return;
+	}
+
 	console.log('done shouldUpdateHydrantEx');
 }
 
 // ACTIONS
 const SET_PREF = 'SET_PREF';
 const SET_ADDON_INFO = 'SET_ADDON_INFO';
+const SET_MAIN_KEYS = 'SET_MAIN_KEYS';
 
 // ACTION CREATORS
 function setPref(pref, value) {
@@ -402,6 +432,13 @@ function setAddonInfo(info, value) {
 		value
 	}
 }
+function setMainKeys(obj_of_mainkeys) {
+	gSupressUpdateHydrantExOnce = true;
+	return {
+		type: SET_MAIN_KEYS,
+		obj_of_mainkeys
+	}
+}
 
 // REDUCERS
 function prefs(state=hydrant_ex.prefs, action) {
@@ -411,6 +448,10 @@ function prefs(state=hydrant_ex.prefs, action) {
 			return Object.assign({}, state, {
 				[pref]: value
 			});
+		case SET_MAIN_KEYS:
+			var { obj_of_mainkeys } = action;
+			var mainkey = 'prefs';
+			return (mainkey in obj_of_mainkeys ? obj_of_mainkeys[mainkey] : state);
 		default:
 			return state;
 	}
@@ -422,6 +463,10 @@ function addon_info(state=hydrant_ex.addon_info, action) {
 			return Object.assign({}, state, {
 				[info]: value
 			});
+		case SET_MAIN_KEYS:
+			var { obj_of_mainkeys } = action;
+			var mainkey = 'addon_info';
+			return (mainkey in obj_of_mainkeys ? obj_of_mainkeys[mainkey] : state);
 		default:
 			return state;
 	}

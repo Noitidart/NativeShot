@@ -7,13 +7,13 @@ function initAppPage(aArg) {
 	var actionid = window.location.href.match(/\d{11,}/i);
 	if (!actionid) {
 		alert('show error page');
-		gAppPageComponents.push('ERROR: Could not identify action');
+		gAppPageComponents.push(formatStringFromNameCore('error_actionid', 'main'));
 	} else {
 		var deferred = new Deferred();
 		gActionId = actionid = parseInt(actionid);
 		callInBootstrap('extractData', actionid, function(data) {
 			if (!data) {
-				gAppPageComponents.push('ERROR: Data for this action no longer exists. The data bar was probably closed.');
+				gAppPageComponents.push(formatStringFromNameCore('error_datagone', 'main'));
 			} else {
 
 				gImageData = new ImageData(new Uint8ClampedArray(data.arrbuf), data.width, data.height);

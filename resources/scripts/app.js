@@ -67,18 +67,7 @@ function init() {
 
 		var page_inited = initAppPage(aArg);
 
-
-		if (page_inited && page_inited.constructor.name == 'Promise') {
-			page_inited.then(function() {
-				// render react
-				ReactDOM.render(
-					React.createElement(ReactRedux.Provider, { store },
-						React.createElement(App)
-					),
-					document.getElementById('root')
-				);
-			});
-		} else {
+		var afterPageInited = function() {
 			// render react
 			ReactDOM.render(
 				React.createElement(ReactRedux.Provider, { store },
@@ -86,6 +75,15 @@ function init() {
 				),
 				document.getElementById('root')
 			);
+			if (typeof(focusAppPage) != 'undefined') {
+				window.addEventListener('focus', focusAppPage, false);
+			}
+		};
+
+		if (page_inited && page_inited.constructor.name == 'Promise') {
+			page_inited.then(afterPageInited);
+		} else {
+			afterPageInited();
 		}
 
 	});
@@ -112,6 +110,8 @@ var store;
 
 // var unsubscribe = store.subscribe(() => console.log(store.getState()) );
 
+var gSupressUpdateHydrantOnce = false; // supress the updating of the filestore due to hydrant update
+var gSupressUpdateHydrantExOnce = false; // supress the updating of the filestore due to hydrant update
 function shouldUpdateHydrant() {
 	console.log('in shouldUpdateHydrant');
 
@@ -131,10 +131,15 @@ function shouldUpdateHydrant() {
 	}
 
 	if (hydrant_updated) {
-		callInMainworker('updateHydrant', {
-			head: gPage.name,
-			hydrant
-		})
+		if (gSupressUpdateHydrantOnce) {
+			console.log('hydrant update supressed once');
+			gSupressUpdateHydrantOnce = false;
+		} else {
+			callInMainworker('updateHydrant', {
+				head: gPage.name,
+				hydrant
+			});
+		}
 	}
 
 	console.log('done shouldUpdateHydrant');

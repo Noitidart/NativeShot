@@ -1120,7 +1120,7 @@ function getAddonInfo(aAddonId=core.addon.id) {
 	AddonManager.getAddonByID(aAddonId, addon =>
 		deferredmain_getaddoninfo.resolve({
 			applyBackgroundUpdates: addon.applyBackgroundUpdates === 1 ? (AddonManager.autoUpdateDefault ? 2 : 0) : addon.applyBackgroundUpdates,
-			updateDate: addon.updateDate,
+			updateDate: addon.updateDate.getTime(),
 			version: addon.version
 		})
 	);
