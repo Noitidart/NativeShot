@@ -1,9 +1,11 @@
 function initAppPage(aArg) {
 	// aArg is what is received by the call in `init`
+	store.dispatch(overwriteGalleryItems(hydrant_ex.logsrc));
+
 	gAppPageComponents = [
 		React.createElement(BarsContainer),
 		React.createElement(FiltersContainer),
-		React.createElement(GalleryContainer)
+		React.createElement(GalleryContainer, { layouts:gGalleryLayouts })
 	];
 }
 
@@ -64,6 +66,34 @@ function getDisplayFilters(selected_filter) {
 
 	return display_filters;
 }
+
+var gGalleryLayouts = [ // must be in order from largest breakpoint to lowest
+	{
+		name: 'xxxlg',
+		breakpoint: 99999999, // gallery_width <= this then it qualifies for xxxlg
+		cols: 3 // col_width will be total gallery width DIVIDED BY this
+	},
+	{
+		name: 'lg',
+		breakpoint: 1200,
+		cols: 3
+	},
+	{
+		name: 'md',
+		breakpoint: 996,
+		cols: 3
+	},
+	{
+		name: 'sm',
+		breakpoint: 768,
+		cols: 2
+	},
+	{
+		name: 'xs',
+		breakpoint: 480,
+		cols: 1
+	}
+];
 
 // REACT COMPONENTS - PRESENTATIONAL
 var Filters = React.createClass({
@@ -207,39 +237,63 @@ var Bars = React.createClass({
 
 var Gallery = React.createClass({
 	render: function() {
-		var { selected_filter } = this.props; // mapped state
+		var { layouts } = this.props; // attr
+		var { selected_filter, width, all_items } = this.props; // mapped state
 		var { setFilter } = this.props; // dispatchers
 
 		var display_filters = getDisplayFilters(selected_filter);
 		var services = core.nativeshot.services;
 
+		console.log('all_items:', all_items);
 
-		var log;
-		if (selected_filter == 'all') {
-			log = hydrant_ex.logsrc;
-		} else {
-			if (services[selected_filter]) {
-				// `serviceid` is filtered
-				log = hydrant_ex.logsrc.filter(entry => entry.t === services[selected_filter].code );
+		if (width > 0) { // so we dont render when gallery width is not yet set
+			var layout = layouts.reduce( (pre, cur) => width <= cur.breakpoint ? cur : pre );
+
+			var colwidth = width / layout.cols;
+			var colwidthpx = colwidth + 'px';
+
+			var items;
+			if (selected_filter == 'all') {
+				items = all_items;
 			} else {
-				// no `serviceid` filtered, just `type` of `selected_filter`
-				log = hydrant_ex.logsrc.filter(entry => getServiceFromCode(entry.t).entry.type == selected_filter );
+				if (services[selected_filter]) {
+					// `serviceid` is filtered
+					items = all_items.filter(entry => entry.t === services[selected_filter].code );
+				} else {
+					// no `serviceid` filtered, just `type` of `selected_filter`
+					items = all_items.filter(entry => getServiceFromCode(entry.t).entry.type == selected_filter );
+				}
 			}
+
+			items = items.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
+
+			console.log('items:', items);
+
+			var item_rels = items.map(entry =>
+				React.createElement('div', { className:'galentry', style:{width:colwidthpx} },
+					React.createElement('img', { src:entry.src })
+				)
+			);
+		} else {
+			var item_rels = undefined;
 		}
 
-		log = log.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
-
-		console.log('log:', log);
-
-		var galentry_rels = log.map(entry =>
-			React.createElement('div', undefined,
-				React.createElement('img', { src:entry.src })
-			)
-		);
-
 		return React.createElement('div', { id:'gallery', className:'padd-80' },
-			galentry_rels
+			item_rels
 		);
+	},
+	componentDidMount: function() {
+		window.addEventListener('resize', this.resize, false);
+
+		// console.error('gal width on mount:', ReactDOM.findDOMNode(this).offsetWidth);
+		store.dispatch(setGalleryWidth(ReactDOM.findDOMNode(this).offsetWidth));
+	},
+	resize: function() {
+		var domel = ReactDOM.findDOMNode(this);
+		var width = domel.offsetWidth;
+
+		console.log('width:', width);
+		store.dispatch(setGalleryWidth(width));
 	}
 });
 
@@ -280,7 +334,9 @@ var BarsContainer = ReactRedux.connect(
 var GalleryContainer = ReactRedux.connect(
 	function mapStateToProps(state, ownProps) {
 		return {
-			selected_filter: state.selected_filter
+			selected_filter: state.selected_filter,
+			width: state.gallery_width,
+			all_items: state.gallery_items
 		}
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
@@ -323,7 +379,34 @@ function shouldUpdateHydrantEx() {} // need empty function, as i dont update any
 // ACTIONS
 const SET_FILTER = 'SET_FILTER';
 
+const OVERWRITE_GALLERY_ITEMS = 'OVERWRITE_GALLERY_ITEMS';
+const ADD_GALLERY_ITEMS = 'ADD_GALLERY_ITEMS';
+
+const SET_GALLERY_WIDTH = 'SET_GALLERY_WIDTH';
+
 // ACTION CREATORS
+function overwriteGalleryItems(items) {
+	// should only call this on `init`
+	return {
+		type: OVERWRITE_GALLERY_ITEMS,
+		items
+	}
+}
+
+function addGalleryItems(items) {
+	return {
+		type: ADD_GALLERY_ITEMS,
+		items
+	}
+}
+
+function setGalleryWidth(width) {
+	return {
+		type: SET_GALLERY_WIDTH,
+		width
+	}
+}
+
 function setFilter(serviceid) {
 	// `serviceid` is a string. a key in `core.nativeshot.services` (except ones marked `history_ignore` like "ocrall") OR "all"
 	return {
@@ -342,9 +425,33 @@ function selected_filter(state='all', action) {
 	}
 }
 
+function gallery_items(state=[], action) {
+	switch (action.type) {
+		case OVERWRITE_GALLERY_ITEMS:
+			return action.items;
+		case ADD_GALLERY_ITEMS:
+			return [ ...state, ...action.items ];
+		default:
+			return state;
+	}
+}
+
+// console.error('document.documentElement.offsetWidth:', document.documentElement.offsetWidth);
+// var gGalleryWidthDefault = document.documentElement.offsetWidth - 123;
+function gallery_width(state=0, action) {
+	switch (action.type) {
+		case SET_GALLERY_WIDTH:
+			return action.width;
+		default:
+			return state;
+	}
+}
+
 // `var` so app.js can access it
 var app = Redux.combineReducers({
-	selected_filter
+	selected_filter,
+	gallery_width,
+	gallery_items
 });
 
 // end - react-redux

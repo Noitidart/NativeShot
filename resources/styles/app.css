@@ -555,4 +555,11 @@ span[data-service-name] {
 }
 /***/
 
+.galentry {
+    position: absolute;
+}
+.galentry img {
+    width: 100%;
+    min-height: 200px;
+}
 /******/
