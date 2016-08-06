@@ -3997,8 +3997,8 @@ function platformFilePathSeperator() {
 // end - common worker functions
 
 function getServiceFromCode(servicecode) {
-	// exact copy in bootstrap.js, MainWorker.js
-	console.log('getting service from id of:', servicecode);
+	// exact copy in bootstrap.js, MainWorker.js, app_history.js
+	// console.log('getting service from id of:', servicecode);
 	for (var a_serviceid in core.nativeshot.services) {
 		if (core.nativeshot.services[a_serviceid].code === servicecode) {
 			return {

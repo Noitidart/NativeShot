@@ -530,4 +530,29 @@ span[data-service-name] {
 }
 /***/
 
+/* domgroup:bar */
+#bars .lblcnt {
+    display: flex;
+    justify-content: space-between;
+}
+
+#bars .line-bg {
+    height: 5px;
+    background: #DDD;
+    position: relative;
+    width: 100%;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+#bars .line-fill {
+    height: 5px;
+    background: #333;
+    position: relative;
+    border-radius: 5px;
+    width: 0%;
+    transition: width 2000ms ease;
+}
+/***/
+
 /******/

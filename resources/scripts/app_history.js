@@ -1,9 +1,9 @@
 function initAppPage(aArg) {
 	// aArg is what is received by the call in `init`
 	gAppPageComponents = [
-		React.createElement(Bars),
+		React.createElement(BarsContainer),
 		React.createElement(FiltersContainer),
-		React.createElement(Gallery)
+		React.createElement(GalleryContainer)
 	];
 }
 
@@ -15,61 +15,80 @@ var focusAppPage; // undefined for now, as i dont want focus events during dev
 
 // start - react-redux
 
+function getDisplayFilters(selected_filter) {
+	var services = core.nativeshot.services;
+
+	var display_filters = []; // element is an object
+	if (selected_filter == 'all') {
+		// add all types without duplicates
+		var types = new Set();
+		for (var serviceid in services) {
+			var entry = services[serviceid];
+
+			if (entry.history_ignore) { continue; }
+
+			types.add(entry.type);
+		}
+		// put into array so i can later sort it
+		for (var type of types) {
+			display_filters.push({
+				serviceid: type,
+				label: formatStringFromNameCore('filter_' + type, 'main')
+			});
+		}
+	} else {
+		// selected_filter is either a `serviceid` or a `type`
+		var type;
+		if (selected_filter in services) {
+			type = services[selected_filter].type;
+		} else {
+			// else its a `type`
+			type = selected_filter;
+		}
+
+		for (var serviceid in services) {
+			var entry = services[serviceid];
+
+			if (entry.history_ignore) { continue; }
+			if (entry.type != type) { continue; }
+
+			display_filters.push({
+				serviceid,
+				label: core.addon.l10n.main['filter_' + serviceid] || formatStringFromNameCore(serviceid, 'main')
+			});
+		}
+	}
+
+	// sort in `label` alpha
+	display_filters.sort((a,b) => a.label.localeCompare(b.label));
+
+	return display_filters;
+}
+
 // REACT COMPONENTS - PRESENTATIONAL
 var Filters = React.createClass({
 	render: function() {
 		var { selected_filter } = this.props; // mapped state
 		var { setFilter } = this.props; // dispatchers
 
+		var display_filters = getDisplayFilters(selected_filter);
+
 		var services = core.nativeshot.services;
-
-		var buttons_detail = []; // element is an object
 		if (selected_filter == 'all') {
-			// add all types without duplicates
-			var types = new Set();
-			for (var serviceid in services) {
-				var entry = services[serviceid];
-
-				if (entry.history_ignore) { continue; }
-
-				types.add(entry.type);
-			}
-			// put into array so i can later sort it
-			for (var type of types) {
-				buttons_detail.push({
-					serviceid: type,
-					label: formatStringFromNameCore('filter_' + type, 'main')
-				});
-			}
+			display_filters.splice(0, 0, {serviceid:'all', label:formatStringFromNameCore('filter_all', 'main')});
 		} else {
-			// selected_filter is either a `serviceid` or a `type`
-			var type;
-			if (selected_filter in services) {
-				type = services[selected_filter].type;
+			var all_of_type;
+			if (services[selected_filter]) {
+				all_of_type = services[selected_filter].type;
 			} else {
-				// else its a `type`
-				type = selected_filter;
+				all_of_type = selected_filter;
 			}
-
-			for (var serviceid in services) {
-				var entry = services[serviceid];
-
-				if (entry.history_ignore) { continue; }
-				if (entry.type != type) { continue; }
-
-				buttons_detail.push({
-					serviceid,
-					label: core.addon.l10n.main['filter_' + serviceid] || formatStringFromNameCore(serviceid, 'main')
-				});
-			}
+			display_filters.splice(0, 0, {serviceid:all_of_type, label:formatStringFromNameCore('filter_all_' + all_of_type, 'main')});
+			display_filters.splice(0, 0, {serviceid:'all', label:formatStringFromNameCore('back', 'main')});
 		}
 
-		// sort with "all" in first position, then the rest in `label` alpha
-		buttons_detail.sort((a,b) => a.label.localeCompare(b.label));
-		buttons_detail.splice(0, 0, {serviceid:'all', label:formatStringFromNameCore('filter_all', 'main')});
-
 		// `rel` is like `domel` it means react element
-		var buttons_rel = buttons_detail.map(el => React.createElement('button', { className:(selected_filter == el.serviceid ? 'selected' : undefined), onClick:setFilter.bind(null, el.serviceid) },
+		var buttons_rel = display_filters.map(el => React.createElement('button', { className:(selected_filter == el.serviceid ? 'selected' : undefined), onClick:setFilter.bind(null, el.serviceid) },
 			el.label
 		));
 
@@ -85,8 +104,95 @@ var Filters = React.createClass({
 
 var Bars = React.createClass({
 	render: function() {
+		var { selected_filter } = this.props; // mapped state
+		var { setFilter } = this.props; // dispatchers
+
+		const MAX_COL = 3;
+
+		var display_filters = getDisplayFilters(selected_filter);
+		var services = core.nativeshot.services;
+		var log = hydrant_ex.logsrc;
+
+		if (selected_filter == 'all') {
+			// get counts by type (`serviceid` in `filter_entry` is actually `type`)
+			for (var filter of display_filters) {
+				filter.cnt = log.filter( log_entry => getServiceFromCode(log_entry.t).entry.type === filter.serviceid ).length;
+			}
+		} else {
+			// get counts of `serviceid`s in `display_filters`
+			for (var filter of display_filters) {
+				filter.cnt = log.filter( log_entry => log_entry.t === services[filter.serviceid].code ).length;
+			}
+
+			if (services[selected_filter]) {
+				// `serviceid` is filtered
+			} else {
+				// no `serviceid` filtered, just `type` of `selected_filter`
+			}
+		}
+
+		// get max cnt, set percent
+		var max_cnt = 1;
+		for (var filter of display_filters) {
+			if (filter.cnt > max_cnt) {
+				max_cnt = filter.cnt;
+			}
+		}
+
+		// make 100% cnt be 5% more then max_cnt
+		var hundred_cnt = max_cnt + (.05 * max_cnt);
+
+		// set percent
+		for (var filter of display_filters) {
+			filter.per = Math.round((filter.cnt / hundred_cnt) * 100);
+		}
+
+		var serviceid_cnt = display_filters.length;
+
+		var col_rels = [
+			[], // col1
+			[], // col2
+			[] // col3
+		];
+
+		function animLine(per, el) {
+			if (el) {
+				window.getComputedStyle(el, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+				el.style.width = per + '%';
+			} // else its null meaning el was unmounted
+		}
+
+		var colnum = 0;
+		for (var filter of display_filters) {
+			col_rels[colnum].push(
+				React.createElement('div', { key:filter.serviceid, className:'service', onClick:setFilter.bind(null, filter.serviceid) },
+					React.createElement('div', { className:'lblcnt' },
+						filter.label,
+						React.createElement(CountTo, { transition:'ease', duration:2000, mountval:0, end:filter.cnt })
+					),
+					React.createElement('div', { className:'line-bg' },
+						React.createElement('div', { className:'line-fill', ref:(filter.per > 0 ? animLine.bind(null, filter.per) : undefined) })
+					)
+				)
+			);
+			if (++colnum === MAX_COL) {
+				colnum = 0;
+			}
+		}
+
+
 		return React.createElement('div', { id:'bars', className:'padd-40' },
-			'bars'
+			React.createElement('div', {className:'row'},
+				React.createElement('div', {className:'col-md-4 col-sm-6 col-xs-12'},
+					col_rels[0] // React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				),
+				React.createElement('div', {className:'col-md-4 col-sm-6 col-xs-12'},
+					col_rels[1] // React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				),
+				React.createElement('div', {className:'col-md-4 col-sm-8 col-sm-offset-2 col-md-offset-0 col-xs-12'}, // should this be `col-sm-6`? not `-12`?
+					col_rels[2] // React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				)
+			)
 		);
 	}
 });
@@ -120,6 +226,32 @@ var FiltersContainer = ReactRedux.connect(
 		}
 	}
 )(Filters);
+
+var BarsContainer = ReactRedux.connect(
+	function mapStateToProps(state, ownProps) {
+		return {
+			selected_filter: state.selected_filter
+		}
+	},
+	function mapDispatchToProps(dispatch, ownProps) {
+		return {
+			setFilter: serviceid => dispatch(setFilter(serviceid))
+		}
+	}
+)(Bars);
+
+var GalleryContainer = ReactRedux.connect(
+	function mapStateToProps(state, ownProps) {
+		return {
+			selected_filter: state.selected_filter
+		}
+	},
+	function mapDispatchToProps(dispatch, ownProps) {
+		return {
+
+		}
+	}
+)(Gallery);
 
 // material for app.js
 var gAppPageNarrow = false;
@@ -179,3 +311,16 @@ var app = Redux.combineReducers({
 });
 
 // end - react-redux
+
+function getServiceFromCode(servicecode) {
+	// exact copy in bootstrap.js, MainWorker.js, app_history.js
+	// console.log('getting service from id of:', servicecode);
+	for (var a_serviceid in core.nativeshot.services) {
+		if (core.nativeshot.services[a_serviceid].code === servicecode) {
+			return {
+				serviceid: a_serviceid,
+				entry: core.nativeshot.services[a_serviceid]
+			};
+		}
+	}
+}
