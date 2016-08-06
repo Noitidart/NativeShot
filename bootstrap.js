@@ -70,12 +70,14 @@ var core = {
 			copy: {
 				code: 2,
 				type: 'system',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				noimg: true // no associated image file to show on history page
 			},
 			print: {
 				code: 3,
 				type: 'system',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				noimg: true
 			},
 			savequick: {
 				code: 4,
@@ -90,12 +92,14 @@ var core = {
 			tineye: {
 				code: 7,
 				type: 'search',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				noimg: true
 			},
 			googleimages: {
 				code: 8,
 				type: 'search',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				noimg: true
 			},
 			dropbox: {
 				code: 9,
@@ -115,27 +119,33 @@ var core = {
 			gocr: {
 				code: 12,
 				type: 'ocr',
-				datatype: 'plain_arrbuf'
+				datatype: 'plain_arrbuf',
+				noimg: true
 			},
 			ocrad: {
 				code: 13,
 				type: 'ocr',
-				datatype: 'plain_arrbuf'
+				datatype: 'plain_arrbuf',
+				noimg: true
 			},
 			tesseract: {
 				code: 14,
 				type: 'ocr',
-				datatype: 'plain_arrbuf'
+				datatype: 'plain_arrbuf',
+				noimg: true
 			},
 			ocrall: {
 				code: 15,
 				type: 'ocr',
-				datatype: 'plain_arrbuf'
+				datatype: 'plain_arrbuf',
+				noimg: true,
+				history_ignore: true
 			},
 			bing: {
 				code: 16,
 				type: 'search',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				noimg: true
 			},
 			facebook: {
 				code: 17,
@@ -1576,6 +1586,7 @@ function addAltServiceMenuitems(aBtnsArr, aSkipServiceid) {
 }
 
 function getServiceFromCode(servicecode) {
+	// exact copy in bootstrap.js, MainWorker.js
 	console.log('getting service from id of:', servicecode);
 	for (var a_serviceid in core.nativeshot.services) {
 		if (core.nativeshot.services[a_serviceid].code === servicecode) {

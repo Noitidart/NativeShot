@@ -1,6 +1,8 @@
 function initAppPage(aArg) {
 	// aArg is what is received by the call in `init`
-
+	gAppPageComponents = [
+		formatStringFromNameCore('page_underconstruction', 'main')
+	];
 }
 
 function uninitAppPage() {
@@ -34,9 +36,7 @@ var gAppPageHeaderProps = {
 	]
 };
 
-var gAppPageComponents = [
-
-];
+var gAppPageComponents; // done on init, as needs l10n
 
 var hydrant, hydrant_ex, hydrant_ex_instructions;
 

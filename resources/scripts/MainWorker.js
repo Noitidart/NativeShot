@@ -225,6 +225,8 @@ function init(objCore) {
 	// setTimeoutSync(1000); // i want to delay 1sec to allow old framescripts to destroy
 
 	setTimeout(readFilestore, 0); // init this as gFilestoreDefaultGetters should be sync, but `prefs__quick_save_dir` not right now, so i have to init it
+	// readFilestore();
+
 
 	return {
 		core,
@@ -280,6 +282,40 @@ function fetchCore(aArg) {
 			// filestore_entries - optional;array - of strings, each is a key found in filestore
 			//
 		rez.hydrant_ex = {};
+
+		if (hydrant_ex_instructions.logsrc) {
+			var logsrc = JSON.parse(JSON.stringify(fetchFilestoreEntry({ mainkey:'log' })));
+
+			var services = core.nativeshot.services;
+			for (var entry of logsrc) {
+				switch (entry.t) {
+					case services.imgur.code:
+					case services.imguranon.code:
+							entry.src = 'http://i.imgur.com/' + entry.i + '.png'
+						break;
+					case services.facebook.code:
+							// TODO: figure out direct link to facebook image upload
+							entry.src = entry.p;
+							delete entry.p;
+						break;
+					case services.savequick.code:
+					case services.savebrowse.code:
+							entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
+							delete entry.f;
+							delete entry.n;
+						break;
+					default:
+						if (!getServiceFromCode(entry.t).entry.noimg) {
+							// it has a l, turn that to src
+							if (!entry.l) { console.error('deverror: i thought this should have l but it doesnt:', entry); throw new Error('deverror: i thought this would have l') }
+							entry.src = entry.l;
+							delete entry.l;
+						} // else it is noimg
+				}
+			}
+
+			rez.hydrant_ex.logsrc = logsrc;
+		}
 
 		if (hydrant_ex_instructions.filestore_entries) {
 			for (var filestore_entry of hydrant_ex_instructions.filestore_entries) {
@@ -2650,12 +2686,24 @@ var gFilestoreDefaultGetters = [ // after default is set, it runs all these func
 		// all getters should be sync, so i need to figure out what to do here
 		console.error('in prefs__quick_save_dir');
 		getSystemDirectory('Pictures').then(val=> {
+			console.error('ok got pics');
 			gFilestoreDefault.prefs.quick_save_dir = val;
 		});
 		// var st = Date.now();
 		// var i = 0;
 		// while (!gFilestoreDefault.prefs.quick_save_dir) {
 		// 	i++;
+		// }
+		// var end = Date.now();
+		// console.log('prefs__quick_save_dir: took this long to get quick save dir:', (end - st), 'ms', 'i:', i);
+
+		// var st = Date.now();
+		// var i = 0;
+		// while (!gFilestoreDefault.prefs.quick_save_dir) {
+		// 	i++;
+		// 	// xhr(OS.Path.toFileURI(OS.Constants.Path.profileDir));
+		// 	ostypes.API('SleepEx')(1000, true);
+		// 	console.log('completed one sleep, gFilestoreDefault.prefs.quick_save_dir:', gFilestoreDefault.prefs.quick_save_dir);
 		// }
 		// var end = Date.now();
 		// console.log('prefs__quick_save_dir: took this long to get quick save dir:', (end - st), 'ms', 'i:', i);
@@ -3947,3 +3995,16 @@ function platformFilePathSeperator() {
 	return OS.Path.join(' ', ' ').replace(/ /g, '');
 }
 // end - common worker functions
+
+function getServiceFromCode(servicecode) {
+	// exact copy in bootstrap.js, MainWorker.js
+	console.log('getting service from id of:', servicecode);
+	for (var a_serviceid in core.nativeshot.services) {
+		if (core.nativeshot.services[a_serviceid].code === servicecode) {
+			return {
+				serviceid: a_serviceid,
+				entry: core.nativeshot.services[a_serviceid]
+			};
+		}
+	}
+}

@@ -478,6 +478,7 @@ header.type3 {
 /***/
 
 /* domgroup:padd */
+.padd-40 {padding-bottom: 40px; position: relative; width: 100%;}
 .padd-80 {padding-bottom: 80px; position: relative; width: 100%;}
 .padd-120 {padding-bottom: 120px;}
 /*.padd-80:last-child {padding-bottom: 0px;}*/
@@ -500,3 +501,33 @@ span[data-service-name] {
     -moz-user-select: none;
 }
 /***/
+
+/** page:history **/
+
+#filters {
+    text-align: center;
+}
+
+/* domgroup:filter button */
+#filters button {
+    text-transform: uppercase;
+    font-size: 12px;
+    color: #1a1a1a;
+    font-weight: 300;
+    margin: 0px 20px;
+    background: none;
+    letter-spacing: 3px;
+
+    outline: none;
+    border: none;
+    box-shadow: none;
+    background: none;
+}
+
+#filters button.selected {
+    font-weight: 700;
+    pointer-events: none;
+}
+/***/
+
+/******/
