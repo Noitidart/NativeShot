@@ -180,17 +180,25 @@ var Bars = React.createClass({
 			}
 		}
 
+		var grid_class;
+		if (col_rels[2].length) {
+			grid_class = 'col-md-4 col-sm-6 col-xs-12';
+		} else if (col_rels[1].length) {
+			grid_class = 'col-md-6 col-sm-6 col-xs-12';
+		} else {
+			grid_class = 'col-md-12 col-sm-12 col-xs-12';
+		}
 
 		return React.createElement('div', { id:'bars', className:'padd-40' },
-			React.createElement('div', {className:'row'},
-				React.createElement('div', {className:'col-md-4 col-sm-6 col-xs-12'},
-					col_rels[0] // React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+			React.createElement('div', { className:'row' },
+				React.createElement('div', { className:grid_class },
+					col_rels[0]
 				),
-				React.createElement('div', {className:'col-md-4 col-sm-6 col-xs-12'},
-					col_rels[1] // React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				!col_rels[1].length ? undefined : React.createElement('div', { className:grid_class },
+					col_rels[1]
 				),
-				React.createElement('div', {className:'col-md-4 col-sm-8 col-sm-offset-2 col-md-offset-0 col-xs-12'}, // should this be `col-sm-6`? not `-12`?
-					col_rels[2] // React.createElement(ServicesSummaryCol, {pServicesInfosGroup:cServicesInfosGroups.shift(), sActiveFilter:this.props.sActiveFilter, sServicesLogEntryCnts:sServicesLogEntryCnts})
+				!col_rels[2].length ? undefined : React.createElement('div', { className:grid_class }, // `grid_class` was "'col-md-4 col-sm-8 col-sm-offset-2 col-md-offset-0 col-xs-12'"
+					col_rels[2]
 				)
 			)
 		);
@@ -199,9 +207,38 @@ var Bars = React.createClass({
 
 var Gallery = React.createClass({
 	render: function() {
+		var { selected_filter } = this.props; // mapped state
+		var { setFilter } = this.props; // dispatchers
+
+		var display_filters = getDisplayFilters(selected_filter);
+		var services = core.nativeshot.services;
+
+
+		var log;
+		if (selected_filter == 'all') {
+			log = hydrant_ex.logsrc;
+		} else {
+			if (services[selected_filter]) {
+				// `serviceid` is filtered
+				log = hydrant_ex.logsrc.filter(entry => entry.t === services[selected_filter].code );
+			} else {
+				// no `serviceid` filtered, just `type` of `selected_filter`
+				log = hydrant_ex.logsrc.filter(entry => getServiceFromCode(entry.t).entry.type == selected_filter );
+			}
+		}
+
+		log = log.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
+
+		console.log('log:', log);
+
+		var galentry_rels = log.map(entry =>
+			React.createElement('div', undefined,
+				React.createElement('img', { src:entry.src })
+			)
+		);
+
 		return React.createElement('div', { id:'gallery', className:'padd-80' },
-			'gallery',
-			React.createElement(Pagination)
+			galentry_rels
 		);
 	}
 });

@@ -264,6 +264,8 @@ function shutdown(aData, aReason) {
 	windowListener.unregister();
 
 	AB.uninit();
+
+	releaseAllResourceURI();
 }
 
 // start - addon functions
@@ -1595,6 +1597,23 @@ function getServiceFromCode(servicecode) {
 				entry: core.nativeshot.services[a_serviceid]
 			};
 		}
+	}
+}
+
+var gUsedURIs = {};
+var gNextURI_i = 0;
+function makeResourceURI(aFileURI) {
+	if (!gUsedURIs[aFileURI]) {
+		var uri = Services.io.newURI(aFileURI, null, null);
+		gUsedURIs[aFileURI] = 'nativeshot_file' + (gNextURI_i++);
+		Services.io.getProtocolHandler('resource').QueryInterface(Ci.nsIResProtocolHandler).setSubstitution(gUsedURIs[aFileURI], uri);
+	}
+	return 'resource://' + gUsedURIs[aFileURI];
+}
+
+function releaseAllResourceURI() {
+	for (var i=0; i<gNextURI_i; i++) {
+		Services.io.getProtocolHandler('resource').QueryInterface(Ci.nsIResProtocolHandler).setSubstitution('nativeshot_file' + i, null);
 	}
 }
 

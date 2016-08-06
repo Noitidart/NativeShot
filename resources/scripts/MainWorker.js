@@ -261,6 +261,15 @@ self.onclose = function() {
 }
 
 // start - Comm functions
+function setEntryResourceURI(aFileURI, aEntry) {
+	let deferred = new Deferred();
+	callInBootstrap('makeResourceURI', aFileURI, aResourceURI => {
+		aEntry.src = aResourceURI;
+		console.error('aEntry;', aEntry);
+		deferred.resolve(true);
+	});
+	return deferred.promise;
+}
 function fetchCore(aArg) {
 	var { hydrant:hydrant_head, hydrant_ex_instructions, nocore } = aArg || {};
 
@@ -300,7 +309,10 @@ function fetchCore(aArg) {
 						break;
 					case services.savequick.code:
 					case services.savebrowse.code:
-							entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
+							var path = OS.Path.join(entry.f, entry.n);
+							var fileuri = OS.Path.toFileURI(path);
+							// entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
+							promiseallarr.push(setEntryResourceURI(fileuri, entry));
 							delete entry.f;
 							delete entry.n;
 						break;
@@ -313,6 +325,9 @@ function fetchCore(aArg) {
 						} // else it is noimg
 				}
 			}
+
+			// sort by `d` desc
+			logsrc.sort((a,b) => a-b);
 
 			rez.hydrant_ex.logsrc = logsrc;
 		}
