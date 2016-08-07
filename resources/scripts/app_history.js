@@ -300,7 +300,7 @@ var Gallery = React.createClass({
 		var display_filters = getDisplayFilters(selected_filter);
 		var services = core.nativeshot.services;
 
-		console.log('all_items:', all_items);
+		// console.log('all_items:', all_items);
 
 		var item_rels;
 		if (width > 0) { // so we dont render when gallery width is not yet set
@@ -324,7 +324,7 @@ var Gallery = React.createClass({
 
 			items = items.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
 
-			console.log('items:', items);
+			// console.log('items:', items);
 
 			var running_colheight = [];
 			for (var i=0; i<layout.cols; i++) {
@@ -373,7 +373,10 @@ var Gallery = React.createClass({
 						// item_attr['data-display-img-dims'] = display_img_width + ' x ' + display_img_height;
 						// item_attr['data-img-dims'] = image_info.width + ' x ' + image_info.height;
 
-						item_rel = React.createElement('img', { src:image_info.src }); // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
+						item_rel = [
+							React.createElement(GalleryItemSlip, { entry }),
+							React.createElement('img', { src:image_info.src }) // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
+						];
 					} else {
 						// failed
 						item_rel = image_info.reason;
@@ -484,6 +487,109 @@ var GalleryItem = React.createClass({
 	// componentDidLeave: function() {
 	// 	console.error('did leave');
 	// }
+});
+
+var GalleryItemSlip = React.createClass({
+	render: function() {
+		var { entry } = this.props; // attr
+
+		var services = core.nativeshot.services;
+		var code_info = getServiceFromCode(entry.t);
+
+		var button_rels;
+		switch (entry.t) {
+			case services.savebrowse.code:
+			case services.savequick.code:
+					button_rels = [
+						React.createElement('a', { href:'#', className:'fa_eye' },
+							formatStringFromNameCore('view', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_link' },
+							formatStringFromNameCore('just_copy', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_folder-open' },
+							formatStringFromNameCore('open', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_trash' },
+							formatStringFromNameCore('trash', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_cancel' },
+							formatStringFromNameCore('remove', 'main')
+						)
+					];
+				break;
+			case services.imgur.code:
+			case services.imguranon.code:
+			case services.gdrive.code:
+					button_rels = [
+						React.createElement('a', { href:'#', className:'fa_eye' },
+							formatStringFromNameCore('view', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_link' },
+							formatStringFromNameCore('just_copy', 'main')
+						),
+						React.DOM.br(),
+						React.createElement('a', { href:'#', className:'fa_cancel' },
+							formatStringFromNameCore('delete', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_history' },
+							formatStringFromNameCore('remove', 'main')
+						)
+					];
+				break;
+			case services.dropbox.code:
+					button_rels = [
+						React.createElement('a', { href:'#', className:'fa_eye' },
+							formatStringFromNameCore('view', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_link' },
+							formatStringFromNameCore('just_copy', 'main')
+						),
+						React.DOM.br(),
+						React.createElement('a', { href:'#', className:'fa_trash' },
+							formatStringFromNameCore('trash', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_history' },
+							formatStringFromNameCore('remove', 'main')
+						)
+					];
+				break;
+			case services.twitter.code:
+			case services.facebook.code:
+					button_rels = [
+						React.createElement('a', { href:'#', className:'fa_eye' },
+							formatStringFromNameCore('view', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_link' },
+							formatStringFromNameCore('just_copy', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_' + code_info.serviceid },
+							formatStringFromNameCore(code_info.serviceid == 'twitter' ? 'open_tweet' : 'open_post', 'main')
+						),
+						React.createElement('a', { href:'#', className:'fa_history' },
+							formatStringFromNameCore('remove', 'main')
+						)
+					];
+				break;
+		}
+
+		return React.createElement('div', { className:'slip-container slip-dark' },
+			React.createElement('div', { className:'slip-overlay'},
+				React.createElement('div', { className:'galslip' },
+					React.createElement('h4', null,
+						formatTime(entry.d)
+					),
+					React.createElement('h5', null,
+						formatStringFromNameCore(code_info.serviceid, 'main')
+					),
+					!entry.u ? undefined : React.createElement('h6', null,
+						entry.s
+					),
+					button_rels
+				)
+			)
+		);
+	}
 });
 
 var Pagination = React.createClass({
@@ -677,4 +783,18 @@ function getServiceFromCode(servicecode) {
 			};
 		}
 	}
+}
+
+function formatTime(aDateOrTime) {
+	var aDate = typeof(aDateOrTime) == 'object' ? aDateOrTime : new Date(aDateOrTime);
+
+	var mon = formatStringFromNameCore('month.' + (aDate.getMonth()+1) + '.name', 'dateFormat');
+	var yr = aDate.getFullYear();
+	var day = aDate.getDate();
+
+	var hr = aDate.getHours() > 12 ? aDate.getHours() - 12 : aDate.getHours();
+	var min = aDate.getMinutes() < 10 ? '0' + aDate.getMinutes() : aDate.getMinutes();
+	var meridiem = aDate.getHours() < 12 ? 'AM' : 'PM';
+
+	return mon + ' ' + day + ', ' + yr + ' - ' + hr + ':' + min + ' ' + meridiem;
 }

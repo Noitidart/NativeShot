@@ -446,7 +446,7 @@ var Dropdown = React.createClass({
 					!selected || alwaysShowLabel ? label : selected.label
 				),
 				' ',
-				React.createElement('i', { className:'glyphs-angle-down' },
+				React.createElement('i', { className:'fa-down-thin' },
 					'\ue802'
 				)
 			),
