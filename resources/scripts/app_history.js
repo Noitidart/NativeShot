@@ -97,10 +97,6 @@ var gGalleryLayouts = [ // must be in order from largest breakpoint to lowest
 
 var gImageInfoLoading = {}; // object where key is the `item.src`, so link39193888 knows not to kick off another `loadImageForEntry` // value is true, if a `item.src` not in here, then its not loading AND EITHER it was never requested to load with `loadImageForEntry` OR `image_info` object was set in `item`
 function loadImageForEntry(aEntry) {
-	// var deferredmain = new Deferred();
-
-	// return deferredmain.promise;
-
 	var info = {
 		ok: undefined // `undefined` when loading, `false` when error, `true` when loaded and ready
 		// reason: undefined // this is populated when `ok` is set to `false`
@@ -183,7 +179,7 @@ var Filters = React.createClass({
 
 		return React.createElement('div', { className:'padd-40' },
 			React.createElement('div', { className:'row' },
-				React.createElement('div', { id:'filters', className:'padd-40' },
+				React.createElement('div', { id:'filters' },
 					buttons_rel
 				)
 			)
@@ -334,6 +330,7 @@ var Gallery = React.createClass({
 			}
 
 			const GALENTRY_MIN_HEIGHT = 200;
+			const GALITEM_IMAGE_MARGIN = 5; // must match crossfile-link173771
 
 			var item_rels = items.map( (entry, i) => {
 				var col = i % layout.cols; // base 0
@@ -341,30 +338,43 @@ var Gallery = React.createClass({
 
 				var translate_x = col * colwidth;
 				var translate_y = running_colheight[col];
-				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
+				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px) scale(0)';
+				var transform2 = 'translate(' + translate_x + 'px, ' + translate_y + 'px) scale(1)';
+				var ref = function(domel) {
+					if (domel) {
+						window.getComputedStyle(domel, '').transform; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+						domel.style.transform = transform2;
+					}
+				};
 
-				var key = entry.src;
+				var item_rel;
+				var item_attr = { key:entry.src, className:'galentry', style:{width:colwidthpx, transform}, ref };
+
 				var image_info = entry.image_info;
 				if (image_info) { // link39193888 - two ways to check if, check gImageInfoLoading or entry.image_info
 					// if image_entry.ok is undefined it means its still loading
 					if (image_info.ok) {
 
 						// add to `running_colheight` this images height
-						var scale_factor = colwidth / image_info.width;
-						var display_height = Math.round(image_info.height * scale_factor);
-						if (display_height < GALENTRY_MIN_HEIGHT) {
-							display_height = GALENTRY_MIN_HEIGHT;
+						var display_img_width = colwidth - (GALITEM_IMAGE_MARGIN * 2);
+						var scale_factor = display_img_width / image_info.width;
+						var display_img_height = Math.round(image_info.height * scale_factor);
+						if (display_img_height < GALENTRY_MIN_HEIGHT) {
+							display_img_height = GALENTRY_MIN_HEIGHT - (GALITEM_IMAGE_MARGIN * 2);
 						}
-						running_colheight[col] += display_height;
 
-						return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
-							React.createElement('img', { src:image_info.src }) // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
-						);
+						var display_item_width = colwidth;
+						var display_item_height = display_img_height + (GALITEM_IMAGE_MARGIN * 2);
+						running_colheight[col] += display_item_height;
+
+						// item_attr['data-display-item-dims'] = display_item_width + ' x ' + display_item_height;
+						// item_attr['data-display-img-dims'] = display_img_width + ' x ' + display_img_height;
+						// item_attr['data-img-dims'] = image_info.width + ' x ' + image_info.height;
+
+						item_rel = React.createElement('img', { src:image_info.src }); // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
 					} else {
 						// failed
-						return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
-							image_info.reason
-						);
+						item_rel = image_info.reason;
 					}
 				} else {
 					if (!gImageInfoLoading[entry.src]) {
@@ -373,18 +383,20 @@ var Gallery = React.createClass({
 						setTimeout(loadImageForEntry.bind(null, entry), 0);
 					}
 					running_colheight[col] += GALENTRY_MIN_HEIGHT;
-					return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
-						React.createElement('div', { className:'uil-default-css', style:{transform:'scale(0.66)'} },
-							[0, 36, 72, 108, 144, 180, 216, 252, 288, 324].map( deg => React.createElement('div', {style:{transform:'rotate('+deg+'deg) translate(0,-60px)'}}) )
-						)
-					)
+					item_rel = React.createElement('div', { className:'uil-default-css' },
+						[0, 36, 72, 108, 144, 180, 216, 252, 288, 324].map( deg => React.createElement('div', {style:{transform:'rotate('+deg+'deg) translate(0,-60px)'}}) )
+					);
 				}
+
+				return React.createElement('div', item_attr,
+					item_rel
+				);
 			});
 		} else {
 			var item_rels = undefined;
 		}
 
-		return React.createElement('div', { id:'gallery', className:'padd-80' },
+		return React.createElement(ReactCSSTransitionGroup, getTrans('galitem-sition', { component:'div', id:'gallery', className:'padd-80' }),
 			item_rels
 		);
 	},

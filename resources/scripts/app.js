@@ -156,7 +156,8 @@ function createTrans(transitionName, transitionEnterTimeout, transitionLeaveTime
 	return props;
 }
 var gTrans = [
-	createTrans('animsition', 1100, 800, true)
+	createTrans('animsition', 1100, 800, true),
+	createTrans('galitem-sition', 300, 300)
 ];
 function initTransTimingStylesheet() {
 	var style = document.createElement('style');
