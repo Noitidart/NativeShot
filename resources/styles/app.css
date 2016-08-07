@@ -132,24 +132,6 @@ textarea {
         transition-property: opacity, transform;
 	}
 
-    /* galitem-sition */
-    .galitem-sition-enter {
-		opacity: 0;
-        /*transform: scale(0);*/
-	}
-    .galitem-sition-enter.galitem-sition-enter-active {
-		opacity: 1;
-        /*transform: scale(1);*/
-	}
-	.galitem-sition-leave {
-		opacity: 1;
-        /*transform: scale(1);*/
-	}
-	.galitem-sition-leave.galitem-sition-leave-active {
-		opacity: 0;
-        /*transform: scale(0);*/
-	}
-
 /* specific */
 .container {
     margin-right: auto;
@@ -580,7 +562,9 @@ span[data-service-name] {
     justify-content: stretch;
     align-content: stretch;
     transform: translate(0, 0);
-    transition: opacity 300ms, transform 300ms;
+}
+#gallery.galsition .galentry {
+    transition: opacity 301ms, transform 301ms;
 }
 .galentry img {
     flex-grow: 1;

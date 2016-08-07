@@ -104,6 +104,7 @@ function uninit() {
 
 // start - react-redux
 const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
+const ReactTransitionGroup = React.addons.TransitionGroup;
 
 // STORE
 var store;
@@ -156,8 +157,7 @@ function createTrans(transitionName, transitionEnterTimeout, transitionLeaveTime
 	return props;
 }
 var gTrans = [
-	createTrans('animsition', 1100, 800, true),
-	createTrans('galitem-sition', 300, 300)
+	createTrans('animsition', 1100, 800, true)
 ];
 function initTransTimingStylesheet() {
 	var style = document.createElement('style');
@@ -210,7 +210,7 @@ var App = React.createClass({
 		];
 
 		return React.createElement(ReactCSSTransitionGroup, getTrans('animsition'),
-			React.createElement('div', {key:'trans0', className:'app-wrap container' + (gAppPageNarrow ? ' container-narrow' : '')},
+			React.createElement('div', {key:'trans0', id:'app_wrap', className:'app-wrap container' + (gAppPageNarrow ? ' container-narrow' : '')},
 				app_components
 			)
 		);

@@ -290,6 +290,7 @@ var Bars = React.createClass({
 	}
 });
 
+var gGalleryAnimated = false;
 var Gallery = React.createClass({
 	render: function() {
 		var { layouts } = this.props; // attr
@@ -302,6 +303,10 @@ var Gallery = React.createClass({
 		console.log('all_items:', all_items);
 
 		if (width > 0) { // so we dont render when gallery width is not yet set
+			if (!gGalleryAnimated && !document.getElementById('app_wrap').getAttribute('class').includes('animsition')) {
+				gGalleryAnimated = true;
+				ReactDOM.findDOMNode(this).classList.add('galsition');
+			}
 			var layout = layouts.reduce( (pre, cur) => width <= cur.breakpoint ? cur : pre );
 
 			var colwidth = Math.round(width / layout.cols);
@@ -338,17 +343,13 @@ var Gallery = React.createClass({
 
 				var translate_x = col * colwidth;
 				var translate_y = running_colheight[col];
-				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px) scale(0)';
-				var transform2 = 'translate(' + translate_x + 'px, ' + translate_y + 'px) scale(1)';
-				var ref = function(domel) {
-					if (domel) {
-						window.getComputedStyle(domel, '').transform; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
-						domel.style.transform = transform2;
-					}
-				};
+				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
+				// if (gGalleryAnimated) {
+				// 	transform += ' scale(0.01)';
+				// }
 
 				var item_rel;
-				var item_attr = { key:entry.src, className:'galentry', style:{width:colwidthpx, transform}, ref };
+				var item_attr = { key:entry.src, className:'galentry', style:{width:colwidthpx, transform} };
 
 				var image_info = entry.image_info;
 				if (image_info) { // link39193888 - two ways to check if, check gImageInfoLoading or entry.image_info
@@ -388,7 +389,7 @@ var Gallery = React.createClass({
 					);
 				}
 
-				return React.createElement('div', item_attr,
+				return React.createElement(GalleryItem, item_attr,
 					item_rel
 				);
 			});
@@ -396,7 +397,7 @@ var Gallery = React.createClass({
 			var item_rels = undefined;
 		}
 
-		return React.createElement(ReactCSSTransitionGroup, getTrans('galitem-sition', { component:'div', id:'gallery', className:'padd-80' }),
+		return React.createElement(ReactTransitionGroup, { component:'div', id:'gallery', className:'padd-80' },
 			item_rels
 		);
 	},
@@ -413,6 +414,63 @@ var Gallery = React.createClass({
 		console.log('width:', width);
 		store.dispatch(setGalleryWidth(width));
 	}
+});
+
+var GalleryItem = React.createClass({
+	render: function() {
+		var attr = {};
+		for (var p in this.props) {
+			if (p != 'children' && p != 'ref' && p != 'key') {
+				attr[p] = this.props[p];
+			}
+		}
+		if (gGalleryAnimated && !this.entered) {
+			attr.style.transform += ' scale(0.01)'; // cant scale to 0, otherwise it also translates to 0,0. so i do 0.01
+		}
+		return React.DOM.div(attr,
+			this.props.children
+		);
+	},
+	entered: false,
+	// componentDidMount: function() {
+	// 	console.error('comp did mount!');
+	// },
+	// componentWillUnmount: function() {
+	// 	console.error('will UNMOUNT');
+	// },
+	// componentWillAppear: function(callback) {
+	// 	console.error('will appear');
+	// 	callback();
+	// },
+	// componentDidAppear: function() {
+	// 	console.error('did appear');
+	// },
+	componentWillEnter: function(callback) {
+		this.entered = true;
+		if (!gGalleryAnimated) {
+			callback();
+		} else {
+			var domel = ReactDOM.findDOMNode(this);
+			domel.style.transform = this.props.style.transform.replace('0.01', '1');
+			setTimeout(callback, 301);
+		}
+	},
+	// componentDidEnter: function() {
+	// 	console.error('did enter');
+	// },
+	componentWillLeave: function(callback) {
+		// console.error('will leave, transform:', this.props.style.transform);
+		if (!gGalleryAnimated) {
+			callback();
+		} else {
+			var domel = ReactDOM.findDOMNode(this);
+			domel.style.transform = this.props.style.transform + ' scale(0.01)'; // cant scale to 0, otherwise it also translates to 0,0. so i do 0.01
+			setTimeout(callback, 301);
+		}
+	}
+	// componentDidLeave: function() {
+	// 	console.error('did leave');
+	// }
 });
 
 var Pagination = React.createClass({
