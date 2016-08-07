@@ -582,19 +582,18 @@ span[data-service-name] {
     position: absolute;
     width: 100%;
     height: 100%;
-    padding: 5px; /* matching the margin of `.galentry img` link11120 */
+    margin: 5px; /* matching the margin of `.galentry img` link11120 */
     overflow: hidden;
 }
 .slip-overlay {
     position: relative;
-    width: 100%;
-    height: 100%;
-    padding: 10px;
+    width: calc(100% - 10px);  /* the 10px is 5px*2 due to `margin` of `.slip-container ` link11120 */
+    height: calc(100% - 10px);
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
-    transform: translate(calc(-100% - 5px), calc(-100% - 5px)); /* the 5px should match the `padding` link11120 */
+    transform: translate(-100%, -100%);
     transition: transform 313ms;
 }
 

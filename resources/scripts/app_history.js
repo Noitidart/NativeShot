@@ -379,6 +379,7 @@ var Gallery = React.createClass({
 						];
 					} else {
 						// failed
+						running_colheight[col] += GALENTRY_MIN_HEIGHT;
 						item_rel = image_info.reason;
 					}
 				} else {
@@ -437,19 +438,26 @@ var GalleryItem = React.createClass({
 		var attr = {};
 		for (var p in this.props) {
 			if (p != 'children' && p != 'ref' && p != 'key') {
-				attr[p] = this.props[p];
+				if (p == 'style') {
+					attr[p] = Object.assign({}, this.props[p]);
+				} else {
+					attr[p] = this.props[p];
+				}
 			}
 		}
 		if (gGalleryAnimated && !this.entered) {
+			// console.error('applied trans and opac, kkey:', this.props.kkey);
 			attr.style.transform += ' scale(0.01)'; // cant scale to 0, otherwise it also translates to 0,0. so i do 0.01
+			attr.style.opacity = 0.01;
 		}
+		// else { console.error('NOT APPLYING trans and opac', 'gGalleryAnimated:', gGalleryAnimated, 'entered:', this.entered, 'kkey:', this.props.kkey); }
 		return React.DOM.div(attr,
 			this.props.children
 		);
 	},
 	entered: false,
 	// componentDidMount: function() {
-	// 	console.error('comp did mount!');
+	// 	console.error('comp did mount! kkey:', this.props.kkey, 'entered:', this.entered);
 	// },
 	// componentWillUnmount: function() {
 	// 	console.error('will UNMOUNT');
@@ -462,12 +470,16 @@ var GalleryItem = React.createClass({
 	// 	console.error('did appear');
 	// },
 	componentWillEnter: function(callback) {
+		// console.error('will enter, kkey:', this.props.kkey, this.props.kkey ? ReactDOM.findDOMNode(this).style.transform : undefined);
 		this.entered = true;
 		if (!gGalleryAnimated) {
 			callback();
 		} else {
 			var domel = ReactDOM.findDOMNode(this);
-			domel.style.transform = this.props.style.transform.replace('0.01', '1');
+			window.getComputedStyle(domel, '').transform; // SOMETIEMS trans fails, so just do this everytime // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+			// console.error('this.props.style.transform:', this.props.style.transform);
+			domel.style.transform = this.props.style.transform + ' scale(1)';
+			domel.style.opacity = 1;
 			setTimeout(callback, 301);
 		}
 	},
@@ -481,6 +493,7 @@ var GalleryItem = React.createClass({
 		} else {
 			var domel = ReactDOM.findDOMNode(this);
 			domel.style.transform = this.props.style.transform + ' scale(0.01)'; // cant scale to 0, otherwise it also translates to 0,0. so i do 0.01
+			domel.style.opacity = 0;
 			setTimeout(callback, 301);
 		}
 	}
@@ -563,6 +576,7 @@ var GalleryItemSlip = React.createClass({
 						React.createElement('a', { href:'#', className:'fa_link' },
 							formatStringFromNameCore('just_copy', 'main')
 						),
+						React.DOM.br(),
 						React.createElement('a', { href:'#', className:'fa_' + code_info.serviceid },
 							formatStringFromNameCore(code_info.serviceid == 'twitter' ? 'open_tweet' : 'open_post', 'main')
 						),
