@@ -309,10 +309,10 @@ function fetchCore(aArg) {
 						break;
 					case services.savequick.code:
 					case services.savebrowse.code:
-							var path = OS.Path.join(entry.f, entry.n);
-							var fileuri = OS.Path.toFileURI(path);
-							// entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
-							promiseallarr.push(setEntryResourceURI(fileuri, entry));
+							// var path = OS.Path.join(entry.f, entry.n);
+							// var fileuri = OS.Path.toFileURI(path);
+							entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
+							// promiseallarr.push(setEntryResourceURI(fileuri, entry));
 							delete entry.f;
 							delete entry.n;
 						break;

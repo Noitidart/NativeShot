@@ -249,7 +249,7 @@ var Gallery = React.createClass({
 		if (width > 0) { // so we dont render when gallery width is not yet set
 			var layout = layouts.reduce( (pre, cur) => width <= cur.breakpoint ? cur : pre );
 
-			var colwidth = width / layout.cols;
+			var colwidth = Math.round(width / layout.cols);
 			var colwidthpx = colwidth + 'px';
 
 			var items;
@@ -269,11 +269,36 @@ var Gallery = React.createClass({
 
 			console.log('items:', items);
 
-			var item_rels = items.map(entry =>
-				React.createElement('div', { className:'galentry', style:{width:colwidthpx} },
-					React.createElement('img', { src:entry.src })
-				)
-			);
+			var running_colheight = [];
+			for (var i=0; i<layout.cols; i++) {
+				running_colheight.push(0);
+			}
+
+			const GALENTRY_MIN_HEIGHT = 200;
+
+			var item_rels = items.map( (entry, i) => {
+				var col = i % layout.cols; // base 0
+				var row = Math.floor(i / layout.cols);
+
+				var translate_x = col * colwidth;
+				var translate_y = running_colheight[col];
+				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
+
+				var key = entry.src;
+				if (entry.image) {
+					running_colheight[col] += entry.image.naturalHeight ;
+					return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
+						React.createElement('img', { src:entry.src })
+					)
+				} else {
+					running_colheight[col] += GALENTRY_MIN_HEIGHT;
+					return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
+						React.createElement('div', { className:'uil-default-css', style:{transform:'scale(0.66)'} },
+							[0, 36, 72, 108, 144, 180, 216, 252, 288, 324].map( deg => React.createElement('div', {style:{transform:'rotate('+deg+'deg) translate(0,-60px)'}}) )
+						)
+					)
+				}
+			});
 		} else {
 			var item_rels = undefined;
 		}
