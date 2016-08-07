@@ -302,12 +302,9 @@ var Gallery = React.createClass({
 
 		console.log('all_items:', all_items);
 
+		var item_rels;
 		if (width > 0) { // so we dont render when gallery width is not yet set
-			if (!gGalleryAnimated && !document.getElementById('app_wrap').getAttribute('class').includes('animsition')) {
-				gGalleryAnimated = true;
-				ReactDOM.findDOMNode(this).classList.add('galsition');
-			}
-			var layout = layouts.reduce( (pre, cur) => width <= cur.breakpoint ? cur : pre );
+			var layout = layouts.reduce( (pre, el) => width <= el.breakpoint ? el : pre );
 
 			var colwidth = Math.round(width / layout.cols);
 			var colwidthpx = colwidth + 'px';
@@ -337,16 +334,19 @@ var Gallery = React.createClass({
 			const GALENTRY_MIN_HEIGHT = 200;
 			const GALITEM_IMAGE_MARGIN = 5; // must match crossfile-link173771
 
-			var item_rels = items.map( (entry, i) => {
+			item_rels = items.map( (entry, i) => {
 				var col = i % layout.cols; // base 0
 				var row = Math.floor(i / layout.cols);
+
+				if (row > 0 && layout.cols > 1) {
+					// find shortest col
+					var shortest_col = running_colheight.reduce( (pre, el, i, arr) => i === 1 ? (el < pre ? i /*obviously 1*/ : i - 1 /*obviously 0*/) : (el < arr[pre] ? i : pre) )
+					col = shortest_col;
+				}
 
 				var translate_x = col * colwidth;
 				var translate_y = running_colheight[col];
 				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
-				// if (gGalleryAnimated) {
-				// 	transform += ' scale(0.01)';
-				// }
 
 				var item_rel;
 				var item_attr = { key:entry.src, className:'galentry', style:{width:colwidthpx, transform} };
@@ -366,6 +366,7 @@ var Gallery = React.createClass({
 
 						var display_item_width = colwidth;
 						var display_item_height = display_img_height + (GALITEM_IMAGE_MARGIN * 2);
+
 						running_colheight[col] += display_item_height;
 
 						// item_attr['data-display-item-dims'] = display_item_width + ' x ' + display_item_height;
@@ -393,11 +394,23 @@ var Gallery = React.createClass({
 					item_rel
 				);
 			});
+
+			if (!items.length) {
+				item_rels = React.createElement(GalleryItem, { key:selected_filter, className:'galentry', style:{width:(layout.cols*colwidth)+'px', transform:'translate(0, 0)'} },
+					React.DOM.div({ className:'no-images' },
+						formatStringFromNameCore('no_images_in_filter', 'main')
+					)
+				);
+			}
 		} else {
-			var item_rels = undefined;
+			item_rels = undefined;
 		}
 
-		return React.createElement(ReactTransitionGroup, { component:'div', id:'gallery', className:'padd-80' },
+		if (width > 0 && !gGalleryAnimated && !document.getElementById('app_wrap').getAttribute('class').includes('animsition')) {
+			gGalleryAnimated = true;
+		}
+
+		return React.createElement(ReactTransitionGroup, { component:'div', id:'gallery', className:'padd-80' + (gGalleryAnimated ? ' galsition' : '') },
 			item_rels
 		);
 	},

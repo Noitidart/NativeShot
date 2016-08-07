@@ -570,6 +570,13 @@ span[data-service-name] {
     flex-grow: 1;
     margin: 5px; /* match the js to this crossfile-link173771 */
 }
+.galentry .no-images {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+    font-size: 24px;
+    width: 100%;
+}
 
 /* galentry loading */
 @-webkit-keyframes uil-default-anim {
