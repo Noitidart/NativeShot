@@ -95,6 +95,65 @@ var gGalleryLayouts = [ // must be in order from largest breakpoint to lowest
 	}
 ];
 
+var gImageInfoLoading = {}; // object where key is the `item.src`, so link39193888 knows not to kick off another `loadImageForEntry` // value is true, if a `item.src` not in here, then its not loading AND EITHER it was never requested to load with `loadImageForEntry` OR `image_info` object was set in `item`
+function loadImageForEntry(aEntry) {
+	// var deferredmain = new Deferred();
+
+	// return deferredmain.promise;
+
+	var info = {
+		ok: undefined // `undefined` when loading, `false` when error, `true` when loaded and ready
+		// reason: undefined // this is populated when `ok` is set to `false`
+		// height: // set when `ok` is set to true
+		// width: // set when `ok` is set to true
+		// src: // set when `ok` is set to true
+	};
+
+	var image = new Image();
+
+	// start async-proc94833
+	var prelims = function() {
+		if (aEntry.src.startsWith('file')) {
+			callInBootstrap('makeResourceURI', aEntry.src, aResourceURI => {
+				info.src = aResourceURI;
+				loadit();
+			});
+		} else {
+			info.src = aEntry.src;
+			loadit();
+		}
+	};
+
+	var loadit = function() {
+		image.src = info.src;
+	};
+
+	image.onerror = function() {
+		info.reason = 'ERROR: something happend'; // TODO
+		info.ok = false;
+		injectInfoIntoState();
+	};
+	image.onabort = function() {
+		info.reason = 'ERROR: loading somehow aborted'; // TODO
+		info.ok = false;
+		injectInfoIntoState();
+	};
+	image.onload = function() {
+		info.height = image.naturalHeight;
+		info.width = image.naturalWidth;
+		info.ok = true;
+		injectInfoIntoState();
+	};
+
+	var injectInfoIntoState = function() {
+		store.dispatch(injectGalleryImageInfo(aEntry.src, info));
+	};
+
+	prelims();
+	// end async-proc94833
+
+}
+
 // REACT COMPONENTS - PRESENTATIONAL
 var Filters = React.createClass({
 	render: function() {
@@ -285,12 +344,34 @@ var Gallery = React.createClass({
 				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
 
 				var key = entry.src;
-				if (entry.image) {
-					running_colheight[col] += entry.image.naturalHeight ;
-					return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
-						React.createElement('img', { src:entry.src })
-					)
+				var image_info = entry.image_info;
+				if (image_info) { // link39193888 - two ways to check if, check gImageInfoLoading or entry.image_info
+					// if image_entry.ok is undefined it means its still loading
+					if (image_info.ok) {
+
+						// add to `running_colheight` this images height
+						var scale_factor = colwidth / image_info.width;
+						var display_height = Math.round(image_info.height * scale_factor);
+						if (display_height < GALENTRY_MIN_HEIGHT) {
+							display_height = GALENTRY_MIN_HEIGHT;
+						}
+						running_colheight[col] += display_height;
+
+						return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
+							React.createElement('img', { src:image_info.src }) // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
+						);
+					} else {
+						// failed
+						return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
+							image_info.reason
+						);
+					}
 				} else {
+					if (!gImageInfoLoading[entry.src]) {
+						// link39193888
+						gImageInfoLoading[entry.src] = true;
+						setTimeout(loadImageForEntry.bind(null, entry), 0);
+					}
 					running_colheight[col] += GALENTRY_MIN_HEIGHT;
 					return React.createElement('div', { key, className:'galentry', style:{width:colwidthpx,transform} },
 						React.createElement('div', { className:'uil-default-css', style:{transform:'scale(0.66)'} },
@@ -406,6 +487,7 @@ const SET_FILTER = 'SET_FILTER';
 
 const OVERWRITE_GALLERY_ITEMS = 'OVERWRITE_GALLERY_ITEMS';
 const ADD_GALLERY_ITEMS = 'ADD_GALLERY_ITEMS';
+const INJECT_GALLERY_IMAGE_INFO = 'INJECT_GALLERY_IMAGE_INFO';
 
 const SET_GALLERY_WIDTH = 'SET_GALLERY_WIDTH';
 
@@ -415,6 +497,15 @@ function overwriteGalleryItems(items) {
 	return {
 		type: OVERWRITE_GALLERY_ITEMS,
 		items
+	}
+}
+
+function injectGalleryImageInfo(src, info) {
+	// `src` is the `src` in `item` NOT the resource uri `src` found in `info.src` if its a file://
+	return {
+		type: INJECT_GALLERY_IMAGE_INFO,
+		src,
+		info
 	}
 }
 
@@ -456,6 +547,17 @@ function gallery_items(state=[], action) {
 			return action.items;
 		case ADD_GALLERY_ITEMS:
 			return [ ...state, ...action.items ];
+		case INJECT_GALLERY_IMAGE_INFO:
+			var { src, info } = action;
+			return state.map(item => {
+				if (item.src && item.src == src) { // `noimg` type entries in the log (`item`) dont have a `src`
+					return Object.assign({}, item, {
+						image_info: info
+					});
+				} else {
+					return item;
+				}
+			});
 		default:
 			return state;
 	}
