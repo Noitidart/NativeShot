@@ -54,6 +54,27 @@ var pageLoader = {
 		switch (pageLoader.matches(contentWindow.location.href, contentWindow.location)) {
 			case MATCH_APP:
 					console.error('MATCH APP');
+
+					// DOESNT WORK
+					// if (contentWindow.location.href.toLowerCase() == 'about:nativeshot') {
+					// 	// on gallery page
+					// 	// trick firefox into thinking my about page is chrome:// so it can load file uri's as images
+					// 	// doing setCurrentURI does not do the trick. i need to change the webNav.document.documentURI, which is done by pushState
+					// 	var webnav = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
+					// 	var docuri = webnav.document.documentURI;
+					// 	// console.log('docURI:', docURI);
+					// 	if (!webnav.setCurrentURI) {
+					// 		console.error('no setCurrentURI!!!!, i should reload the page till i get one');
+					// 		content.alert('Error occured while loading page, need to reload');
+					// 		content.location.reload();
+					// 	} else {
+					// 		webnav.setCurrentURI(Services.io.newURI('chrome://nativeshot/content/rawr.htm', null, null)); // need to setCurrentURI otherwise the pushState says operation insecure
+					// 		contentWindow.history.pushState(null, null, 'chrome://nativeshot/content/rawr.htm'); // note: for mediaSource:'screen' it MUST be https://screencastify/SOMETHING_HERE otherwise it wont work
+					// 		// webnav.setCurrentURI(Services.io.newURI(docuri, null, null)); // make it look like about uri again
+					// 		console.log('ok did the trick');
+					// 	}
+					// }
+
 					gCommScope.gWinComm = gWinComm = new gCommScope.Comm.server.content(contentWindow);
 				break;
 			case MATCH_EDITOR:

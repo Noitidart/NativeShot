@@ -384,7 +384,9 @@ var Gallery = React.createClass({
 					} else {
 						// failed
 						running_colheight[col] += GALENTRY_MIN_HEIGHT;
-						item_rel = image_info.reason;
+						item_rel = React.createElement('div', { className:'flex-center' },
+							image_info.reason
+						);
 					}
 				} else {
 					if (!gImageInfoLoading[entry.src]) {
@@ -525,11 +527,11 @@ var Magnific = React.createClass({
 			// `to` should have w, h
 
 			return React.createElement('div', { id:'magnific' },
-				React.createElement('div', {id:'magnific_cover'}),
+				React.createElement('div', {id:'magnific_cover', onClick:this.close }),
 				React.createElement('button', { id:'magnific_close', onClick:this.close },
 					'×'
 				),
-				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:from.y+'px', left:from.x+'px'} } )
+				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:(from.y - document.documentElement.scrollTop)+'px', left:(from.x - document.documentElement.scrollLeft)+'px'} } )
 			);
 		}
 	},
@@ -610,8 +612,8 @@ var Magnific = React.createClass({
 				console.log('from:', magnific.from.w, 'x', magnific.from.h);
 				console.log('to:', to_img_width, 'x', to_img_height);
 
-				var to_img_top = document.documentElement.scrollTop + Math.round((viewport_height / 2) - (to_img_height / 2));
-				var to_img_left = document.documentElement.scrollLeft + Math.round((viewport_width / 2) - (to_img_width / 2));
+				var to_img_top = Math.round((viewport_height / 2) - (to_img_height / 2));
+				var to_img_left = Math.round((viewport_width / 2) - (to_img_width / 2));
 
 				window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
 				domel.style.width = to_img_width + 'px';
@@ -624,8 +626,8 @@ var Magnific = React.createClass({
 
 					domel.style.width = from.w + 'px';
 					domel.style.height = from.h + 'px';
-					domel.style.left = from.x + 'px';
-					domel.style.top = from.y + 'px';
+					domel.style.left = (from.x - document.documentElement.scrollLeft) + 'px';
+					domel.style.top = (from.y - document.documentElement.scrollTop) + 'px';
 				};
 			}
 		}
