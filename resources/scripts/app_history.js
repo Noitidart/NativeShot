@@ -509,7 +509,6 @@ var GalleryItem = React.createClass({
 var Magnific = React.createClass({
 	render: function() {
 		var { magnific } = this.props; // mapped state
-		var { close } = this.props; // dispatchers
 
 		if (!magnific) {
 			if (this.showing) {
@@ -527,26 +526,39 @@ var Magnific = React.createClass({
 
 			return React.createElement('div', { id:'magnific' },
 				React.createElement('div', {id:'magnific_cover'}),
-				React.createElement('button', { id:'magnific_close', onClick:close },
+				React.createElement('button', { id:'magnific_close', onClick:this.close },
 					'×'
 				),
 				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:from.y+'px', left:from.x+'px'} } )
 			);
 		}
 	},
+	close: function() {
+		var { close } = this.props; // dispatchers
+		this.putImgBack();
+		setTimeout(close, 313);
+	},
+	putImgBack: null, // set
 	showing: false,
 	didHide: function() {
 		this.showing = false;
 		this.img_mounted = false;
+		this.putImgBack = null;
 
 		document.documentElement.style.overflow = '';
+		window.removeEventListener('keydown', this.keydown, false);
 	},
 	didShow: function() {
 
 		this.showing = true;
 
 		document.documentElement.style.overflow = 'hidden'; // blocks scrolling
-
+		window.addEventListener('keydown', this.keydown, false);
+	},
+	keydown: function(e) {
+		if (e.key == 'Escape') {
+			this.close();
+		}
 	},
 	img_mounted: false,
 	imgDidOunt: function(domel) {
@@ -606,6 +618,15 @@ var Magnific = React.createClass({
 				domel.style.height = to_img_height + 'px';
 				domel.style.left = to_img_left + 'px';
 				domel.style.top = to_img_top + 'px';
+
+				this.putImgBack = function() {
+					var { from } = magnific;
+
+					domel.style.width = from.w + 'px';
+					domel.style.height = from.h + 'px';
+					domel.style.left = from.x + 'px';
+					domel.style.top = from.y + 'px';
+				};
 			}
 		}
 	}
