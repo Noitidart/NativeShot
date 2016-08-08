@@ -3,6 +3,7 @@ function initAppPage(aArg) {
 	store.dispatch(overwriteGalleryItems(hydrant_ex.logsrc));
 
 	gAppPageComponents = [
+		React.createElement(MagnificContainer),
 		React.createElement(BarsContainer),
 		React.createElement(FiltersContainer),
 		React.createElement(GalleryContainer, { layouts:gGalleryLayouts })
@@ -274,7 +275,7 @@ var Bars = React.createClass({
 			grid_class = 'col-md-12 col-sm-12 col-xs-12';
 		}
 
-		return React.createElement('div', { id:'bars', className:'padd-40' },
+		return React.createElement('div', { id:'bars', className:'padd-40', onClick:this.view },
 			React.createElement('div', { className:'row' },
 				React.createElement('div', { className:grid_class },
 					col_rels[0]
@@ -364,6 +365,9 @@ var Gallery = React.createClass({
 							display_img_height = GALENTRY_MIN_HEIGHT - (GALITEM_IMAGE_MARGIN * 2);
 						}
 
+						var display_img_top = translate_y + GALITEM_IMAGE_MARGIN;
+						var display_img_left = translate_x + GALITEM_IMAGE_MARGIN;
+
 						var display_item_width = colwidth;
 						var display_item_height = display_img_height + (GALITEM_IMAGE_MARGIN * 2);
 
@@ -374,7 +378,7 @@ var Gallery = React.createClass({
 						// item_attr['data-img-dims'] = image_info.width + ' x ' + image_info.height;
 
 						item_rel = [
-							React.createElement(GalleryItemSlip, { entry }),
+							React.createElement(GalleryItemSlip, { entry, display_img_dims:{width:display_img_width, height:display_img_height, top:display_img_top, left:display_img_left} }),
 							React.createElement('img', { src:image_info.src }) // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
 						];
 					} else {
@@ -502,7 +506,84 @@ var GalleryItem = React.createClass({
 	// }
 });
 
+var Magnific = React.createClass({
+	render: function() {
+		var { magnific } = this.props; // mapped state
+		var { close } = this.props; // dispatchers
+
+		if (!magnific) {
+			if (this.showing) {
+				this.didHide();
+			}
+			return null;
+		} else {
+			if (!this.showing) {
+				this.didShow();
+			}
+
+			var { src, from } = magnific; // attr
+			// `from` should have w, h, x, y
+			// `to` should have w, h
+
+			return React.createElement('div', { id:'magnific' },
+				React.createElement('div', {id:'magnific_cover'}),
+				React.createElement('button', { id:'magnific_close', onClick:close },
+					'×'
+				),
+				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:from.y+'px', left:from.x+'px'} } )
+			);
+		}
+	},
+	showing: false,
+	didHide: function() {
+		this.showing = false;
+
+		document.documentElement.style.overflow = '';
+	},
+	didShow: function() {
+		this.showing = true;
+
+		document.documentElement.style.overflow = 'hidden'; // blocks scrolling
+	},
+	imgDidOunt: function(domel) {
+		// either mounted or unmounted, if `domel` is `null` then it unmounted
+		if (domel) {
+			// window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+			// domel.style.width = to.w + 'px';
+			// domel.style.height = to.h + 'px';
+			// domel.style.left = '50%'; // 'calc(100vw - ' + Math.round(to.x/2) + 'px');
+			// domel.style.top = '50%';
+		}
+	}
+});
+
 var GalleryItemSlip = React.createClass({
+	view: function(e) {
+		// magnific image
+		var { entry, display_img_dims } = this.props; // attr
+
+		e.stopPropagation();
+		e.preventDefault();
+
+		var gallery_domel = document.getElementById('gallery');
+
+		store.dispatch(showMagnific(
+			{
+				src: entry.image_info.src,
+				from: {
+					w: display_img_dims.width,
+					h: display_img_dims.height,
+					x: display_img_dims.left + gallery_domel.offsetLeft,
+					y: display_img_dims.top + gallery_domel.offsetTop
+				},
+				to: {
+					w: entry.image_info.width,
+					h: entry.image_info.height
+				}
+			}
+		));
+
+	},
 	render: function() {
 		var { entry } = this.props; // attr
 
@@ -514,19 +595,19 @@ var GalleryItemSlip = React.createClass({
 			case services.savebrowse.code:
 			case services.savequick.code:
 					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye' },
+						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
 							formatStringFromNameCore('view', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_link' },
+						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
 							formatStringFromNameCore('just_copy', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_folder-open' },
+						React.createElement('a', { href:'#', className:'fa_folder-open', onClick:this.view },
 							formatStringFromNameCore('open', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_trash' },
+						React.createElement('a', { href:'#', className:'fa_trash', onClick:this.view },
 							formatStringFromNameCore('trash', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_cancel' },
+						React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.view },
 							formatStringFromNameCore('remove', 'main')
 						)
 					];
@@ -535,34 +616,34 @@ var GalleryItemSlip = React.createClass({
 			case services.imguranon.code:
 			case services.gdrive.code:
 					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye' },
+						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
 							formatStringFromNameCore('view', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_link' },
+						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
 							formatStringFromNameCore('just_copy', 'main')
 						),
 						React.DOM.br(),
-						React.createElement('a', { href:'#', className:'fa_cancel' },
+						React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.view },
 							formatStringFromNameCore('delete', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_history' },
+						React.createElement('a', { href:'#', className:'fa_history', onClick:this.view },
 							formatStringFromNameCore('remove', 'main')
 						)
 					];
 				break;
 			case services.dropbox.code:
 					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye' },
+						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
 							formatStringFromNameCore('view', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_link' },
+						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
 							formatStringFromNameCore('just_copy', 'main')
 						),
 						React.DOM.br(),
-						React.createElement('a', { href:'#', className:'fa_trash' },
+						React.createElement('a', { href:'#', className:'fa_trash', onClick:this.view },
 							formatStringFromNameCore('trash', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_history' },
+						React.createElement('a', { href:'#', className:'fa_history', onClick:this.view },
 							formatStringFromNameCore('remove', 'main')
 						)
 					];
@@ -570,17 +651,17 @@ var GalleryItemSlip = React.createClass({
 			case services.twitter.code:
 			case services.facebook.code:
 					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye' },
+						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
 							formatStringFromNameCore('view', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_link' },
+						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
 							formatStringFromNameCore('just_copy', 'main')
 						),
 						React.DOM.br(),
 						React.createElement('a', { href:'#', className:'fa_' + code_info.serviceid },
 							formatStringFromNameCore(code_info.serviceid == 'twitter' ? 'open_tweet' : 'open_post', 'main')
 						),
-						React.createElement('a', { href:'#', className:'fa_history' },
+						React.createElement('a', { href:'#', className:'fa_history', onClick:this.view },
 							formatStringFromNameCore('remove', 'main')
 						)
 					];
@@ -655,6 +736,19 @@ var GalleryContainer = ReactRedux.connect(
 	}
 )(Gallery);
 
+var MagnificContainer = ReactRedux.connect(
+	function mapStateToProps(state, ownProps) {
+		return {
+			magnific: state.magnific
+		}
+	},
+	function mapDispatchToProps(dispatch, ownProps) {
+		return {
+			close: () => dispatch(closeMagnific())
+		}
+	}
+)(Magnific);
+
 // material for app.js
 var gAppPageNarrow = false;
 
@@ -694,6 +788,9 @@ const INJECT_GALLERY_IMAGE_INFO = 'INJECT_GALLERY_IMAGE_INFO';
 
 const SET_GALLERY_WIDTH = 'SET_GALLERY_WIDTH';
 
+const SHOW_MAGNIFIC = 'SHOW_MAGNIFIC';
+const CLOSE_MAGNIFIC = 'CLOSE_MAGNIFIC';
+
 // ACTION CREATORS
 function overwriteGalleryItems(items) {
 	// should only call this on `init`
@@ -731,6 +828,20 @@ function setFilter(serviceid) {
 	return {
 		type: SET_FILTER,
 		serviceid
+	}
+}
+
+
+function showMagnific(mag_info) {
+	return {
+		type: SHOW_MAGNIFIC,
+		mag_info
+	}
+}
+
+function closeMagnific() {
+	return {
+		type: CLOSE_MAGNIFIC
 	}
 }
 
@@ -777,11 +888,24 @@ function gallery_width(state=0, action) {
 	}
 }
 
+function magnific(state=null, action) {
+	switch (action.type) {
+		case SHOW_MAGNIFIC:
+			var { src, from, to } = action.mag_info;
+			return { src, from, to };
+		case CLOSE_MAGNIFIC:
+			return null;
+		default:
+			return state;
+	}
+}
+
 // `var` so app.js can access it
 var app = Redux.combineReducers({
 	selected_filter,
 	gallery_width,
-	gallery_items
+	gallery_items,
+	magnific
 });
 
 // end - react-redux

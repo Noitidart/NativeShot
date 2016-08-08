@@ -577,6 +577,47 @@ span[data-service-name] {
 
 /***/
 
+/* domgroup:magnific */
+#magnific {
+    position: absolute;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+}
+#magnific_cover {
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(11,11,11,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+#magnific_close {
+    position: fixed;
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+    right: 0;
+    top: 0;
+    text-decoration: none;
+    text-align: center;
+    color: #fff;
+    opacity: 0.65;
+    transition: opacity 154ms;
+    font-size: 28px;
+    font-weight: 400;
+}
+#magnific_close:hover {
+    opacity: 1;
+}
+#magnific img {
+    position: absolute;
+    /*max-height: 95%;
+    max-width: 85%;*/
+    transition: width 2002ms, height 2002ms, left 2002ms, top 2002ms;
+}
+/***/
+
 /* domgroup:slipcover */
 .slip-container {
     position: absolute;
