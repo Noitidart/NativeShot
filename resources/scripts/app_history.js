@@ -537,22 +537,76 @@ var Magnific = React.createClass({
 	showing: false,
 	didHide: function() {
 		this.showing = false;
+		this.img_mounted = false;
 
 		document.documentElement.style.overflow = '';
 	},
 	didShow: function() {
+
 		this.showing = true;
 
 		document.documentElement.style.overflow = 'hidden'; // blocks scrolling
+
 	},
+	img_mounted: false,
 	imgDidOunt: function(domel) {
 		// either mounted or unmounted, if `domel` is `null` then it unmounted
 		if (domel) {
-			// window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
-			// domel.style.width = to.w + 'px';
-			// domel.style.height = to.h + 'px';
-			// domel.style.left = '50%'; // 'calc(100vw - ' + Math.round(to.x/2) + 'px');
-			// domel.style.top = '50%';
+			if (this.img_mounted) {
+				console.warn('img already mounted, i dont know why it called domel ref callback again when it was already mounted!');
+				return;
+			} else {
+
+				var { magnific } = this.props; // mapped state
+				var { to } = magnific;
+
+				this.img_mounted = true;
+				window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+
+				// animate dimensions and position of image
+				var viewport_height = window.innerHeight;
+				var viewport_width = window.innerWidth;
+
+				var natural_img_width = to.w;
+				var natural_img_height = to.h;
+
+				var max_img_width = .85 * viewport_width; // match crossfile-link8383831
+				var max_img_height = .90 * viewport_height; // match crossfile-link83838312
+
+				var scale_based_on_width;
+				if (natural_img_width > max_img_width) {
+					scale_based_on_width = max_img_width / natural_img_width;
+				} else {
+					scale_based_on_width = 1;
+				}
+
+				var scale_based_on_height;
+				if (natural_img_height > max_img_height) {
+					scale_based_on_height = max_img_height / natural_img_height;
+				} else {
+					scale_based_on_height = 1;
+				}
+
+				console.log('scale_based_on_width:', scale_based_on_width);
+				console.log('scale_based_on_height:', scale_based_on_height);
+
+				var scale = Math.min(scale_based_on_height, scale_based_on_width);
+				console.log('scale:', scale);
+
+				var to_img_width = Math.round(scale * natural_img_width);
+				var to_img_height = Math.round(scale * natural_img_height);
+				console.log('from:', magnific.from.w, 'x', magnific.from.h);
+				console.log('to:', to_img_width, 'x', to_img_height);
+
+				var to_img_top = document.documentElement.scrollTop + Math.round((viewport_height / 2) - (to_img_height / 2));
+				var to_img_left = document.documentElement.scrollLeft + Math.round((viewport_width / 2) - (to_img_width / 2));
+
+				window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+				domel.style.width = to_img_width + 'px';
+				domel.style.height = to_img_height + 'px';
+				domel.style.left = to_img_left + 'px';
+				domel.style.top = to_img_top + 'px';
+			}
 		}
 	}
 });

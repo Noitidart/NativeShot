@@ -587,7 +587,7 @@ span[data-service-name] {
 #magnific_cover {
     width: 100vw;
     height: 100vh;
-    background-color: rgba(11,11,11,0.1);
+    background-color: rgba(11,11,11,0.8);
     position: fixed;
     top: 0;
     left: 0;
@@ -612,9 +612,9 @@ span[data-service-name] {
 }
 #magnific img {
     position: absolute;
-    /*max-height: 95%;
-    max-width: 85%;*/
-    transition: width 2002ms, height 2002ms, left 2002ms, top 2002ms;
+    /* max-width: 85%; /* crossfile-link8383831 */
+    /* max-height: 90%;  /* crossfile-link83838312 */
+    transition: width 202ms, height 202ms, left 202ms, top 202ms;
 }
 /***/
 
