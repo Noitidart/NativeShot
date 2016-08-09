@@ -630,7 +630,28 @@ span[data-service-name] {
     position: fixed;
     /* max-width: 85%; /* crossfile-link8383831 */
     /* max-height: 90%;  /* crossfile-link83838312 */
-    transition: width 313ms, height 313ms, left 313ms, top 313ms;
+    transition: width 313ms, height 313ms, left 313ms, top 313ms; /* link291 */
+}
+#magnific_tools {
+    position: fixed;
+    width: 100vw;
+    text-align: center;
+    bottom: 0;
+    transition: opacity 200ms; /* no need to match this to anything */
+}
+#magnific_tools a {
+    color: #fff;
+    display: inline-block;
+
+    margin: 2px;
+    white-space: nowrap;
+
+    padding: 10px 15px;
+    text-transform: uppercase;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 700;
+
 }
 /***/
 

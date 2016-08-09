@@ -527,7 +527,7 @@ var Magnific = React.createClass({
 				this.didShow();
 			}
 
-			var { src, from } = magnific; // attr
+			var { entry, src, from } = magnific; // attr
 			// `from` should have w, h, x, y
 			// `to` should have w, h
 
@@ -536,15 +536,35 @@ var Magnific = React.createClass({
 				React.createElement('button', { id:'magnific_close', onClick:this.close },
 					'\u00D7'
 				),
-				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:(from.y - document.documentElement.scrollTop)+'px', left:(from.x - document.documentElement.scrollLeft)+'px'} } )
+				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:(from.y - document.documentElement.scrollTop)+'px', left:(from.x - document.documentElement.scrollLeft)+'px'} } ),
+				React.createElement('div', { ref:'tools', id:'magnific_tools', style:{opacity:'0'} },
+					React.createElement('a', { className:'fa_popup-iconic', onClick:this.opentab, href:entry.src },
+						formatStringFromNameCore('open_in_tab', 'main')
+					)
+				)
 			);
 		}
 	},
+	opentab: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+
+		var { magnific } = this.props;
+
+		var { entry } = magnific;
+		callInBootstrap('loadOneTab', {
+			URL: entry.src,
+			params: {
+				inBackground: false
+			}
+		});
+	},
+	transition_ms: 313, // should match transition duration in app.ss crossfile-link291
 	close: function(e) {
 		if (e.button === 0) {
 			var { close } = this.props; // dispatchers
+			this.refs.tools.style.opacity = '0';
 			this.putImgBack();
-			setTimeout(close, 313);
+			setTimeout(close, this.transition_ms);
 		}
 	},
 	putImgBack: null, // set
@@ -592,7 +612,7 @@ var Magnific = React.createClass({
 				var natural_img_height = to.h;
 
 				var max_img_width = .85 * viewport_width; // match crossfile-link8383831
-				var max_img_height = .90 * viewport_height; // match crossfile-link83838312
+				var max_img_height = .78 * viewport_height; // match crossfile-link83838312
 
 				var scale_based_on_width;
 				if (natural_img_width > max_img_width) {
@@ -627,6 +647,10 @@ var Magnific = React.createClass({
 				domel.style.height = to_img_height + 'px';
 				domel.style.left = to_img_left + 'px';
 				domel.style.top = to_img_top + 'px';
+
+				setTimeout(function() {
+					this.refs.tools.style.opacity = '1';
+				}.bind(this), this.transition_ms);
 
 				this.putImgBack = function() {
 					var { from } = magnific;
@@ -697,6 +721,7 @@ var Sliphover = React.createClass({
 
 		store.dispatch(showMagnific(
 			{
+				entry,
 				src: entry.image_info.src,
 				from: {
 					w: display_img_dims.width,
@@ -790,7 +815,7 @@ var Sliphover = React.createClass({
 				case services.savebrowse.code:
 				case services.savequick.code:
 						button_rels = [
-							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
 							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
@@ -811,7 +836,7 @@ var Sliphover = React.createClass({
 				case services.imguranon.code:
 				case services.gdrive.code:
 						button_rels = [
-							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
 							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
@@ -828,7 +853,7 @@ var Sliphover = React.createClass({
 					break;
 				case services.dropbox.code:
 						button_rels = [
-							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
 							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
@@ -846,7 +871,7 @@ var Sliphover = React.createClass({
 				case services.twitter.code:
 				case services.facebook.code:
 						button_rels = [
-							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
 							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
@@ -1179,8 +1204,8 @@ function gallery_width(state=0, action) {
 function magnific(state=null, action) {
 	switch (action.type) {
 		case SHOW_MAGNIFIC:
-			var { src, from, to } = action.mag_info;
-			return { src, from, to };
+			var { entry, src, from, to } = action.mag_info;
+			return { entry, src, from, to };
 		case CLOSE_MAGNIFIC:
 			return null;
 		default:
