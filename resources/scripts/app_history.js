@@ -641,7 +641,24 @@ function forgetByD(entry) {
 	var { d } = entry;
 	store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('processing_forget', 'main')));
 	callInMainworker('removeFromLogD', d, function(aArg) {
-		store.dispatch(removeGalleryItemsBy('d', d));
+		var { __PROGRESS, reason } = aArg;
+
+		if (__PROGRESS) {
+			store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), reason));
+		} else {
+			if (reason == 'SUCCESS') {
+				store.dispatch(removeGalleryItemsBy('d', d));
+			} else {
+				var buttons = [
+					{
+						icon: 'fa_reply',
+						label: formatStringFromNameCore('back', 'main'),
+						func: 'uncover'
+					}
+				];
+				store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('error_forget', 'main', [reason]), buttons));
+			}
+		}
 	});
 }
 // end - slipcover button functions
@@ -825,7 +842,17 @@ var Sliphover = React.createClass({
 					)
 				];
 			} else if (buttons) {
-
+				button_rels = [];
+				for (var button of buttons) {
+					// button is an object
+						// icon - "fa_..." // NOTE: must NOT be "fa-" but should be "fa_", as the underscore signifies its in the pseudo element, otherwise it stylizes the button label font
+						// label - string
+						// func - string
+					var { icon, label, func } = button;
+					button_rels.push(React.createElement('a', { href:'#', className:(icon ? icon : undefined), onClick:this[func] },
+						label
+					));
+				}
 			}
 
 			var key = title; // form == 'confirm' ? 'confirm' : title;

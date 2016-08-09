@@ -3331,13 +3331,34 @@ function processAction(aArg, aReportProgress, aComm) {
 	return deferredMain_processAction.promise;
 }
 
-function removeFromLogD(d) {
+function removeFromLogD(d, aReportProgress) {
 	// removes single entry where `entry.d` === `d`
+
+	// // flow for talking with slipcover
+	// var deferredmain = new Deferred();
+	//
+	// aReportProgress({
+	// 	reason: 'hiii' // reason is a const usually, but in this case it is a text to show in slipcover
+	// });
+	//
+	// setTimeout(function() {
+	//	// this is how to send an error, IF success then send back `reason: 'SUCCESS'`
+	// 	deferredmain.resolve({
+	// 		reason: 'could not find log - dummy error'
+	// 	});
+	// }, 2000);
+	//
+	// return deferredmain.promise;
+
 	updateFilestoreEntry({
 		value: el => el.d === d,
 		mainkey: 'log',
 		verb: 'filter'
 	});
+
+	return {
+		reason: 'SUCCESS'
+	};
 }
 
 function removeFromLogT(t) {
