@@ -1694,6 +1694,16 @@ function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 	}
 }
 
+function commShowFileInOSExplorer(aArg, aReportProgress, aComm) {
+	var fileuri = aArg;
+
+	// convert fileuri to platform path
+	var path = Services.io.newURI(fileuri, null, null).QueryInterface(Components.interfaces.nsIFileURL).file.path;
+
+	var nsifile = new nsIFile(path);
+	showFileInOSExplorer(nsifile);
+}
+
 function loadOneTab(aArg, aReportProgress, aComm) {
 	var window = Services.wm.getMostRecentWindow('navigator:browser');
 	window.gBrowser.loadOneTab(aArg.URL, aArg.params);

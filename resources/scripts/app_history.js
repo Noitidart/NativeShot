@@ -342,6 +342,11 @@ var Gallery = React.createClass({
 				if (row > 0 && layout.cols > 1) {
 					// find shortest col
 					var shortest_col = running_colheight.reduce( (pre, el, i, arr) => i === 1 ? (el < pre ? i /*obviously 1*/ : i - 1 /*obviously 0*/) : (el < arr[pre] ? i : pre) )
+					// if (Math.abs(running_colheight[shortest_col] - running_colheight[col]) > 75) {
+					// 	alert(running_colheight[shortest_col] + ' vs ' + running_colheight[col] + '\n\n' + Math.abs(running_colheight[shortest_col] - running_colheight[col]) + '\n\n' + running_colheight);
+					// 	// if the shortest_col is short by a lot, then use it. if its not short by a lot, then continue with where it should be placed.
+					// 	col = shortest_col;
+					// }
 					col = shortest_col;
 				}
 
@@ -637,14 +642,32 @@ var Magnific = React.createClass({
 });
 
 // start - slipcover button functions
-function forgetByD(entry) {
+function workerWithEntry(entry, verb) {
+	// verb - "forget_d", "trash"
+
 	var { d } = entry;
-	store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('processing_forget', 'main')));
-	callInMainworker('removeFromLogD', d, function(aArg) {
+
+	var l10n_key = verb;
+	var worker_method;
+	var worker_arg;
+	switch (verb) {
+		case 'forget_d':
+				l10n_key = 'forget';
+				worker_method = 'removeFromLogD';
+				worker_arg = entry.d;
+			break;
+		case 'trash':
+				worker_method = 'trashEntry';
+				worker_arg = entry.d;
+			break;
+	}
+
+	store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), formatStringFromNameCore('processing_' + l10n_key, 'main')));
+	callInMainworker(worker_method, worker_arg, function(aArg) {
 		var { __PROGRESS, reason } = aArg;
 
 		if (__PROGRESS) {
-			store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), reason));
+			store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), reason));
 		} else {
 			if (reason == 'SUCCESS') {
 				store.dispatch(removeGalleryItemsBy('d', d));
@@ -656,7 +679,7 @@ function forgetByD(entry) {
 						func: 'uncover'
 					}
 				];
-				store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('error_forget', 'main', [reason]), buttons));
+				store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), formatStringFromNameCore('error_' + l10n_key, 'main', [reason]), buttons));
 			}
 		}
 	});
@@ -694,17 +717,43 @@ var Sliphover = React.createClass({
 
 		var { entry } = this.props; // attr
 
-		this.onConfirm = forgetByD.bind(null, entry);
+		this.onConfirm = workerWithEntry.bind(null, entry, 'forget_d');
 		store.dispatch(showCover(entry.d, 'confirm', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('confirm_forget', 'main')));
 	},
 	copy: function(e) {
 		if (!stopClickAndCheck0(e)) { return }
+
+		var { entry } = this.props; // attr
+
+		callInBootstrap('copy', entry.src);
 	},
 	open: function(e) {
 		if (!stopClickAndCheck0(e)) { return }
+
+		var { entry } = this.props; // attr
+
+		switch (entry.t) {
+			case core.nativeshot.services.savebrowse.code:
+			case core.nativeshot.services.savequick.code:
+					callInBootstrap('commShowFileInOSExplorer', entry.src);
+				break;
+			default:
+				callInBootstrap('loadOneTab', {
+					URL: entry.p,
+					params: {
+						inBackground: false
+					}
+				});
+		}
 	},
 	trash: function(e) {
 		if (!stopClickAndCheck0(e)) { return }
+
+		var { entry } = this.props; // attr
+
+		// only for services.savequick and services.savebrowse
+		this.onConfirm = workerWithEntry.bind(null, entry, 'trash');
+		store.dispatch(showCover(entry.d, 'confirm', formatStringFromNameCore('title_trash', 'main'), formatStringFromNameCore('confirm_trash', 'main')));
 	},
 	delete: function(e) {
 		if (!stopClickAndCheck0(e)) { return }

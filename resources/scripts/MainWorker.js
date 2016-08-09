@@ -321,7 +321,7 @@ function fetchCore(aArg) {
 							// it has a l, turn that to src
 							if (!entry.l) { console.error('deverror: i thought this should have l but it doesnt:', entry); throw new Error('deverror: i thought this would have l') }
 							entry.src = entry.l;
-							delete entry.l;
+							// delete entry.l;
 						} // else it is noimg
 				}
 			}
@@ -3329,6 +3329,30 @@ function processAction(aArg, aReportProgress, aComm) {
 	}, aReportProgress);
 
 	return deferredMain_processAction.promise;
+}
+
+function trashEntry(d, aReportProgress) {
+	var log = fetchFilestoreEntry({ mainkey:'log' });
+	var entry = log.find( el => el.d === d);
+	var rez = trashFile(OS.Path.join(entry.f, entry.n));
+
+	if (!rez) {
+		return {
+			reason: formatStringFromName('reason1_trash', 'main')
+		};
+	} else {
+		aReportProgress({
+			reason: formatStringFromName('processing_forget', 'main')
+		});
+		var rez2 = removeFromLogD(d, aReportProgress);
+		if (rez2.reason != 'SUCCESS') {
+			return {
+				reason: formatStringFromName('reason2_trash', 'main')
+			};
+		} else {
+			return rez2;
+		}
+	}
 }
 
 function removeFromLogD(d, aReportProgress) {
