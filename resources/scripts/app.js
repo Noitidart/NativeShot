@@ -157,7 +157,8 @@ function createTrans(transitionName, transitionEnterTimeout, transitionLeaveTime
 	return props;
 }
 var gTrans = [
-	createTrans('animsition', 1100, 800, true)
+	createTrans('animsition', 1100, 800, true),
+	createTrans('slideleftright', 225, 225)
 ];
 function initTransTimingStylesheet() {
 	var style = document.createElement('style');

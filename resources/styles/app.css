@@ -131,6 +131,21 @@ textarea {
         transform: translateY(-50vh);
         transition-property: opacity, transform;
 	}
+    /* slideleftright */
+    .slideleftright-enter {
+        transform: translateX(-100%);
+	}
+    .slideleftright-enter.slideleftright-enter-active {
+        transform: translateX(0);
+		transition-property: transform;
+	}
+	.slideleftright-leave {
+		transform: translateX(0);
+	}
+	.slideleftright-leave.slideleftright-leave-active {
+        transform: translateX(100%);
+        transition-property: transform;
+	}
 
 /* specific */
 .container {
@@ -568,7 +583,7 @@ span[data-service-name] {
     width: 100%;
 }
 
-/* gallery item slipcover */
+/* gallery item sliphover */
 .galslip {
     /*position: sticky;
     bottom: 50px;*/
@@ -627,7 +642,7 @@ span[data-service-name] {
 }
 /***/
 
-/* domgroup:slipcover */
+/* domgroup:sliphover */
 .slip-container {
     position: absolute;
     width: 100%;
@@ -645,6 +660,18 @@ span[data-service-name] {
     text-align: center;
     transform: translate(-100%, -100%);
     transition: transform 313ms;
+    overflow: hidden;
+}
+
+.slip-transition {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    left: 0;
+    top: 0;
 }
 
 .slip-overlay a {
@@ -681,6 +708,10 @@ span[data-service-name] {
     letter-spacing: 1px;
 }
 
+.slip-overlay p {
+    margin: 20px 0;
+}
+
     /* substyle:dark */
     .slip-dark .slip-overlay {
         color: rgb(255, 255, 255);
@@ -705,6 +736,11 @@ span[data-service-name] {
     color: #000;
 }
 .slip-container:hover .slip-overlay {
+    transform: translate(0, 0);
+}
+
+/* state:cover */
+.slip-container.slipcover .slip-overlay {
     transform: translate(0, 0);
 }
 

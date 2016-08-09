@@ -2764,8 +2764,12 @@ function updateFilestoreEntry(aArg, aComm) {
 	// if gFilestore not yet read, it will readFilestore first
 
 	var { mainkey, value, key, verb } = aArg;
+	// verb
+		// "filter" - `value` must be a function to determine what to remove
+
 	// key is optional. if key is not set, then gFilestore[mainkey] is set to value
 	// if key is set, then gFilestore[mainkey][key] is set to value
+	// if verb is set
 
 	// REQUIRED: mainkey, value
 
@@ -2773,12 +2777,34 @@ function updateFilestoreEntry(aArg, aComm) {
 		readFilestore();
 	}
 
+	var dirty = true;
 	switch (verb) {
 		case 'push':
+				// acts on arrays only
 				if (key) {
 					gFilestore[mainkey][key].push(value);
 				} else {
 					gFilestore[mainkey].push(value);
+				}
+			break;
+		case 'filter':
+				// acts on arrays only
+				// removes entires that match verb_do
+				var verb_do = value;
+				dirty = false;
+				var arr;
+				if (key) {
+					arr = gFilestore[mainkey][key];
+				} else {
+					arr = gFilestore[mainkey];
+				}
+				var lm1 = arr.length - 1;
+				for (var i=lm1; i>-1; i--) {
+					var el = arr[i];
+					if (verb_do(el)) {
+						arr.splice(i, 1);
+						dirty = true;
+					}
 				}
 			break;
 		default:
@@ -2788,12 +2814,15 @@ function updateFilestoreEntry(aArg, aComm) {
 				gFilestore[mainkey] = value;
 			}
 	}
-	gFilestore.dirty = true; // meaning not yet written to disk
 
-	if (gWriteFilestoreTimeout !== null) {
-		clearTimeout(gWriteFilestoreTimeout);
+	if (dirty) {
+		gFilestore.dirty = dirty; // meaning not yet written to disk
+
+		if (gWriteFilestoreTimeout !== null) {
+			clearTimeout(gWriteFilestoreTimeout);
+		}
+		gWriteFilestoreTimeout = setTimeout(writeFilestore, 10000);
 	}
-	gWriteFilestoreTimeout = setTimeout(writeFilestore, 10000);
 }
 
 function fetchFilestoreEntry(aArg) {
@@ -3300,6 +3329,19 @@ function processAction(aArg, aReportProgress, aComm) {
 	}, aReportProgress);
 
 	return deferredMain_processAction.promise;
+}
+
+function removeFromLogD(d) {
+	// removes single entry where `entry.d` === `d`
+	updateFilestoreEntry({
+		value: el => el.d === d,
+		mainkey: 'log',
+		verb: 'filter'
+	});
+}
+
+function removeFromLogT(t) {
+	// removes all entries where `entry.t` === `t`
 }
 
 function addShotToLog(shot, aExtraKeys={}) {

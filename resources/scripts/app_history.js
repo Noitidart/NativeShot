@@ -378,7 +378,7 @@ var Gallery = React.createClass({
 						// item_attr['data-img-dims'] = image_info.width + ' x ' + image_info.height;
 
 						item_rel = [
-							React.createElement(GalleryItemSlip, { entry, display_img_dims:{width:display_img_width, height:display_img_height, top:display_img_top, left:display_img_left} }),
+							React.createElement(SliphoverContainer, { entry, display_img_dims:{width:display_img_width, height:display_img_height, top:display_img_top, left:display_img_left} }),
 							React.createElement('img', { src:image_info.src }) // i dont do `entry.src` because like in case of file uri, the `image.src` is a resource uri and not the origianl which is `entry.src`
 						];
 					} else {
@@ -529,16 +529,18 @@ var Magnific = React.createClass({
 			return React.createElement('div', { id:'magnific' },
 				React.createElement('div', {id:'magnific_cover', onClick:this.close }),
 				React.createElement('button', { id:'magnific_close', onClick:this.close },
-					'×'
+					'\u00D7'
 				),
 				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:(from.y - document.documentElement.scrollTop)+'px', left:(from.x - document.documentElement.scrollLeft)+'px'} } )
 			);
 		}
 	},
-	close: function() {
-		var { close } = this.props; // dispatchers
-		this.putImgBack();
-		setTimeout(close, 313);
+	close: function(e) {
+		if (e.button === 0) {
+			var { close } = this.props; // dispatchers
+			this.putImgBack();
+			setTimeout(close, 313);
+		}
 	},
 	putImgBack: null, // set
 	showing: false,
@@ -634,13 +636,22 @@ var Magnific = React.createClass({
 	}
 });
 
-var GalleryItemSlip = React.createClass({
+// start - slipcover button functions
+function forgetByD(entry) {
+	var { d } = entry;
+	store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('processing_forget', 'main')));
+	callInMainworker('removeFromLogD', d, function(aArg) {
+		store.dispatch(removeGalleryItemsBy('d', d));
+	});
+}
+// end - slipcover button functions
+
+var Sliphover = React.createClass({
 	view: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+
 		// magnific image
 		var { entry, display_img_dims } = this.props; // attr
-
-		e.stopPropagation();
-		e.preventDefault();
 
 		var gallery_domel = document.getElementById('gallery');
 
@@ -661,92 +672,132 @@ var GalleryItemSlip = React.createClass({
 		));
 
 	},
+	forget: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+
+		var { entry } = this.props; // attr
+
+		this.onConfirm = forgetByD.bind(null, entry);
+		store.dispatch(showCover(entry.d, 'confirm', formatStringFromNameCore('title_forget', 'main'), formatStringFromNameCore('confirm_forget', 'main')));
+	},
+	copy: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+	},
+	open: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+	},
+	trash: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+	},
+	delete: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+	},
+	onConfirm: null,
+	confirm: function(e) {
+		// onConfirm must be set
+		if (!stopClickAndCheck0(e)) { return }
+		if (!this.onConfirm) { console.error('deverror: onConfirm not set!!'); return; } // remove on production
+
+		this.onConfirm();
+		this.onConfirm = null;
+	},
+	uncover: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+		var { entry } = this.props;
+		var { d } = entry;
+
+		this.onConfirm = null; // in case there was one
+		store.dispatch(uncover(d));
+	},
 	render: function() {
 		var { entry } = this.props; // attr
+		var { slipcover } = this.props; // mapped state
 
 		var services = core.nativeshot.services;
 		var code_info = getServiceFromCode(entry.t);
 
-		var button_rels;
-		switch (entry.t) {
-			case services.savebrowse.code:
-			case services.savequick.code:
-					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
-							formatStringFromNameCore('view', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
-							formatStringFromNameCore('just_copy', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_folder-open', onClick:this.view },
-							formatStringFromNameCore('open', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_trash', onClick:this.view },
-							formatStringFromNameCore('trash', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.view },
-							formatStringFromNameCore('remove', 'main')
-						)
-					];
-				break;
-			case services.imgur.code:
-			case services.imguranon.code:
-			case services.gdrive.code:
-					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
-							formatStringFromNameCore('view', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
-							formatStringFromNameCore('just_copy', 'main')
-						),
-						React.DOM.br(),
-						React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.view },
-							formatStringFromNameCore('delete', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_history', onClick:this.view },
-							formatStringFromNameCore('remove', 'main')
-						)
-					];
-				break;
-			case services.dropbox.code:
-					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
-							formatStringFromNameCore('view', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
-							formatStringFromNameCore('just_copy', 'main')
-						),
-						React.DOM.br(),
-						React.createElement('a', { href:'#', className:'fa_trash', onClick:this.view },
-							formatStringFromNameCore('trash', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_history', onClick:this.view },
-							formatStringFromNameCore('remove', 'main')
-						)
-					];
-				break;
-			case services.twitter.code:
-			case services.facebook.code:
-					button_rels = [
-						React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
-							formatStringFromNameCore('view', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_link', onClick:this.view },
-							formatStringFromNameCore('just_copy', 'main')
-						),
-						React.DOM.br(),
-						React.createElement('a', { href:'#', className:'fa_' + code_info.serviceid },
-							formatStringFromNameCore(code_info.serviceid == 'twitter' ? 'open_tweet' : 'open_post', 'main')
-						),
-						React.createElement('a', { href:'#', className:'fa_history', onClick:this.view },
-							formatStringFromNameCore('remove', 'main')
-						)
-					];
-				break;
-		}
+		// create galslip_rel
+		var galslip_rel;
+		if (!slipcover) {
+			var button_rels;
+			switch (entry.t) {
+				case services.savebrowse.code:
+				case services.savequick.code:
+						button_rels = [
+							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+								formatStringFromNameCore('view', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+								formatStringFromNameCore('just_copy', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_folder-open', onClick:this.open },
+								formatStringFromNameCore('open', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_trash', onClick:this.trash },
+								formatStringFromNameCore('trash', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+								formatStringFromNameCore('forget', 'main')
+							)
+						];
+					break;
+				case services.imgur.code:
+				case services.imguranon.code:
+				case services.gdrive.code:
+						button_rels = [
+							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+								formatStringFromNameCore('view', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+								formatStringFromNameCore('just_copy', 'main')
+							),
+							React.DOM.br(),
+							React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.delete },
+								formatStringFromNameCore('delete', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+								formatStringFromNameCore('forget', 'main')
+							)
+						];
+					break;
+				case services.dropbox.code:
+						button_rels = [
+							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+								formatStringFromNameCore('view', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+								formatStringFromNameCore('just_copy', 'main')
+							),
+							React.DOM.br(),
+							React.createElement('a', { href:'#', className:'fa_trash', onClick:this.trash },
+								formatStringFromNameCore('trash', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+								formatStringFromNameCore('forget', 'main')
+							)
+						];
+					break;
+				case services.twitter.code:
+				case services.facebook.code:
+						button_rels = [
+							React.createElement('a', { href:'#', className:'fa_eye', onClick:this.view },
+								formatStringFromNameCore('view', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+								formatStringFromNameCore('just_copy', 'main')
+							),
+							React.DOM.br(),
+							React.createElement('a', { href:'#', className:'fa_' + code_info.serviceid, onClick:this.open },
+								formatStringFromNameCore(code_info.serviceid == 'twitter' ? 'open_tweet' : 'open_post', 'main')
+							),
+							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+								formatStringFromNameCore('forget', 'main')
+							)
+						];
+					break;
+			}
 
-		return React.createElement('div', { className:'slip-container slip-dark' },
-			React.createElement('div', { className:'slip-overlay'},
+			galslip_rel = React.createElement('div', { className:'slip-transition', key:'innate' },
 				React.createElement('div', { className:'galslip' },
 					React.createElement('h4', null,
 						formatTime(entry.d)
@@ -759,6 +810,41 @@ var GalleryItemSlip = React.createClass({
 					),
 					button_rels
 				)
+			);
+		} else {
+			var { form, title, body, buttons } = slipcover;
+
+			var button_rels;
+			if (form == 'confirm') {
+				button_rels = [
+					React.createElement('a', { href:'#', className:'fa_ok', onClick:this.confirm },
+						formatStringFromNameCore('okay', 'main')
+					),
+					React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.uncover },
+						formatStringFromNameCore('cancel', 'main')
+					)
+				];
+			} else if (buttons) {
+
+			}
+
+			var key = title; // form == 'confirm' ? 'confirm' : title;
+			galslip_rel = React.createElement('div', { className:'slip-transition', key },
+				React.createElement('div', { className:'galslip' },
+					React.createElement('h4', null,
+						title
+					),
+					React.createElement('p', null,
+						body
+					),
+					button_rels
+				)
+			);
+		}
+
+		return React.createElement('div', { className:'slip-container slip-dark' + (slipcover ? ' slipcover' : '') },
+			React.createElement(ReactCSSTransitionGroup, getTrans('slideleftright', { component:'div', className:'slip-overlay' }),
+				galslip_rel
 			)
 		);
 	}
@@ -826,6 +912,19 @@ var MagnificContainer = ReactRedux.connect(
 	}
 )(Magnific);
 
+var SliphoverContainer = ReactRedux.connect(
+	function mapStateToProps(state, ownProps) {
+		return {
+			slipcover: state.slipcover[ownProps.entry.d]
+		}
+	},
+	function mapDispatchToProps(dispatch, ownProps) {
+		return {
+
+		}
+	}
+)(Sliphover);
+
 // material for app.js
 var gAppPageNarrow = false;
 
@@ -862,11 +961,15 @@ const SET_FILTER = 'SET_FILTER';
 const OVERWRITE_GALLERY_ITEMS = 'OVERWRITE_GALLERY_ITEMS';
 const ADD_GALLERY_ITEMS = 'ADD_GALLERY_ITEMS';
 const INJECT_GALLERY_IMAGE_INFO = 'INJECT_GALLERY_IMAGE_INFO';
+const REMOVE_GALLERY_ITEMS_BY = 'REMOVE_GALLERY_ITEMS_BY';
 
 const SET_GALLERY_WIDTH = 'SET_GALLERY_WIDTH';
 
 const SHOW_MAGNIFIC = 'SHOW_MAGNIFIC';
 const CLOSE_MAGNIFIC = 'CLOSE_MAGNIFIC';
+
+const SHOW_COVER = 'SHOW_COVER';
+const UNCOVER = 'UNCOVER';
 
 // ACTION CREATORS
 function overwriteGalleryItems(items) {
@@ -890,6 +993,15 @@ function addGalleryItems(items) {
 	return {
 		type: ADD_GALLERY_ITEMS,
 		items
+	}
+}
+
+function removeGalleryItemsBy(by, value) {
+	// by - "t", "d"
+	return {
+		type: REMOVE_GALLERY_ITEMS_BY,
+		by,
+		value
 	}
 }
 
@@ -922,6 +1034,26 @@ function closeMagnific() {
 	}
 }
 
+function showCover(d, form, title, body, buttons) {
+	// form is enum string - "message","cover"
+		// if "message", then buttons can be set
+	return {
+		type: SHOW_COVER,
+		d,
+		form,
+		title,
+		body,
+		buttons
+	}
+}
+
+function uncover(d) {
+	return {
+		type: UNCOVER,
+		d
+	}
+}
+
 // REDUCERS
 function selected_filter(state='all', action) {
 	switch (action.type) {
@@ -938,6 +1070,9 @@ function gallery_items(state=[], action) {
 			return action.items;
 		case ADD_GALLERY_ITEMS:
 			return [ ...state, ...action.items ];
+		case REMOVE_GALLERY_ITEMS_BY:
+			var { by, value } = action;
+			return state.filter( el => el[by] !== value );
 		case INJECT_GALLERY_IMAGE_INFO:
 			var { src, info } = action;
 			return state.map(item => {
@@ -977,12 +1112,30 @@ function magnific(state=null, action) {
 	}
 }
 
+function slipcover(state={}, action) {
+	switch (action.type) {
+		case SHOW_COVER:
+			var { d, form, title, body, buttons } = action;
+			return Object.assign({}, state, {
+				[d]: { form, title, body, buttons }
+			});
+		case UNCOVER:
+			var { d } = action;
+			var new_state = Object.assign({}, state);
+			delete new_state[d];
+			return new_state;
+		default:
+			return state;
+	}
+}
+
 // `var` so app.js can access it
 var app = Redux.combineReducers({
 	selected_filter,
 	gallery_width,
 	gallery_items,
-	magnific
+	magnific,
+	slipcover
 });
 
 // end - react-redux
@@ -1012,4 +1165,14 @@ function formatTime(aDateOrTime) {
 	var meridiem = aDate.getHours() < 12 ? 'AM' : 'PM';
 
 	return mon + ' ' + day + ', ' + yr + ' - ' + hr + ':' + min + ' ' + meridiem;
+}
+
+function stopClickAndCheck0(e) {
+	e.stopPropagation();
+	e.preventDefault();
+	if (e.button === 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
