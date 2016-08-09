@@ -1362,6 +1362,18 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 									});
 								});
 							break;
+						case 'facebook':
+								btn.bType = 'menu-button';
+								btn.bMenu = [];
+								btn.bMenu.push({
+									cTxt: formatStringFromNameCore('copy_postlink', 'main'),
+									meta: {
+										data: {
+											copytxt: meta.data.post_link
+										}
+									}
+								});
+							break;
 						case 'savebrowse':
 						case 'savequick':
 								btn.bType = 'menu-button';
@@ -1698,7 +1710,7 @@ function commShowFileInOSExplorer(aArg, aReportProgress, aComm) {
 	var fileuri = aArg;
 
 	// convert fileuri to platform path
-	var path = Services.io.newURI(fileuri, null, null).QueryInterface(Components.interfaces.nsIFileURL).file.path;
+	var path = Services.io.newURI(fileuri, null, null).QueryInterface(Ci.nsIFileURL).file.path;
 
 	var nsifile = new nsIFile(path);
 	showFileInOSExplorer(nsifile);

@@ -802,6 +802,8 @@ span[data-service-name] {
     height: 200px;
     transform: scale(0.66);
     margin: 0 auto;
+    pointer-events: none;
+    z-index: -1;
 }
 .uil-default-css > div:nth-of-type(2) {
     -webkit-animation: uil-default-anim 1s linear infinite;

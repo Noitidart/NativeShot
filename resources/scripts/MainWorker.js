@@ -302,11 +302,6 @@ function fetchCore(aArg) {
 					case services.imguranon.code:
 							entry.src = 'http://i.imgur.com/' + entry.i + '.png'
 						break;
-					case services.facebook.code:
-							// TODO: figure out direct link to facebook image upload
-							entry.src = entry.p;
-							delete entry.p;
-						break;
 					case services.savequick.code:
 					case services.savebrowse.code:
 							// var path = OS.Path.join(entry.f, entry.n);
@@ -319,7 +314,7 @@ function fetchCore(aArg) {
 					default:
 						if (!getServiceFromCode(entry.t).entry.noimg) {
 							// it has a l, turn that to src
-							if (!entry.l) { console.error('deverror: i thought this should have l but it doesnt:', entry); throw new Error('deverror: i thought this would have l') }
+							// if (!entry.l) { console.error('deverror: i thought this should have l but it doesnt:', entry); throw new Error('deverror: i thought this would have l') }
 							entry.src = entry.l;
 							// delete entry.l;
 						} // else it is noimg

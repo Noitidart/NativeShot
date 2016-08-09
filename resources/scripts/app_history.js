@@ -389,9 +389,12 @@ var Gallery = React.createClass({
 					} else {
 						// failed
 						running_colheight[col] += GALENTRY_MIN_HEIGHT;
-						item_rel = React.createElement('div', { className:'flex-center' },
-							image_info.reason
-						);
+						item_rel = [
+							React.createElement(SliphoverContainer, { entry, display_img_dims:null }),
+							React.createElement('div', { className:'flex-center' },
+								image_info.reason
+							)
+						];
 					}
 				} else {
 					if (!gImageInfoLoading[entry.src]) {
@@ -400,9 +403,12 @@ var Gallery = React.createClass({
 						setTimeout(loadImageForEntry.bind(null, entry), 0);
 					}
 					running_colheight[col] += GALENTRY_MIN_HEIGHT;
-					item_rel = React.createElement('div', { className:'uil-default-css' },
-						[0, 36, 72, 108, 144, 180, 216, 252, 288, 324].map( deg => React.createElement('div', {style:{transform:'rotate('+deg+'deg) translate(0,-60px)'}}) )
-					);
+					item_rel = [
+						React.createElement(SliphoverContainer, { entry, display_img_dims:null }),
+						React.createElement('div', { className:'uil-default-css' },
+							[0, 36, 72, 108, 144, 180, 216, 252, 288, 324].map( deg => React.createElement('div', {style:{transform:'rotate('+deg+'deg) translate(0,-60px)'}}) )
+						)
+					];
 				}
 
 				return React.createElement(GalleryItem, item_attr,
@@ -717,24 +723,33 @@ var Sliphover = React.createClass({
 		// magnific image
 		var { entry, display_img_dims } = this.props; // attr
 
-		var gallery_domel = document.getElementById('gallery');
-
-		store.dispatch(showMagnific(
-			{
-				entry,
-				src: entry.image_info.src,
-				from: {
-					w: display_img_dims.width,
-					h: display_img_dims.height,
-					x: display_img_dims.left + gallery_domel.offsetLeft,
-					y: display_img_dims.top + gallery_domel.offsetTop
-				},
-				to: {
-					w: entry.image_info.width,
-					h: entry.image_info.height
+		if (!entry.image_info.ok) {
+			callInBootstrap('loadOneTab', {
+				URL: entry.src,
+				params: {
+					inBackground: false
 				}
-			}
-		));
+			});
+		} else {
+			var gallery_domel = document.getElementById('gallery');
+
+			store.dispatch(showMagnific(
+				{
+					entry,
+					src: entry.image_info.src,
+					from: {
+						w: display_img_dims.width,
+						h: display_img_dims.height,
+						x: display_img_dims.left + gallery_domel.offsetLeft,
+						y: display_img_dims.top + gallery_domel.offsetTop
+					},
+					to: {
+						w: entry.image_info.width,
+						h: entry.image_info.height
+					}
+				}
+			));
+		}
 
 	},
 	forget: function(e) {
