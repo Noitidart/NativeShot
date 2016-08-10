@@ -1288,7 +1288,7 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					btn.bType = 'button';
 				break;
 			case 'HOLD_USER_TWEET_NEEDED':
-					btn.bTxt = formatStringFromNameCore('hold_user_tweet_needed', 'main'),
+					btn.bTxt = formatStringFromNameCore(meta.serviceid == 'twitter' ? 'hold_user_tweet_needed' : 'hold_user_post_needed', 'main'),
 					btn.bDisabled = false;
 					btn.bType = 'button';
 				break;
@@ -1494,7 +1494,7 @@ function attnBtnClick(doClose, aBrowser) {
 			break;
 		case 'HOLD_USER_TWEET_NEEDED':
 				var msg = {value:''};
-				var result = Services.prompt.prompt(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Tweet Message', 'Type a message you want to Tweet these images with:', msg, null, {});
+				var result = Services.prompt.prompt(Services.wm.getMostRecentWindow('navigator:browser'), formatStringFromNameCore(serviceid == 'twitter' ? 'prompt_title_tweet' : 'prompt_title_post', 'main'), formatStringFromNameCore(serviceid == 'twitter' ? 'prompt_body_tweet' : 'prompt_body_post', 'main'), msg, null, {});
 				if (result) {
 					callInMainworker('withHoldResume', {
 						actionid_serviceid: this.btn.meta.actionid,
