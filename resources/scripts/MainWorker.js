@@ -2805,6 +2805,8 @@ function bootstrapTimeout(milliseconds) {
 
 // reaons:
 var reasons = {
+	SUCCESS: 'SUCCESS',
+	ABORT_ERROR: 'ABORT_ERROR',
 	HOLD_ERROR: 'HOLD_ERROR',
 	HOLD_USER_AUTH_NEEDED: 'HOLD_USER_AUTH_NEEDED', // user needs to grant oauth authorization
 	HOLD_UNHANDLED_STATUS_CODE: 'HOLD_UNHANDLED_STATUS_CODE',
@@ -3185,6 +3187,12 @@ function processAction(aArg, aReportProgress, aComm) {
 	// var { actionid, sessionid, serviceid, arrbuf/dataurl, action_options, width, height } = aArg;
 	// actionid is time the action started
 	// sessionid is the time the screenshot was taken
+		// special actions - based on action_options.alt_action
+			// action_options.alt_action == 'delete'
+				// action_options.d = d in log
+				// serviceid
+				// actionid - the Date.now() it started
+				// nothing else, no arrbuf/dataurl, no width, no height
 	var shot = aArg;
 	// shot.shotid = shot.actionid; // shotid can be time, as time is down to millisecond and thus should be unique per shot
 

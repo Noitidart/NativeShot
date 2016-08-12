@@ -673,7 +673,7 @@ var Magnific = React.createClass({
 
 // start - slipcover button functions
 function workerWithEntry(entry, verb) {
-	// verb - "forget_d", "trash"
+	// verb - "forget_d", "trash", "delete"
 
 	var { d } = entry;
 
@@ -689,6 +689,16 @@ function workerWithEntry(entry, verb) {
 		case 'trash':
 				worker_method = 'trashEntry';
 				worker_arg = entry.d;
+		case 'delete':
+				worker_method = 'processAction';
+				worker_arg = {
+					serviceid: getServiceFromCode(entry.t).serviceid,
+					actionid: Date.now(),
+					action_options: {
+						alt_action: 'delete',
+						d
+					}
+				};
 			break;
 	}
 
@@ -709,7 +719,18 @@ function workerWithEntry(entry, verb) {
 						func: 'uncover'
 					}
 				];
-				store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), formatStringFromNameCore('error_' + l10n_key, 'main', [reason]), buttons));
+
+				var error_txt;
+				switch (reason) {
+					case 'ABORT_ERROR':
+							var { data } = aArg;
+							var { error_details } = data;
+							error_txt = error_details;
+						break;
+					default:
+						error_txt = reason;
+				}
+				store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), formatStringFromNameCore('error_' + l10n_key, 'main', [error_txt]), buttons));
 			}
 		}
 	});
@@ -797,6 +818,12 @@ var Sliphover = React.createClass({
 	},
 	delete: function(e) {
 		if (!stopClickAndCheck0(e)) { return }
+
+		var { entry } = this.props; // attr
+
+		this.onConfirm = workerWithEntry.bind(null, entry, 'delete');
+		store.dispatch(showCover(entry.d, 'confirm', formatStringFromNameCore('title_delete', 'main'), formatStringFromNameCore('confirm_delete', 'main')));
+
 	},
 	onConfirm: null,
 	confirm: function(e) {
@@ -938,7 +965,7 @@ var Sliphover = React.createClass({
 						// label - string
 						// func - string
 					var { icon, label, func } = button;
-					button_rels.push(React.createElement('a', { href:'#', className:(icon ? icon : undefined), onClick:this[func] },
+					button_rels.push(React.createElement('a', { className:(icon ? icon : undefined), onClick:this[func] },
 						label
 					));
 				}
