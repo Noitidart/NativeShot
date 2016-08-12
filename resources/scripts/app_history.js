@@ -833,16 +833,16 @@ var Sliphover = React.createClass({
 							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+							React.createElement('a', { className:'fa_link', onClick:this.copy },
 								formatStringFromNameCore('just_copy', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_folder-open', onClick:this.open },
+							React.createElement('a', { className:'fa_folder-open', onClick:this.open },
 								formatStringFromNameCore('open', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_trash', onClick:this.trash },
+							React.createElement('a', { className:'fa_trash', onClick:this.trash },
 								formatStringFromNameCore('trash', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+							React.createElement('a', { className:'fa_history', onClick:this.forget },
 								formatStringFromNameCore('forget', 'main')
 							)
 						];
@@ -854,14 +854,14 @@ var Sliphover = React.createClass({
 							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+							React.createElement('a', { className:'fa_link', onClick:this.copy },
 								formatStringFromNameCore('just_copy', 'main')
 							),
 							React.DOM.br(),
-							React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.delete },
+							React.createElement('a', { className:'fa_cancel', onClick:this.delete },
 								formatStringFromNameCore('delete', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+							React.createElement('a', { className:'fa_history', onClick:this.forget },
 								formatStringFromNameCore('forget', 'main')
 							)
 						];
@@ -871,14 +871,14 @@ var Sliphover = React.createClass({
 							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+							React.createElement('a', { className:'fa_link', onClick:this.copy },
 								formatStringFromNameCore('just_copy', 'main')
 							),
 							React.DOM.br(),
-							React.createElement('a', { href:'#', className:'fa_trash', onClick:this.trash },
+							React.createElement('a', { className:'fa_trash', onClick:this.trash },
 								formatStringFromNameCore('trash', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+							React.createElement('a', { className:'fa_history', onClick:this.forget },
 								formatStringFromNameCore('forget', 'main')
 							)
 						];
@@ -889,14 +889,14 @@ var Sliphover = React.createClass({
 							React.createElement('a', { href:entry.src, className:'fa_eye', onClick:this.view },
 								formatStringFromNameCore('view', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_link', onClick:this.copy },
+							React.createElement('a', { className:'fa_link', onClick:this.copy },
 								formatStringFromNameCore('just_copy', 'main')
 							),
 							React.DOM.br(),
-							React.createElement('a', { href:'#', className:'fa_' + code_info.serviceid, onClick:this.open },
+							React.createElement('a', { href:entry.p, className:'fa_' + code_info.serviceid, onClick:this.open },
 								formatStringFromNameCore(code_info.serviceid == 'twitter' ? 'open_tweet' : 'open_post', 'main')
 							),
-							React.createElement('a', { href:'#', className:'fa_history', onClick:this.forget },
+							React.createElement('a', { className:'fa_history', onClick:this.forget },
 								formatStringFromNameCore('forget', 'main')
 							)
 						];
@@ -923,10 +923,10 @@ var Sliphover = React.createClass({
 			var button_rels;
 			if (form == 'confirm') {
 				button_rels = [
-					React.createElement('a', { href:'#', className:'fa_ok', onClick:this.confirm },
+					React.createElement('a', { className:'fa_ok', onClick:this.confirm },
 						formatStringFromNameCore('okay', 'main')
 					),
-					React.createElement('a', { href:'#', className:'fa_cancel', onClick:this.uncover },
+					React.createElement('a', { className:'fa_cancel', onClick:this.uncover },
 						formatStringFromNameCore('cancel', 'main')
 					)
 				];

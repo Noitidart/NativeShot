@@ -710,6 +710,8 @@ span[data-service-name] {
 
     text-decoration: none;
     outline: none;
+
+    cursor: pointer;
 }
 
 .slip-overlay h4 {
