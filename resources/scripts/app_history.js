@@ -703,6 +703,7 @@ function workerWithEntry(entry, verb) {
 	}
 
 	store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), formatStringFromNameCore('processing_' + l10n_key, 'main')));
+
 	callInMainworker(worker_method, worker_arg, function(aArg) {
 		var { __PROGRESS, reason } = aArg;
 
@@ -723,9 +724,22 @@ function workerWithEntry(entry, verb) {
 				var error_txt;
 				switch (reason) {
 					case 'ABORT_ERROR':
-							var { data } = aArg;
+							var { subreason, data } = aArg;
 							var { error_details } = data;
 							error_txt = error_details;
+
+							switch (subreason) {
+								case 'UNHANDLED_STATUS_CODE':
+										buttons.push({
+											icon: 'fa_popup-iconic',
+											label: formatStringFromNameCore('show_error', 'main'),
+											func: 'showError',
+											data: {
+												response: data.response_details.response
+											}
+										});
+									break;
+							}
 						break;
 					default:
 						error_txt = reason;
@@ -825,6 +839,7 @@ var Sliphover = React.createClass({
 		store.dispatch(showCover(entry.d, 'confirm', formatStringFromNameCore('title_delete', 'main'), formatStringFromNameCore('confirm_delete', 'main')));
 
 	},
+	gui_data: null,
 	onConfirm: null,
 	confirm: function(e) {
 		// onConfirm must be set
@@ -840,7 +855,15 @@ var Sliphover = React.createClass({
 		var { d } = entry;
 
 		this.onConfirm = null; // in case there was one
+		this.gui_data = null;
 		store.dispatch(uncover(d));
+	},
+	showError: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+
+		callInBootstrap('beautifyJs', this.gui_data.response, function(aBeautified) {
+			alert(aBeautified);
+		});
 	},
 	render: function() {
 		var { entry } = this.props; // attr
@@ -964,7 +987,10 @@ var Sliphover = React.createClass({
 						// icon - "fa_..." // NOTE: must NOT be "fa-" but should be "fa_", as the underscore signifies its in the pseudo element, otherwise it stylizes the button label font
 						// label - string
 						// func - string
-					var { icon, label, func } = button;
+					var { icon, label, func, data } = button;
+					if (data) {
+						this.gui_data = data;
+					}
 					button_rels.push(React.createElement('a', { className:(icon ? icon : undefined), onClick:this[func] },
 						label
 					));

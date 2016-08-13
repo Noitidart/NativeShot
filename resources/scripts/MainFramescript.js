@@ -22,6 +22,8 @@ var MATCH_APP = 1;
 var MATCH_TWITTER = 2;
 var MATCH_EDITOR = 3;
 
+var gLastReloadDueToError = 0;
+
 // start - pageLoader
 var pageLoader = {
 	// start - devuser editable
@@ -113,7 +115,8 @@ var pageLoader = {
 	error: function(aContentWindow, aDocURI) {
 		// triggered when page fails to load due to error
 		console.warn('hostname page ready, but an error page loaded, so like offline or something, aHref:', aContentWindow.location.href, 'aDocURI:', aDocURI);
-		if (aContentWindow.location.href.startsWith('about:nativeshot')) {
+		if (aContentWindow.location.href.startsWith('about:nativeshot') && Date.now() - gLastReloadDueToError > 100) {
+			gLastReloadDueToError = Date.now();
 			console.warn('it is about:nativeshot, this hpapens if the connection to load about:nativeshot was established before the about page was setup. which happens on gBrowser.loadOneTab(about:nativeshot). so load it again, href:', aContentWindow.location.href);
 			aContentWindow.location.href = aContentWindow.location.href;
 		}

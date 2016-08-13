@@ -1146,6 +1146,10 @@ function setApplyBackgroundUpdates(aNewApplyBackgroundUpdates) {
 		addon.applyBackgroundUpdates = aNewApplyBackgroundUpdates
 	);
 }
+
+function beautifyJs(aStr) {
+	return BEAUTIFY.js(aStr);
+}
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content
@@ -1304,6 +1308,11 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 				break;
 			case 'UPLOAD_GETTING_META':
 					btn.bTxt = formatStringFromNameCore('upload_getting_meta', 'main'),
+					btn.bDisabled = false;
+					btn.bType = 'button';
+				break;
+			case 'SERVER_RETRY_WAIT':
+					btn.bTxt = formatStringFromNameCore('server_retry_wait', 'main', [data.countdown]);
 					btn.bDisabled = false;
 					btn.bType = 'button';
 				break;
