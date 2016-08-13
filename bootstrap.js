@@ -591,7 +591,7 @@ function sendWinArrToEditors() {
 }
 function broadcastToOthers(aArg) {
 	var { iMon } = aArg;
-	var shots = gSession.shots;
+	var shots = gSession.shots; // TODO: sometimes i get this error in console `TypeError: shots is undefined[Learn More]bootstrap.js:596:6` baffling, i need to figure out how to fix this, it doesnt seem to cause issues that i can find
 	// console.log('gSession:', gSession);
 	var l = shots.length;
 	for (var i=0; i<l; i++) {

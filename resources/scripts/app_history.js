@@ -707,19 +707,41 @@ function workerWithEntry(entry, verb) {
 	callInMainworker(worker_method, worker_arg, function(aArg) {
 		var { __PROGRESS, reason } = aArg;
 
+		var buttons = [
+			{
+				icon: 'fa_reply',
+				label: formatStringFromNameCore('back', 'main'),
+				func: 'uncover'
+			}
+		];
+
 		if (__PROGRESS) {
-			store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), reason));
+			var error_txt;
+			switch (reason) {
+				case 'HOLD_USER_AUTH_NEEDED':
+						buttons.push({
+							icon: 'fa_popup-iconic',
+							label: formatStringFromNameCore('reauth_button', 'main'),
+							func: 'reauth'
+						});
+
+						store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), formatStringFromNameCore('manual_auth_needed', 'main'), buttons));
+					break;
+				case 'SERVER_RETRY_WAIT':
+					var { data } = aArg;
+					error_txt = formatStringFromNameCore('server_retry_wait', 'main', [data.countdown]);
+					// break; // dont break so it goes into default section
+				default:
+					if (!error_txt) {
+						error_txt = reason;
+					}
+					// no buttons for message updates due to progress
+					store.dispatch(showCover(d, 'message', formatStringFromNameCore('title_' + l10n_key, 'main'), error_txt));
+			}
 		} else {
 			if (reason == 'SUCCESS') {
 				store.dispatch(removeGalleryItemsBy('d', d));
 			} else {
-				var buttons = [
-					{
-						icon: 'fa_reply',
-						label: formatStringFromNameCore('back', 'main'),
-						func: 'uncover'
-					}
-				];
 
 				var error_txt;
 				switch (reason) {
@@ -857,6 +879,15 @@ var Sliphover = React.createClass({
 		this.onConfirm = null; // in case there was one
 		this.gui_data = null;
 		store.dispatch(uncover(d));
+	},
+	reauth: function(e) {
+		if (!stopClickAndCheck0(e)) { return }
+
+		var { entry } = this.props; // attr
+
+		var { serviceid } = getServiceFromCode(entry.t);
+
+		callInMainworker('openAuthTab', serviceid);
 	},
 	showError: function(e) {
 		if (!stopClickAndCheck0(e)) { return }
