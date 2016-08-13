@@ -227,6 +227,7 @@ function init(objCore) {
 	setTimeout(readFilestore, 0); // init this as gFilestoreDefaultGetters should be sync, but `prefs__quick_save_dir` not right now, so i have to init it
 	// readFilestore();
 
+	setTimeout(hotkeysRegister, 0);
 
 	return {
 		core,
@@ -239,6 +240,11 @@ self.onclose = function() {
 	console.log('doing mainworker term proc');
 
 	writeFilestore();
+
+	if (gHKILoopInterval) {
+		// it means its running, so lets stop it
+		hotkeysUnregister();
+	}
 
 	Comm.server.unregAll('worker');
 
@@ -257,7 +263,7 @@ self.onclose = function() {
 			break;
 	}
 
-	console.log('ok ready to terminate');
+	console.log('ok terminated');
 }
 
 // start - Comm functions
@@ -3384,6 +3390,284 @@ function actionCatch(shot, aActionFinalizer, aReportProgress, aResumer, aPromise
 	});
 }
 // end - functions called by bootstrap
+
+// start - system hotkey
+var gHKI = { // stands for globalHotkeyInfo
+	any_registered: false, // false or true depending on if any registered
+	all_registered: false, // false or true if all hotkeys succesfully registered
+	loop_interval_ms: 200, // only for windows and xcb
+	min_time_between_repeat: 1000,
+	hotkeys: undefined, // as i need access to core.os.mname first, this will happen after init, i run hotkeysRegister after init, so i do it there
+		// on succesful registration, the entry is marked with __REGISTRED: {} and holds data needed for unregistration
+	next_hotkey_id: 1
+};
+var gHKILoopInterval = null;
+
+function hotkeysRegister() {
+	if (!gHKI.hotkeys) {
+		switch (core.os.mname) {
+			case 'winnt':
+					gHKI.hotkeys = [
+						{
+							code: ostypes.CONST.VK_SNAPSHOT,
+							callback: 'screenshot'
+						}
+					];
+				break;
+			case 'gtk':
+					gHKI.hotkeys = [
+						{
+							code: ostypes.CONST.XK_Print,
+							// mods: // if undefined, or object is empty it will use ostypes.CONST.XCB_NONE
+							callback: 'screenshot'
+						},
+						{
+							code: ostypes.CONST.XK_Print,
+							mods: {
+								capslock: true // capslock is only available as mod on linux
+							},
+							callback: 'screenshot'
+						},
+						{
+							code: ostypes.CONST.XK_Print,
+							mods: {
+								numlock: true // numlock is only available as mod on linux
+							},
+							callback: 'screenshot'
+						},
+						{
+							code: ostypes.CONST.XK_Print,
+							mods: {
+								numlock:true,
+								capslock: true
+							},
+							callback: 'screenshot'
+						}
+					];
+				break;
+			case 'darwin':
+					gHKI.hotkeys = [
+						{
+							code: ostypes.CONST.KEY_3,
+							mods: {
+								meta: true
+							},
+							callback: 'screenshot'
+						}
+					];
+				break;
+			default:
+				console.error('your os is not supported for global platform hotkey');
+				throw new Error('your os is not supported for global platform hotkey');
+		}
+	}
+
+	switch (core.os.mname) {
+		case 'winnt':
+
+				var hotkeys = gHKI.hotkeys;
+				for (var hotkey of hotkeys) {
+					var { __REGISTERED, mods, code:code_os } = hotkey;
+
+					if (__REGISTERED) {
+						console.warn('hotkey already registered for entry:', hotkey);
+						continue;
+					} else {
+						var mods_os;
+						if (!mods) {
+							mods_os = ostypes.CONST.MOD_NONE;
+						} else {
+							// possible mods:
+							// TODO: not yet supported
+						}
+						var hotkeyid = gHKI.next_hotkey_id++;
+						var rez_reg = ostypes.API('RegisterHotKey')(null, hotkeyid, mods_os, code_os);
+						if (rez_reg) {
+							hotkey.__REGISTERED = {
+								hotkeyid,
+								last_triggered: 0 // Date.now() of when it was last triggered, for use to check with min_time_between_repeat
+							};
+						} else {
+							console.error('failed to register hotkey:', hotkey);
+						}
+					}
+				}
+
+				hotkeysStartLoop();
+
+			break;
+		case 'gtk':
+
+				//
+
+			break;
+		case 'darwin':
+
+				//
+
+			break;
+		default:
+			console.error('your os is not supported for global platform hotkey');
+			throw new Error('your os is not supported for global platform hotkey');
+	}
+}
+
+function hotkeysUnregister() {
+
+	hotkeysStopLoop()
+
+	switch (core.os.mname) {
+		case 'winnt':
+
+				var hotkeys = gHKI.hotkeys;
+				for (var hotkey of hotkeys) {
+					var { __REGISTERED, mods, code:code_os } = hotkey;
+
+					if (!__REGISTERED) {
+						console.warn('this one is not registered:', hotkey);
+					} else {
+						var { hotkeyid } = __REGISTERED;
+						var rez_unreg = ostypes.API('UnregisterHotKey')(null, hotkeyid);
+						if (!rez_unreg) {
+							console.error('failed to unregister hotkey:', hotkey);
+						} else {
+							delete hotkey.__REGISTERED;
+						}
+					}
+				}
+
+			break;
+		case 'gtk':
+
+				//
+
+			break;
+		case 'darwin':
+
+				//
+
+			break;
+		default:
+			console.error('your os is not supported for global platform hotkey');
+			throw new Error('your os is not supported for global platform hotkey');
+	}
+
+	console.log('succesfully unregistered hotkeys');
+}
+
+function hotkeysStartLoop() {
+	if (gHKILoopInterval !== null) {
+		// never stopped loop
+		return;
+	}
+
+	switch (core.os.mname) {
+		case 'winnt':
+
+				gHKI.win_msg = ostypes.TYPE.MSG();
+
+			break;
+		case 'gtk':
+
+				//
+
+			break;
+		case 'darwin':
+
+				//
+
+			break;
+		// no need for this `default` block as `hotkeysStopLoop`, `hotkeysStartLoop`, and `hotkeysLoop` are only triggered after `hotkeysRegister` was succesful
+		// default:
+		// 	console.error('your os is not supported for global platform hotkey');
+		// 	throw new Error('your os is not supported for global platform hotkey');
+	}
+
+	gHKILoopInterval = setInterval(hotkeysLoop, gHKI.loop_interval_ms);
+}
+
+function hotkeysStopLoop() {
+	if (gHKILoopInterval === null) {
+		// never started loop
+		return;
+	}
+
+	clearInterval(gHKILoopInterval);
+	gHKILoopInterval = null;
+
+	switch (core.os.mname) {
+		case 'winnt':
+
+				delete gHKI.win_msg;
+
+			break;
+		case 'gtk':
+
+				//
+
+			break;
+		case 'darwin':
+
+				//
+
+			break;
+		// no need for this `default` block as `hotkeysStopLoop`, `hotkeysStartLoop`, and `hotkeysLoop` are only triggered after `hotkeysRegister` was succesful
+		// default:
+		// 	console.error('your os is not supported for global platform hotkey');
+		// 	throw new Error('your os is not supported for global platform hotkey');
+	}
+
+}
+
+function hotkeysLoop() {
+	// event loop for hotkey
+	switch (core.os.mname) {
+		case 'winnt':
+
+				var msg = gHKI.win_msg;
+				var hotkeys = gHKI.hotkeys;
+				while (ostypes.API('PeekMessage')(msg.address(), null, ostypes.CONST.WM_HOTKEY, ostypes.CONST.WM_HOTKEY, ostypes.CONST.PM_REMOVE)) {
+					// console.log('in peek, msg:', msg);
+					for (var hotkey of hotkeys) {
+						var { callback, __REGISTERED } = hotkey;
+						if (__REGISTERED) {
+							var { last_triggered, hotkeyid } = __REGISTERED;
+							if (cutils.jscEqual(hotkeyid, msg.wParam)) {
+								var now_triggered = Date.now();
+								if (now_triggered - last_triggered > gHKI.min_time_between_repeat) {
+									__REGISTERED.last_triggered = now_triggered;
+									hotkeyCallbacks[callback]();
+								}
+								else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms'); }
+							}
+						}
+					}
+				}
+
+			break;
+		case 'gtk':
+
+				//
+
+			break;
+		case 'darwin':
+
+				//
+
+			break;
+		default:
+			console.error('your os is not supported for global platform hotkey');
+			throw new Error('your os is not supported for global platform hotkey');
+	}
+}
+
+
+var hotkeyCallbacks = {
+	screenshot: function() {
+		console.error('in trigger callback! "screenshot"');
+	}
+};
+// end - system hotkey
 
 // End - Addon Functionality
 
