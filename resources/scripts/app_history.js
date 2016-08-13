@@ -687,15 +687,23 @@ function workerWithEntry(entry, verb) {
 				worker_arg = entry.d;
 			break;
 		case 'trash':
-				worker_method = 'trashEntry';
-				worker_arg = entry.d;
+				if (entry.t === core.nativeshot.services.savebrowse.code || entry.t === core.nativeshot.services.savequick.code) {
+					worker_method = 'trashEntry';
+					worker_arg = entry.d;
+					break;
+				} else {
+					// its `dropbox`
+					// dont break, so it goes into the `case 'delete'`
+				}
+			// break; // dont break, as if its not `savebrowse` or `savequick`, like `dropbox`, then it should go into 'delete'
+		case 'trash': // only for `dropbox`
 		case 'delete':
 				worker_method = 'processAction';
 				worker_arg = {
 					serviceid: getServiceFromCode(entry.t).serviceid,
 					actionid: Date.now(),
 					action_options: {
-						alt_action: 'delete',
+						alt_action: verb,
 						d
 					}
 				};
