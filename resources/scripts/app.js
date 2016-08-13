@@ -383,7 +383,7 @@ var Button = React.createClass({
 		// style - int;enum:1,2,3,4,5,6
 
 		return React.createElement('div', { className:'butt-style button-style-' + style },
-			React.createElement('a', { className:'b-' + size, href:'#', onClick },
+			React.createElement('a', { className:'b-' + size, onClick },
 				text
 			)
 		);
@@ -497,3 +497,13 @@ function escapeRegExp(text) {
 	return text.replace(arguments.callee.sRE, '\\$1');
 }
 // end - common helper functions
+
+function stopClickAndCheck0(e) {
+	e.stopPropagation();
+	e.preventDefault();
+	if (e.button === 0) {
+		return true;
+	} else {
+		return false;
+	}
+}

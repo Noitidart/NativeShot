@@ -1159,7 +1159,8 @@ function broadcastToOpenHistory(aMandA) {
 		var window = windows.getNext();
 		var tabs = window.gBrowser.tabContainer.childNodes;
 		for (var tab of tabs) {
-			if (tab.linkedBrowser.currentURI.spec.toLowerCase() == 'about:nativeshot') {
+			var spec_lower = tab.linkedBrowser.currentURI.spec.toLowerCase();
+			if (spec_lower == 'about:nativeshot' || spec_lower == 'about:nativeshot#') {
 				callInContentinframescript('commDispatch', aMandA, null, tab.linkedBrowser.messageManager);
 			}
 		}

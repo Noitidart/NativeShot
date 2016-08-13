@@ -372,7 +372,7 @@ header.type3 {
 
 /* domgroup:buttons */
 .butt-style { display: inline-block; }
-.butt-style a {text-transform: uppercase;  display: block; letter-spacing: 1px; font-weight: 300; transition: all 0.27s cubic-bezier(0.000, 0.000, 0.580, 1.000);}
+.butt-style a { cursor:pointer; text-transform: uppercase;  display: block; letter-spacing: 1px; font-weight: 300; transition: all 0.27s ease-out;}
 .button-style-1 a { background: none; border: 1px solid #222; color: #222; display: inline-block;}
 .button-style-1 a:hover {background: #222; color: #fff;}
 .button-style-2 a { background: #222; border: 1px solid #222; color: #fff; display: inline-block;}

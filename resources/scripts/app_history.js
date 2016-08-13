@@ -1382,16 +1382,6 @@ function formatTime(aDateOrTime) {
 	return mon + ' ' + day + ', ' + yr + ' - ' + hr + ':' + min + ' ' + meridiem;
 }
 
-function stopClickAndCheck0(e) {
-	e.stopPropagation();
-	e.preventDefault();
-	if (e.button === 0) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
 function commDispatch(aArg) {
 	var { m, a } = aArg;
 	store.dispatch(gCommScope[m](...a));
