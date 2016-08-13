@@ -297,32 +297,11 @@ function fetchCore(aArg) {
 
 			var services = core.nativeshot.services;
 			for (var entry of logsrc) {
-				switch (entry.t) {
-					case services.imgur.code:
-					case services.imguranon.code:
-							entry.src = 'http://i.imgur.com/' + entry.i + '.png'
-						break;
-					case services.savequick.code:
-					case services.savebrowse.code:
-							// var path = OS.Path.join(entry.f, entry.n);
-							// var fileuri = OS.Path.toFileURI(path);
-							entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
-							// promiseallarr.push(setEntryResourceURI(fileuri, entry));
-							delete entry.f;
-							delete entry.n;
-						break;
-					default:
-						if (!getServiceFromCode(entry.t).entry.noimg) {
-							// it has a l, turn that to src
-							// if (!entry.l) { console.error('deverror: i thought this should have l but it doesnt:', entry); throw new Error('deverror: i thought this would have l') }
-							entry.src = entry.l;
-							// delete entry.l;
-						} // else it is noimg
-				}
+				mutateEntryForLogsrc(entry);
 			}
 
 			// sort by `d` desc
-			logsrc.sort((a,b) => a-b);
+			logsrc.sort((a,b) => b.d-a.d); // crossfile-link189391
 
 			rez.hydrant_ex.logsrc = logsrc;
 		}
@@ -351,6 +330,33 @@ function fetchCore(aArg) {
 	} else {
 		return rez;
 	}
+}
+
+function mutateEntryForLogsrc(entry) {
+	var services = core.nativeshot.services;
+	switch (entry.t) {
+		case services.imgur.code:
+		case services.imguranon.code:
+				entry.src = 'http://i.imgur.com/' + entry.i + '.png'
+			break;
+		case services.savequick.code:
+		case services.savebrowse.code:
+				// var path = OS.Path.join(entry.f, entry.n);
+				// var fileuri = OS.Path.toFileURI(path);
+				entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
+				// promiseallarr.push(setEntryResourceURI(fileuri, entry));
+				delete entry.f;
+				delete entry.n;
+			break;
+		default:
+			if (!getServiceFromCode(entry.t).entry.noimg) {
+				// it has a l, turn that to src
+				// if (!entry.l) { console.error('deverror: i thought this should have l but it doesnt:', entry); throw new Error('deverror: i thought this would have l') }
+				entry.src = entry.l;
+				// delete entry.l;
+			} // else it is noimg
+	}
+	return entry;
 }
 // end - Comm functions
 
@@ -2863,7 +2869,9 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 				path = OS.Path.join(f, modded_n);
 			}
 			OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf), { noOverwrite:true });
-
+			if (modded_n) {
+				n = modded_n;
+			}
 			aActionFinalizer({
 				reason: 'SUCCESS',
 				data: {
@@ -3258,6 +3266,16 @@ function removeFromLogD(d, aReportProgress) {
 		verb: 'filter'
 	});
 
+	setTimeout(function() {
+		callInBootstrap('broadcastToOpenHistory', {
+			m: 'removeGalleryItemsBy',
+			a: [
+				'd',
+				d
+			]
+		});
+	}, 0);
+
 	return {
 		reason: 'SUCCESS'
 	};
@@ -3265,6 +3283,26 @@ function removeFromLogD(d, aReportProgress) {
 
 function removeFromLogT(t) {
 	// removes all entries where `entry.t` === `t`
+
+	updateFilestoreEntry({
+		value: el => el.t === t,
+		mainkey: 'log',
+		verb: 'filter'
+	});
+
+	setTimeout(function() {
+		callInBootstrap('broadcastToOpenHistory', {
+			m: 'removeGalleryItemsBy',
+			a: [
+				't',
+				t
+			]
+		});
+	}, 0);
+
+	return {
+		reason: 'SUCCESS'
+	};
 }
 
 function addShotToLog(shot, aExtraKeys={}) {
@@ -3306,6 +3344,14 @@ function addShotToLog(shot, aExtraKeys={}) {
 		value: log_entry,
 		mainkey: 'log',
 		verb: 'push'
+	});
+
+	var cloned = JSON.parse(JSON.stringify(log_entry));
+	callInBootstrap('broadcastToOpenHistory', {
+		m: 'addGalleryItems',
+		a: [
+			[mutateEntryForLogsrc(cloned)]
+		]
 	});
 }
 

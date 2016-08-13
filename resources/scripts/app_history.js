@@ -190,15 +190,15 @@ var Filters = React.createClass({
 
 var Bars = React.createClass({
 	render: function() {
-		var { selected_filter } = this.props; // mapped state
+		var { selected_filter, all_items } = this.props; // mapped state
 		var { setFilter } = this.props; // dispatchers
 
 		const MAX_COL = 3;
 
 		var display_filters = getDisplayFilters(selected_filter);
 		var services = core.nativeshot.services;
-		var log = hydrant_ex.logsrc;
 
+		var log = all_items;
 		if (selected_filter == 'all') {
 			// get counts by type (`serviceid` in `filter_entry` is actually `type`)
 			for (var filter of display_filters) {
@@ -257,7 +257,7 @@ var Bars = React.createClass({
 						React.createElement(CountTo, { transition:'ease', duration:2000, mountval:0, end:filter.cnt })
 					),
 					React.createElement('div', { className:'line-bg' },
-						React.createElement('div', { className:'line-fill', ref:(filter.per > 0 ? animLine.bind(null, filter.per) : undefined) })
+						React.createElement('div', { className:'line-fill', ref:animLine.bind(null, filter.per) })
 					)
 				)
 			);
@@ -355,7 +355,7 @@ var Gallery = React.createClass({
 				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
 
 				var item_rel;
-				var item_attr = { key:entry.src, className:'galentry', style:{width:colwidthpx, transform} };
+				var item_attr = { key:entry.d, className:'galentry', style:{width:colwidthpx, transform} };
 
 				var image_info = entry.image_info;
 				if (image_info) { // link39193888 - two ways to check if, check gImageInfoLoading or entry.image_info
@@ -1082,7 +1082,8 @@ var FiltersContainer = ReactRedux.connect(
 var BarsContainer = ReactRedux.connect(
 	function mapStateToProps(state, ownProps) {
 		return {
-			selected_filter: state.selected_filter
+			selected_filter: state.selected_filter,
+			all_items: state.gallery_items
 		}
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
@@ -1277,10 +1278,16 @@ function gallery_items(state=[], action) {
 		case OVERWRITE_GALLERY_ITEMS:
 			return action.items;
 		case ADD_GALLERY_ITEMS:
-			return [ ...state, ...action.items ];
+			var new_state = [ ...action.items, ...state ];
+			new_state.sort((a,b) => b.d-a.d); // crossfile-link189391
+			return new_state;
 		case REMOVE_GALLERY_ITEMS_BY:
 			var { by, value } = action;
-			return state.filter( el => el[by] !== value );
+			if (state.find(el => el[by] === value)) {
+				return state.filter( el => el[by] !== value );
+			} else {
+				return state;
+			}
 		case INJECT_GALLERY_IMAGE_INFO:
 			var { src, info } = action;
 			return state.map(item => {
@@ -1383,4 +1390,9 @@ function stopClickAndCheck0(e) {
 	} else {
 		return false;
 	}
+}
+
+function commDispatch(aArg) {
+	var { m, a } = aArg;
+	store.dispatch(gCommScope[m](...a));
 }

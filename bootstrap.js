@@ -1150,6 +1150,21 @@ function setApplyBackgroundUpdates(aNewApplyBackgroundUpdates) {
 function beautifyJs(aStr) {
 	return BEAUTIFY.js(aStr);
 }
+
+function broadcastToOpenHistory(aMandA) {
+	// aMandA is object with `m` a string, and `a` an array of what is applied
+	// sends message to all tabs that are open on history page
+	var windows = Services.wm.getEnumerator('navigator:browser');
+	while (windows.hasMoreElements()) {
+		var window = windows.getNext();
+		var tabs = window.gBrowser.tabContainer.childNodes;
+		for (var tab of tabs) {
+			if (tab.linkedBrowser.currentURI.spec.toLowerCase() == 'about:nativeshot') {
+				callInContentinframescript('commDispatch', aMandA, null, tab.linkedBrowser.messageManager);
+			}
+		}
+	}
+}
 // start - Comm functions
 function processAction(aArg, aReportProgress) {
 	// called by content
