@@ -227,7 +227,12 @@ function init(objCore) {
 	setTimeout(readFilestore, 0); // init this as gFilestoreDefaultGetters should be sync, but `prefs__quick_save_dir` not right now, so i have to init it
 	// readFilestore();
 
-	setTimeout(hotkeysRegister, 0);
+	setTimeout(function() {
+		var rez_fail = hotkeysRegister();
+		if (rez_fail) {
+			// send `Services.prompt` message to mainthread telling user hotkey registrations failed due to this hotkey
+		}
+	}, 0);
 
 	return {
 		core,
@@ -3404,24 +3409,30 @@ var gHKI = { // stands for globalHotkeyInfo
 var gHKILoopInterval = null;
 
 function hotkeysRegister() {
+	// on error, it returns an object:
+	 	// hotkey - `hotkey` entry in gHKI.hotkeys that caused the failure
+		// reason - string explaining why
 	if (!gHKI.hotkeys) {
 		switch (core.os.mname) {
 			case 'winnt':
 					gHKI.hotkeys = [
 						{
+							desc: 'Print Screen', // it describes the `code` combo in english for use on hotkeysRegister() failing
 							code: ostypes.CONST.VK_SNAPSHOT,
-							callback: 'screenshot'
+							callback: 'screenshot',
 						}
 					];
 				break;
 			case 'gtk':
 					gHKI.hotkeys = [
 						{
+							desc: 'Print Screen (Capslock:Off, Numlock:Off)',
 							code: ostypes.CONST.XK_Print,
 							// mods: // if undefined, or object is empty it will use ostypes.CONST.XCB_NONE
 							callback: 'screenshot'
 						},
 						{
+							desc: 'Print Screen (Capslock:On, Numlock:Off)',
 							code: ostypes.CONST.XK_Print,
 							mods: {
 								capslock: true // capslock is only available as mod on linux
@@ -3429,6 +3440,7 @@ function hotkeysRegister() {
 							callback: 'screenshot'
 						},
 						{
+							desc: 'Print Screen (Capslock:Off, Numlock:On)',
 							code: ostypes.CONST.XK_Print,
 							mods: {
 								numlock: true // numlock is only available as mod on linux
@@ -3436,6 +3448,7 @@ function hotkeysRegister() {
 							callback: 'screenshot'
 						},
 						{
+							desc: 'Print Screen (Capslock:On, Numlock:On)',
 							code: ostypes.CONST.XK_Print,
 							mods: {
 								numlock:true,
@@ -3448,6 +3461,7 @@ function hotkeysRegister() {
 			case 'darwin':
 					gHKI.hotkeys = [
 						{
+							desc: '\u2318 + 3', // \u2318 is the apple/meta key symbol
 							code: ostypes.CONST.KEY_3,
 							mods: {
 								meta: true
@@ -3489,6 +3503,12 @@ function hotkeysRegister() {
 							};
 						} else {
 							console.error('failed to register hotkey:', hotkey);
+							console.error('due to fail will not register any of the other hotkeys if there were any, and will unregister whatever was registered');
+							hotkeysUnregister();
+							return {
+								hotkey,
+								reason: 'Failed for winLastError of "' + ctypes.winLastError + '"';
+							};
 						}
 					}
 				}
@@ -3498,7 +3518,125 @@ function hotkeysRegister() {
 			break;
 		case 'gtk':
 
-				//
+				var hotkeys = gHKI.hotkeys;
+
+				// // get `code_os` for each `code`
+
+				// collect unique codes
+				var codes = new Set();
+				for (var hotkey of hotkeys) {
+					codes.add(hotkey.code);
+				}
+
+				codes = [...codes];
+
+				var code_to_codeos = {};
+
+				var keysyms = ostypes.API('xcb_key_symbols_alloc')(ostypes.HELPER.cachedXCBConn());
+				console.log('keysyms:', keysyms.toString());
+
+				for (var code of codes) {
+					code_to_codeos[code] = []; // array becuase multiple codeos can exist for a single code
+
+
+					var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, code);
+					console.log('keycodesPtr:', keycodesPtr.toString());
+
+					for (var i=0; i<10; i++) { // im just thinking 10 is a lot, usually you only have 1 keycode. mayyybe 2. 10 should cover it
+						var keycodesArrC = ctypes.cast(keycodesPtr, ostypes.TYPE.xcb_keycode_t.array(i+1).ptr).contents;
+						console.log('keycodesArrC:', keycodesArrC);
+						if (cutils.jscEqual(keycodesArrC[i], ostypes.CONST.XCB_NO_SYMBOL)) {
+							break;
+						} else {
+							code_to_codeos[code].push(keycodesArrC[i]);
+						}
+					}
+
+					ostypes.API('free')(keycodesPtr);
+
+					if (!code_to_codeos[code].length) {
+						console.error('linux no keycodes found for hotkey code:', code);
+						// throw new Error('linux no keycodes found for hotkey code: ' + code);
+						// nothing yet registered, so no need to run `hotkeysUnregister()`
+						return {
+							hotkey: hotkeys.find(el => el.code === code),
+							reason: 'No keycodes on this system'
+						}; // the first hoeky that uses this `code`
+					}
+				}
+
+				ostypes.API('xcb_key_symbols_free')(keysyms);
+
+				// // grab the keys
+				// collect the grab windows
+				var setup = ostypes.API('xcb_get_setup')(ostypes.HELPER.cachedXCBConn());
+				console.log('setup:', setup.contents);
+
+				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
+				var grabwins = []; // so iterate through these and ungrab on remove of hotkey
+				var screens_cnt = screens.rem;
+
+				for (var i=0; i<screens_cnt; i++) {
+					console.log('screen[' + i + ']:', screens);
+					console.log('screen[' + i + '].data:', screens.data.contents);
+					var grabwin = screens.data.contents.root;
+					grabwins.push(grabwin);
+					ostypes.API('xcb_screen_next')(screens.address());
+				}
+
+				// start registering hotkeys if they are not registered
+				for (var hotkey of hotkeys) {
+					var { code, mods, __REGISTERED } = hotkey;
+					if (__REGISTERED) {
+						console.warn('hotkey already registered for entry:', hotkey);
+						continue;
+					} else {
+
+						var mods_os = ostypes.CONST.XCB_NONE; // is 0
+						if (mods) {
+							// possible mods: capslock, numlock
+							if (mods.capslock) {
+								mods_os |= ostypes.CONST.XCB_MOD_MASK_LOCK;
+							}
+							if (mods.numlock) {
+								mods_os |= ostypes.CONST.XCB_MOD_MASK_2;
+							}
+						}
+
+						// grab this hotkey on all grabwins
+						// var any_win_registered = false;
+						// var any_codeos_registered = false;
+						// var any_registered = false;
+						for (var grabwin of grabwins) {
+							for (var code_os of code_to_codeos[code]) {
+								var rez_grab = ostypes.API('xcb_grab_key_checked')(ostypes.HELPER.cachedXCBConn(), 1, grabwin, mods_os, code_os, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
+								var rez_check = ostypes.API('xcb_request_check')(ostypes.HELPER.cachedXCBConn(), rez_grab);
+								console.log('rez_check:', rez_check.toString());
+								if (!rez_check.isNull()) {
+									console.error('The hotkey is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system, if so go there and remove it.'); // http://i.imgur.com/cLz1fDs.png
+								} else {
+									// even if just one registered, lets mark it registerd, so the `hotkeysUnregister` function will just get errors on what isnt yet registered from the set of `code_to_codeos`
+									// any_registered = true;
+									hotkey.__REGISTERED = {
+										grabwins
+									};
+								}
+							}
+						}
+
+						if (!hotkey.__REGISTERED) { // same as checking `if (!any_registered)`
+							// nothing for any of the codeos's for this code registered on any of the grabwins
+							console.error('failed to register hotkey:', hotkey);
+							console.error('due to fail will not register any of the other hotkeys if there were any, and will unregister whatever was registered');
+							hotkeysUnregister();
+							return {
+								hotkey,
+								reason: 'Was not able to register any of the `code_os` on any of the `grabwins`. `grabwins`: ' + grabwins.toString() + ' code_os: ' + code_os.toString()
+							};
+						}
+
+					}
+				}
 
 			break;
 		case 'darwin':
