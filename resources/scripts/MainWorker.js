@@ -228,10 +228,7 @@ function init(objCore) {
 	// readFilestore();
 
 	setTimeout(function() {
-		var rez_fail = hotkeysRegister();
-		if (rez_fail) {
-			// send `Services.prompt` message to mainthread telling user hotkey registrations failed due to this hotkey
-		}
+		hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
 	}, 0);
 
 	return {
@@ -246,8 +243,8 @@ self.onclose = function() {
 
 	writeFilestore();
 
-	if (gHKILoopInterval) {
-		// it means its running, so lets stop it
+	if (gHKI.hotkeys.find(el => el.__REGISTERED)) {
+		// it means something is registered, so lets unregister it
 		hotkeysUnregister();
 	}
 
@@ -3403,7 +3400,7 @@ var gHKI = { // stands for globalHotkeyInfo
 	loop_interval_ms: 200, // only for windows and xcb
 	min_time_between_repeat: 1000,
 	hotkeys: undefined, // as i need access to core.os.mname first, this will happen after init, i run hotkeysRegister after init, so i do it there
-		// on succesful registration, the entry is marked with __REGISTRED: {} and holds data needed for unregistration
+		// on succesful registration, the entry is marked with __REGISTERED: {} and holds data needed for unregistration
 	next_hotkey_id: 1
 };
 var gHKILoopInterval = null;
@@ -3412,6 +3409,8 @@ function hotkeysRegister() {
 	// on error, it returns an object:
 	 	// hotkey - `hotkey` entry in gHKI.hotkeys that caused the failure
 		// reason - string explaining why
+	var deferredmain = new Deferred();
+
 	if (!gHKI.hotkeys) {
 		switch (core.os.mname) {
 			case 'winnt':
@@ -3472,7 +3471,9 @@ function hotkeysRegister() {
 				break;
 			default:
 				console.error('your os is not supported for global platform hotkey');
-				throw new Error('your os is not supported for global platform hotkey');
+				// throw new Error('your os is not supported for global platform hotkey');
+				deferredmain.resolve({reason:'Your OS is not supported for global platform hotkey, OS is "' + core.os.mname + '" and "' + core.os.name + '"'});
+				return deferredmain.promise;
 		}
 	}
 
@@ -3519,15 +3520,18 @@ function hotkeysRegister() {
 							console.error('failed to register hotkey:', hotkey);
 							console.error('due to fail will not register any of the other hotkeys if there were any, and will unregister whatever was registered');
 							hotkeysUnregister();
-							return {
+							deferredmain.resolve({
 								hotkey,
 								reason: 'Failed for winLastError of "' + ctypes.winLastError + '"'
-							};
+							});
+							return deferredmain.promise;
 						}
 					}
 				}
 
 				hotkeysStartLoop();
+
+				deferredmain.resolve(null); // resolve with `null` for no error
 
 			break;
 		case 'gtk':
@@ -3572,10 +3576,11 @@ function hotkeysRegister() {
 						console.error('linux no keycodes found for hotkey code:', code);
 						// throw new Error('linux no keycodes found for hotkey code: ' + code);
 						// nothing yet registered, so no need to run `hotkeysUnregister()`
-						return {
+						deferredmain.resolve({
 							hotkey: hotkeys.find(el => el.code === code),
 							reason: 'No keycodes on this system for code of "' + code+ '"'
-						}; // the first hoeky that uses this `code`
+						}); // the first hoeky that uses this `code`
+						return deferredmain.promise;
 					}
 				}
 
@@ -3648,10 +3653,11 @@ function hotkeysRegister() {
 							console.error('failed to register hotkey:', hotkey);
 							console.error('due to fail will not register any of the other hotkeys if there were any, and will unregister whatever was registered');
 							hotkeysUnregister();
-							return {
+							deferredmain.resolve({
 								hotkey,
 								reason: 'It is most likely that this key combination is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system - http://i.imgur.com/cLz1fDs.png\n\n\nDetails: Was not able to register any of the `code_os` on any of the `grabwins`. `grabwins`: ' + grabwins.toString() + ' code_os: ' + code_os.toString()
-							};
+							});
+							return deferredmain.promise;
 						}
 
 					}
@@ -3662,16 +3668,98 @@ function hotkeysRegister() {
 
 				hotkeysStartLoop();
 
+				deferredmain.resolve(null); // resolve with `null` for no error
+
 			break;
 		case 'darwin':
 
-				//
+				var hotkeys_basic = [];
+				var { hotkeys } = gHKI;
+
+				for (var hotkey of hotkeys) {
+					var { code:code_os, mods } = hotkey;
+
+					var mods_os = 0;
+					if (mods) {
+						// possible mods: alt (on mac alt and option key is same), control, shift, meta
+							// mac only mods: capslock
+
+						if (mods.capslock) {
+							mods_os |= ostypes.CONST.alphaLock;
+						}
+						if (mods.meta) {
+							mods_os |= ostypes.CONST.cmdKey;
+						}
+						if (mods.alt) {
+							mods_os |= ostypes.CONST.optionKey;
+							mods_os |= ostypes.CONST.rightOptionKey;
+						}
+						if (mods.shift) {
+							mods_os |= ostypes.CONST.shiftKey;
+							mods_os |= ostypes.CONST.rightShiftKey;
+						}
+						if (mods.control) {
+							mods_os |= ostypes.CONST.controlKey;
+							mods_os |= ostypes.CONST.rightControlKey;
+						}
+					}
+
+					var hotkeyid = gHKI.next_hotkey_id++;
+					var signature = ostypes.HELPER.OS_TYPE(nonce(4 - hotkeyid.toString().length) + hotkeyid.toString());
+
+					hotkey.temp_hotkeyid = hotkeyid; // this is premetive, so on return of `hotkeysRegisterMt`, i can go in and find the corresponding `hotkey` entry to attach the returned `ref`/`__REGISTERED`
+
+					hotkeys_basic.push({
+						mods_os,
+						code_os,
+						signature,
+						hotkeyid
+					});
+				}
+
+				callInBootstrap('hotkeysRegisterMt', { hotkeys_basic }, function(aObjOfErrAndRegs) {
+					var { __ERROR, __REGISTREDs } = aObjOfErrAndRegs;
+
+					var errored_hotkey;
+					if (__ERROR && __ERROR.hotkeyid) {
+						// find the `hotkey` entry associated with it, as in next block i will delete all hotkey.temp_hotkeyid
+						errored_hotkey = hotkeys.find( el => el.temp_hotkeyid === __ERROR.hotkeyid );
+					}
+
+					if (Object.keys(__REGISTREDs).length) {
+						// if any were succesfully registered, then go through add the `__REGISTERED` object to the associated `hotkey` entry. find association by `hotkey.temp_hotkeyid`
+						for (var hotkey of hotkeys) {
+							var { temp_hotkeyid:hotkeyid } = hotkey;
+
+							delete hotkey.temp_hotkeyid;
+
+							if (__REGISTREDs[hotkeyid]) {
+								hotkey.__REGISTERED = __REGISTREDs[hotkeyid];
+							}
+						}
+
+						if (__ERROR) {
+							hotkeysUnregister();
+						}
+					}
+
+					if (__ERROR) {
+						deferredmain.resolve({
+							hotkey: errored_hotkey,
+							reason: __ERROR.reason
+						});
+					}
+				});
 
 			break;
 		default:
 			console.error('your os is not supported for global platform hotkey');
-			throw new Error('your os is not supported for global platform hotkey');
+			// throw new Error('your os is not supported for global platform hotkey');
+			deferredmain.resolve({reason:'Your OS is not supported for global platform hotkey, OS is "' + core.os.mname + '" and "' + core.os.name + '"'});
+			return deferredmain.promise;
 	}
+
+	return deferredmain.promise;
 }
 
 function hotkeysUnregister() {
@@ -3739,7 +3827,9 @@ function hotkeysUnregister() {
 			break;
 		case 'darwin':
 
-				//
+				var hotkeys = gHKI.hotkeys;
+
+				callInBootstrap('hotkeysUnregisterMt', { hotkeys });
 
 			break;
 		default:
@@ -3890,12 +3980,34 @@ function hotkeysLoop() {
 	}
 }
 
-
 var hotkeyCallbacks = {
 	screenshot: function() {
 		console.error('in trigger callback! "screenshot"');
 	}
 };
+
+function hotkeyMacCallback(aArg) {
+	var { id, now_triggered } = aArg;
+	id = parseInt(id);
+
+	var { hotkeys } = gHKI;
+
+	for (var hotkey of hotkeys) {
+		var { callback, __REGISTERED } = hotkey;
+		if (__REGISTERED) {
+			var { last_triggered, hotkeyid } = __REGISTERED;
+			if (id === hotkeyid) {
+				var now_triggered = Date.now();
+				if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
+					__REGISTERED.last_triggered = now_triggered;
+					hotkeyCallbacks[callback]();
+				}
+				else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms'); }
+				__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
+			}
+		}
+	}
+}
 // end - system hotkey
 
 // End - Addon Functionality
