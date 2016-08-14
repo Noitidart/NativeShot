@@ -3487,12 +3487,26 @@ function hotkeysRegister() {
 						console.warn('hotkey already registered for entry:', hotkey);
 						continue;
 					} else {
-						var mods_os;
-						if (!mods) {
-							mods_os = ostypes.CONST.MOD_NONE;
-						} else {
-							// possible mods:
-							// TODO: not yet supported
+						var mods_os = ostypes.CONST.MOD_NONE; // this is 0
+						if (mods) {
+							// possible mods: alt, control, shift, meta (meta means win key)
+								// windows only mods: norepeat
+							if (mods.alt) {
+								mods_os |= ostypes.CONST.MOD_ALT;
+							}
+							if (mods.control) {
+								mods_os |= ostypes.CONST.MOD_CONTROL;
+							}
+							if (mods.norepeat) {
+								// not supported on win vista - per docs
+								mods_os |= ostypes.CONST.MOD_NOREPEAT;
+							}
+							if (mods.shift) {
+								mods_os |= ostypes.CONST.MOD_SHIFT;
+							}
+							if (mods.meta) {
+								mods_os |= ostypes.CONST.MOD_WIN;
+							}
 						}
 						var hotkeyid = gHKI.next_hotkey_id++;
 						var rez_reg = ostypes.API('RegisterHotKey')(null, hotkeyid, mods_os, code_os);
@@ -3507,7 +3521,7 @@ function hotkeysRegister() {
 							hotkeysUnregister();
 							return {
 								hotkey,
-								reason: 'Failed for winLastError of "' + ctypes.winLastError + '"';
+								reason: 'Failed for winLastError of "' + ctypes.winLastError + '"'
 							};
 						}
 					}
@@ -3530,13 +3544,13 @@ function hotkeysRegister() {
 
 				codes = [...codes];
 
-				var code_to_codeos = {};
+				var code_os_to_codes_os = {};
 
 				var keysyms = ostypes.API('xcb_key_symbols_alloc')(ostypes.HELPER.cachedXCBConn());
 				console.log('keysyms:', keysyms.toString());
 
 				for (var code of codes) {
-					code_to_codeos[code] = []; // array becuase multiple codeos can exist for a single code
+					code_os_to_codes_os[code] = []; // array becuase multiple codeos can exist for a single code
 
 
 					var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, code);
@@ -3548,19 +3562,19 @@ function hotkeysRegister() {
 						if (cutils.jscEqual(keycodesArrC[i], ostypes.CONST.XCB_NO_SYMBOL)) {
 							break;
 						} else {
-							code_to_codeos[code].push(keycodesArrC[i]);
+							code_os_to_codes_os[code].push(keycodesArrC[i]);
 						}
 					}
 
 					ostypes.API('free')(keycodesPtr);
 
-					if (!code_to_codeos[code].length) {
+					if (!code_os_to_codes_os[code].length) {
 						console.error('linux no keycodes found for hotkey code:', code);
 						// throw new Error('linux no keycodes found for hotkey code: ' + code);
 						// nothing yet registered, so no need to run `hotkeysUnregister()`
 						return {
 							hotkey: hotkeys.find(el => el.code === code),
-							reason: 'No keycodes on this system'
+							reason: 'No keycodes on this system for code of "' + code+ '"'
 						}; // the first hoeky that uses this `code`
 					}
 				}
@@ -3592,9 +3606,11 @@ function hotkeysRegister() {
 						continue;
 					} else {
 
+						// start - copy of block-link391999
 						var mods_os = ostypes.CONST.XCB_NONE; // is 0
 						if (mods) {
-							// possible mods: capslock, numlock
+							// possible mods: alt, control, shift, meta // TODO: <<< these are not yet supported
+								// nix only mods: capslock, numlock - these are supported
 							if (mods.capslock) {
 								mods_os |= ostypes.CONST.XCB_MOD_MASK_LOCK;
 							}
@@ -3602,23 +3618,26 @@ function hotkeysRegister() {
 								mods_os |= ostypes.CONST.XCB_MOD_MASK_2;
 							}
 						}
+						// end - copy of block-link391999
 
 						// grab this hotkey on all grabwins
 						// var any_win_registered = false;
 						// var any_codeos_registered = false;
 						// var any_registered = false;
 						for (var grabwin of grabwins) {
-							for (var code_os of code_to_codeos[code]) {
+							for (var code_os of code_os_to_codes_os[code]) {
 								var rez_grab = ostypes.API('xcb_grab_key_checked')(ostypes.HELPER.cachedXCBConn(), 1, grabwin, mods_os, code_os, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
 								var rez_check = ostypes.API('xcb_request_check')(ostypes.HELPER.cachedXCBConn(), rez_grab);
 								console.log('rez_check:', rez_check.toString());
 								if (!rez_check.isNull()) {
-									console.error('The hotkey is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system, if so go there and remove it.'); // http://i.imgur.com/cLz1fDs.png
+									console.error('The hotkey is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system.'); // http://i.imgur.com/cLz1fDs.png
 								} else {
-									// even if just one registered, lets mark it registerd, so the `hotkeysUnregister` function will just get errors on what isnt yet registered from the set of `code_to_codeos`
+									// even if just one registered, lets mark it registerd, so the `hotkeysUnregister` function will just get errors on what isnt yet registered from the set of `code_os_to_codes_os`
 									// any_registered = true;
 									hotkey.__REGISTERED = {
-										grabwins
+										grabwins,
+										codes_os: code_os_to_codes_os[code],
+										last_triggered: 0
 									};
 								}
 							}
@@ -3631,12 +3650,17 @@ function hotkeysRegister() {
 							hotkeysUnregister();
 							return {
 								hotkey,
-								reason: 'Was not able to register any of the `code_os` on any of the `grabwins`. `grabwins`: ' + grabwins.toString() + ' code_os: ' + code_os.toString()
+								reason: 'It is most likely that this key combination is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system - http://i.imgur.com/cLz1fDs.png\n\n\nDetails: Was not able to register any of the `code_os` on any of the `grabwins`. `grabwins`: ' + grabwins.toString() + ' code_os: ' + code_os.toString()
 							};
 						}
 
 					}
 				}
+
+				var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+				console.log('rez_flush:', rez_flush);
+
+				hotkeysStartLoop();
 
 			break;
 		case 'darwin':
@@ -3677,7 +3701,40 @@ function hotkeysUnregister() {
 			break;
 		case 'gtk':
 
-				//
+				var hotkeys = gHKI.hotkeys;
+				for (var hotkey of hotkeys) {
+					var { __REGISTERED, mods, code:code_os } = hotkey;
+
+					if (!__REGISTERED) {
+						console.warn('this one is not registered:', hotkey);
+					} else {
+						var { codes_os, grabwins } = __REGISTERED;
+
+						// start - copy of block-link391999
+						var mods_os = ostypes.CONST.XCB_NONE; // is 0
+						if (mods) {
+							// possible mods: alt, control, shift, meta // TODO: <<< these are not yet supported
+								// nix only mods: capslock, numlock - these are supported
+							if (mods.capslock) {
+								mods_os |= ostypes.CONST.XCB_MOD_MASK_LOCK;
+							}
+							if (mods.numlock) {
+								mods_os |= ostypes.CONST.XCB_MOD_MASK_2;
+							}
+						}
+						// end - copy of block-link391999
+
+						for (var grabwin of grabwins) {
+							for (var code_os of codes_os) {
+								var rez_ungrab = ostypes.API('xcb_ungrab_key')(ostypes.HELPER.cachedXCBConn(), code_os, grabwin, mods_os);
+								console.log('rez_ungrab:', rez_ungrab);
+							}
+						}
+
+						// TODO: maybe add error checking if ungrab fails, not sure
+						delete hotkey.__REGISTERED;
+					}
+				}
 
 			break;
 		case 'darwin':
@@ -3772,11 +3829,12 @@ function hotkeysLoop() {
 							var { last_triggered, hotkeyid } = __REGISTERED;
 							if (cutils.jscEqual(hotkeyid, msg.wParam)) {
 								var now_triggered = Date.now();
-								if (now_triggered - last_triggered > gHKI.min_time_between_repeat) {
+								if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
 									__REGISTERED.last_triggered = now_triggered;
 									hotkeyCallbacks[callback]();
 								}
 								else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms'); }
+								__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
 							}
 						}
 					}
@@ -3785,12 +3843,45 @@ function hotkeysLoop() {
 			break;
 		case 'gtk':
 
-				//
+				while (true) {
+					// true until evt is found to be null
+					var evt = ostypes.API('xcb_poll_for_event')(ostypes.HELPER.cachedXCBConn());
+					if (!evt.isNull()) {
+						if (evt.contents.response_type == ostypes.CONST.XCB_KEY_PRESS) {
+							var hotkeys = gHKI.hotkeys;
+							hotkeyOf:
+							for (var hotkey of hotkeys) {
+								var { callback, __REGISTERED } = hotkey;
+								if (__REGISTERED) {
+									var { codes_os, last_triggered } = __REGISTERED;
+									for (var code_os of codes_os) {
+										if (cutils.jscEqual(code_os, evt.contents.pad0)) {
+											var now_triggered = Date.now();
+											if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
+												console.warn('TRIGGERING!!!!!! time past IS > min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms, gHKI.min_time_between_repeat:', gHKI.min_time_between_repeat, 'last_triggered:', last_triggered);
+												__REGISTERED.last_triggered = now_triggered;
+												hotkeyCallbacks[callback]();
+												break hotkeyOf;
+											}
+											else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms, gHKI.min_time_between_repeat:', gHKI.min_time_between_repeat, 'last_triggered:', last_triggered); }
+											__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
+											break hotkeyOf;
+										}
+									}
+								}
+							}
+						}
+
+						ostypes.API('free')(evt);
+					} else {
+						break;
+					}
+				}
 
 			break;
 		case 'darwin':
 
-				//
+				throw new Error('darwin not supported for fake loop - use real loop');
 
 			break;
 		default:
