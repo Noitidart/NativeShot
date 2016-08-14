@@ -231,7 +231,13 @@ function startup(aData, aReason) {
 			AB.init();
 		}
 
-    });
+    }, function() {
+		var deferredmain = new Deferred();
+
+		callInMainworker('hotkeysUnregister', undefined, done=>deferredmain.resolve());
+
+		return deferredmain.promise;
+	});
 
     callInMainworker('dummyForInstantInstantiate');
 }
@@ -1170,6 +1176,7 @@ function broadcastToOpenHistory(aMandA) {
 // start - mainthread side for system hotkey
 var gHotkeysRegisteredMt = false;
 var gHotkeyMacCallbackMt_c = null;
+var gInstallRef;
 function hotkeysRegisterMt(aArg) {
 	var deferredmain = new Deferred();
 
@@ -1201,13 +1208,15 @@ function hotkeysRegisterMt(aArg) {
 				var rez_appTarget = ostypes.API('GetApplicationEventTarget')();
 				// console.log('rez_appTarget GetApplicationEventTarget:', rez_appTarget.toString());
 
-				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, gHotkeyMacCallbackMt_c, 1, eventType.address(), null, null);
+				var install_ref = ostypes.TYPE.EventHandlerRef();
+				var rez_install = ostypes.API('InstallEventHandler')(rez_appTarget, gHotkeyMacCallbackMt_c, 1, eventType.address(), null, install_ref.address())
 				if (!cutils.jscEqual(rez_install, ostypes.CONST.noErr)) {
 					__ERROR = {
 						// hotkeyid: 'all', // really is all, but just leave it undefined
 						reason: 'Failed to install hotkey event handler for OSStatus of "' + cutils.jscGetDeepest(rez_install) + '" / "' + ostypes.HELPER.convertLongOSStatus(cutils.jscGetDeepest(rez_install)) + '"'
 					};
 				} else {
+					gInstallRef = cutils.strOfPtr(install_ref);
 					for (var hotkey_basic of hotkeys_basic) {
 						var { signature, hotkeyid, code_os, mods_os } = hotkey_basic;
 
@@ -1253,7 +1262,10 @@ function hotkeysRegisterMt(aArg) {
 function hotkeysUnregisterMt(aArg) {
 	if (!gHotkeysRegisteredMt) {
 		console.error('hotkeys not yet registred (meaning inited) on mainthread')
-		throw new Error('hotkeys not yet registred (meaning inited) on mainthread')
+		// throw new Error('hotkeys not yet registred (meaning inited) on mainthread')
+		return {
+			reason: 'Hotkey main thread registration was not done'
+		};
 	}
 
 	switch (core.os.mname) {
@@ -1262,17 +1274,22 @@ function hotkeysUnregisterMt(aArg) {
 				var { hotkeys } = aArg;
 
 				for (var hotkey of hotkeys) {
-					var { __REGISTRED } = hotkey_basic;
-					if (__REGISTRED) {
-						var { ref } = __REGISTRED;
-						ref = ostypes.TYPE.EventHotKeyRef.ptr(ctypes.UInt64(ref)).contents;
+					var { __REGISTERED } = hotkey;
+					if (__REGISTERED) {
+						var { ref } = __REGISTERED;
+						ref = ostypes.TYPE.EventHotKeyRef(ctypes.UInt64(ref));
 						var rez_unreg = ostypes.API('UnregisterEventHotKey')(ref);
 						console.log('rez_unreg:', rez_unreg, rez_unreg.toString());
 						// TODO: maybe some error handling, i dont do yet for windows or nix so i dont do here for now either
 					}
 				}
 
+				var install_ref = ostypes.TYPE.EventHandlerRef(ctypes.UInt64(gInstallRef));
+				var rez_uninstall = ostypes.API('RemoveEventHandler')(install_ref);
+				console.log('rez_uninstall:', rez_uninstall, rez_uninstall.toString());
+
 				gHotkeyMacCallbackMt_c = null;
+				gInstallRef = null;
 				gHotkeysRegisteredMt = false;
 
 			break;

@@ -3829,7 +3829,15 @@ function hotkeysUnregister() {
 
 				var hotkeys = gHKI.hotkeys;
 
-				callInBootstrap('hotkeysUnregisterMt', { hotkeys });
+				var deferredmain = new Deferred();
+				callInBootstrap('hotkeysUnregisterMt', { hotkeys }, function() {
+					for (var hotkey of hotkeys) {
+						delete hotkey.__REGISTERED;
+					}
+					deferredmain.resolve()
+				});
+
+				return deferredmain.promise;
 
 			break;
 		default:
