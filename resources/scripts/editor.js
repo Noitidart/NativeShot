@@ -1488,7 +1488,7 @@ function init(aArrBufAndCore) {
 
 						// other
 						DRAWABLE.blurblock = aOptions.level || this.state.sPalBlurBlock;
-
+					break;
 				case 'cutout':
 
 						// dimensions
@@ -1862,7 +1862,7 @@ function init(aArrBufAndCore) {
 							for (i = 0; i < 8; i += 1) {
 								cur = selectionHandles[i];
 								this.ctx.rect(cur.x, cur.y, handleSize, handleSize);
-							};
+							}
 
 							this.ctx.fill();
 							this.ctx.stroke();
@@ -6068,7 +6068,6 @@ function init(aArrBufAndCore) {
 			pPalFontUnderline: undefined,
 
 			pCanHandleSize: 18,
-			pPalSeldSubs: palSeldSubs,
 
 			pPalX: 5, // link239285555
 			pPalY: 50 // link239285555
@@ -6387,7 +6386,9 @@ if (!('win81ScaleX' in tQS)) {
 console.log('tQS:', tQS);
 var gQS = tQS;
 
-var gBsComm = new Comm.client.content( ()=>console.log('handshake done client side') );
+var gBsComm = new Comm.client.content(
+	()=>console.log('handshake done client side')
+);
 var { callInMainworker, callInBootstrap } = CommHelper.content;
 var myEvent = document.createEvent('CustomEvent');
 myEvent.initCustomEvent('nscomm', true, true, gQS.iMon);

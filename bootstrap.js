@@ -359,7 +359,7 @@ function takeShot() {
 	var allMonDimStr;
 	var shootAllMons = function() {
 		callInMainworker('shootAllMons', undefined, function(aArg) {
-			({ collMonInfos } = aArg);
+			var { collMonInfos } = aArg;
 
 			for (var i=0; i<collMonInfos.length; i++) {
 				collMonInfos[i].arrbuf = aArg['arrbuf' + i];

@@ -188,7 +188,7 @@ function init(objCore) {
 		case 'winmo':
 		case 'wince':
 			importScripts(core.addon.path.scripts + 'ostypes/ostypes_win.jsm');
-			break
+			break;
 		case 'gtk':
 			importScripts(core.addon.path.scripts + 'ostypes/ostypes_x11.jsm');
 			break;
