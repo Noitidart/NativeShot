@@ -1602,13 +1602,14 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 								});
 							break;
 						case 'facebook':
+								success_suffix = meta.serviceid;
 								btn.bType = 'menu-button';
 								btn.bMenu = [];
 								btn.bMenu.push({
-									cTxt: formatStringFromNameCore('copy_postlink', 'main'),
+									cTxt: formatStringFromNameCore('copy_imagelink', 'main'),
 									meta: {
 										data: {
-											copytxt: meta.data.post_link
+											copytxt: meta.data.img_src
 										}
 									}
 								});
@@ -1907,11 +1908,19 @@ function attnMenuClick(doClose, aBrowser) {
 			case formatStringFromNameCore('show_in_explorer', 'main'):
 					showFileInOSExplorer(new nsIFile(this.btn.meta.data.copytxt));
 				break;
+			case formatStringFromNameCore('show_error_details', 'main'):
+					var error_details = this.btn.meta.data.error_details;
+					if (typeof(error_details) == 'object') {
+						error_details = BEAUTIFY.js(JSON.stringify(this.btn.meta.data.error_details));
+					}
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), formatStringFromNameCore('prompt_title_show_error_details', 'main'), error_details);
+				break;
 		}
 	}
 }
 
 function addAltServiceMenuitems(aBtnsArr, aSkipServiceid) {
+	return; // TODO: as i have not yet hooked up changing a service, i dont add this alt services yet
 	var ignore_menuitem_txt = formatStringFromNameCore(aSkipServiceid, 'main');
 
 	var mainmenu_txts = [];

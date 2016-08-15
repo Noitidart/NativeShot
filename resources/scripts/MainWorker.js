@@ -2523,22 +2523,6 @@ function getPathForAction(path, rec, unsafe_filename) {
 	return OS.Path.join( path, safedForPlatFS(unsafe_filename, {repStr:'.'}) ) + '.' + rec.mimetype.substr(rec.mimetype.indexOf('/')+1);
 }
 
-
-function buildOSFileErrorString(aMethod, aOSFileError) {
-	// aMethod:string - enum[writeAtomic]
-
-	switch (aMethod) {
-		case 'writeAtomic':
-				var explain;
-				if (aOSFileError.becauseNoSuchFile) {
-					explain = formatStringFromName('osfileerror_writeatomic_nosuchfile', 'main');
-				} else {
-					explain = formatStringFromName('osfileerror_unknownreason', 'main');
-				}
-				formatStringFromName('osfileerror_' + aMethod, 'app', [explain, aOSFileError.winLastError || aOSFileError.unixErrno])
-			break;
-	}
-}
 function genericCountdown(countdown, reason, resumer) {
 	// reason - the reason that should be sent in aReportProgress on countdown tick
 	// countdown is a int of seconds
@@ -2903,16 +2887,16 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 			if (OSFileError.becauseExists) {
 				write_cnt++;
 				writeToDisk();
-				return;
+			} else {
+				console.error('action_savequick -> OSFileError:', OSFileError);
+				withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) ));
+				aReportProgress({
+					reason: reasons.HOLD_ERROR,
+					data: {
+						error_details: buildOSFileErrorString('writeAtomic', OSFileError)
+					}
+				});
 			}
-			console.error('action_savequick -> OSFileError:', OSFileError);
-			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) ));
-			aReportProgress({
-				reason: reasons.HOLD_ERROR,
-				data: {
-					error_details: buildOSFileErrorString('writeAtomic', OSFileError)
-				}
-			});
 		}
 	};
 
@@ -4599,20 +4583,25 @@ function formatBytes(bytes,decimals) {
    var i = Math.floor(Math.log(bytes) / Math.log(k));
    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
-function buildOSFileErrorString(aMethod, aOSFileError) { // rev1 - https://gist.github.com/Noitidart/a67dc6c83ae79aeffe5e3123d42d8f65
+function buildOSFileErrorString(aMethod, aOSFileError) { // rev3 - https://gist.github.com/Noitidart/a67dc6c83ae79aeffe5e3123d42d8f65
 	// aMethod:string - enum[writeAtomic]
 
+	var rez;
+	aMethod = aMethod.toLowerCase();
+
 	switch (aMethod) {
-		case 'writeAtomic':
+		case 'writeatomic':
 				var explain;
 				if (aOSFileError.becauseNoSuchFile) {
 					explain = formatStringFromName('osfileerror_writeatomic_nosuchfile', 'main');
 				} else {
 					explain = formatStringFromName('osfileerror_unknownreason', 'main');
 				}
-				formatStringFromName('osfileerror_' + aMethod, 'app', [explain, aOSFileError.winLastError || aOSFileError.unixErrno])
+				rez = formatStringFromName('osfileerror_' + aMethod, 'main', [explain, aOSFileError.winLastError || aOSFileError.unixErrno])
 			break;
 	}
+
+	return rez;
 }
 function base64ArrayBuffer(arrayBuffer) {
 
