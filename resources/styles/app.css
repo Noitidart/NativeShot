@@ -417,7 +417,7 @@ header.type3 {
 .dropdown-style-2 .dropdown-list-item { background-color: #fff; border: 1px solid #222; margin-top: -1px; }
 .dropdown-style-2 .dropdown-list-item:hover { background-color: #ebebeb; }
 
-.dropdown-list { transition: transform 200ms; transform: scale(1, 0); transform-origin: 50% 0; }
+.dropdown-list { transition: transform 200ms; transform: scale(1, 0); transform-origin: 50% 0; z-index: 1; }
 .dropdown-open .dropdown-list { transform: scale(1, 1); }
 
 .d-lg .dropdown-display, .d-lg .dropdown-list-item {padding: 16px 40px; font-size: 18px;}

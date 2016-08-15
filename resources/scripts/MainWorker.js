@@ -228,13 +228,13 @@ function init(objCore) {
 	// readFilestore();
 
 	// read store to see if we should enable system hotkey
-	setTimeout(function() {
-		readFilestore();
-		var system_hotkey = fetchFilestoreEntry({mainkey:'prefs',key:'system_hotkey'});
-		if (system_hotkey) {
-			hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
-		}
-	}, 0);
+	// setTimeout(function() {
+	// 	var system_hotkey = fetchFilestoreEntry({mainkey:'prefs',key:'system_hotkey'});
+	// 	if (system_hotkey) {
+	// 		hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
+	// 	}
+	// }, 0);
+	setTimeout(reflectSystemHotkeyPref, 0); // this does `readFilestore` because it does `fetchFilestoreEntry`
 
 	return {
 		core,
@@ -3401,6 +3401,16 @@ function actionCatch(shot, aActionFinalizer, aReportProgress, aResumer, aPromise
 }
 // end - functions called by bootstrap
 
+function reflectSystemHotkeyPref() {
+	var system_hotkey = fetchFilestoreEntry({mainkey:'prefs',key:'system_hotkey'});
+	console.log('reflectSystemHotkeyPref, system_hotkey:', system_hotkey);
+	if (system_hotkey) {
+		hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
+	} else {
+		hotkeysUnregister();
+	}
+}
+
 // start - system hotkey
 var gHKI = { // stands for globalHotkeyInfo
 	any_registered: false, // false or true depending on if any registered
@@ -3780,12 +3790,14 @@ function hotkeysShouldUnregister() {
 
 function hotkeysUnregister() {
 
-	hotkeysStopLoop()
+	hotkeysStopLoop();
+
+	var hotkeys = gHKI.hotkeys;
+	if (!hotkeys) { return } // never ever registered
 
 	switch (core.os.mname) {
 		case 'winnt':
 
-				var hotkeys = gHKI.hotkeys;
 				for (var hotkey of hotkeys) {
 					var { __REGISTERED, mods, code:code_os } = hotkey;
 
@@ -3805,7 +3817,6 @@ function hotkeysUnregister() {
 			break;
 		case 'gtk':
 
-				var hotkeys = gHKI.hotkeys;
 				for (var hotkey of hotkeys) {
 					var { __REGISTERED, mods, code:code_os } = hotkey;
 
@@ -3842,8 +3853,6 @@ function hotkeysUnregister() {
 
 			break;
 		case 'darwin':
-
-				var hotkeys = gHKI.hotkeys;
 
 				var deferredmain = new Deferred();
 				callInBootstrap('hotkeysUnregisterMt', { hotkeys }, function() {

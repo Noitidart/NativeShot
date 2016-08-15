@@ -507,3 +507,23 @@ function stopClickAndCheck0(e) {
 		return false;
 	}
 }
+function formatTime(aDateOrTime, aOptions={}) {
+	// aMonthFormat - name, Mmm
+	var aDefaultOptions = {
+		month: 'name', // string;enum[name,Mmm] - format for month
+		time: true // bool - if should append time string
+	};
+	aOptions = Object.assign(aDefaultOptions, aOptions);
+
+	var aDate = typeof(aDateOrTime) == 'object' ? aDateOrTime : new Date(aDateOrTime);
+
+	var mon = formatStringFromNameCore('month.' + (aDate.getMonth()+1) + '.' + aOptions.month, 'dateFormat');
+	var yr = aDate.getFullYear();
+	var day = aDate.getDate();
+
+	var hr = aDate.getHours() > 12 ? aDate.getHours() - 12 : aDate.getHours();
+	var min = aDate.getMinutes() < 10 ? '0' + aDate.getMinutes() : aDate.getMinutes();
+	var meridiem = aDate.getHours() < 12 ? 'AM' : 'PM';
+
+	return mon + ' ' + day + ', ' + yr + (aOptions.time ? ' - ' + hr + ':' + min + ' ' + meridiem : '');
+}

@@ -1368,20 +1368,6 @@ function getServiceFromCode(servicecode) {
 	}
 }
 
-function formatTime(aDateOrTime) {
-	var aDate = typeof(aDateOrTime) == 'object' ? aDateOrTime : new Date(aDateOrTime);
-
-	var mon = formatStringFromNameCore('month.' + (aDate.getMonth()+1) + '.name', 'dateFormat');
-	var yr = aDate.getFullYear();
-	var day = aDate.getDate();
-
-	var hr = aDate.getHours() > 12 ? aDate.getHours() - 12 : aDate.getHours();
-	var min = aDate.getMinutes() < 10 ? '0' + aDate.getMinutes() : aDate.getMinutes();
-	var meridiem = aDate.getHours() < 12 ? 'AM' : 'PM';
-
-	return mon + ' ' + day + ', ' + yr + ' - ' + hr + ':' + min + ' ' + meridiem;
-}
-
 function commDispatch(aArg) {
 	var { m, a } = aArg;
 	store.dispatch(gCommScope[m](...a));

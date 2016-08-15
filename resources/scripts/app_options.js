@@ -5,12 +5,17 @@ function initAppPage(aArg) {
 	gBlockDetails = {
 		autoupdate: {
 			type: 'buttons',
-			options: createSortedOnOffOptionsArr(2, 0)
+			options: createSortedOnOffOptionsArr(2, 0),
+			desc: [
+				formatStringFromNameCore('autoupdate_desc1', 'main', [core.addon.version]),
+				formatStringFromNameCore('autoupdate_desc2', 'main', [formatTime(hydrant_ex.addon_info.updateDate, { month:'Mmm',time:false })])
+			]
 		},
 		quick_save_dir: {
 			type: 'action',
 			actions: [
 				{
+					label: formatStringFromNameCore('change', 'main'),
 					onClick: function() {
 						callInBootstrap(
 							'browseFile',
@@ -27,22 +32,40 @@ function initAppPage(aArg) {
 								}
 							}
 						);
-					},
-					label: formatStringFromNameCore('change', 'main')
+					}
 				}
+			],
+			desc: [
+				formatStringFromNameCore('quick_save_dir_desc1', 'main'),
+				formatStringFromNameCore('quick_save_dir_desc2', 'main')
 			]
 		},
 		print_preview: {
 			type: 'buttons',
-			options: createSortedOnOffOptionsArr(true, false)
+			options: createSortedOnOffOptionsArr(true, false),
+			desc: [
+				formatStringFromNameCore('print_preview_desc1', 'main'),
+				formatStringFromNameCore('print_preview_desc2', 'main')
+			]
 		},
 		system_hotkey: {
 			type: 'buttons',
-			options: createSortedOnOffOptionsArr(true, false)
+			options: createSortedOnOffOptionsArr(true, false),
+			desc: [
+				formatStringFromNameCore('system_hotkey_desc1_' + (core.os.name == 'darwin' ? 'mac' : 'windows_linux'), 'main').replace('\\u2318', '\u2318'),
+				formatStringFromNameCore('system_hotkey_desc2', 'main')
+			],
+			onClick: function() {
+				setTimeout(()=>callInMainworker('reflectSystemHotkeyPref'), 0); // to be safe so it exectues after it sent the updateFilestoreEntry
+			}
 		},
 		default_tesseract_lang: {
 			type: 'dropdown',
-			options: createSortedTessLangArr()
+			options: createSortedTessLangArr(),
+			desc: [
+				formatStringFromNameCore('default_tesseract_lang_desc1', 'main'),
+				formatStringFromNameCore('default_tesseract_lang_desc2', 'main')
+			]
 		}
 	};
 
@@ -203,7 +226,7 @@ var Row = React.createClass({
 
 var Block = React.createClass({
 	displayName: 'Block',
-	setPref: function(value) {
+	setPref: function(value, onAfterSet) {
 		var { pref, special } = this.props;
 		if (special) {
 			if (special == 'autoupdate') {
@@ -211,6 +234,9 @@ var Block = React.createClass({
 			}
 		} else {
 			store.dispatch(setPref(pref, value));
+		}
+		if (onAfterSet) {
+			onAfterSet();
 		}
 	},
 	render: function() {
@@ -224,7 +250,7 @@ var Block = React.createClass({
 					var options = details.options;
 					for (var option of options) {
 						if (option.value !== value) {
-							controls.push( React.createElement(Button, { key:option.label, style:2, size:'md', text:option.label, onClick:this.setPref.bind(null, option.value) }) );
+							controls.push( React.createElement(Button, { key:option.label, style:2, size:'md', text:option.label, onClick:this.setPref.bind(null, option.value, details.onClick) }) );
 						}
 					}
 				break;
@@ -253,11 +279,10 @@ var Block = React.createClass({
 					)
 				),
 				React.createElement('ul', undefined,
-					React.createElement('li', undefined,
-						'desc1'
-					),
-					React.createElement('li', undefined,
-						'desc2'
+					details.desc.map( desc =>
+						React.createElement('li', undefined,
+							desc
+						)
 					)
 				),
 				React.createElement('div', { className:'pref-block-btns' },

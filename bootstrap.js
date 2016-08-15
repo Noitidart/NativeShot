@@ -27,6 +27,7 @@ var core = {
 	addon: {
 		name: 'NativeShot',
 		id: 'NativeShot@jetpack',
+		version: null, // populated by `startup`
 		path: {
 			name: 'nativeshot',
 			//
@@ -42,7 +43,7 @@ var core = {
 			// below are added by worker
 			// storage: OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id, 'simple-storage')
 		},
-		cache_key: Math.random() // set to version on release
+		cache_key: Math.random()
 	},
 	os: {
 		// // name: added by worker
@@ -238,6 +239,7 @@ function uninstall(aData, aReason) {
 }
 
 function startup(aData, aReason) {
+	core.addon.version = aData.version;
 
     Services.scriptloader.loadSubScript(core.addon.path.scripts + 'comm/Comm.js', gBootstrap);
     ({ callInMainworker, callInContentinframescript, callInFramescript } = CommHelper.bootstrap);
@@ -493,7 +495,6 @@ function takeShot() {
 			shot.domwin = editor_domwin;
 		}
 
-		console.log('collMonInfos:', collMonInfos);
 	};
 
 	shootAllMons();
