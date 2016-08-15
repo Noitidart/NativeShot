@@ -243,10 +243,7 @@ self.onclose = function() {
 
 	writeFilestore();
 
-	if (gHKI.hotkeys.find(el => el.__REGISTERED)) {
-		// it means something is registered, so lets unregister it
-		hotkeysUnregister();
-	}
+	// hotkeysShouldUnregister(); // this isnt really in use as im doing it on before term of worker
 
 	Comm.server.unregAll('worker');
 
@@ -3762,6 +3759,13 @@ function hotkeysRegister() {
 	return deferredmain.promise;
 }
 
+function hotkeysShouldUnregister() {
+	if (gHKI.hotkeys.find(el => el.__REGISTERED)) {
+		// it means something is registered, so lets unregister it
+		return hotkeysUnregister();
+	} // else it will return undefined
+}
+
 function hotkeysUnregister() {
 
 	hotkeysStopLoop()
@@ -4005,7 +4009,6 @@ function hotkeyMacCallback(aArg) {
 		if (__REGISTERED) {
 			var { last_triggered, hotkeyid } = __REGISTERED;
 			if (id === hotkeyid) {
-				var now_triggered = Date.now();
 				if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
 					__REGISTERED.last_triggered = now_triggered;
 					hotkeyCallbacks[callback]();
