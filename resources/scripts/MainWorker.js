@@ -238,12 +238,13 @@ function init(objCore) {
 }
 
 // Start - Addon Functionality
-self.onclose = function() {
+// self.onclose = function() {}
+function onBeforeTerminate() {
 	console.log('doing mainworker term proc');
 
 	writeFilestore();
 
-	// hotkeysShouldUnregister(); // this isnt really in use as im doing it on before term of worker
+	var promise_unreg = hotkeysShouldUnregister(); // this isnt really in use as im doing it on before term of worker
 
 	Comm.server.unregAll('worker');
 
@@ -262,7 +263,12 @@ self.onclose = function() {
 			break;
 	}
 
-	console.log('ok terminated');
+
+	console.log('ok onBeforeTerminate return point');
+	if (promise_unreg) {
+		return promise_unreg;
+	}
+
 }
 
 // start - Comm functions
@@ -3760,10 +3766,11 @@ function hotkeysRegister() {
 }
 
 function hotkeysShouldUnregister() {
-	if (gHKI.hotkeys.find(el => el.__REGISTERED)) {
+	if (gHKI.hotkeys && gHKI.hotkeys.find(el => el.__REGISTERED)) {
 		// it means something is registered, so lets unregister it
 		return hotkeysUnregister();
 	} // else it will return undefined
+	else { console.log('no need to hotkeysUnregister'); }
 }
 
 function hotkeysUnregister() {
@@ -4013,7 +4020,7 @@ function hotkeyMacCallback(aArg) {
 					__REGISTERED.last_triggered = now_triggered;
 					hotkeyCallbacks[callback]();
 				}
-				else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms'); }
+				else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms, last_triggered:', last_triggered); }
 				__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
 			}
 		}

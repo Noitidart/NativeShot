@@ -1176,7 +1176,7 @@ function broadcastToOpenHistory(aMandA) {
 // start - mainthread side for system hotkey
 var gHotkeysRegisteredMt = false;
 var gHotkeyMacCallbackMt_c = null;
-var gHotkeyInstallRef;
+var gHotkeyRefs = null; // object holding stuff needed for `hotkeysUnregisterMt`
 function hotkeysRegisterMt(aArg) {
 	var deferredmain = new Deferred();
 
@@ -1216,7 +1216,9 @@ function hotkeysRegisterMt(aArg) {
 						reason: 'Failed to install hotkey event handler for OSStatus of "' + cutils.jscGetDeepest(rez_install) + '" / "' + ostypes.HELPER.convertLongOSStatus(cutils.jscGetDeepest(rez_install)) + '"'
 					};
 				} else {
-					gHotkeyInstallRef = cutils.strOfPtr(install_ref);
+					gHotkeyRefs = {};
+					gHotkeyRefs.install = install_ref;
+					// gHotkeyInstallRef = cutils.strOfPtr(install_ref);
 					for (var hotkey_basic of hotkeys_basic) {
 						var { signature, hotkeyid, code_os, mods_os } = hotkey_basic;
 
@@ -1229,8 +1231,10 @@ function hotkeysRegisterMt(aArg) {
 						console.log('rez_reg:', rez_reg.toString(), ostypes.HELPER.convertLongOSStatus(rez_reg));
 
 						if (cutils.jscEqual(rez_reg, ostypes.CONST.noErr)) {
+							// gHotkeyRefs.push(ref);
+							gHotkeyRefs[hotkeyid] = ref;
 							__REGISTREDs[hotkeyid] = {
-								ref: cutils.strOfPtr(ref),
+								// ref: cutils.strOfPtr(ref),
 								hotkeyid,
 								signature, // not really used, but ill store it, for the heck of it
 								last_triggered: 0
@@ -1277,18 +1281,20 @@ function hotkeysUnregisterMt(aArg) {
 				for (var hotkey of hotkeys) {
 					var { __REGISTERED } = hotkey;
 					if (__REGISTERED) {
-						var { ref } = __REGISTERED;
-						ref = ostypes.TYPE.EventHotKeyRef(ctypes.UInt64(ref));
-						var rez_unreg = ostypes.API('UnregisterEventHotKey')(ref);
+						// var { ref } = __REGISTERED;
+						var { hotkeyid } = __REGISTERED;
+						// ref = ostypes.TYPE.EventHotKeyRef(ctypes.UInt64(ref));
+						var rez_unreg = ostypes.API('UnregisterEventHotKey')(gHotkeyRefs[hotkeyid]);
 						console.log('rez_unreg:', rez_unreg, rez_unreg.toString());
 						// TODO: maybe some error handling, i dont do yet for windows or nix so i dont do here for now either
 					}
 				}
 
-				var install_ref = ostypes.TYPE.EventHandlerRef(ctypes.UInt64(gHotkeyInstallRef));
-				var rez_uninstall = ostypes.API('RemoveEventHandler')(install_ref);
+				// var install_ref = ostypes.TYPE.EventHandlerRef(ctypes.UInt64(gHotkeyInstallRef));
+				var rez_uninstall = ostypes.API('RemoveEventHandler')(gHotkeyRefs.install);
 				console.log('rez_uninstall:', rez_uninstall, rez_uninstall.toString());
 
+				gHotkeyRefs = null;
 				gHotkeyMacCallbackMt_c = null;
 				gHotkeyInstallRef = null;
 				gHotkeysRegisteredMt = false;
