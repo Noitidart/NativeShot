@@ -188,8 +188,52 @@ const NS_XUL = 'http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul';
 function install() {}
 function uninstall(aData, aReason) {
     if (aReason == ADDON_UNINSTALL) {
-		Cu.import('resource://gre/modules/osfile.jsm');
-		OS.File.removeDir(OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id), {ignorePermissions:true, ignoreAbsent:true}); // will reject if `jetpack` folder does not exist
+		// we have to access the locale pacage with jar path, as at this point chrome:// doesnt work
+
+		var lang = 'rawr'; // Services.prefs.getCharPref('general.useragent.locale');
+		var jarpath_main_properties = __SCRIPT_URI_SPEC__.replace('/bootstrap.js', '/locale/' + lang + '/main.properties'); // TODO: figure out the `lang` that is used when picking `chrome` package, like if it doesnt find `en` it falls back to closest which is like `en-US`, figure that calculation out
+		var jarpath_enus_main_properties = __SCRIPT_URI_SPEC__.replace('/bootstrap.js', '/locale/en-US/main.properties');
+
+		// __SCRIPT_URI_SPEC__ == jar:file:///C:/Users/Mercurius/AppData/Roaming/Mozilla/Firefox/Profiles/cx4w5lvy.Nightly%20Tester/extensions/NativeShot@jetpack.xpi!/bootstrap.js
+
+		// now get contents of the file
+			// needs to sync, its amo-reviewer ok, as im accessing local file
+			// needs to be sync because as soon as `uninstall` procedure is done i cannot access files via `jar:` path either, and i need the locale file
+		var xhr = Cc['@mozilla.org/xmlextras/xmlhttprequest;1'].createInstance(Ci.nsIXMLHttpRequest);
+
+		// first try per pref
+		xhr.open('GET', jarpath_main_properties, false);
+		try {
+			xhr.send();
+		} catch (ex if ex.result == Cr.NS_ERROR_FILE_NOT_FOUND) {
+			console.error('ex:', ex, 'xhr:', xhr);
+			// ex: Exception { message: "", result: 2152857618, name: "NS_ERROR_FILE_NOT_FOUND", filename: "resource://gre/modules/addons/XPIPr…", lineNumber: 205, columnNumber: 0, data: null, stack: "uninstall@resource://gre/modules/ad…", location: XPCWrappedNative_NoHelper } xhr: XMLHttpRequest { onreadystatechange: null, readyState: 1, timeout: 0, withCredentials: false, upload: XMLHttpRequestUpload, responseURL: "", status: 0, statusText: "", responseType: "", response: "" }
+
+			// ok fallback to en-US
+			xhr.open('GET', jarpath_enus_main_properties, false);
+			xhr.send();
+		}
+
+		console.log('xhr:', xhr);
+		// xhr: XMLHttpRequest { onreadystatechange: null, readyState: 4, timeout: 0, withCredentials: false, upload: XMLHttpRequestUpload, responseURL: "jar:file:///C:/Users/Mercurius/AppD…", status: 200, statusText: "OK", responseType: "", response: "addon_name=NativeShot addon_descrip…" }
+
+		var packageStr = xhr.response;
+
+		// bottom is taken from worker `formatStringFromName`
+		var packageJson = {};
+		var propPatt = /(.*?)=(.*?)$/gm;
+		var propMatch;
+		while (propMatch = propPatt.exec(packageStr)) {
+			packageJson[propMatch[1]] = propMatch[2];
+		}
+		// end taken from worker
+
+		var should_delete = Services.prompt.confirmEx(Services.wm.getMostRecentWindow('navigator:browser'), packageJson.uninstall_title, packageJson.uninstall_body.replace(/\\n/g, '\n'), Services.prompt.BUTTON_POS_0 * Services.prompt.BUTTON_TITLE_IS_STRING + Services.prompt.BUTTON_POS_1 * Services.prompt.BUTTON_TITLE_IS_STRING, packageJson.delete, packageJson.keep, '', null, {value: false});
+		if (should_delete === 0) {
+			Cu.import('resource://gre/modules/osfile.jsm');
+			OS.File.removeDir(OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id), {ignorePermissions:true, ignoreAbsent:true}); // will reject if `jetpack` folder does not exist
+		}
+
 	}
 }
 
@@ -243,8 +287,9 @@ function startup(aData, aReason) {
 }
 
 function shutdown(aData, aReason) {
+	callInMainworker('writeFilestore'); // do even on APP_SHUTDOWN
+
 	if (aReason == APP_SHUTDOWN) {
-		callInMainworker('writeFilestore');
 		return;
 	}
 
@@ -2123,6 +2168,14 @@ function extractData(aActionId) {
 		}
 		return btn.meta.data;
 	}
+}
+
+function shouldTakeShot() {
+	// does takeShot if no session in progress
+	if (!gSession.id) {
+		takeShot();
+	}
+	else { console.warn('screenshot session currently in progress so will not takeShot'); }
 }
 
 // start - common helper functions

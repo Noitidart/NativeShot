@@ -224,11 +224,16 @@ function init(objCore) {
 
 	// setTimeoutSync(1000); // i want to delay 1sec to allow old framescripts to destroy
 
-	setTimeout(readFilestore, 0); // init this as gFilestoreDefaultGetters should be sync, but `prefs__quick_save_dir` not right now, so i have to init it
+	// setTimeout(readFilestore, 0); // init this as gFilestoreDefaultGetters should be sync, but `prefs__quick_save_dir` not right now, so i have to init it
 	// readFilestore();
 
+	// read store to see if we should enable system hotkey
 	setTimeout(function() {
-		hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
+		readFilestore();
+		var system_hotkey = fetchFilestoreEntry({mainkey:'prefs',key:'system_hotkey'});
+		if (system_hotkey) {
+			hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
+		}
 	}, 0);
 
 	return {
@@ -4002,6 +4007,7 @@ function hotkeysLoop() {
 var hotkeyCallbacks = {
 	screenshot: function() {
 		console.error('in trigger callback! "screenshot"');
+		callInBootstrap('shouldTakeShot');
 	}
 };
 
