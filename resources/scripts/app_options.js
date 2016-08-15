@@ -69,26 +69,36 @@ function initAppPage(aArg) {
 		}
 	};
 
-	gAppPageComponents = [];
+	gAppPageComponents = [
+		React.createElement(Row, undefined,
+			React.createElement(BlockContainer, { special:'autoupdate' }),
+			React.createElement(BlockContainer, { pref:'quick_save_dir' }),
+			React.createElement(BlockContainer, { pref:'print_preview' })
+		),
+		React.createElement(Row, undefined,
+			React.createElement(BlockContainer, { pref:'system_hotkey', bootstrapgrid:'col-lg-4 col-lg-offset-2 col-md-4 col-md-offset-2 col-sm-6 col-sm-offset-3 col-xs-12' }),
+			React.createElement(BlockContainer, { pref:'default_tesseract_lang' })
+		)
+	];
 
 	// push rows
-	var crow = [React.createElement(BlockContainer, { special:'autoupdate' })];
-	const MAX_BLOCKS_PER_ROW = 3;
-	for (var a_pref in hydrant_ex.prefs) {
-		crow.push(React.createElement(BlockContainer, { pref:a_pref }));
-
-		if (crow.length == MAX_BLOCKS_PER_ROW) {
-			gAppPageComponents.push(React.createElement(Row, undefined,
-				crow
-			));
-			crow = [];
-		}
-	}
-	if (crow.length) {
-		gAppPageComponents.push(React.createElement(Row, undefined,
-			crow
-		));
-	}
+	// var crow = [React.createElement(BlockContainer, { special:'autoupdate' })];
+	// const MAX_BLOCKS_PER_ROW = 3;
+	// for (var a_pref in hydrant_ex.prefs) {
+	// 	crow.push(React.createElement(BlockContainer, { pref:a_pref }));
+	//
+	// 	if (crow.length == MAX_BLOCKS_PER_ROW) {
+	// 		gAppPageComponents.push(React.createElement(Row, undefined,
+	// 			crow
+	// 		));
+	// 		crow = [];
+	// 	}
+	// }
+	// if (crow.length) {
+	// 	gAppPageComponents.push(React.createElement(Row, undefined,
+	// 		crow
+	// 	));
+	// }
 }
 
 function uninitAppPage() {
@@ -240,7 +250,7 @@ var Block = React.createClass({
 		}
 	},
 	render: function() {
-		var { title, type, value, pref, special, value_label, value_label_sup, details } = this.props;
+		var { title, type, value, pref, special, value_label, value_label_sup, details, bootstrapgrid } = this.props;
 		// type - string enum:buttons, select, action
 			// action means on click it does custom, like browse directory
 
@@ -265,7 +275,7 @@ var Block = React.createClass({
 		}
 		pushAlternatingRepeating(controls, ' ');
 
-		return React.createElement('div', { className:'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12' },
+		return React.createElement('div', { className:(bootstrapgrid || 'col-lg-4 col-lg-offset-0 col-md-4 col-md-offset-0 col-sm-6 col-sm-offset-3 col-xs-12') },
 				React.createElement('div', { className:'pref-block' },
 				React.createElement('div', { className:'pref-block-title' },
 					React.createElement('h4', {},

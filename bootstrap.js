@@ -1782,7 +1782,7 @@ function attnMenuClick(doClose, aBrowser) {
 	// this == {inststate:AB.Insts[aCloseCallbackId].state, btn:aBtnEntry, menu:jMenu, menuitem:jEntry}
 	console.log('attn menu clicked, this:', this);
 	// do it based on the bTxt
-	if (this.menuitem.meta.data.copytxt) {
+	if (this.menuitem.meta && this.menuitem.meta.data && this.menuitem.meta.data.copytxt) {
 		copy(this.menuitem.meta.data.copytxt);
 	} else {
 		switch (this.menuitem.cTxt) {
