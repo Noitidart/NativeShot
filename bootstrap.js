@@ -17,7 +17,7 @@ var BEAUTIFY = {};
 }());
 
 // Lazy Imports
-const myServices = {};
+var myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'as', () => Cc['@mozilla.org/alerts-service;1'].getService(Ci.nsIAlertsService) );
 
 var nsIFile = CC('@mozilla.org/file/local;1', Ci.nsILocalFile, 'initWithPath');
@@ -708,6 +708,8 @@ function exitEditors(aArg) {
 	gSession = {}; // gEditor.cleanUp();
 
 	attnUpdate(sessionid); // show the attnbar if there is anything to show
+	console.error('will now checkOnlySingleAction as have shown it for sure, entry.shown:', gAttn[sessionid].shown);
+	checkOnlySingleAction(sessionid, true);
 
 	gEditorStateStr = JSON.stringify(aArg.editorstate);
 	console.log('set gEditorStateStr to:', gEditorStateStr);
@@ -853,7 +855,8 @@ var gDashboardMenuitem_jsonTemplate = ['xul:menuitem', {
 		var l = gbrowser.tabs.length;
 		for (var i=0; i<l; i++) {
 			// e10s safe way to check content of tab
-			if (tabs[i].linkedBrowser.currentURI.spec.toLowerCase().includes('about:nativeshot')) { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
+			var spec_lower = tabs[i].linkedBrowser.currentURI.spec.toLowerCase();
+			if (spec_lower == 'about:nativeshot') { // crossfile-link381787872 - i didnt link over there but &nativeshot.app-main.title; is what this is equal to
 				gbrowser.selectedTab = tabs[i];
 				return;
 			}
@@ -1430,6 +1433,7 @@ function workerProcessActionCallback(shot, aDeferredProcess, aReportProgress, aA
 
 function attnUpdate(aSessionId, aUpdateInfo) {
 	// aUpdateInfo pass as undefined/null if you want to just show attnbar
+		// OR just update the label with time left
 	/*
 	aUpdateInfo
 		{
@@ -1453,11 +1457,12 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 		if (!entry) {
 			entry = {
 				state: { // this is live reference being used to AB.setState
-					aTxt: (new Date(aSessionId).toLocaleString()),
+					aTxt: formatTime(aSessionId, {month:'Mmm'}),
 					aPriority: 1,
 					aIcon: core.addon.path.images + 'icon16.png',
 					aBtns: [], // each entry is an object. so i give it a key `meta` which is ignored by the AttnBar module
 					aClose: function() {
+						gAttn[aSessionId].closed = true; // so if autoclose_countdown_callback is going on, it will quit
 						delete gAttn[aSessionId];
 					}
 				},
@@ -1619,6 +1624,9 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					}
 					btn.bTxt = formatStringFromNameCore('success_' + success_suffix, 'main');
 
+					console.error('will now checkOnlySingleAction as have just reached success on an action in session');
+					checkOnlySingleAction(aSessionId, false);
+
 				break;
 			case 'HOLD_ERROR':
 					// HOLD_ means user can resume this error, but user input is needed
@@ -1698,9 +1706,119 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 		}
 	}
 
-	// should show it?
-	if (entry && !entry.shown && gSession.id !== aSessionId) { // `entry &&` because if there is no aUpdateInfo was ever provided, then there is no bar to show. and when `exitEditors` calls `updateAttn(sessionid)` meaning without 2nd arg, it will find there is nothing to show
-		gAttn[aSessionId].state = AB.setState(entry.state);
+
+	if (aUpdateInfo) {
+		// should update it?
+		if (entry && entry.shown) { // `entry &&` because if there is no aUpdateInfo was ever provided, then there is no bar to show. and when `exitEditors` calls `updateAttn(sessionid)` meaning without 2nd arg, it will find there is nothing to show
+			gAttn[aSessionId].state = AB.setState(entry.state);
+		}
+	} else {
+		// devuser called `attnUpdate` to show if its ready to be shown?
+		if (entry && !entry.shown && gSession.id !== aSessionId) {
+			// `gSession.id !== aSessionId` tests if session is currently open/ongoing - in which i dont want to update/show
+			gAttn[aSessionId].state = AB.setState(entry.state);
+			entry.shown = true;
+		}
+
+
+		// devuser called `attnUpdate` to update for is `autoclose_secleft`?
+		if (entry && entry.shown && 'autoclose_secleft' in entry) {
+			if (!entry.autoclose_orig_atxt) {
+				entry.autoclose_orig_atxt = entry.state.aTxt;
+				entry.state.aBtns.splice(0, 0, {
+					bTxt: formatStringFromNameCore('autoclose_cancel', 'main'),
+					bClick: function() {
+						entry.autoclose_cancelled = true;
+						attnUpdate(aSessionId);
+					}
+				});
+			}
+			if (entry.autoclose_cancelled) {
+				if (entry.state.aBtns[0].bTxt == formatStringFromNameCore('autoclose_cancel', 'main')) {
+					entry.state.aBtns.splice(0, 1);
+					entry.state.aTxt = entry.autoclose_orig_atxt;
+				}
+			} else {
+				entry.state.aTxt = entry.autoclose_orig_atxt + formatStringFromNameCore('autoclose_suffix', 'main', [entry.autoclose_secleft]);
+			}
+			entry.state = AB.setState(entry.state);
+		}
+	}
+}
+
+function checkOnlySingleAction(aSessionId, aDontCopy) {
+	// aEntry is the entry in gAttn
+
+	var aEntry = gAttn[aSessionId]; // making assumption here that whenever `checkOnlySingleAction` is called, then this entry exists for sure
+
+	// check if there was only one item for this session, if so then it reached success, copy to clipboard and start timeout to hide attnbar
+		// i can do this test by doing `gAttn[aSessionId].state.aBtns === 1` because each action gets a button
+	if (aEntry.state.aBtns.length === 1 && aEntry.state.aBtns[0].meta.reason == 'SUCCESS') {
+		// yes only 1 action
+		console.error('yes only 1 action AND it is at success');
+
+		var meta = aEntry.state.aBtns[0].meta;
+		var {serviceid, actionid} = meta;
+
+		if (!aDontCopy) {
+			if (meta.data && meta.data.copytxt) {
+				copy(meta.data.copytxt);
+
+				if (core.addon.l10n.main['copied_notification_title_' + meta.serviceid]) {
+					// show alert notification that it was copied
+					var notifcookie = {
+						serviceid,
+						actionid
+					};
+					console.log('meta.serviceidmeta.serviceidmeta.serviceidmeta.serviceid:', core.addon.path.images + 'icon48.png', formatStringFromNameCore('copied_notification_title_' + serviceid, 'main'), formatStringFromNameCore('copied_notification_body_' + serviceid, 'main'), true, notifcookie, notificationClick, 'NativeShot-' + actionid);
+
+					// myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', formatStringFromNameCore('copied_notification_title_' + serviceid, 'main'), formatStringFromNameCore('copied_notification_body_' + serviceid, 'main'), true, notifcookie, notificationClick, 'NativeShot-' + actionid)
+					// on win10, if i dont wait 1000ms its not showing
+					callInMainworker( 'bootstrapTimeout', 1000, () => myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', formatStringFromNameCore('copied_notification_title_' + serviceid, 'main'), formatStringFromNameCore('copied_notification_body_' + serviceid, 'main'), true, notifcookie, notificationClick, 'NativeShot-' + actionid) );
+				}
+			}
+		}
+
+		// start countdown if visible
+		if (aEntry.shown) {
+			console.error('ok bar is shown');
+			aEntry.autoclose_secleft = 26;
+			aEntry.autoclose_countdown_callback = function() {
+				if (!aEntry.closed && !aEntry.autoclose_cancelled) {
+					if (--aEntry.autoclose_secleft === 0) {
+						// close it
+						AB.Callbacks[aEntry.state.aId]();
+					} else {
+						attnUpdate(aSessionId);
+						callInMainworker('bootstrapTimeout', 1000, aEntry.autoclose_countdown_callback);
+					}
+				}
+
+				// TODO: handle if clean up on if cancelled or closed
+				if (aEntry.autoclose_cancelled) {
+					delete aEntry.autoclose_cancelled;
+				}
+			};
+
+			callInMainworker('bootstrapTimeout', 0, aEntry.autoclose_countdown_callback); // as i call `checkOnlySingleAction` from inside `attnUpdate`, so I want that update to go through first before doing this, i think
+		}
+		else { console.error('ok bar is NOT shown'); }
+	}
+}
+
+var notificationClick = {
+	observe: function(aSubject, aTopic, aData) {
+		// aSubject - is always null
+		switch (aTopic) {
+			case 'alertclickcallback':
+				var { serviceid, actionid } = aData;
+				myServices.as.closeAlert('NativeShot-' + actionid);
+
+				// do an action based on the serviceid
+				switch(serviceid) {
+
+				}
+		}
 	}
 }
 
@@ -2351,4 +2469,25 @@ function getStrongReference(aWkRef) {
 		return null;
 	}
 	return strongRef;
+}
+
+function formatTime(aDateOrTime, aOptions={}) {
+	// aMonthFormat - name, Mmm
+	var aDefaultOptions = {
+		month: 'name', // string;enum[name,Mmm] - format for month
+		time: true // bool - if should append time string
+	};
+	aOptions = Object.assign(aDefaultOptions, aOptions);
+
+	var aDate = typeof(aDateOrTime) == 'object' ? aDateOrTime : new Date(aDateOrTime);
+
+	var mon = formatStringFromNameCore('month.' + (aDate.getMonth()+1) + '.' + aOptions.month, 'dateFormat');
+	var yr = aDate.getFullYear();
+	var day = aDate.getDate();
+
+	var hr = aDate.getHours() > 12 ? aDate.getHours() - 12 : aDate.getHours();
+	var min = aDate.getMinutes() < 10 ? '0' + aDate.getMinutes() : aDate.getMinutes();
+	var meridiem = aDate.getHours() < 12 ? 'AM' : 'PM';
+
+	return mon + ' ' + day + ', ' + yr + (aOptions.time ? ' - ' + hr + ':' + min + ' ' + meridiem : '');
 }

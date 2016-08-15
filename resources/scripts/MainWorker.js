@@ -3703,22 +3703,22 @@ function hotkeysRegister() {
 							// mac only mods: capslock
 
 						if (mods.capslock) {
-							mods_os |= ostypes.CONST.alphaLock;
+							mods_os |= ostypes.CONST.alphaLock; // UNTESTED
 						}
 						if (mods.meta) {
 							mods_os |= ostypes.CONST.cmdKey;
 						}
 						if (mods.alt) {
 							mods_os |= ostypes.CONST.optionKey;
-							mods_os |= ostypes.CONST.rightOptionKey;
+							// mods_os |= ostypes.CONST.rightOptionKey;
 						}
 						if (mods.shift) {
 							mods_os |= ostypes.CONST.shiftKey;
-							mods_os |= ostypes.CONST.rightShiftKey;
+							// mods_os |= ostypes.CONST.rightShiftKey;
 						}
 						if (mods.control) {
 							mods_os |= ostypes.CONST.controlKey;
-							mods_os |= ostypes.CONST.rightControlKey;
+							// mods_os |= ostypes.CONST.rightControlKey;
 						}
 					}
 
