@@ -5710,13 +5710,26 @@ function init(aArrBufAndCore) {
 
 	var InputNumber = React.createClass({
 		displayName: 'InputNumber',
+		getStateVarVal: function() {
+			var { pStateVarName } = this.props;
+			if (pStateVarName != 'sGenPalH' && pStateVarName != 'sGenPalW') {
+				return this.props[this.props.pStateVarName];
+			} else {
+				if (pStateVarName == 'sGenPalH') {
+					return parseFloat(gHeightRef.value);
+				} else if (pStateVarName == 'sGenPalW') {
+					return parseFloat(gWidthRef.value);
+				}
+			}
+		},
 		wheel: function(e) {
 			var newVal;
 			// console.log('e:', e.deltaMode, e.deltaY);
+
 			if (e.deltaY < 0) {
-				newVal = this.props[this.props.pStateVarName] + this.crement;
+				newVal = this.getStateVarVal() + this.crement;
 			} else {
-				newVal = this.props[this.props.pStateVarName] - this.crement;
+				newVal = this.getStateVarVal() - this.crement;
 			}
 
 			this.limitTestThenSet(newVal);
@@ -5729,12 +5742,12 @@ function init(aArrBufAndCore) {
 			switch (e.key) {
 				case 'ArrowUp':
 
-						newVal = this.props[this.props.pStateVarName] + this.crement;
+						newVal = this.getStateVarVal() + this.crement;
 
 					break;
 				case 'ArrowDown':
 
-						newVal = this.props[this.props.pStateVarName] - this.crement;
+						newVal = this.getStateVarVal() - this.crement;
 
 					break;
 				default:
@@ -5797,7 +5810,7 @@ function init(aArrBufAndCore) {
 			if (e.button != 0) { return }
 
 			this.downx = e.clientX;
-			this.downval = this.props[this.props.pStateVarName];
+			this.downval = this.getStateVarVal();
 			window.addEventListener('mouseup', this.mouseup, false);
 			window.addEventListener('mousemove', this.mousemove, false);
 
