@@ -1,6 +1,7 @@
 // Imports
 const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
 Cu.import('resource://gre/modules/AddonManager.jsm');
+Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 Cu.importGlobalProperties(['Blob', 'URL']);
@@ -231,7 +232,6 @@ function uninstall(aData, aReason) {
 
 		var should_delete = Services.prompt.confirmEx(Services.wm.getMostRecentWindow('navigator:browser'), packageJson.uninstall_title, packageJson.uninstall_body.replace(/\\n/g, '\n'), Services.prompt.BUTTON_POS_0 * Services.prompt.BUTTON_TITLE_IS_STRING + Services.prompt.BUTTON_POS_1 * Services.prompt.BUTTON_TITLE_IS_STRING, packageJson.delete, packageJson.keep, '', null, {value: false});
 		if (should_delete === 0) {
-			Cu.import('resource://gre/modules/osfile.jsm');
 			OS.File.removeDir(OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id), {ignorePermissions:true, ignoreAbsent:true}); // will reject if `jetpack` folder does not exist
 		}
 
@@ -502,9 +502,11 @@ function takeShot() {
 }
 
 // start - functions called by editor
-function editorInitShot(aIMon) {
+function editorInitShot(aIMon, e) {
 	// does the platform dependent stuff to make the window be position on the proper monitor and full screened covering all things underneeath
 	// also transfer the screenshot data to the window
+
+	// console.error('e:', e);
 
 	var iMon = aIMon; // iMon is my rename of colMonIndex. so its the i in the collMoninfos object
 	var shots = gSession.shots;
@@ -521,6 +523,7 @@ function editorInitShot(aIMon) {
 	}
 	var domwin = shot.domwin;
 	var aHwndPtrStr = getNativeHandlePtrStr(domwin);
+	console.error('aHwndPtrStr.pre method1:', getNativeHandlePtrStr(domwin), 'method2:', getNativeHandlePtrStr(e.target));
 	shot.hwndPtrStr = aHwndPtrStr;
 
 	// if (core.os.name != 'darwin') {
@@ -548,12 +551,16 @@ function editorInitShot(aIMon) {
 
 	// if (core.os.name != 'darwinAAAA') {
 	callInMainworker('setWinAlwaysOnTop', { aArrHwndPtrStr, aOptions:aArrHwndPtrOsParams }, function(aArg) {
+		console.error('post for logging aHwndPtrStr, core.os:', core.os);
 		if (core.os.name == 'darwin') {
+			console.error('in darwin block of post for logging aHwndPtrStr');
 			initOstypes();
 			// link98476884
-			OSStuff.NSMainMenuWindowLevel = aVal;
+			OSStuff.NSMainMenuWindowLevel = aArg;
 
-			var NSWindowString = getNativeHandlePtrStr(domwin);
+			var NSWindowString = aHwndPtrStr;
+			console.error('aHwndPtrStr.post method1:', getNativeHandlePtrStr(domwin), 'method2:', getNativeHandlePtrStr(e.target));
+			// var NSWindowString = getNativeHandlePtrStr(domwin);
 			var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
 
 			var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
@@ -1012,7 +1019,7 @@ var windowListener = {
 				var detail = e.detail;
 				var iMon = detail;
 				var shot = gSession.shots[iMon];
-				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon), shot.port1, shot.port2);
+				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
 			}, false, true);
 		}
 	},
@@ -2306,6 +2313,47 @@ function shouldTakeShot() {
 	else { console.warn('screenshot session currently in progress so will not takeShot'); }
 }
 
+function normalizePath(aPath) {
+	return OS.Path.normalize(aPath);
+}
+
+function getMostRecentWindowTitle(aWindowType=null) {
+	var win = Services.wm.getMostRecentWindow(aWindowType);
+	if (win && win.document) {
+		return win.document.title;
+	} else {
+		return undefined;
+	}
+}
+
+function macSetAlwaysOnTop(aNSWindowPtrStr) {
+	initOstypes();
+	var NSWindow = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
+	var rez_set = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // OSStuff.NSMainMenuWindowLevel exists for sure because this function is only called after screenshot window is opened
+	console.log('rez_set:', rez_set.toString());
+}
+
+function macFindDialogAndSetTop() {
+	console.error('in macFindDialogAndSetTop');
+	initOstypes();
+	var shared_app = ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSApplication'), ostypes.HELPER.sel('sharedApplication')); //
+	var keywin = ostypes.API('objc_msgSend')(shared_app, ostypes.HELPER.sel('keyWindow'));
+	if (keywin.isNull()) {
+		console.error('no keywin, most rect title:', getMostRecentWindowTitle());
+		return null;
+	} else {
+		var title_objc = ostypes.API('objc_msgSend')(keywin, ostypes.HELPER.sel('title'));
+		var title = ostypes.HELPER.readNSString(title_objc);
+		console.error('title_objc as js:', title, 'most rect title:', getMostRecentWindowTitle());
+		if (title == formatStringFromNameCore('filepicker_title_savescreenshot', 'main')) {
+			var rez_set = ostypes.API('objc_msgSend')(keywin, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // OSStuff.NSMainMenuWindowLevel exists for sure because this function is only called after screenshot window is opened
+			console.log('rez_set:', rez_set.toString());
+			return true;
+		} else {
+			return undefined;
+		}
+	}
+}
 // start - common helper functions
 function Deferred() {
 	this.resolve = null;

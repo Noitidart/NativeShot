@@ -26,10 +26,12 @@ function initAppPage(aArg) {
 									win: 'navigator:browser'
 								}
 							},
-							function(aArg) {
-								if (aArg) {
-									store.dispatch(setPref('quick_save_dir', aArg));
-								}
+							function(aDirPath) {
+								if (aDirPath) {
+									callInBootstrap('normalizePath', aDirPath, function(aDirPathNormalized) {
+										store.dispatch(setPref('quick_save_dir', aDirPathNormalized));
+									});
+								} // else user canceled dialog
 							}
 						);
 					}

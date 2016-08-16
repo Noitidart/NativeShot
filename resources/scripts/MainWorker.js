@@ -1967,6 +1967,7 @@ function setWinAlwaysOnTop(aArg) {
 		case 'gtk':
 
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					console.log('at top of gtk loop');
 					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
 					console.log('hwndPtr:', hwndPtr);
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
@@ -2910,7 +2911,7 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 	var f;
 	var doBrowse = function() {
 		var browsefile_arg = {
-			aDialogTitle: formatStringFromName('filepicker_title_savescreenshot', 'main'),
+			aDialogTitle: formatStringFromName('filepicker_title_savescreenshot', 'main'), // link431003
 			aOptions: {
 				returnDetails: true,
 				mode: 'modeSave',
@@ -2921,6 +2922,10 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 		};
 		if (shot.action_options && 'imon' in shot.action_options) {
 			browsefile_arg.aOptions.win = shot.action_options.imon;
+			if (core.os.mname == 'darwin') {
+				macSetTry = 0;
+				setTimeout(macSetBrowseFileDialogLevel, 0);
+			}
 		} else {
 			browsefile_arg.aOptions.win = 'navigator:browser';
 		}
@@ -4026,6 +4031,20 @@ function hotkeyMacCallback(aArg) {
 	}
 }
 // end - system hotkey
+
+var macSetTry = 0;
+function macSetBrowseFileDialogLevel() {
+	if (macSetTry++ === 20) {
+		console.error('reached max tries');
+		return;
+	}
+
+	callInBootstrap('macFindDialogAndSetTop', undefined, function(aDone) {
+		if (!aDone) {
+			setTimeout(macSetBrowseFileDialogLevel, 50);
+		}
+	});
+}
 
 // End - Addon Functionality
 
