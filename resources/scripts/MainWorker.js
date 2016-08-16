@@ -428,27 +428,71 @@ function trashFile(aFilePlatPath) {
 			break;
 		case 'darwin':
 
-				// http://stackoverflow.com/a/18069259/1828637
-				// NSError * error = nil;
-				// [[NSFileManager defaultManager] trashItemAtURL:url resultingItemURL:nil error:&error];
-				var NSFileManager = ostypes.HELPER.class('NSFileManager');
-				var default_manager = ostypes.API('objc_msgSend')(NSFileManager, ostypes.HELPER.sel('defaultManager'));
-
-				var NSURL = ostypes.HELPER.class('NSURL');
-				var NSStrings = new ostypes.HELPER.nsstringColl();
 				try {
-					var url = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('fileURLWithPath:isDirectory:'), NSStrings.get(aFilePlatPath), ostypes.CONST.NO);
 
-					var rez_trash = ostypes.API('objc_msgSend')(default_manager, ostypes.HELPER.sel('trashItemAtURL:resultingItemURL:error:'), url, ostypes.CONST.NIL, ostypes.CONST.NIL);
-					console.log('rez_trash:', rez_trash, 'make sure nil is still nil:', ostypes.CONST.NIL);
-					if (cutils.jscEqual(rez_trash, ostypes.CONST.YES, 10)) {
-						return true;
-					} else {
+					var NSArray = ostypes.HELPER.class('NSArray');
+					// var cNSArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('array'));
+
+					var NSURL = ostypes.HELPER.class('NSURL');
+					console.log('aFilePlatPath:', aFilePlatPath);
+
+					var cMacUrl = ostypes.API('objc_msgSend')(NSURL, ostypes.HELPER.sel('fileURLWithPath:isDirectory:'), trashNSStrings.get(aFilePlatPath), ostypes.CONST.NO);
+					console.log('cMacUrl:', cMacUrl);
+					if (cMacUrl.isNull()) {
+						console.error('failed to create NSURL');
 						return false;
 					}
+
+					var cMacUrlArray = ostypes.API('objc_msgSend')(NSArray, ostypes.HELPER.sel('arrayWithObject:'), cMacUrl);
+					console.log('cMacUrlArray:', cMacUrlArray);
+
+					var NSWorkspace = ostypes.HELPER.class('NSWorkspace');
+
+					var sharedWorkspace = ostypes.API('objc_msgSend')(NSWorkspace, ostypes.HELPER.sel('sharedWorkspace'));
+
+					var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, ostypes.CONST.NIL); // verified that NIL is not modified it is still 0x0 after calling this
+					console.log('rez_trash:', rez_trash); // value is meaningless
+
+					// as val of rez_trash is meaningless i have to check until its trashed. i dont think this function blocks till trash completes, so i loop below
+					var TRASHED_CHECK_INTERVAL = 100; // ms
+					var MAX_TRASHED_CHECK_CNT = Math.ceil(10000 / TRASHED_CHECK_INTERVAL); // checks for 10,000 ms
+					var trashed_check_i = 0;
+					while (trashed_check_i < MAX_TRASHED_CHECK_CNT) {
+						var trashedFileExists = OS.File.exists(aFilePlatPath);
+						console.log(trashed_check_i, 'trashedFileExists:', trashedFileExists);
+						if (!trashedFileExists) {
+							// yes it was trashed
+							return true;
+						}
+						setTimeoutSync(TRASHED_CHECK_INTERVAL);
+						trashed_check_i++;
+					}
+					return false; // checked max times, and the file is still not yet trashed, so report false for rez_trash
+
+					// with callback block - this cannot be run from ChromeWorker's - this is a firefox bug i have to link the bugzilla here
+					// var handlerId = new Date().getTime();
+					// OSStuff[handlerId] = {};
+					//
+					// OSStuff[handlerId].myHandler_js = function(NSURLs, error) {
+					// 	console.error('handler called');
+					//
+					// 	console.log('error:', error, error.toString(), error.isNull());
+					//
+					// 	// return nothing as per its IMP
+					// };
+					// ostypes.TYPE.NSURLs = ctypes.voidptr_t;
+					// ostypes.TYPE.NSError = ctypes.voidptr_t;
+					// var IMP_for_completionHandler = ctypes.FunctionType(ostypes.TYPE.CALLBACK_ABI, ostypes.TYPE.VOID, [ostypes.TYPE.NSURLs, ostypes.TYPE.NSError]);
+					// OSStuff[handlerId].myHandler_c = IMP_for_completionHandler.ptr(OSStuff[handlerId].myHandler_js);
+					// var myBlock_c = ostypes.HELPER.createBlock(OSStuff[handlerId].myHandler_c);
+					//
+					// var rez_trash = ostypes.API('objc_msgSend')(sharedWorkspace, ostypes.HELPER.sel('recycleURLs:completionHandler:'), cMacUrlArray, myBlock_c.address()); // verified that NIL is not modified it is still 0x0 after calling this
+					// console.log('rez_trash:', rez_trash);
+
+
 				} finally {
-					if (NSStrings) {
-						NSStrings.releaseAll()
+					if (trashNSStrings) {
+						trashNSStrings.releaseAll()
 					}
 				}
 
