@@ -491,6 +491,9 @@ function takeShot() {
 			// console.log('query_str:', query_str);
 
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			// editor_domwin.addEventListener('load', function() {
+			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
+			// }, false);
 			shot.domwin_wk = Cu.getWeakReference(editor_domwin);
 			shot.domwin = editor_domwin;
 		}
@@ -1012,7 +1015,7 @@ var windowListener = {
 		// console.error('title changed to:', aNewTitle);
 		if (aNewTitle == 'nativeshot_canvas') {
 			var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow);
-			// aDOMWindow.document.documentElement.style.backgroundColor = 'transparent';
+			// aDOMWindow.document.documentElement.style.backgroundColor = 'red';
 			aDOMWindow.addEventListener('nscomm', function(e) {
 				aDOMWindow.removeEventListener('nscomm', arguments.callee, false);
 				// console.log('got nscomm', e.detail);
