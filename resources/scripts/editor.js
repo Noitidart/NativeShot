@@ -342,6 +342,8 @@ function fullfillCompositeRequest(aData) {
 			facebook: 'facebook',
 			gdrive: 'gdrive',
 			dropbox: 'dropbox',
+			imgur: 'imgur',
+			imguranon: 'imguranon',
 			bing: 'bing',
 			tineye: 'tineye',
 			googleimages: 'just_google',
@@ -360,13 +362,14 @@ function fullfillCompositeRequest(aData) {
 		if (!serviceid) {
 			for (var a_serviceid in serviceid_to_subl10n) {
 				var l10nkey = serviceid_to_subl10n[a_serviceid];
+				console.log('sub:', sub, 'l10nkey:', l10nkey, formatStringFromNameCore(l10nkey, 'main'));
 				if (sub == formatStringFromNameCore(l10nkey, 'main')) {
 					serviceid = a_serviceid;
 					break;
 				}
 			}
 		}
-		console.error('serviceid:', serviceid);
+		console.error('serviceid:', serviceid, 'action:', action, 'sub:', sub);
 
 		var postAction = function() {
 			if (boolclose) {
