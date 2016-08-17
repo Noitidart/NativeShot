@@ -327,102 +327,46 @@ function fullfillCompositeRequest(aData) {
 		// send data to bootstrap
 
 
-		// determeint oauthServiceName
-		var oauthServiceName;
+		//// determine serviceid
+		var serviceid;
 
-		switch (action) {
-			case formatStringFromNameCore('just_copy', 'main'):
-			case formatStringFromNameCore('just_print', 'main'):
-
-					oauthServiceName = action.toLowerCase();
-
-				break;
-			case formatStringFromNameCore('just_save', 'main'):
-
-					if (sub == formatStringFromNameCore('browse', 'main')) {
-						oauthServiceName = 'savebrowse';
-					} else if (sub == formatStringFromNameCore('quick', 'main')) {
-						oauthServiceName = 'savequick';
-					}
-					// if (!boolclose && oauthServiceName == 'savebrowse') {
-					// 	oauthServiceName = 'save-browse-canvas';
-					// }
-
-				break;
-			case formatStringFromNameCore('just_upload', 'main'):
-
-					switch (sub) {
-						case formatStringFromNameCore('imguranon', 'main'):
-
-								oauthServiceName = 'imguranon';
-
-							break;
-						case formatStringFromNameCore('imgur', 'main'):
-
-								oauthServiceName = 'imgur';
-
-							break;
-						case formatStringFromNameCore('gdrive', 'main'):
-
-								oauthServiceName = 'gdrive';
-
-							break;
-						case formatStringFromNameCore('dropbox', 'main'):
-
-								oauthServiceName = 'dropbox';
-
-							break;
-						default:
-							console.error('should never get here unrecognized sub:', sub);
-					}
-
-				break;
-			case formatStringFromNameCore('just_search', 'main'):
-
-					switch (sub) {
-						case formatStringFromNameCore('tineye', 'main'):
-
-								oauthServiceName = 'tineye';
-
-							break;
-						case formatStringFromNameCore('just_google', 'main'):
-
-								oauthServiceName = 'googleimages';
-
-							break;
-						case formatStringFromNameCore('bing', 'main'):
-
-								oauthServiceName = 'bing';
-
-							break;
-						default:
-							console.error('should never get here unrecognized sub:', sub);
-					}
-
-				break;
-			case formatStringFromNameCore('share', 'main'):
-			case formatStringFromNameCore('text_recognition', 'main'):
-
-					switch(sub) {
-						case formatStringFromNameCore('gocr', 'main'):
-								oauthServiceName = 'gocr';
-							break;
-						case formatStringFromNameCore('ocrad', 'main'):
-								oauthServiceName = 'ocrad';
-							break;
-						case formatStringFromNameCore('tesseract', 'main'):
-								oauthServiceName = 'tesseract';
-							break;
-						case formatStringFromNameCore('ocrall', 'main'):
-							oauthServiceName = 'ocrall';
-					}
-
-
-				break;
-			default:
-				console.error('no bootstrap action specified, action:', action, 'sub:', sub);
-				return;
+		// key is serviceid, value is l10n key
+		var serviceid_to_actionl10n = {
+			copy: 'just_copy',
+			print: 'just_print'
+		};
+		var serviceid_to_subl10n = {
+			savequick: 'quick',
+			savebrowse: 'browse',
+			twitter: 'twitter',
+			facebook: 'facebook',
+			gdrive: 'gdrive',
+			dropbox: 'dropbox',
+			bing: 'bing',
+			tineye: 'tineye',
+			googleimages: 'just_google',
+			ocrall: 'ocrall',
+			gocr: 'gocr',
+			ocrad: 'ocrad',
+			tesseract: 'tesseract'
 		}
+		for (var a_serviceid in serviceid_to_actionl10n) {
+			var l10nkey = serviceid_to_actionl10n[a_serviceid];
+			if (action == formatStringFromNameCore(l10nkey, 'main')) {
+				serviceid = a_serviceid;
+				break;
+			}
+		}
+		if (!serviceid) {
+			for (var a_serviceid in serviceid_to_subl10n) {
+				var l10nkey = serviceid_to_subl10n[a_serviceid];
+				if (sub == formatStringFromNameCore(l10nkey, 'main')) {
+					serviceid = a_serviceid;
+					break;
+				}
+			}
+		}
+		console.error('serviceid:', serviceid);
 
 		var postAction = function() {
 			if (boolclose) {
@@ -430,17 +374,17 @@ function fullfillCompositeRequest(aData) {
 			}
 		};
 
-		// holds oauthServiceName which is serviceid
+		// holds serviceid which is serviceid
 		var shot = {
 			sessionid: gQS.sessionid,
 			actionid: Date.now(),
-			serviceid: oauthServiceName,
+			serviceid,
 			width: compositeRect.width,
 			height: compositeRect.height
 		};
 
 		// set up action_options
-		if (oauthServiceName == 'savebrowse') {
+		if (serviceid == 'savebrowse') {
 			if (!boolclose) {
 				shot.action_options = {
 					imon: tQS.iMon
@@ -464,7 +408,7 @@ function fullfillCompositeRequest(aData) {
 			}
 		};
 
-		switch (core.nativeshot.services[oauthServiceName].datatype) {
+		switch (core.nativeshot.services[serviceid].datatype) {
 			case 'png_dataurl':
 					shot.dataurl = can.toDataURL('image/png', '');
 					postDataGen();
@@ -4336,7 +4280,7 @@ function init(aArrBufAndCore) {
 				case formatStringFromNameCore('just_save', 'main'):
 				case formatStringFromNameCore('just_copy', 'main'):
 				case formatStringFromNameCore('just_print', 'main'):
-				case formatStringFromNameCore('upload', 'main'):
+				case formatStringFromNameCore('just_upload', 'main'):
 				case formatStringFromNameCore('just_share', 'main'):
 				case formatStringFromNameCore('just_search', 'main'):
 				case formatStringFromNameCore('text_recognition', 'main'):
@@ -4563,13 +4507,6 @@ function init(aArrBufAndCore) {
 				}
 			}
 		},
-		componentDidMount: function() {
-
-			// if its an action button, then append to label " & Close" - i can do this in did mount, because when mount for sure alt is not pressed, well pretty sure so yea no big
-			if ([formatStringFromNameCore('just_save', 'main'), formatStringFromNameCore('just_print', 'main'), formatStringFromNameCore('just_copy', 'main'), formatStringFromNameCore('upload', 'main'), formatStringFromNameCore('just_share', 'main'), formatStringFromNameCore('just_search', 'main'), formatStringFromNameCore('text_recognition', 'main')].indexOf(this.props.pButton.label) > -1) {
-				this.isActionButton = true;
-			}
-		},
 		render: function() {
 			// props
 			//		pButton
@@ -4649,6 +4586,12 @@ function init(aArrBufAndCore) {
 				);
 			}
 
+			if (this.isActionButton === undefined) {
+				// if its an action button, then append to label " & Close" - i can do this in did mount, because when mount for sure alt is not pressed, well pretty sure so yea no big
+				if ([formatStringFromNameCore('just_save', 'main'), formatStringFromNameCore('just_print', 'main'), formatStringFromNameCore('just_copy', 'main'), formatStringFromNameCore('just_upload', 'main'), formatStringFromNameCore('just_share', 'main'), formatStringFromNameCore('just_search', 'main'), formatStringFromNameCore('text_recognition', 'main')].indexOf(this.props.pButton.label) > -1) {
+					this.isActionButton = true;
+				}
+			}
 			var origLabel = this.props.pButton.label;
 			if (this.isActionButton && !this.props.sGenShiftKey) {
 				origLabel += formatStringFromNameCore('and_close', 'main');
@@ -4721,7 +4664,7 @@ function init(aArrBufAndCore) {
 				gCanStore.setCanState(false); // as i for sure added a new cutout
 			}
 
-			if ([formatStringFromNameCore('just_save', 'main'), formatStringFromNameCore('upload', 'main'), formatStringFromNameCore('just_share', 'main'), formatStringFromNameCore('just_search', 'main'), formatStringFromNameCore('text_recognition', 'main')].indexOf(this.props.pButton.label) > -1) {
+			if ([formatStringFromNameCore('just_save', 'main'), formatStringFromNameCore('just_upload', 'main'), formatStringFromNameCore('just_share', 'main'), formatStringFromNameCore('just_search', 'main'), formatStringFromNameCore('text_recognition', 'main')].indexOf(this.props.pButton.label) > -1) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
 			} else if (this.props.pButton.label == formatStringFromNameCore('blur', 'main')) {
