@@ -1991,8 +1991,8 @@ function setWinAlwaysOnTop(aArg) {
 						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
 						console.log('rez_map', rez_map);
 
-						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-						// console.log('rez_flush', rez_flush);
+						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						console.log('rez_flush', rez_flush);
 					}, 0);
 
 					setTimeout(function() {
@@ -2062,8 +2062,8 @@ function setWinAlwaysOnTop(aArg) {
 						// var rez_resize = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, mask, ostypes.TYPE.uint32_t.array()(valswin));
 						// console.log('rez_resize:', rez_resize);
 console.error('final');
-						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-						console.log('rez_map', rez_map);
+						// var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
+						// console.log('rez_map', rez_map);
 
 						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
 						// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
