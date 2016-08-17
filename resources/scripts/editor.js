@@ -331,39 +331,43 @@ function fullfillCompositeRequest(aData) {
 		var oauthServiceName;
 
 		switch (action) {
-			case 'Copy':
-			case 'Print':
+			case formatStringFromNameCore('just_copy', 'main'):
+			case formatStringFromNameCore('just_print', 'main'):
 
 					oauthServiceName = action.toLowerCase();
 
 				break;
-			case 'Save':
+			case formatStringFromNameCore('just_save', 'main'):
 
-					oauthServiceName = 'save' + sub.toLowerCase();
+					if (sub == formatStringFromNameCore('browse', 'main')) {
+						oauthServiceName = 'savebrowse';
+					} else if (sub == formatStringFromNameCore('quick', 'main')) {
+						oauthServiceName = 'savequick';
+					}
 					// if (!boolclose && oauthServiceName == 'savebrowse') {
 					// 	oauthServiceName = 'save-browse-canvas';
 					// }
 
 				break;
-			case 'Upload':
+			case formatStringFromNameCore('just_upload', 'main'):
 
 					switch (sub) {
-						case 'Imgur Anonymous':
+						case formatStringFromNameCore('imguranon', 'main'):
 
 								oauthServiceName = 'imguranon';
 
 							break;
-						case 'Imgur':
+						case formatStringFromNameCore('imgur', 'main'):
 
 								oauthServiceName = 'imgur';
 
 							break;
-						case 'Google Drive':
+						case formatStringFromNameCore('gdrive', 'main'):
 
 								oauthServiceName = 'gdrive';
 
 							break;
-						case 'Dropbox':
+						case formatStringFromNameCore('dropbox', 'main'):
 
 								oauthServiceName = 'dropbox';
 
@@ -373,20 +377,20 @@ function fullfillCompositeRequest(aData) {
 					}
 
 				break;
-			case 'Search':
+			case formatStringFromNameCore('just_search', 'main'):
 
 					switch (sub) {
-						case 'Tineye':
+						case formatStringFromNameCore('tineye', 'main'):
 
 								oauthServiceName = 'tineye';
 
 							break;
-						case 'Google':
+						case formatStringFromNameCore('just_google', 'main'):
 
 								oauthServiceName = 'googleimages';
 
 							break;
-						case 'Bing':
+						case formatStringFromNameCore('bing', 'main'):
 
 								oauthServiceName = 'bing';
 
@@ -396,15 +400,23 @@ function fullfillCompositeRequest(aData) {
 					}
 
 				break;
-			case 'Share':
-			case 'Text Recognition':
+			case formatStringFromNameCore('share', 'main'):
+			case formatStringFromNameCore('text_recognition', 'main'):
 
-					oauthServiceName = sub.toLowerCase();
-
-					if (oauthServiceName == 'all') {
-						// its all ocr
-						oauthServiceName = 'ocrall';
+					switch(sub) {
+						case formatStringFromNameCore('gocr', 'main'):
+								oauthServiceName = 'gocr';
+							break;
+						case formatStringFromNameCore('ocrad', 'main'):
+								oauthServiceName = 'ocrad';
+							break;
+						case formatStringFromNameCore('tesseract', 'main'):
+								oauthServiceName = 'tesseract';
+							break;
+						case formatStringFromNameCore('ocrall', 'main'):
+							oauthServiceName = 'ocrall';
 					}
+
 
 				break;
 			default:
@@ -674,11 +686,11 @@ function init(aArrBufAndCore) {
 		},
 		// selection tools
 		{
-			label: 'Select',
+			label: formatStringFromNameCore('select', 'main'),
 			icon: '\ue831', // the fontello font code
 			sub: [
 				{
-					label: 'Last Selection',
+					label: formatStringFromNameCore('last_selection', 'main'),
 					icon: '\ue822',
 					unfixable: true
 				}
@@ -687,7 +699,7 @@ function init(aArrBufAndCore) {
 			hotkey: 'm'
 		},
 		{
-			label: 'Fullscreen', // by default it selects the current monitor
+			label: formatStringFromNameCore('fullscreen', 'main'), // by default it selects the current monitor
 			icon: '\ue80d',
 			hotkey: 'ca', // hotkey does the currently set sub, in this case its fixed to current monitor (i should test which window the mouse is over)
 			justClick: true,
@@ -699,12 +711,12 @@ function init(aArrBufAndCore) {
 			// ]
 		},
 		{
-			label: 'Window Wand',
+			label: formatStringFromNameCore('window_wand', 'main'),
 			icon: '\ue832',
 			hotkey: 'w'
 		},
 		{
-			label: 'Clear Selection',
+			label: formatStringFromNameCore('clear_selection', 'main'),
 			justClick: true,
 			icon: '\ue825',
 			hotkey: 'd'
@@ -719,7 +731,7 @@ function init(aArrBufAndCore) {
 		//	multiDepress: true
 		//},
 		{
-			label: 'Zoom View',
+			label: formatStringFromNameCore('zoom_view', 'main'),
 			icon: '\ue80f',
 			multiDepress: true,
 			hotkey: 'z'
@@ -735,30 +747,30 @@ function init(aArrBufAndCore) {
 		},
 		// draw tools
 		{
-			label: 'Freedraw',
+			label: formatStringFromNameCore('freedraw', 'main'),
 			icon: '\ue82d',
 			hotkey: 'f',
 			sub: [
 				{
-					label: 'Pencil',
+					label: formatStringFromNameCore('pencil', 'main'),
 					icon: '\ue800',
-					options: ['Color']
+					options: [formatStringFromNameCore('color', 'main')]
 				},
 				{
-					label: 'Marker', // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
+					label: formatStringFromNameCore('marker', 'main'), // this just its own remembered color and transparency - otherwise its a copy of pencil - im thinking cap the opacity at 10% - 90%
 					icon: '\ueae9',
-					options: ['Marker Color']
+					options: [formatStringFromNameCore('marker_color', 'main')]
 				}
 			],
 			options: ['LineTools']
 		},
 		{
-			label: 'Shapes',
+			label: formatStringFromNameCore('shapes', 'main'),
 			icon: '\ue827',
 			hotkey: 's',
 			sub: [
 				{
-					label: 'Rectangle',
+					label: formatStringFromNameCore('rectangle', 'main'),
 					icon: '\ue81b'
 				},
 				// { // discontinued this, as i plan to offer a border radius option for when Rectangle is selected
@@ -766,34 +778,34 @@ function init(aArrBufAndCore) {
 				// 	icon: '\ue803'
 				// },
 				{
-					label: 'Oval',
+					label: formatStringFromNameCore('oval', 'main'),
 					icon: '\ue83d'
 				}
 			],
-			options: ['Color', 'Fill Color', 'LineTools', 'DimensionTools']
+			options: [formatStringFromNameCore('color', 'main'), formatStringFromNameCore('fill_color', 'main'), 'LineTools', 'DimensionTools']
 		},
 		{
-			label: 'Line',
+			label: formatStringFromNameCore('line', 'main'),
 			icon: '\ue82e',
 			hotkey: 'l',
-			options: ['Color', 'LineTools', 'ArrowTools']
+			options: [formatStringFromNameCore('color', 'main'), 'LineTools', 'ArrowTools']
 		},
 		{
-			label: 'Text', // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
+			label: formatStringFromNameCore('text', 'main'), // if click with this tool, then its free type. if click and drag then its contained. if contained, then show sPalFontWrap option
 			icon: '\ueae8',
-			options: ['TextTools', 'Fill Color'],
+			options: ['TextTools', formatStringFromNameCore('fill_color', 'main')],
 			hotkey: 't'
 		},
 		{
-			label: 'Blur',
+			label: formatStringFromNameCore('blur', 'main'),
 			icon: '\ue807',
 			sub: [
 				{
-					label: 'Gaussian',
+					label: formatStringFromNameCore('gaussian', 'main'),
 					icon: '\ue814'
 				},
 				{
-					label: 'Mosaic',
+					label: formatStringFromNameCore('mosaic', 'main'),
 					icon: '\ue819',
 					options: ['Word Break / Ellipsis']
 				}
@@ -806,7 +818,7 @@ function init(aArrBufAndCore) {
 		},
 		// options
 		{
-			label: 'Color',
+			label: formatStringFromNameCore('color', 'main'),
 			icon: 'S',
 			justClick: true,
 			sub: [
@@ -818,7 +830,7 @@ function init(aArrBufAndCore) {
 			isOption: true
 		},
 		{
-			label: 'Marker Color',
+			label: formatStringFromNameCore('marker_color', 'main'),
 			icon: 'S',
 			justClick: true,
 			sub: [
@@ -843,7 +855,7 @@ function init(aArrBufAndCore) {
 			props: ['sPalArrowStart', 'sPalArrowEnd', 'sPalArrowLength']
 		},
 		{
-			label: 'Fill Color',
+			label: formatStringFromNameCore('fill_color', 'main'),
 			icon: 'S',
 			justClick: true,
 			sub: [
@@ -877,113 +889,113 @@ function init(aArrBufAndCore) {
 		},
 		// actions
 		{
-			label: 'Save',
+			label: formatStringFromNameCore('just_save', 'main'),
 			icon: '\ue803',
 			hotkey: 'cs',
 			justClick: true,
 			sub: [
 				{
-					label: 'Quick',
+					label: formatStringFromNameCore('quick', 'main'),
 					icon: '\ue81c'
 				},
 				{
-					label: 'Browse',
+					label: formatStringFromNameCore('browse', 'main'),
 					icon: '\ueaed'
 				}
 			]
 		},
 		{
-			label: 'Print',
+			label: formatStringFromNameCore('just_print', 'main'),
 			justClick: true,
 			icon: '\ue804',
 			hotkey: 'cp'
 		},
 		{
-			label: 'Copy',
+			label: formatStringFromNameCore('just_copy', 'main'),
 			justClick: true,
 			icon: '\ue80c',
 			hotkey: 'cc'
 		},
 		{
-			label: 'Upload',
+			label: formatStringFromNameCore('just_upload', 'main'),
 			justClick: true,
 			icon: '\ue84e',
 			hotkey: 'cu',
 			sub: [
 				{
-					label: 'Imgur Anonymous',
+					label: formatStringFromNameCore('imguranon', 'main'),
 					icon: '\ue829'
 				},
 				{
-					label: 'Imgur',
+					label: formatStringFromNameCore('imgur', 'main'),
 					icon: '\ue826'
 				},
 				{
-					label: 'Dropbox',
+					label: formatStringFromNameCore('dropbox', 'main'),
 					icon: '\ue808'
 				},
 				{
-					label: 'Google Drive',
+					label: formatStringFromNameCore('gdrive', 'main'),
 					icon: '\ue833'
 				}
 			]
 		},
 		{
-			label: 'Share',
+			label: formatStringFromNameCore('just_share', 'main'),
 			justClick: true,
 			icon: '\ue81e',
 			hotkey: 'cm',
 			sub: [
 				{
-					label: 'Twitter',
+					label: formatStringFromNameCore('twitter', 'main'),
 					icon: '\ue802'
 				},
 				{
-					label: 'Facebook',
+					label: formatStringFromNameCore('facebook', 'main'),
 					icon: '\ue801'
 				}
 			]
 		},
 		{
-			label: 'Search',
+			label: formatStringFromNameCore('just_search', 'main'),
 			justClick: true,
 			icon: '\ue81f',
 			hotkey: 'cf',
 			sub: [
 				{
-					label: 'Tineye',
+					label: formatStringFromNameCore('tineye', 'main'),
 					icon: '\ue84f'
 				},
 				{
-					label: 'Google',
+					label: formatStringFromNameCore('just_google', 'main'),
 					icon: '\ue80e'
 				},
 				{
-					label: 'Bing',
+					label: formatStringFromNameCore('bing', 'main'),
 					icon: '\ueaeb'
 				}
 			]
 		},
 		{
-			label: 'Text Recognition',
+			label: formatStringFromNameCore('text_recognition', 'main'),
 			justClick: true,
 			icon: '\ueafd',
 			hotkey: 'cr',
 			sub: [
 				{
-					label: 'All',
+					label: formatStringFromNameCore('all', 'main'),
 					icon: '\ue848'
 				},
 				{
-					label: 'GOCR',
+					label: formatStringFromNameCore('gocr', 'main'),
 					icon: '\ueafa'
 				},
 				{
-					label: 'OCRAD',
+					label: formatStringFromNameCore('ocrad', 'main'),
 					icon: '\ue840'
 				},
 				{
-					label: 'Tesseract',
+					label: formatStringFromNameCore('tesseract', 'main'),
 					icon: '\ue841'
 				}
 			]
@@ -1025,7 +1037,7 @@ function init(aArrBufAndCore) {
 			special: 'Divider'
 		},
 		{
-			label: 'Close',
+			label: formatStringFromNameCore('close', 'main'),
 			justClick: true,
 			icon: '\ue835',
 			hotkey: 'Escape' // currently doesnt work with the hotkey algo
@@ -1043,7 +1055,7 @@ function init(aArrBufAndCore) {
 				sGenCanMouseMoveCursor: null,
 				sGenPalDragStart: null, // is null when not dragging. when dragging it is {clientX:, clientY:}
 				sGenPalZoomViewDragStart: null, // is null when not dragging. when dragging it is {clientX, clientY, initX, initY}
-				sGenPalTool: 'Select', // the label of the currently active tool
+				sGenPalTool: formatStringFromNameCore('select', 'main'), // the label of the currently active tool
 				sGenPalW: 0, // width
 				sGenPalH: 0, // height
 				sGenAltKey: false,
@@ -1260,7 +1272,7 @@ function init(aArrBufAndCore) {
 
 					var affectsStateVars = {
 						fillStyle: ['sPalFillColor', 'sPalFillAlpha'],
-						strokeStyle: mySel.name == 'Marker' ? ['sPalMarkerColor', 'sPalMarkerAlpha'] : ['sPalLineColor', 'sPalLineAlpha'],
+						strokeStyle: mySel.name == formatStringFromNameCore('marker', 'main') ? ['sPalMarkerColor', 'sPalMarkerAlpha'] : ['sPalLineColor', 'sPalLineAlpha'],
 						lineWidth: 'sPalLineWidth',
 						// lineStyle: ,
 						arrowStart: 'sPalArrowStart',
@@ -1278,11 +1290,11 @@ function init(aArrBufAndCore) {
 
 					// special for line
 					var isText;
-					if (mySel.name == 'Line') {
+					if (mySel.name == formatStringFromNameCore('line', 'main')) {
 						delete affectsStateVars.fillStyle;
-					} else if (mySel.name == 'Text') {
+					} else if (mySel.name == formatStringFromNameCore('text', 'main')) {
 						isText = true;
-					} else if (mySel.name == 'Rectangle') {
+					} else if (mySel.name == formatStringFromNameCore('rectangle', 'main')) {
 						affectsStateVars.radius = 'sPalRectRadius';
 					}
 
@@ -1307,7 +1319,7 @@ function init(aArrBufAndCore) {
 										if (mySel[p] !== newColor) {
 											canValid = false;
 											mySel[p] = newColor;
-											if (p == 'strokeStyle' && mySel.name == 'Line') {
+											if (p == 'strokeStyle' && mySel.name == formatStringFromNameCore('line', 'main')) {
 												mySel.fillStyle = newColor; // needed for arrow
 											}
 										}
@@ -1333,21 +1345,21 @@ function init(aArrBufAndCore) {
 					// check if need to convert shape. like if rect was selected, and now made it oval. or gaussian and now mosaic - only for tools with a submenu
 					if (prevState.sGenPalTool == this.state.sGenPalTool && prevState.sPalSeldSubs[prevState.sGenPalTool] != this.state.sPalSeldSubs[prevState.sGenPalTool]) {
 						// exclude Freedraw submenu
-						if (prevState.sGenPalTool != 'Freedraw') {
+						if (prevState.sGenPalTool != formatStringFromNameCore('freedraw', 'main')) {
 							var nameOfDrawableOfPrevSubTool = prevState.sPalSeldSubs[prevState.sGenPalTool];
 							var nameOfDrawableOfNowSubTool = this.state.sPalSeldSubs[prevState.sGenPalTool];
 							if (mySel.name == nameOfDrawableOfPrevSubTool) {
 								mySel.name = nameOfDrawableOfNowSubTool;
 								canValid = false;
-								if (nameOfDrawableOfPrevSubTool == 'Mosaic') {
+								if (nameOfDrawableOfPrevSubTool == formatStringFromNameCore('mosaic', 'main')) {
 									delete mySel.blurblock;
 									mySel.blurradius = this.state.sPalBlurRadius;
-								} else if (nameOfDrawableOfPrevSubTool == 'Gaussian') {
+								} else if (nameOfDrawableOfPrevSubTool == formatStringFromNameCore('gaussian', 'main')) {
 									delete mySel.blurradius;
 									mySel.blurblock = this.state.sPalBlurBlock;
-								} else if (nameOfDrawableOfPrevSubTool == 'Rectangle') {
+								} else if (nameOfDrawableOfPrevSubTool == formatStringFromNameCore('rectangle', 'main')) {
 									delete mySel.radius;
-								} else if (nameOfDrawableOfPrevSubTool == 'Oval') {
+								} else if (nameOfDrawableOfPrevSubTool == formatStringFromNameCore('oval', 'main')) {
 									mySel.radius = this.state.sPalRectRadius;
 								}
 							}
@@ -1375,8 +1387,8 @@ function init(aArrBufAndCore) {
 				gDroppingMixCtx = null;
 			}
 
-			//if (this.state.sPalMultiDepresses['Zoom View'] != prevState.sPalMultiDepresses['Zoom View']) {
-			//	if (this.state.sPalMultiDepresses['Zoom View']) {
+			//if (this.state.sPalMultiDepresses[formatStringFromNameCore('zoom_view', 'main')] != prevState.sPalMultiDepresses[formatStringFromNameCore('zoom_view', 'main')]) {
+			//	if (this.state.sPalMultiDepresses[formatStringFromNameCore('zoom_view', 'main')]) {
 			//		alert('adding wheel');
 			//		window.addEventListener('wheel', this.wheel, false);
 			//	} else {
@@ -1411,7 +1423,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.fillStyle = 'rgba(0, 0, 0, 0.6)';
 
 					break;
-				case 'Line':
+				case formatStringFromNameCore('line', 'main'):
 
 						// dimensions
 						DRAWABLE.x = x;
@@ -1432,8 +1444,8 @@ function init(aArrBufAndCore) {
 						DRAWABLE.lineJoin = aOptions.lineJoin;
 
 					break;
-				case 'Pencil':
-				case 'Marker':
+				case formatStringFromNameCore('pencil', 'main'):
+				case formatStringFromNameCore('marker', 'main'):
 
 						// has to be drawn, i dont allow constructing DRAWABLE with predefiend path. as in i dont offer aOptions.path
 						DRAWABLE.path = [x, y];
@@ -1445,7 +1457,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.lineJoin = aOptions.lineJoin;
 
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
 						// dimensions
 						DRAWABLE.x = x;
@@ -1466,7 +1478,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.font = undefined; // i need to set it to undefined otherwise setStyleablesDefaults will not set it // user should only set fontsize,fontface,fontbold,fontitalic. the .font will be calculated by setStyleablesDefaults
 
 					break;
-				case 'Gaussian':
+				case formatStringFromNameCore('gaussian', 'main'):
 
 						// dimensions
 						DRAWABLE.x = x;
@@ -1478,7 +1490,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.blurradius = aOptions.level || this.state.sPalBlurRadius
 
 					break;
-				case 'Mosaic':
+				case formatStringFromNameCore('mosaic', 'main'):
 
 						// dimensions
 						DRAWABLE.x = x;
@@ -1498,8 +1510,8 @@ function init(aArrBufAndCore) {
 						DRAWABLE.h = h;
 
 					break;
-				case 'Rectangle':
-				case 'Oval':
+				case formatStringFromNameCore('rectangle', 'main'):
+				case formatStringFromNameCore('oval', 'main'):
 
 						// dimensions
 						DRAWABLE.x = x;
@@ -1514,7 +1526,7 @@ function init(aArrBufAndCore) {
 						DRAWABLE.setLineDash = undefined;
 						DRAWABLE.lineJoin = undefined;
 
-						if (name == 'Rectangle') {
+						if (name == formatStringFromNameCore('rectangle', 'main')) {
 							DRAWABLE.radius = aOptions.radius || this.state.sPalRectRadius;
 						}
 
@@ -1540,7 +1552,7 @@ function init(aArrBufAndCore) {
 
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
-			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
+			// if (aDrawable.name != 'dim' && aDrawable.name != formatStringFromNameCore('line', 'main') && !aDrawable.w && !aDrawable.h) {
 				console.error('width or height is 0 so not drawing, aDrawable:', aDrawable);
 				return true;
 			}
@@ -1573,7 +1585,7 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Rectangle':
+				case formatStringFromNameCore('rectangle', 'main'):
 
 						if (!aDrawable.radius) {
 							this.ctx.fillRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
@@ -1587,7 +1599,7 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Oval':
+				case formatStringFromNameCore('oval', 'main'):
 
 						// per jsbin from here - http://stackoverflow.com/a/2173084/1828637
 
@@ -1623,7 +1635,7 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Line':
+				case formatStringFromNameCore('line', 'main'):
 
 						this.ctx.beginPath();
 						this.ctx.moveTo(aDrawable.x, aDrawable.y);
@@ -1641,8 +1653,8 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Pencil':
-				case 'Marker':
+				case formatStringFromNameCore('pencil', 'main'):
+				case formatStringFromNameCore('marker', 'main'):
 
 						this.ctx.beginPath();
 						this.ctx.moveTo(aDrawable.path[0], aDrawable.path[1]);
@@ -1652,12 +1664,12 @@ function init(aArrBufAndCore) {
 						this.ctx.stroke();
 
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
 						this.ctx.fillText(aDrawable.chars, aDrawable.x, aDrawable.y);
 
 					break;
-				case 'Gaussian':
+				case formatStringFromNameCore('gaussian', 'main'):
 
 						var positived = this.makeDimsPositive(aDrawable, true);
 
@@ -1688,7 +1700,7 @@ function init(aArrBufAndCore) {
 						this.ctx.putImageData(srcImgData, positived.x, positived.y);
 
 					break;
-				case 'Mosaic':
+				case formatStringFromNameCore('mosaic', 'main'):
 
 						var positived = this.makeDimsPositive(aDrawable, true);
 
@@ -1741,10 +1753,10 @@ function init(aArrBufAndCore) {
 						};
 
 					break;
-				case 'Rectangle':
-				case 'Oval':
-				case 'Gaussian':
-				case 'Mosaic':
+				case formatStringFromNameCore('rectangle', 'main'):
+				case formatStringFromNameCore('oval', 'main'):
+				case formatStringFromNameCore('gaussian', 'main'):
+				case formatStringFromNameCore('mosaic', 'main'):
 
 						curStyle = {
 							lineWidth: 1,
@@ -1753,9 +1765,9 @@ function init(aArrBufAndCore) {
 						};
 
 					break;
-				case 'Line':
-				case 'Pencil':
-				case 'Marker':
+				case formatStringFromNameCore('line', 'main'):
+				case formatStringFromNameCore('pencil', 'main'):
+				case formatStringFromNameCore('marker', 'main'):
 
 						curStyle = {
 							strokeStyle: '#ffffff',
@@ -1765,7 +1777,7 @@ function init(aArrBufAndCore) {
 						};
 
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
 						curStyle = {
 							strokeStyle: 'black',
@@ -1783,7 +1795,7 @@ function init(aArrBufAndCore) {
 
 			// do check if it no select should be drawn, if it has 0 dimensions:
 			if (('w' in aDrawable && !aDrawable.w) || ('h' in aDrawable && !aDrawable.h)) {
-			// if (aDrawable.name != 'dim' && aDrawable.name != 'Line' && !aDrawable.w && !aDrawable.h) {
+			// if (aDrawable.name != 'dim' && aDrawable.name != formatStringFromNameCore('line', 'main') && !aDrawable.w && !aDrawable.h) {
 				console.error('width or height is 0 so not drawing');
 				return true;
 			}
@@ -1794,10 +1806,10 @@ function init(aArrBufAndCore) {
 			// draw the selection of it
 			switch (aDrawable.name) {
 				case 'cutout':
-				case 'Rectangle':
-				case 'Oval':
-				case 'Gaussian':
-				case 'Mosaic':
+				case formatStringFromNameCore('rectangle', 'main'):
+				case formatStringFromNameCore('oval', 'main'):
+				case formatStringFromNameCore('gaussian', 'main'):
+				case formatStringFromNameCore('mosaic', 'main'):
 
 						if (this.state.sCanHandleSize > 0) {
 							this.ctx.strokeRect(aDrawable.x, aDrawable.y, aDrawable.w, aDrawable.h);
@@ -1869,7 +1881,7 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
 						// var linespacingAsPx = aDrawable.linespacing * aDrawable.size;
 
@@ -1913,7 +1925,7 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Line':
+				case formatStringFromNameCore('line', 'main'):
 
 						// this.ctx.beginPath();
 						// this.ctx.arc(aDrawable.x, aDrawable.y, this.state.sCanHandleSize, 0, 360);
@@ -1953,8 +1965,8 @@ function init(aArrBufAndCore) {
 						this.ctx.stroke();
 
 					break;
-				case 'Pencil':
-				case 'Marker':
+				case formatStringFromNameCore('pencil', 'main'):
+				case formatStringFromNameCore('marker', 'main'):
 
 						// this.ctx.beginPath();
 						// this.ctx.arc(aDrawable.path[0], aDrawable.path[1], this.state.sCanHandleSize, 0, 360);
@@ -2000,7 +2012,7 @@ function init(aArrBufAndCore) {
 			}
 
 			switch (aDrawable.name) {
-				case 'Line':
+				case formatStringFromNameCore('line', 'main'):
 
 						if (this.cstate.selection && this.cstate.selection.id == aDrawable.id) {
 							var selectionHandles = this.cstate.selectionHandles;
@@ -2021,8 +2033,8 @@ function init(aArrBufAndCore) {
 						return this.ctx.isPointInStroke(mx, my) ? 1 : 0;
 
 					break;
-				case 'Pencil':
-				case 'Marker':
+				case formatStringFromNameCore('pencil', 'main'):
+				case formatStringFromNameCore('marker', 'main'):
 
 						this.ctx.setLineDash([]);
 						this.ctx.lineWidth = aDrawable.lineWidth >= 20 ? aDrawable.lineWidth : 20;
@@ -2034,7 +2046,7 @@ function init(aArrBufAndCore) {
 						return this.ctx.isPointInStroke(mx, my) ? 1 : 0;
 
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
 						var font = this.calcCtxFont(aDrawable);
 						this.ctx.font = font;
@@ -2140,7 +2152,7 @@ function init(aArrBufAndCore) {
 			}
 
 			switch (aDrawable.name) {
-				case 'Line':
+				case formatStringFromNameCore('line', 'main'):
 
 						if (aDrawable.x == aDrawable.x2 && aDrawable.y == aDrawable.y2) {
 							return true;
@@ -2149,8 +2161,8 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Pencil':
-				case 'Marker':
+				case formatStringFromNameCore('pencil', 'main'):
+				case formatStringFromNameCore('marker', 'main'):
 
 						if (aDrawable.path.length == 2) {
 							return true;
@@ -2159,7 +2171,7 @@ function init(aArrBufAndCore) {
 						}
 
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
 						return aDrawable.chars.length ? false : true;
 
@@ -2343,8 +2355,8 @@ function init(aArrBufAndCore) {
 					// We can skip the drawing of elements that have moved off the screen:
 					/*
 					switch (drawable.name) {
-						case 'Rectangle':
-						case 'Oval':
+						case formatStringFromNameCore('rectangle', 'main'):
+						case formatStringFromNameCore('oval', 'main'):
 								if (
 									drawable.x > this.cstate.width || drawable.y > this.cstate.height || // test top left coord // this is why we need positive coords // THIS NEEDS REVISIT based on mtmm and mmtm
 									drawable.x + drawable.w < 0 || drawable.y + drawable.h < 0
@@ -2473,10 +2485,10 @@ function init(aArrBufAndCore) {
 				lineJoin: 'butt',
 				font: this.calcCtxFont(fontablesDefaults),
 				setLineDash: [],
-				strokeStyle: aDrawable.name == 'Marker' ? colorStrToCssRgba(this.state.sPalMarkerColor, this.state.sPalMarkerAlpha) : colorStrToCssRgba(this.state.sPalLineColor, this.state.sPalLineAlpha)
+				strokeStyle: aDrawable.name == formatStringFromNameCore('marker', 'main') ? colorStrToCssRgba(this.state.sPalMarkerColor, this.state.sPalMarkerAlpha) : colorStrToCssRgba(this.state.sPalLineColor, this.state.sPalLineAlpha)
 			};
 
-			if (aDrawable.name == 'Line') { // non-isomorphic but i gotta
+			if (aDrawable.name == formatStringFromNameCore('line', 'main')) { // non-isomorphic but i gotta
 				styleables.fillStyle = styleables.strokeStyle;
 			}
 
@@ -2512,7 +2524,7 @@ function init(aArrBufAndCore) {
 		wheel: function(e) {
 			// console.log('wheel:', e.deltaMode, e.deltaX, e.deltaY);
 
-			if (this.state.sPalMultiDepresses['Zoom View']) {
+			if (this.state.sPalMultiDepresses[formatStringFromNameCore('zoom_view', 'main')]) {
 				var cLevel = this.state.sPalZoomViewLevel;
 				var nLevel;
 				if (e.deltaY < 0) {
@@ -2543,7 +2555,7 @@ function init(aArrBufAndCore) {
 			gMY = my;
 			gMTime = Date.now();
 			// console.log('mm:', mx, my, 'm:', mmtm.x(mx), mmtm.y(my));
-			if (this.state.sPalMultiDepresses['Zoom View']) {
+			if (this.state.sPalMultiDepresses[formatStringFromNameCore('zoom_view', 'main')]) {
 				gZState.mouse = {x:mx, y:my};
 				gZState.setInvalid();
 			}
@@ -2578,18 +2590,18 @@ function init(aArrBufAndCore) {
 				var toolsub = this.state.sGenPalTool + '-' + (this.state.sPalSeldSubs[this.state.sGenPalTool] || '');
 				if (this.cstate.dragging) {
 					switch (this.cstate.selection.name) {
-						case 'Rectangle':
-						case 'Oval':
+						case formatStringFromNameCore('rectangle', 'main'):
+						case formatStringFromNameCore('oval', 'main'):
 						case 'cutout':
-						case 'Gaussian':
-						case 'Mosaic':
-						case 'Text':
+						case formatStringFromNameCore('gaussian', 'main'):
+						case formatStringFromNameCore('mosaic', 'main'):
+						case formatStringFromNameCore('text', 'main'):
 
 								this.cstate.selection.x = mx - this.cstate.dragoffx;
 								this.cstate.selection.y = my - this.cstate.dragoffy;
 
 							break;
-						case 'Line':
+						case formatStringFromNameCore('line', 'main'):
 
 								var delx = mx - this.cstate.dragdown.mx;
 								var dely = my - this.cstate.dragdown.my;
@@ -2600,8 +2612,8 @@ function init(aArrBufAndCore) {
 								this.cstate.selection.y2 = this.cstate.dragdown.y2 + dely;
 
 							break;
-						case 'Pencil':
-						case 'Marker':
+						case formatStringFromNameCore('pencil', 'main'):
+						case formatStringFromNameCore('marker', 'main'):
 
 								var delx = mx - this.cstate.dragdown.mx;
 								var dely = my - this.cstate.dragdown.my;
@@ -2756,37 +2768,37 @@ function init(aArrBufAndCore) {
 					// just moving, see if mouse is over a resize point, or a drag point
 					var dragFilterFunc;
 					switch (toolsub) {
-						case 'Select-':
+						case formatStringFromNameCore('select', 'main') + '-':
 
 								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
 
 							break;
-						case 'Shapes-Rectangle':
-						case 'Shapes-Oval':
+						case formatStringFromNameCore('shapes', 'main') + '-' + formatStringFromNameCore('rectangle', 'main'):
+						case formatStringFromNameCore('shapes', 'main') + '-' + formatStringFromNameCore('oval', 'main'):
 
-								dragFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
-
-							break;
-						case 'Text-':
-
-								dragFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
+								dragFilterFunc = function(aToFilter) { return [formatStringFromNameCore('rectangle', 'main'), formatStringFromNameCore('oval', 'main')].indexOf(aToFilter.name) > -1 };
 
 							break;
-						case 'Line-':
+						case formatStringFromNameCore('text', 'main') + '-':
 
-								dragFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
-
-							break;
-						case 'Freedraw-Pencil':
-						case 'Freedraw-Marker':
-
-								dragFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
+								dragFilterFunc = function(aToFilter) { return [formatStringFromNameCore('text', 'main')].indexOf(aToFilter.name) > -1 };
 
 							break;
-						case 'Blur-Gaussian':
-						case 'Blur-Mosaic':
+						case formatStringFromNameCore('line', 'main') + '-':
 
-								dragFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
+								dragFilterFunc = function(aToFilter) { return aToFilter.name == formatStringFromNameCore('line', 'main') };
+
+							break;
+						case formatStringFromNameCore('freedraw', 'main') + '-' + formatStringFromNameCore('pencil', 'main'):
+						case formatStringFromNameCore('freedraw', 'main') + '-' + formatStringFromNameCore('marker', 'main'):
+
+								dragFilterFunc = function(aToFilter) { return [formatStringFromNameCore('pencil', 'main'), formatStringFromNameCore('marker', 'main')].indexOf(aToFilter.name) > -1 };
+
+							break;
+						case formatStringFromNameCore('blur', 'main') + '-' + formatStringFromNameCore('gaussian', 'main'):
+						case formatStringFromNameCore('blur', 'main') + '-' + formatStringFromNameCore('mosaic', 'main'):
+
+								dragFilterFunc = function(aToFilter) { return [formatStringFromNameCore('gaussian', 'main'), formatStringFromNameCore('mosaic', 'main')].indexOf(aToFilter.name) > -1 };
 
 							break;
 						default:
@@ -2812,7 +2824,7 @@ function init(aArrBufAndCore) {
 							switch (isContained) {
 								case 1:
 
-										if (drawable.name == 'Text' && gCState.typing && gCState.selection == drawable) {
+										if (drawable.name == formatStringFromNameCore('text', 'main') && gCState.typing && gCState.selection == drawable) {
 											cursor = 'text'; // typing
 										} else {
 											cursor = 'move'; // draggable
@@ -2931,24 +2943,24 @@ function init(aArrBufAndCore) {
 					var addColorSetStateObj = {};
 					if (this.cstate.selection) {
 						switch (this.cstate.selection.name) {
-							case 'Marker':
+							case formatStringFromNameCore('marker', 'main'):
 
 									addColorSetStateObj = this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', true);
 
 								break;
-							case 'Line':
-							case 'Pencil':
+							case formatStringFromNameCore('line', 'main'):
+							case formatStringFromNameCore('pencil', 'main'):
 
 									addColorSetStateObj = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
 
 								break;
-							case 'Text':
+							case formatStringFromNameCore('text', 'main'):
 
 									addColorSetStateObj = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
 
 								break;
-							case 'Rectangle':
-							case 'Oval':
+							case formatStringFromNameCore('rectangle', 'main'):
+							case formatStringFromNameCore('oval', 'main'):
 
 									addColorSetStateObj = this.addColorToHistory(dropping.pStateColorKey, 'sPalBothColorHist', true);
 
@@ -2969,38 +2981,38 @@ function init(aArrBufAndCore) {
 				// if selectable, set a selectFilterFunc
 				var selectFilterFunc;
 				switch (toolsub) {
-					case 'Select-':
+					case formatStringFromNameCore('select', 'main') + '-':
 
 							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'cutout' };
 
 						break;
-					case 'Shapes-Rectangle':
-					case 'Shapes-Oval':
+					case formatStringFromNameCore('shapes', 'main') + '-' + formatStringFromNameCore('rectangle', 'main'):
+					case formatStringFromNameCore('shapes', 'main') + '-' + formatStringFromNameCore('oval', 'main'):
 
-							selectFilterFunc = function(aToFilter) { return ['Rectangle', 'Oval'].indexOf(aToFilter.name) > -1 };
-
-						break;
-					case 'Line-':
-
-							selectFilterFunc = function(aToFilter) { return aToFilter.name == 'Line' };
+							selectFilterFunc = function(aToFilter) { return [formatStringFromNameCore('rectangle', 'main'), formatStringFromNameCore('oval', 'main')].indexOf(aToFilter.name) > -1 };
 
 						break;
-					case 'Freedraw-Pencil':
-					case 'Freedraw-Marker':
+					case formatStringFromNameCore('line', 'main') + '-':
 
-							selectFilterFunc = function(aToFilter) { return ['Pencil', 'Marker'].indexOf(aToFilter.name) > -1 };
-
-						break;
-					case 'Blur-Gaussian':
-					case 'Blur-Mosaic':
-
-							selectFilterFunc = function(aToFilter) { return ['Gaussian', 'Mosaic'].indexOf(aToFilter.name) > -1 };
+							selectFilterFunc = function(aToFilter) { return aToFilter.name == formatStringFromNameCore('line', 'main') };
 
 						break;
-					case 'Text-':
+					case formatStringFromNameCore('freedraw', 'main') + '-' + formatStringFromNameCore('pencil', 'main'):
+					case formatStringFromNameCore('freedraw', 'main') + '-' + formatStringFromNameCore('marker', 'main'):
+
+							selectFilterFunc = function(aToFilter) { return [formatStringFromNameCore('pencil', 'main'), formatStringFromNameCore('marker', 'main')].indexOf(aToFilter.name) > -1 };
+
+						break;
+					case formatStringFromNameCore('blur', 'main') + '-' + formatStringFromNameCore('gaussian', 'main'):
+					case formatStringFromNameCore('blur', 'main') + '-' + formatStringFromNameCore('mosaic', 'main'):
+
+							selectFilterFunc = function(aToFilter) { return [formatStringFromNameCore('gaussian', 'main'), formatStringFromNameCore('mosaic', 'main')].indexOf(aToFilter.name) > -1 };
+
+						break;
+					case formatStringFromNameCore('text', 'main') + '-':
 
 							console.log('ok filtering Text');
-							selectFilterFunc = function(aToFilter) { return ['Text'].indexOf(aToFilter.name) > -1 };
+							selectFilterFunc = function(aToFilter) { return [formatStringFromNameCore('text', 'main')].indexOf(aToFilter.name) > -1 };
 
 						break;
 					default:
@@ -3022,7 +3034,7 @@ function init(aArrBufAndCore) {
 
 							if (isContained === 1) {
 								// introduced for line dragging
-								if (mySel.name == 'Line') {
+								if (mySel.name == formatStringFromNameCore('line', 'main')) {
 									this.cstate.dragdown = {
 										// the initial x and y the user mouse downed on
 										mx: mx,
@@ -3036,7 +3048,7 @@ function init(aArrBufAndCore) {
 									};
 								} else
 								// introduced for pencil/marker dragging
-								if (['Pencil', 'Marker'].indexOf(mySel.name) > -1) {
+								if ([formatStringFromNameCore('pencil', 'main'), formatStringFromNameCore('marker', 'main')].indexOf(mySel.name) > -1) {
 									this.cstate.dragdown = {
 										// the initial x and y the user mouse downed on
 										mx: mx,
@@ -3056,7 +3068,7 @@ function init(aArrBufAndCore) {
 								}
 
 								// non-isomorphic stuff needed for if selecting another text element
-								if (this.cstate.selection && this.cstate.selection.name == 'Text') {
+								if (this.cstate.selection && this.cstate.selection.name == formatStringFromNameCore('text', 'main')) {
 									if (this.cstate.selection == mySel) {
 										if (this.cstate.typing) {
 											// stop here, user is in typing mode, this should do highlighting :todo:
@@ -3109,7 +3121,7 @@ function init(aArrBufAndCore) {
 				// test if we should create a new Drawable and set it to resizing
 				if (!this.cstate.selection) {
 					switch (toolsub) {
-						case 'Select-':
+						case formatStringFromNameCore('select', 'main') + '-':
 
 								if (!e.altKey) {
 									// remove all previous cutouts
@@ -3119,26 +3131,26 @@ function init(aArrBufAndCore) {
 								this.cstate.selection = this.newDrawable(mx, my, 0, 0, 'cutout');
 
 							break;
-						case 'Shapes-Rectangle':
-						case 'Shapes-Oval':
-						case 'Blur-Gaussian':
-						case 'Blur-Mosaic':
+						case formatStringFromNameCore('shapes', 'main') + '-' + formatStringFromNameCore('rectangle', 'main'):
+						case formatStringFromNameCore('shapes', 'main') + '-' + formatStringFromNameCore('oval', 'main'):
+						case formatStringFromNameCore('blur', 'main') + '-' + formatStringFromNameCore('gaussian', 'main'):
+						case formatStringFromNameCore('blur', 'main') + '-' + formatStringFromNameCore('mosaic', 'main'):
 
 								this.cstate.selection = this.newDrawable(mx, my, 0, 0, this.state.sPalSeldSubs[this.state.sGenPalTool]);
 
 							break;
-						case 'Line-':
+						case formatStringFromNameCore('line', 'main') + '-':
 
-								this.cstate.selection = this.newDrawable(mx, my, null, null, 'Line');
+								this.cstate.selection = this.newDrawable(mx, my, null, null, formatStringFromNameCore('line', 'main'));
 
 							break;
-						case 'Freedraw-Pencil':
-						case 'Freedraw-Marker':
+						case formatStringFromNameCore('freedraw', 'main') + '-' + formatStringFromNameCore('pencil', 'main'):
+						case formatStringFromNameCore('freedraw', 'main') + '-' + formatStringFromNameCore('marker', 'main'):
 
 								this.cstate.selection = this.newDrawable(mx, my, null, null, this.state.sPalSeldSubs[this.state.sGenPalTool]);
 
 							break;
-						case 'Text-':
+						case formatStringFromNameCore('text', 'main') + '-':
 
 								// if (this.cstate.typing) {
 									// console.log('exiting typing, this was selection:', this.cstate.selection);
@@ -3146,7 +3158,7 @@ function init(aArrBufAndCore) {
 									// this.cstate.typing = false;
 									// this.cstate.valid = false;
 								// } else {
-									this.cstate.selection = this.newDrawable(mx, my, null, null, 'Text');
+									this.cstate.selection = this.newDrawable(mx, my, null, null, formatStringFromNameCore('text', 'main'));
 								// }
 
 							break;
@@ -3160,24 +3172,24 @@ function init(aArrBufAndCore) {
 
 						// add color to history as it was just added
 						switch (this.cstate.selection.name) {
-							case 'Marker':
+							case formatStringFromNameCore('marker', 'main'):
 
 									this.addColorToHistory('sPalMarkerColor', 'sPalMarkerColorHist', false);
 
 								break;
-							case 'Line':
-							case 'Pencil':
+							case formatStringFromNameCore('line', 'main'):
+							case formatStringFromNameCore('pencil', 'main'):
 
 									this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', false);
 
 								break;
-							case 'Text':
+							case formatStringFromNameCore('text', 'main'):
 
 									this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', false);
 
 								break;
-							case 'Rectangle':
-							case 'Oval':
+							case formatStringFromNameCore('rectangle', 'main'):
+							case formatStringFromNameCore('oval', 'main'):
 
 									var setStateObjLine = this.addColorToHistory('sPalLineColor', 'sPalBothColorHist', true);
 									var setStateObjFill = this.addColorToHistory('sPalFillColor', 'sPalBothColorHist', true);
@@ -3192,29 +3204,29 @@ function init(aArrBufAndCore) {
 						// set the proper cstate action bool
 						switch (this.cstate.selection.name) {
 							case 'cutout':
-							case 'Rectangle':
-							case 'Oval':
-							case 'Gaussian':
-							case 'Mosaic':
+							case formatStringFromNameCore('rectangle', 'main'):
+							case formatStringFromNameCore('oval', 'main'):
+							case formatStringFromNameCore('gaussian', 'main'):
+							case formatStringFromNameCore('mosaic', 'main'):
 
 									this.cstate.resizing = 9;
 									gCanStore.setCanState(false); // to update on mouse down? for updating other windows?
 
 								break;
-							case 'Line':
+							case formatStringFromNameCore('line', 'main'):
 
 									this.cstate.lining = 11;
 									gCanStore.setCanState(false); // as i have to draw the selection point
 
 								break;
-							case 'Pencil':
-							case 'Marker':
+							case formatStringFromNameCore('pencil', 'main'):
+							case formatStringFromNameCore('marker', 'main'):
 
 									this.cstate.pathing = [];
 									gCanStore.setCanState(false); // :todo: consider: as i have to draw the selection point
 
 								break;
-							case 'Text':
+							case formatStringFromNameCore('text', 'main'):
 
 									this.cstate.typing = true; // special, because i just added it, i enter typing mode link11911111
 									gCanStore.setCanState(false);
@@ -3301,7 +3313,7 @@ function init(aArrBufAndCore) {
 							blurradius: 'sPalBlurRadius',
 							radius: 'sPalRectRadius',
 							fillStyle: 'sPalFill', // partial as i do alpha too
-							strokeStyle: mySel.name == 'Marker' ? 'sPalMarker' : 'sPalLine'  // partial as i do alpha too
+							strokeStyle: mySel.name == formatStringFromNameCore('marker', 'main') ? 'sPalMarker' : 'sPalLine'  // partial as i do alpha too
 						};
 						var setStateObj = {};
 						for (var p in propToStateDict) {
@@ -3311,7 +3323,7 @@ function init(aArrBufAndCore) {
 									case 'fillStyle':
 									case 'strokeStyle':
 
-											if (mySel.name == 'Line' && p == 'fillStyle') {
+											if (mySel.name == formatStringFromNameCore('line', 'main') && p == 'fillStyle') {
 												continue; // skip this one, as for line fillStyle is matched strokeStyle
 											}
 
@@ -3343,7 +3355,7 @@ function init(aArrBufAndCore) {
 							}
 						}
 						// special case for blur, if they have Mosaic tool active, and then they go to Gaussian, then i have to change the subtool
-						if (this.state.sGenPalTool == 'Blur') {
+						if (this.state.sGenPalTool == formatStringFromNameCore('blur', 'main')) {
 							var shouldBeSubTool = mySel.name;
 							if (this.state.sPalSeldSubs.Blur != shouldBeSubTool) {
 								var sPalSeldSubs = cloneObject(this.state.sPalSeldSubs);
@@ -3357,7 +3369,7 @@ function init(aArrBufAndCore) {
 					}
 
 					// put into typing mode
-					if (mySel.name == 'Text') {
+					if (mySel.name == formatStringFromNameCore('text', 'main')) {
 						if (!this.cstate.typing) {
 							this.cstate.typing = true;
 							gCanStore.setCanState(false);
@@ -3430,7 +3442,7 @@ function init(aArrBufAndCore) {
 				// }
 
 				if (e.target == this.refs.can) {
-					if (this.state.sGenPalTool == 'Window Wand') {
+					if (this.state.sGenPalTool == formatStringFromNameCore('window_wand', 'main')) {
 						var x = mtmm.x(e.clientX);
 						var y = mtmm.y(e.clientY);
 						// alert('look for window at coords: ' + x + ', ' + y);
@@ -3459,7 +3471,7 @@ function init(aArrBufAndCore) {
 								}
 								var cCutout = gCanStore.rconn.newDrawable(cwin.left, cwin.top, cwin.width, cwin.height, 'cutout');
 								gCanStore.rconn.dAdd(cCutout);
-								// if (this.props.sGenPalTool == 'Select') {
+								// if (this.props.sGenPalTool == formatStringFromNameCore('select', 'main')) {
 								// 	gCState.selection = cCutout;
 								// 	gEditorStore.setState({
 								// 		sGenPalW: tQS.w,
@@ -3951,16 +3963,16 @@ function init(aArrBufAndCore) {
 					cCanProps.style.cursor = this.state.sGenCanMouseMoveCursor;
 				} else {
 					switch (this.state.sGenPalTool) {
-						case 'Select':
-						case 'Shapes':
-						case 'Line':
-						case 'Freedraw':
-						case 'Blur':
+						case formatStringFromNameCore('select', 'main'):
+						case formatStringFromNameCore('shapes', 'main'):
+						case formatStringFromNameCore('line', 'main'):
+						case formatStringFromNameCore('freedraw', 'main'):
+						case formatStringFromNameCore('blur', 'main'):
 
 								cCanProps.style.cursor = 'crosshair';
 
 							break;
-						case 'Window Wand':
+						case formatStringFromNameCore('window_wand', 'main'):
 
 								cCanProps.style.cursor = 'pointer';
 
@@ -3972,7 +3984,7 @@ function init(aArrBufAndCore) {
 			}
 
 			var zoomViewREl;
-			if (this.state.sPalMultiDepresses['Zoom View']) {
+			if (this.state.sPalMultiDepresses[formatStringFromNameCore('zoom_view', 'main')]) {
 				cPalPalProps.mPalZoomViewHandleMousedown = this.mPalZoomViewHandleMousedown;
 				zoomViewREl = React.createElement(ZoomView, cPalProps);
 			}
@@ -4266,7 +4278,7 @@ function init(aArrBufAndCore) {
 				React.createElement('div', {className: 'pbutton', onClick:this.enlarge, ref:'enlarge'},
 					React.createElement('div', {className:'plabel'},
 						React.createElement('span', {},
-							!sGenAltKey ? 'Enlarge Palette' : 'Enlarge Handles'
+							!sGenAltKey ? formatStringFromNameCore('enlarge_palette', 'main') : formatStringFromNameCore('enlarge_handles', 'main')
 						)
 					),
 					'\ue818'
@@ -4274,7 +4286,7 @@ function init(aArrBufAndCore) {
 				React.createElement('div', {className: 'pbutton', onClick:this.reduce, ref:'reduce'},
 					React.createElement('div', {className:'plabel plabelbot'},
 						React.createElement('span', {},
-							!sGenAltKey ? 'Shrink Palette' : 'Shrink Handles'
+							!sGenAltKey ? formatStringFromNameCore('shrink_palette', 'main') : formatStringFromNameCore('shrink_handles', 'main')
 						)
 					),
 					'\ue817'
@@ -4321,13 +4333,13 @@ function init(aArrBufAndCore) {
 
 			switch (this.props.pButton.label) {
 				// start - actions
-				case 'Save':
-				case 'Copy':
-				case 'Print':
-				case 'Upload':
-				case 'Share':
-				case 'Search':
-				case 'Text Recognition':
+				case formatStringFromNameCore('just_save', 'main'):
+				case formatStringFromNameCore('just_copy', 'main'):
+				case formatStringFromNameCore('just_print', 'main'):
+				case formatStringFromNameCore('upload', 'main'):
+				case formatStringFromNameCore('just_share', 'main'):
+				case formatStringFromNameCore('just_search', 'main'):
+				case formatStringFromNameCore('text_recognition', 'main'):
 
 					var cSubTool = gChangingSubToolTo || this.props.sPalSeldSubs[this.props.pButton.label];
 					initCompositeForAction(this.props.pButton.label, cSubTool, !e.shiftKey);
@@ -4335,21 +4347,21 @@ function init(aArrBufAndCore) {
 					break;
 				// end - actions
 				// start - on click reapply styles
-				case 'Blur':
+				case formatStringFromNameCore('blur', 'main'):
 
 						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
-						if (cSubTool == 'Gaussian') {
-							affectsSelNames.push('Gaussian');
+						if (cSubTool == formatStringFromNameCore('gaussian', 'main')) {
+							affectsSelNames.push(formatStringFromNameCore('gaussian', 'main'));
 							affectsStateVars.blurradius = 'sPalBlurRadius';
 						} else {
-							affectsSelNames.push('Mosaic');
+							affectsSelNames.push(formatStringFromNameCore('mosaic', 'main'));
 							affectsStateVars.blurblock = 'sPalBlurBlock';
 						}
 
 					break;
-				case 'Line':
+				case formatStringFromNameCore('line', 'main'):
 
-						affectsSelNames.push('Line');
+						affectsSelNames.push(formatStringFromNameCore('line', 'main'));
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						affectsStateVars.arrowStart = 'sPalArrowStart';
@@ -4357,35 +4369,35 @@ function init(aArrBufAndCore) {
 						affectsStateVars.arrowLength = 'sPalArrowLength';
 
 					break;
-				case 'Freedraw':
+				case formatStringFromNameCore('freedraw', 'main'):
 
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
-						if (cSubTool == 'Pencil') {
-							affectsSelNames.push('Pencil');
+						if (cSubTool == formatStringFromNameCore('pencil', 'main')) {
+							affectsSelNames.push(formatStringFromNameCore('pencil', 'main'));
 							affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 						} else {
-							affectsSelNames.push('Marker');
+							affectsSelNames.push(formatStringFromNameCore('marker', 'main'));
 							affectsStateVars.strokeStyle = ['sPalMarkerColor', 'sPalMarkerAlpha'];
 						}
 
 					break;
-				case 'Shapes':
+				case formatStringFromNameCore('shapes', 'main'):
 
-						affectsSelNames.push('Rectangle');
-						affectsSelNames.push('Oval');
+						affectsSelNames.push(formatStringFromNameCore('rectangle', 'main'));
+						affectsSelNames.push(formatStringFromNameCore('oval', 'main'));
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 						affectsStateVars.lineWidth = 'sPalLineWidth';
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
 
 						var cSubTool = this.props.sPalSeldSubs[this.props.pButton.label];
-						if (cSubTool == 'Rectangle') {
+						if (cSubTool == formatStringFromNameCore('rectangle', 'main')) {
 							affectsStateVars.radius = 'sPalRectRadius';
 						}
 					break;
-				case 'Text':
+				case formatStringFromNameCore('text', 'main'):
 
-						affectsSelNames.push('Text');
+						affectsSelNames.push(formatStringFromNameCore('text', 'main'));
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
 						affectsStateVars.fontface = 'sPalFontFace';
 						affectsStateVars.fontbold = 'sPalFontBold';
@@ -4393,36 +4405,36 @@ function init(aArrBufAndCore) {
 						affectsStateVars.fontsize = 'sPalFontSize';
 
 					break;
-				case 'Marker Color':
+				case formatStringFromNameCore('marker_color', 'main'):
 
-						affectsSelNames.push('Marker');
+						affectsSelNames.push(formatStringFromNameCore('marker', 'main'));
 						affectsStateVars.strokeStyle = ['sPalMarkerColor', 'sPalMarkerAlpha'];
 
 					break;
-				case 'Color':
+				case formatStringFromNameCore('color', 'main'):
 
-						affectsSelNames.push('Rectangle');
-						affectsSelNames.push('Oval');
-						affectsSelNames.push('Pencil');
-						affectsSelNames.push('Line');
+						affectsSelNames.push(formatStringFromNameCore('rectangle', 'main'));
+						affectsSelNames.push(formatStringFromNameCore('oval', 'main'));
+						affectsSelNames.push(formatStringFromNameCore('pencil', 'main'));
+						affectsSelNames.push(formatStringFromNameCore('line', 'main'));
 						affectsStateVars.strokeStyle = ['sPalLineColor', 'sPalLineAlpha'];
 
 					break;
-				case 'Fill Color':
+				case formatStringFromNameCore('fill_color', 'main'):
 
-						affectsSelNames.push('Rectangle');
-						affectsSelNames.push('Oval');
-						affectsSelNames.push('Text');
+						affectsSelNames.push(formatStringFromNameCore('rectangle', 'main'));
+						affectsSelNames.push(formatStringFromNameCore('oval', 'main'));
+						affectsSelNames.push(formatStringFromNameCore('text', 'main'));
 						affectsStateVars.fillStyle = ['sPalFillColor', 'sPalFillAlpha'];
 
 					break;
 				// end - on click reapply styles
-				case 'Close':
+				case formatStringFromNameCore('close', 'main'):
 
 						unload(false);
 
 					break;
-				case 'Select':
+				case formatStringFromNameCore('select', 'main'):
 
 						// if (gCState.cutouts.length) {
 						// 	if (!gCState.selection || gCState.selection != gCState.cutouts[0]) {
@@ -4433,19 +4445,19 @@ function init(aArrBufAndCore) {
 						// }
 
 					break;
-				case 'Clear Selection':
+				case formatStringFromNameCore('clear_selection', 'main'):
 
 						gCanStore.setCanState(gCanStore.rconn.dDeleteAll(['cutout']));
 
 					break;
-				case 'Fullscreen':
+				case formatStringFromNameCore('fullscreen', 'main'):
 
 						if (!e.shiftKey) {
 							gCanStore.rconn.dDeleteAll(['cutout']);
 						}
 						var cCutout = gCanStore.rconn.newDrawable(tQS.x, tQS.y, tQS.w, tQS.h, 'cutout');
 						gCanStore.rconn.dAdd(cCutout);
-						if (this.props.sGenPalTool == 'Select') {
+						if (this.props.sGenPalTool == formatStringFromNameCore('select', 'main')) {
 							gCState.selection = cCutout;
 							gEditorStore.setState({
 								sGenPalW: tQS.w,
@@ -4467,7 +4479,7 @@ function init(aArrBufAndCore) {
 					var mySel = gCState.selection;
 
 					var isText;
-					if (mySel.name == 'Text') {
+					if (mySel.name == formatStringFromNameCore('text', 'main')) {
 						isText = true;
 					}
 
@@ -4485,7 +4497,7 @@ function init(aArrBufAndCore) {
 									if (mySel[p] !== newColor) {
 										canValid = false;
 										mySel[p] = newColor;
-										if (p == 'strokeStyle' && mySel.name == 'Line') {
+										if (p == 'strokeStyle' && mySel.name == formatStringFromNameCore('line', 'main')) {
 											mySel.fillStyle = newColor; // needed for arrow
 										}
 									}
@@ -4545,7 +4557,7 @@ function init(aArrBufAndCore) {
 				if (aKey == this.settingKey) {
 					var origLabel = this.props.pButton.label;
 					if (this.isActionButton && !this.props.sGenShiftKey) {
-						origLabel += ' & Close';
+						origLabel += formatStringFromNameCore('and_close', 'main');
 					}
 					this.refs.plabel.textContent = origLabel;
 				}
@@ -4554,7 +4566,7 @@ function init(aArrBufAndCore) {
 		componentDidMount: function() {
 
 			// if its an action button, then append to label " & Close" - i can do this in did mount, because when mount for sure alt is not pressed, well pretty sure so yea no big
-			if (['Save', 'Print', 'Copy', 'Upload', 'Share', 'Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
+			if ([formatStringFromNameCore('just_save', 'main'), formatStringFromNameCore('just_print', 'main'), formatStringFromNameCore('just_copy', 'main'), formatStringFromNameCore('upload', 'main'), formatStringFromNameCore('just_share', 'main'), formatStringFromNameCore('just_search', 'main'), formatStringFromNameCore('text_recognition', 'main')].indexOf(this.props.pButton.label) > -1) {
 				this.isActionButton = true;
 			}
 		},
@@ -4604,22 +4616,21 @@ function init(aArrBufAndCore) {
 			}
 
 			var cButtonIcon;
-			if (['Color', 'Fill Color', 'Marker Color'].indexOf(this.props.pButton.label) > -1) {
+			if ([formatStringFromNameCore('color', 'main'), formatStringFromNameCore('fill_color', 'main'), formatStringFromNameCore('marker_color', 'main')].indexOf(this.props.pButton.label) > -1) {
 				var rgbaStr;
 				var dropping = this.props.sGenColorPickerDropping;
-				if (this.props.pButton.label == 'Color') {
+				if (this.props.pButton.label == formatStringFromNameCore('color', 'main')) {
 					rgbaStr = colorStrToCssRgba(this.props.sPalLineColor, this.props.sPalLineAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalLineColor') {
 						cProps.className += ' eyedropper';
 					}
-				} else if (this.props.pButton.label == 'Fill Color') {
+				} else if (this.props.pButton.label == formatStringFromNameCore('fill_color', 'main')) {
 					rgbaStr = colorStrToCssRgba(this.props.sPalFillColor, this.props.sPalFillAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalFillColor') {
 						cProps.className += ' eyedropper';
 					}
 				} else {
-					// its Marker Color
-					rgbaStr = colorStrToCssRgba(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
+					// formatStringFromNameCore('marker_color', 'main')					rgbaStr = colorStrToCssRgba(this.props.sPalMarkerColor, this.props.sPalMarkerAlpha);
 					if (dropping && dropping.pStateColorKey == 'sPalMarkerColor') {
 						cProps.className += ' eyedropper';
 					}
@@ -4640,7 +4651,7 @@ function init(aArrBufAndCore) {
 
 			var origLabel = this.props.pButton.label;
 			if (this.isActionButton && !this.props.sGenShiftKey) {
-				origLabel += ' & Close';
+				origLabel += formatStringFromNameCore('and_close', 'main');
 			}
 
 			return React.createElement('div', cProps,
@@ -4677,7 +4688,7 @@ function init(aArrBufAndCore) {
 		click: function(e) {
 			var dontStopPropagation = false;
 
-			if (this.props.pButton.label == 'Fullscreen') {
+			if (this.props.pButton.label == formatStringFromNameCore('fullscreen', 'main')) {
 				// alert(this.props.pSubButton.label);
 				if (!e.shiftKey) {
 					gCanStore.rconn.dDeleteAll(['cutout']);
@@ -4685,7 +4696,7 @@ function init(aArrBufAndCore) {
 				var cCutout;
 				var cSubLabel = this.props.pSubButton.label;
 				var allMonDim = tQS.allMonDim;
-				if (this.props.pSubButton.label == 'All Monitors') {
+				if (this.props.pSubButton.label == formatStringFromNameCore('all_monitors', 'main')) {
 					var allmonRect = new Rect(0, 0, 0, 0);
 					var imonRects = [];
 					var l = allMonDim.length;
@@ -4700,7 +4711,7 @@ function init(aArrBufAndCore) {
 					cCutout = gCanStore.rconn.newDrawable(allMonDim[iMon].x, allMonDim[iMon].y, allMonDim[iMon].w, allMonDim[iMon].h, 'cutout');
 				}
 				gCanStore.rconn.dAdd(cCutout);
-				if (this.props.sGenPalTool == 'Select') {
+				if (this.props.sGenPalTool == formatStringFromNameCore('select', 'main')) {
 					gCState.selection = cCutout;
 					gEditorStore.setState({
 						sGenPalW: cCutout.w,
@@ -4710,20 +4721,20 @@ function init(aArrBufAndCore) {
 				gCanStore.setCanState(false); // as i for sure added a new cutout
 			}
 
-			if (['Save', 'Upload', 'Share', 'Search', 'Text Recognition'].indexOf(this.props.pButton.label) > -1) {
+			if ([formatStringFromNameCore('just_save', 'main'), formatStringFromNameCore('upload', 'main'), formatStringFromNameCore('just_share', 'main'), formatStringFromNameCore('just_search', 'main'), formatStringFromNameCore('text_recognition', 'main')].indexOf(this.props.pButton.label) > -1) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
-			} else if (this.props.pButton.label == 'Blur') {
-				// if ('Blur' == this.props.sGenPalTool) {
+			} else if (this.props.pButton.label == formatStringFromNameCore('blur', 'main')) {
+				// if (formatStringFromNameCore('blur', 'main') == this.props.sGenPalTool) {
 					dontStopPropagation = true;
 					gChangingSubToolTo = this.props.pSubButton.label;
 				// }
-			} else if (this.props.pButton.label == 'Shapes') {
+			} else if (this.props.pButton.label == formatStringFromNameCore('shapes', 'main')) {
 				dontStopPropagation = true;
 				gChangingSubToolTo = this.props.pSubButton.label;
 			}
 
-			if (this.props.pSubButton.label == 'Last Selection') {
+			if (this.props.pSubButton.label == formatStringFromNameCore('last_selection', 'main')) {
 				var cutouts = gCState.drawables.filter(function(aToFilter) { return aToFilter.name == 'cutout' });
 				callInBootstrap('selectPreviousSelection', {
 					cutoutsArr: cutouts.length ? cutouts : null,
@@ -4829,8 +4840,8 @@ function init(aArrBufAndCore) {
 			//		sGenPalTool
 			//		sPalSeldSubs
 			return React.createElement('div', {className:'plinetools'},
-				React.createElement(InputNumber, {pLabel:'Line Width (px)', pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:0, pCStateSel:{'Rectangle':'lineWidth', 'Oval':'lineWidth', 'Line':'lineWidth', 'Pencil':'lineWidth', 'Marker':'lineWidth'}}),
-				this.props.sGenPalTool == 'Shapes' && this.props.sPalSeldSubs.Shapes == 'Rectangle' ? React.createElement(InputNumber, {pLabel:'Line Radius (px)', pStateVarName:'sPalRectRadius', sPalRectRadius:this.props.sPalRectRadius, pMin:0 }) : undefined
+				React.createElement(InputNumber, {pLabel:formatStringFromNameCore('line_width_px', 'main'), pStateVarName:'sPalLineWidth', sPalLineWidth:this.props.sPalLineWidth, pMin:0, pCStateSel:{[formatStringFromNameCore('rectangle', 'main')]:'lineWidth', [formatStringFromNameCore('oval', 'main')]:'lineWidth', [formatStringFromNameCore('line', 'main')]:'lineWidth', [formatStringFromNameCore('pencil', 'main')]:'lineWidth', [formatStringFromNameCore('marker', 'main')]:'lineWidth'}}),
+				this.props.sGenPalTool == formatStringFromNameCore('shapes', 'main') && this.props.sPalSeldSubs.Shapes == formatStringFromNameCore('rectangle', 'main') ? React.createElement(InputNumber, {pLabel:formatStringFromNameCore('line_radius_px', 'main'), pStateVarName:'sPalRectRadius', sPalRectRadius:this.props.sPalRectRadius, pMin:0 }) : undefined
 			);
 		}
 	});
@@ -4848,20 +4859,20 @@ function init(aArrBufAndCore) {
 
 			var cInputNumberProps = {
 				pMin: 1,
-				pCStateSel: {'Gaussian':'blurradius', 'Mosaic':'blurblock'},
+				pCStateSel: {[formatStringFromNameCore('gaussian', 'main')]:'blurradius', [formatStringFromNameCore('mosaic', 'main')]:'blurblock'},
 				key: subtool
 			};
 
-			if (subtool == 'Mosaic') {
+			if (subtool == formatStringFromNameCore('mosaic', 'main')) {
 				// Mosaic
 				cInputNumberProps.sPalBlurBlock = this.props.sPalBlurBlock;
 				cInputNumberProps.pStateVarName = 'sPalBlurBlock';
-				cInputNumberProps.pLabel = 'Block Size (px)';
+				cInputNumberProps.pLabel = formatStringFromNameCore('block_size_px', 'main');
 			} else {
 				// Gaussian
 				cInputNumberProps.sPalBlurRadius = this.props.sPalBlurRadius;
 				cInputNumberProps.pStateVarName = 'sPalBlurRadius';
-				cInputNumberProps.pLabel = 'Radius (px)';
+				cInputNumberProps.pLabel = formatStringFromNameCore('radius_px', 'main');
 			}
 
 			return React.createElement('div', {className:'pblurlevel'},
@@ -4878,8 +4889,8 @@ function init(aArrBufAndCore) {
 			//		sPalHeight
 
 			return React.createElement('div', {className:'pdimtools'},
-				React.createElement(InputNumber, {pLabel:'Width', pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', 'Rectangle':'w', 'Oval':'w', 'Gaussian':'w', 'Mosaic':'w'}, pCrement:mtmm.w(1) }),
-				React.createElement(InputNumber, {pLabel:'Height', pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', 'Rectangle':'h', 'Oval':'h', 'Gaussian':'w', 'Mosaic':'w'}, pCrement:mtmm.h(1) })
+				React.createElement(InputNumber, {pLabel:formatStringFromNameCore('width', 'main'), pMin:0, pStateVarName:'sGenPalW', sGenPalW:this.props.sGenPalW, pCStateSel:{'cutout':'w', [formatStringFromNameCore('rectangle', 'main')]:'w', [formatStringFromNameCore('oval', 'main')]:'w', [formatStringFromNameCore('gaussian', 'main')]:'w', [formatStringFromNameCore('mosaic', 'main')]:'w'}, pCrement:mtmm.w(1) }),
+				React.createElement(InputNumber, {pLabel:formatStringFromNameCore('height', 'main'), pMin:0, pStateVarName:'sGenPalH', sGenPalH:this.props.sGenPalH, pCStateSel:{'cutout':'h', [formatStringFromNameCore('rectangle', 'main')]:'h', [formatStringFromNameCore('oval', 'main')]:'h', [formatStringFromNameCore('gaussian', 'main')]:'w', [formatStringFromNameCore('mosaic', 'main')]:'w'}, pCrement:mtmm.h(1) })
 			)
 		}
 	});
@@ -4887,7 +4898,7 @@ function init(aArrBufAndCore) {
 	var TextTools = React.createClass({
 		displayName: 'TextTools',
 		componentDidUpdate: function(prevProps, prevState) {
-			//// if (gCState && gCState.selection && gCState.selection.name == 'Text') {
+			//// if (gCState && gCState.selection && gCState.selection.name == formatStringFromNameCore('text', 'main')) {
 			//// 	var newValid = true;
 			//// 	if (prevProps.sPalFontFace != this.props.sPalFontFace) {
 			//// 		gCState.selection.fontface = this.props.sPalFontFace;
@@ -4948,12 +4959,12 @@ function init(aArrBufAndCore) {
 					)
 				),
 				React.createElement('div', {className:'ptexttools-row'},
-					React.createElement(InputNumber, {pLabel:'Font Size (px)', pStateVarName:'sPalFontSize', sPalFontSize:this.props.sPalFontSize, pMin:1, pCStateSel:{'Text':'fontsize'} }),
+					React.createElement(InputNumber, {pLabel:formatStringFromNameCore('font_size_px', 'main'), pStateVarName:'sPalFontSize', sPalFontSize:this.props.sPalFontSize, pMin:1, pCStateSel:{[formatStringFromNameCore('text', 'main')]:'fontsize'} }),
 					React.createElement('div', {className:'pbutton ptexttools-bold' + (this.props.sPalFontBold ? ' pbutton-pressed' : ''), onClick:this.click.bind(this, 'sPalFontBold')},
-						'B'
+						formatStringFromNameCore('bold_short', 'main')
 					),
 					React.createElement('div', {className:'pbutton ptexttools-italic' + (this.props.sPalFontItalic ? ' pbutton-pressed' : ''), onClick:this.click.bind(this, 'sPalFontItalic')},
-						'I'
+						formatStringFromNameCore('italics_short', 'main')
 					)
 					// React.createElement('div', {className:'pbutton ptexttools-italic' },
 					// 	'U'
@@ -4977,7 +4988,7 @@ function init(aArrBufAndCore) {
 		},
 		componentDidUpdate: function(prevProps, prevState) {
 			// console.log('arrowtools did update!', 'prevProps:', uneval(prevProps), 'nowProps:', uneval(this.props));
-			//// if (gCState && gCState.selection && gCState.selection.name == 'Line') {
+			//// if (gCState && gCState.selection && gCState.selection.name == formatStringFromNameCore('line', 'main')) {
 			//// 	var newValid = true;
 			//// 	if (prevProps.sPalArrowStart != this.props.sPalArrowStart) {
 			//// 		gCState.selection.arrowStart = this.props.sPalArrowStart;
@@ -5010,17 +5021,17 @@ function init(aArrBufAndCore) {
 					React.createElement('div', {},
 						React.createElement('input', {id:'arrow_start', type:'checkbox', defaultChecked:this.props.sPalArrowStart, onClick:this.checkStart, ref:'checkstart'}),
 						React.createElement('label', {htmlFor:'arrow_start'},
-							'Start'
+							formatStringFromNameCore('start', 'main')
 						)
 					),
 					React.createElement('div', {},
 						React.createElement('input', {id:'arrow_end', type:'checkbox', defaultChecked:this.props.sPalArrowEnd, onClick:this.checkEnd, ref:'checkend'}),
 						React.createElement('label', {htmlFor:'arrow_end'},
-							'End'
+							formatStringFromNameCore('end', 'main')
 						)
 					)
 				),
-				React.createElement(InputNumber, {pLabel:'Size', pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1, pCStateSel:{'Line':'arrowLength'} })
+				React.createElement(InputNumber, {pLabel:formatStringFromNameCore('size', 'main'), pStateVarName:'sPalArrowLength', sPalArrowLength:this.props.sPalArrowLength, pMin:1, pCStateSel:{[formatStringFromNameCore('line', 'main')]:'arrowLength'} })
 				// React.createElement('div', {},
 				// 	React.createElement('label', {htmlFor:'arrow_length'},
 				// 		'Length'
@@ -5029,7 +5040,7 @@ function init(aArrBufAndCore) {
 				// ),
 				// React.createElement('div', {},
 				// 	React.createElement('label', {htmlFor:'arrow_width'},
-				// 		'Width'
+				// 		formatStringFromNameCore('width', 'main')
 				// 	),
 				// 	React.createElement('input', {id:'arrow_width', type:'text'})
 				// ),
@@ -5053,9 +5064,9 @@ function init(aArrBufAndCore) {
 			//// 		if (this.props.pStateColorKey == 'sPalFillColor') {
 			//// 			// if currently selection object obeys fillcolor, then apply this new fillcolor
 			//// 			switch (gCState.selection.name) {
-			//// 				case 'Rectangle':
-			//// 				case 'Oval':
-			//// 				case 'Text':
+			//// 				case formatStringFromNameCore('rectangle', 'main'):
+			//// 				case formatStringFromNameCore('oval', 'main'):
+			//// 				case formatStringFromNameCore('text', 'main'):
 			////
 			//// 						gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						gCanStore.setCanState(false);
@@ -5067,13 +5078,13 @@ function init(aArrBufAndCore) {
 			//// 		} else if (this.props.pStateColorKey == 'sPalLineColor') {
 			//// 			// if currently selection object obeys linecolor, then apply this new linecolor
 			//// 			switch (gCState.selection.name) {
-			//// 				case 'Rectangle':
-			//// 				case 'Oval':
-			//// 				case 'Line':
-			//// 				case 'Pencil':
+			//// 				case formatStringFromNameCore('rectangle', 'main'):
+			//// 				case formatStringFromNameCore('oval', 'main'):
+			//// 				case formatStringFromNameCore('line', 'main'):
+			//// 				case formatStringFromNameCore('pencil', 'main'):
 			////
 			//// 						gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
-			//// 						if (gCState.selection.name == 'Line') { // as fillStyle for line is set equal to that of its strokeStyle
+			//// 						if (gCState.selection.name == formatStringFromNameCore('line', 'main')) { // as fillStyle for line is set equal to that of its strokeStyle
 			//// 							gCState.selection.fillStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						}
 			//// 						gCanStore.setCanState(false);
@@ -5085,7 +5096,7 @@ function init(aArrBufAndCore) {
 			//// 		} else if (this.props.pStateColorKey == 'sPalMarkerColor') {
 			//// 			// if currently selection object obeys markercolor, then apply this new markercolor
 			//// 			switch (gCState.selection.name) {
-			//// 				case 'Marker':
+			//// 				case formatStringFromNameCore('marker', 'main'):
 			////
 			//// 						gCState.selection.strokeStyle = colorStrToCssRgba(this.props.sColor, this.props.sAlpha);
 			//// 						gCanStore.setCanState(false);
@@ -5434,10 +5445,10 @@ function init(aArrBufAndCore) {
 			var cPropsA = overwriteObjWithObj({}, cPropsCommon);
 
 
-			cPropsR.pLabel = 'R';
-			cPropsG.pLabel = 'G';
-			cPropsB.pLabel = 'B';
-			cPropsA.pLabel = 'A';
+			cPropsR.pLabel = formatStringFromNameCore('red_short', 'main');
+			cPropsG.pLabel = formatStringFromNameCore('green_short', 'main');
+			cPropsB.pLabel = formatStringFromNameCore('blue_short', 'main');
+			cPropsA.pLabel = formatStringFromNameCore('alpha_short', 'main');
 
 			cPropsR.className += 'r';
 			cPropsG.className += 'g';
@@ -5463,7 +5474,7 @@ function init(aArrBufAndCore) {
 
 			return React.createElement('div', {className:'colorpicker-codes'},
 				React.createElement('div', {className:'colorpicker-codes-hex'},
-					'Hex',
+					formatStringFromNameCore('hex', 'main'),
 					React.createElement('input', {ref:'hexinput', type:'text', maxLength:6, defaultValue:this.props.pHex, onChange:this.changehex})
 				),
 				React.createElement(InputNumber, cPropsR),
@@ -5482,24 +5493,24 @@ function init(aArrBufAndCore) {
 			var addColorSetStateObj = {};
 			if (gCState.selection) {
 				switch (gCState.selection.name) {
-					case 'Marker':
+					case formatStringFromNameCore('marker', 'main'):
 
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalMarkerColorHist', true);
 
 						break;
-					case 'Line':
-					case 'Pencil':
+					case formatStringFromNameCore('line', 'main'):
+					case formatStringFromNameCore('pencil', 'main'):
 
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
 
 						break;
-					case 'Text':
+					case formatStringFromNameCore('text', 'main'):
 
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
 
 						break;
-					case 'Rectangle':
-					case 'Oval':
+					case formatStringFromNameCore('rectangle', 'main'):
+					case formatStringFromNameCore('oval', 'main'):
 
 							addColorSetStateObj = gCanStore.rconn.addColorToHistory(aColor, 'sPalBothColorHist', true);
 
@@ -5664,7 +5675,7 @@ function init(aArrBufAndCore) {
 					}
 				} else {
 					/*
-					if (cLayoutEntry.label == 'Clear Selection' && gCState && gCState.drawables) {
+					if (cLayoutEntry.label == formatStringFromNameCore('clear_selection', 'main') && gCState && gCState.drawables) {
 						// console.log('gCState:', gCState);
 						var cutoutFound = false;
 						var drawables = gCState.drawables;
@@ -5938,18 +5949,18 @@ function init(aArrBufAndCore) {
 		},
 		componentDidMount: function() {
 			this.lastDomElValue = this.props[this.props.pStateVarName];
-			if (this.props.pLabel == 'Width') {
+			if (this.props.pLabel == formatStringFromNameCore('width', 'main')) {
 				console.error('mounted width');
 				gWidthRef = this.refs.input;
-			} else if (this.props.pLabel == 'Height') {
+			} else if (this.props.pLabel == formatStringFromNameCore('height', 'main')) {
 				console.error('mounted height');
 				gHeightRef = this.refs.input;
 			}
 		},
 		componentWillUnmount: function() {
-			if (this.props.pLabel == 'Width') {
+			if (this.props.pLabel == formatStringFromNameCore('width', 'main')) {
 				gWidthRef = null;
-			} else if (this.props.pLabel == 'Height') {
+			} else if (this.props.pLabel == formatStringFromNameCore('height', 'main')) {
 				gHeightRef = null;
 			}
 		},
@@ -6119,10 +6130,10 @@ function init(aArrBufAndCore) {
 		var l = palLayout.length;
 		for (var i=0; i<l; i++) {
 			var entry = palLayout[i];
-			if (entry.label == 'Fullscreen') {
+			if (entry.label == formatStringFromNameCore('fullscreen', 'main')) {
 				entry.sub = [
 						{
-							label: 'All Monitors',
+							label: formatStringFromNameCore('all_monitors', 'main'),
 							icon: '\ue843',
 							unfixable: true,
 							hotkey: 'aa'
@@ -6136,7 +6147,7 @@ function init(aArrBufAndCore) {
 				for (var j=0; j<l2; j++) {
 					if (j !== tQS.iMon) {
 						entry.sub.push({
-							label: 'Monitor ' + (j + 1),
+							label: formatStringFromNameCore('monitor_x', 'main', [(j + 1)]),
 							icon: getMonitorSvg(j),
 							icontext: (j + 1),
 							unfixable: true
@@ -7306,3 +7317,20 @@ var shg_table = [
 		24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
 		24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
 		24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24 ];
+
+function formatStringFromNameCore(aLocalizableStr, aLoalizedKeyInCoreAddonL10n, aReplacements) {
+	// 051916 update - made it core.addon.l10n based
+    // formatStringFromNameCore is formating only version of the worker version of formatStringFromName, it is based on core.addon.l10n cache
+
+	try { var cLocalizedStr = core.addon.l10n[aLoalizedKeyInCoreAddonL10n][aLocalizableStr]; if (!cLocalizedStr) { throw new Error('localized is undefined'); } } catch (ex) { console.error('formatStringFromNameCore error:', ex, 'args:', aLocalizableStr, aLoalizedKeyInCoreAddonL10n, aReplacements); } // remove on production
+
+	var cLocalizedStr = core.addon.l10n[aLoalizedKeyInCoreAddonL10n][aLocalizableStr];
+	// console.log('cLocalizedStr:', cLocalizedStr, 'args:', aLocalizableStr, aLoalizedKeyInCoreAddonL10n, aReplacements);
+    if (aReplacements) {
+        for (var i=0; i<aReplacements.length; i++) {
+            cLocalizedStr = cLocalizedStr.replace('%S', aReplacements[i]);
+        }
+    }
+
+    return cLocalizedStr;
+}
