@@ -1965,24 +1965,26 @@ function setWinAlwaysOnTop(aArg) {
 		case 'gtk':
 
 				for (var i=0; i<aArrHwndPtrStr.length; i++) {
+					var hwndptrstr = aArrHwndPtrStr[i];
 					console.log('at top of gtk loop');
-					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
+					var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(hwndptrstr));
 					console.log('hwndPtr:', hwndPtr);
 					var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
 					console.log('XWindow1a:', XWindow);
 					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
 					console.log('XWindow1b:', XWindow);
 
-					// setTimeout(function() {
-						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-						console.log('rez_unmap', rez_unmap);
-
+					setTimeout(function() {
 						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
 						// console.log('rez_flush', rez_flush);
+
+						var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
+						console.log('rez_unmap', rez_unmap);
 
 						var chgValueList = ostypes.TYPE.uint32_t.array()([
 							1
 						]);
+
 						var rez_chg = ostypes.API('xcb_change_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CW_OVERRIDE_REDIRECT, chgValueList);
 						console.log('rez_chg:', rez_chg);
 
@@ -1991,15 +1993,37 @@ function setWinAlwaysOnTop(aArg) {
 
 						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
 						// console.log('rez_flush', rez_flush);
+					}, 0);
+
+					setTimeout(function() {
+
+						//
+						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						// console.log('rez_flush', rez_flush);
 
 						// raise the window
 						var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
 						console.log('rez_raise:', rez_raise);
 
+						// resize the window - per example here - https://www.x.org/archive/current/doc/man/man3/xcb_configure_window.3.xhtml
+						var mask = 0; //ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE
+						mask |= ostypes.CONST.XCB_CONFIG_WINDOW_X;
+						mask |= ostypes.CONST.XCB_CONFIG_WINDOW_Y;
+						mask |= ostypes.CONST.XCB_CONFIG_WINDOW_WIDTH;
+						mask |= ostypes.CONST.XCB_CONFIG_WINDOW_HEIGHT;
+						var valswin = [
+							aOptions[hwndptrstr].left, // x
+							aOptions[hwndptrstr].top, // y
+							aOptions[hwndptrstr].width, // width
+							aOptions[hwndptrstr].height // height
+						];
+						var rez_resize = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, mask, ostypes.TYPE.uint32_t.array()(valswin));
+						console.log('rez_resize:', rez_resize);
+
 						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
 						// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
-						var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
-						console.log('rez_focus:', rez_focus);
+						// var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
+						// console.log('rez_focus:', rez_focus);
 
 						// // Grab the keyboard to get all input
 						// var reqGrab = ostypes.API('xcb_grab_keyboard')(ostypes.HELPER.cachedXCBConn(), false, XWindow, ostypes.CONST.XCB_CURRENT_TIME, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
@@ -2007,235 +2031,49 @@ function setWinAlwaysOnTop(aArg) {
 						// console.error('replyGrab:', replyGrab);
 						// console.error('replyGrab.contents:', replyGrab.contents);
 						// console.error('replyGrab.status:', replyGrab.contents.status);
+						//
+						// var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
+						// console.log('rez_map', rez_map);
+						//
+						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						// console.log('rez_flush', rez_flush);
+						//
+						// var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
+						// console.log('rez_map', rez_map);
+						//
+						// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+						// console.log('rez_flush', rez_flush);
+
+
+
+
+						// // resize the window - per example here - https://www.x.org/archive/current/doc/man/man3/xcb_configure_window.3.xhtml
+						// var mask = 0; //ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE
+						// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_X;
+						// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_Y;
+						// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_WIDTH;
+						// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_HEIGHT;
+						// var valswin = [
+						// 	aOptions[hwndptrstr].left, // x
+						// 	aOptions[hwndptrstr].top, // y
+						// 	aOptions[hwndptrstr].width, // width
+						// 	aOptions[hwndptrstr].height // height
+						// ];
+						// var rez_resize = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, mask, ostypes.TYPE.uint32_t.array()(valswin));
+						// console.log('rez_resize:', rez_resize);
+console.error('final');
+						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
+						console.log('rez_map', rez_map);
+
+						// Set input focus (we have override_redirect=1, so the wm will not do this for us)
+						// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
+						var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
+						console.log('rez_focus:', rez_focus);
 
 						var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
 						console.log('rez_flush', rez_flush);
-
-					// }, 5000);
+					}, 100);
 				}
-
-
-
-				////// // http://stackoverflow.com/a/4347486/5062337
-				////// // do this stuff up here as if it doesnt exist it will throw now, rather then go through set allocate xevent then find out when setting xevent.xclient data that its not available
-				////// var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
-				////// var atom_wmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
-				////// var atom_wmActive = ostypes.HELPER.cachedAtom('_NET_ACTIVE_WINDOW');
-				//////
-				////// for (var i=0; i<aArrHwndPtrStr.length; i++) {
-                //////
-				////// 	var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-				////// 	console.log('hwndPtr:', hwndPtr);
-				////// 	var XWindow = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-				////// 	console.log('XWindow:', XWindow);
-                //////
-				////// 	// set window always on top
-				////// 	var xevent = ostypes.TYPE.XEvent();
-				//////
-				////// 	xevent.xclient.type = ostypes.CONST.ClientMessage;
-				////// 	xevent.xclient.serial = 0;
-				////// 	xevent.xclient.send_event = ostypes.CONST.True;
-				////// 	xevent.xclient.display = ostypes.HELPER.cachedXOpenDisplay();
-				////// 	xevent.xclient.window = XWindow;
-				////// 	xevent.xclient.message_type = atom_wmState;
-				////// 	xevent.xclient.format = 32; // because xclient.data is long, i defined that in the struct union
-				////// 	xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
-				//////
-				////// 	console.log('xevent set');
-				////// 	var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address());
-				////// 	console.log('rez_SendEv set on top:', rez_SendEv);
-				//////
-				////// 	// focus the window
-				////// 	var xevent = ostypes.TYPE.XEvent();
-				//////
-				////// 	xevent.xclient.type = ostypes.CONST.ClientMessage;
-				////// 	xevent.xclient.serial = 0;
-				////// 	xevent.xclient.send_event = ostypes.CONST.True;
-				////// 	xevent.xclient.display = ostypes.HELPER.cachedXOpenDisplay();
-				////// 	xevent.xclient.window = XWindow; // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-				////// 	xevent.xclient.message_type = atom_wmState;
-				////// 	xevent.xclient.format = 32; // because xclient.data is long, i defined that in the struct union
-				////// 	xevent.xclient.data = ostypes.TYPE.long.array(5)([ostypes.CONST._NET_WM_STATE_ADD, atom_wmStateAbove, 0, 0, 0]);
-				//////
-				////// 	var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-                //////     console.log('rez_SendEv focus:', rez_SendEv);
-				//////
-				////// 	var rez_xmap = ostypes.API('XMapRaised')(ostypes.HELPER.cachedXOpenDisplay(), xevent.xclient.window);
-				////// 	console.log('rez_xmap:', rez_xmap);
-				//////
-				////// 	// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_STICKY');
-				////// 	// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-                //////
-				//////
-				////// 	// xevent.xclient.data[1] = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
-				////// 	// var rez_SendEv = ostypes.API('XSendEvent')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), ostypes.CONST.False, ostypes.CONST.SubstructureRedirectMask | ostypes.CONST.SubstructureNotifyMask, xevent.address()); // window will come to top if it is not at top and then be made to always be on top
-                //////
-                //////
-				////// 	/*
-				////// 	// testing XListProperties
-				////// 	var numAtoms = ostypes.TYPE.int();
-				////// 	var rez_ListProp = ostypes.API('XListProperties')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, numAtoms.address());
-                //////
-                //////
-				////// 	//if (cutils.jscEqual(rez_ListProp, ostypes.CONST.BadWindow)) { // need to figure out how to test this, it seems when rez_ListProp is null, so im not sure how to get BadWindow its just not returning it // throw new Error('XListProperties failed with reason BadWindow'); // }
-				////// 	if (rez_ListProp.isNull()) {
-				////// 		// then probably failed
-				////// 		throw new Error('XListProperties probably failed with BadWindow BUT is possible the window really has no properties set on it in which case i should not throw error on this line');
-				////// 	}
-				//////
-				////// 	var atomsJS = ctypes.cast(rez_ListProp, ostypes.TYPE.Atom.array(parseInt(cutils.jscGetDeepest(numAtoms))).ptr).contents;
-                //////
-				////// 	var atomsC = rez_ListProp;
-				////// 	numAtoms = parseInt(cutils.jscGetDeepest(numAtoms));
-				//////
-				////// 	// ostypes.API('XFree')(rez_ListProp); // must be done
-				//////
-				////// 	// test XGetAtomNames
-				//////
-				////// 	// // var atomsJS = [
-				////// 	// // 	1,
-				////// 	// // 	2,
-				////// 	// // 	3
-				////// 	// // ];
-				////// 	// // var numAtoms = atomsJS.length;
-				////// 	// // var atomsC = ostypes.TYPE.Atom.array(atomsJS.length)(atomsJS);
-				//////
-				//////
-				////// 	var atomNames = ostypes.TYPE.char.ptr.array(numAtoms)();
-                //////
-				////// 	var rez_GetANames = ostypes.API('XGetAtomNames')(ostypes.HELPER.cachedXOpenDisplay(), atomsC, numAtoms, atomNames);
-                //////
-				////// 	if (cutils.jscEqual(rez_GetANames, 0)) {
-				////// 		throw new Error('failed XGetAtomNames');
-				////// 	}
-                //////
-				//////
-				////// 	for (var i=0; i<atomNames.length; i++) {
-                //////
-				////// 		//ostypes.API('XFree')(atomNames[i]);
-				////// 	}
-				//////
-				////// 	// doing XFree on atomNames seemed to cause an eventual crash, so i did XFree on each element and that seemed to not crash, i am now trying to see if I can do a XFreeStringList instead of XFree on each item
-				////// 	//ostypes.API('XFreeStringList')(atomNames);
-				//////
-				////// 	// XFreeStringList crashes it almost immediately
-				////// 	// XFree on atomNames crashes it eventually
-				////// 	// XFree on each element seems the only crash free way
-				////// 	ostypes.API('XFreeStringList')(atomNames);
-				////// 	ostypes.API('XFree')(rez_ListProp); // must be done
-                //////
-				////// 	return;
-				//////
-				////// 	// https://github.com/HarveyHunt/barney/blob/bf43fef9ce95d1f7e2150973c2a28e0970bd8dfb/barney/bar.py#L199
-				////// 	// the reason this XChangeProperty on _NET_WM_STATE is not working is because explained here: "http://standards.freedesktop.org/wm-spec/wm-spec-1.3.html#idm140130317612768" --> "A Client wishing to change the state of a window MUST send a _NET_WM_STATE client message to the root window (see below). The Window Manager MUST keep this property updated to reflect the current state of the window." meaning the WM will handle setting this, and I should be ADDing this from XSendEvent
-				////// 	var dataJS = [
-				////// 		ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK')
-				////// 	];
-				////// 	var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
-				////// 	var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-				////// 	var dataFormat = 32; // cuz unsigned_long
-				////// 	var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE'), ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-                //////
-                //////
-				////// 	// make window show on all desktops
-				////// 	var dataJS = [
-				////// 		ostypes.TYPE.Atom('0xFFFFFFFF') // means all desktops
-				////// 	];
-				////// 	var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
-				////// 	var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-				////// 	var dataFormat = 32; // cuz unsigned_long
-				////// 	var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_DESKTOP'), ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-                //////
-				//////
-				////// 	// // change window title
-				////// 	// var dataJS = [
-				////// 	// 	String.charCodeAt('r'),
-				////// 	// 	String.charCodeAt('a'),
-				////// 	// 	String.charCodeAt('w'),
-				////// 	// ];
-				////// 	// var dataC = ostypes.TYPE.unsigned_char.array(dataJS.length)(dataJS);
-				////// 	// var dataCCasted = dataC; // no need to cast as it is already 8 byte //ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-				////// 	// var dataFormat = 8; // cuz unsigned_long
-				////// 	// var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), XWindow, ostypes.HELPER.cachedAtom('_NET_WM_NAME'), ostypes.HELPER.cachedAtom('UTF8_STRING'), dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-                //////
-				////// 	*/
-				////// }
-				//////
-				////// ostypes.API('XFlush')(ostypes.HELPER.cachedXOpenDisplay()); // will not set on top if you dont do this, wont even change window title name which was done via XChangeProperty, MUST FLUSH
-				//////
-				////// /*
-				////// for (var i=0; i<aArrHwndPtrStr.length; i++) {
-                //////
-				////// 	var gdkWinPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-				////// 	var gtkWinPtr = ostypes.HELPER.gdkWinPtrToGtkWinPtr(gdkWinPtr);
-				////// 	ostypes.API('gtk_window_set_keep_above')(gtkWinPtr, 1);
-				////// }
-				////// */
-				//////
-				////// /*
-				////// // try changing STRUT and STRUT_PARTIAL
-				////// var atom_wmStrut = ostypes.HELPER.cachedAtom('_NET_WM_STRUT_PARTIAL');
-				////// var atom_wmStrutPartial = ostypes.HELPER.cachedAtom('_NET_WM_STRUT_PARTIAL');
-				//////
-				////// for (var i=0; i<aArrHwndPtrStr.length; i++) {
-				////// 	var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-				////// 	var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-				//////
-				////// 	var dataJS = [
-				////// 		0,
-				////// 		0,
-				////// 		0,
-				////// 		0
-				////// 	];
-				////// 	var dataC = ostypes.TYPE.unsigned_long.array(dataJS.length)(dataJS);
-				////// 	var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-				////// 	var dataFormat = 32; // cuz unsigned_long
-				////// 	var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmStrut, ostypes.CONST.XA_CARDINAL, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-                //////
-				////// }
-				////// */
-				////// /*
-				////// // try changing WM_WINDOW_TYPE properties
-				////// var atom_wmWindowType = ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE');
-				////// var atom_wmWindowTypeDock = ostypes.HELPER.cachedAtom('_NET_WM_WINDOW_TYPE_DOCK');
-				//////
-				////// for (var i=0; i<aArrHwndPtrStr.length; i++) {
-				////// 	var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-				////// 	var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-				//////
-				////// 	var dataJS = [
-				////// 		atom_wmWindowTypeDock
-				////// 	];
-				////// 	var dataC = ostypes.TYPE.Atom.array(dataJS.length)(dataJS);
-				////// 	var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-				////// 	var dataFormat = 32; // cuz unsigned_long
-				////// 	var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmWindowType, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-                //////
-				////// }
-				////// */
-				////// /*
-				////// // try changing WM_STATE properties
-				////// var atom_wmWmState = ostypes.HELPER.cachedAtom('_NET_WM_STATE');
-				////// var atom_wmStateAbove = ostypes.HELPER.cachedAtom('_NET_WM_STATE_ABOVE');
-				////// var atom_wmStateFullscreen = ostypes.HELPER.cachedAtom('_NET_WM_STATE_FULLSCREEN');
-				////// var atom_wmStateAttn = ostypes.HELPER.cachedAtom('_NET_WM_STATE_DEMANDS_ATTENTION');;
-				//////
-				////// for (var i=0; i<aArrHwndPtrStr.length; i++) {
-				////// 	var hwndPtr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aArrHwndPtrStr[i]));
-				////// 	var Window = ostypes.HELPER.gdkWinPtrToXID(hwndPtr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
-				//////
-				////// 	var dataJS = [
-				////// 		atom_wmStateAbove,
-				////// 		atom_wmStateFullscreen,
-				////// 		atom_wmStateAttn
-				////// 	];
-				////// 	var dataC = ostypes.TYPE.unsigned_long.array(dataJS.length)(dataJS);
-				////// 	var dataCCasted = ctypes.cast(dataC.address(), ostypes.TYPE.unsigned_char.array(dataJS.length).ptr).contents;
-				////// 	var dataFormat = 32; // cuz unsigned_long
-				////// 	var rez_XChg = ostypes.API('XChangeProperty')(ostypes.HELPER.cachedXOpenDisplay(), ostypes.HELPER.cachedDefaultRootWindow(), atom_wmState, ostypes.CONST.XA_ATOM, dataFormat, ostypes.CONST.PropModeReplace, dataCCasted, dataJS.length);
-                //////
-				////// }
-				////// */
 			break;
 		case 'darwin':
 
@@ -4042,6 +3880,20 @@ function macSetBrowseFileDialogLevel() {
 			setTimeout(macSetBrowseFileDialogLevel, 50);
 		}
 	});
+}
+
+function gtkSetFocus(aGDKWindowPtrStr) {
+	console.log('at top of gtk loop');
+	var gdkwinptr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aGDKWindowPtrStr));
+
+	var xwin = ostypes.HELPER.gdkWinPtrToXID(gdkwinptr);
+	xwin = parseInt(cutils.jscGetDeepest(xwin));
+
+	var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, xwin, ostypes.CONST.XCB_CURRENT_TIME);
+	console.log('rez_focus:', rez_focus);
+
+	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+	console.log('rez_flush', rez_flush);
 }
 
 // End - Addon Functionality

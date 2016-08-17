@@ -718,7 +718,7 @@ function exitEditors(aArg) {
 	gSession = {}; // gEditor.cleanUp();
 
 	attnUpdate(sessionid); // show the attnbar if there is anything to show
-	console.error('will now checkOnlySingleAction as have shown it for sure, entry.shown:', gAttn[sessionid].shown);
+	console.error('will now checkOnlySingleAction as have shown it for sure, well i think but its not true'); // TODO: figure out whye gAttn[sessionid] is undefined here
 	checkOnlySingleAction(sessionid, true);
 
 	gEditorStateStr = JSON.stringify(aArg.editorstate);
@@ -727,6 +727,10 @@ function exitEditors(aArg) {
 		mainkey: 'editorstate',
 		value: aArg.editorstate
 	});
+
+	if (core.os.mname == 'gtk') {
+		callInMainworker('gtkSetFocus', getNativeHandlePtrStr(Services.wm.getMostRecentWindow('navigator:browser')));
+	}
 }
 
 var gUsedSelections = []; // array of arrays. each child is [subcutout1, subcutout2, ...]
@@ -1762,6 +1766,10 @@ function checkOnlySingleAction(aSessionId, aDontCopy) {
 
 	var aEntry = gAttn[aSessionId]; // making assumption here that whenever `checkOnlySingleAction` is called, then this entry exists for sure
 
+	if (!aEntry) {
+		console.warn('no gAttn[aSessionId]! aSessionId:', aSessionId);
+		return;
+	}
 	// check if there was only one item for this session, if so then it reached success, copy to clipboard and start timeout to hide attnbar
 		// i can do this test by doing `gAttn[aSessionId].state.aBtns === 1` because each action gets a button
 	if (aEntry.state.aBtns.length === 1 && aEntry.state.aBtns[0].meta.reason == 'SUCCESS') {
