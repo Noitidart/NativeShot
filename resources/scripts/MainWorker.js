@@ -4621,7 +4621,7 @@ function buildOSFileErrorString(aMethod, aOSFileError) { // rev3 - https://gist.
 				if (aOSFileError.becauseNoSuchFile) {
 					explain = formatStringFromName('osfileerror_writeatomic_nosuchfile', 'main');
 				} else {
-					explain = formatStringFromName('osfileerror_unknownreason', 'main');
+					explain = formatStringFromName('osfileerror_unnamedreason', 'main');
 				}
 				rez = formatStringFromName('osfileerror_' + aMethod, 'main', [explain, aOSFileError.winLastError || aOSFileError.unixErrno])
 			break;

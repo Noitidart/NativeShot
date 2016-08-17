@@ -983,7 +983,7 @@ function init(aArrBufAndCore) {
 			hotkey: 'cr',
 			sub: [
 				{
-					label: formatStringFromNameCore('all', 'main'),
+					label: formatStringFromNameCore('ocrall', 'main'),
 					icon: '\ue848'
 				},
 				{
