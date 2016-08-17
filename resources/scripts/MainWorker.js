@@ -3439,7 +3439,7 @@ function hotkeysRegister() {
 				var screens_cnt = screens.rem;
 
 				for (var i=0; i<screens_cnt; i++) {
-					console.log('screen[' + i + ']:', screens);
+					// console.log('screen[' + i + ']:', screens);
 					console.log('screen[' + i + '].data:', screens.data.contents);
 					var grabwin = screens.data.contents.root;
 					grabwins.push(grabwin);
@@ -3468,12 +3468,14 @@ function hotkeysRegister() {
 						}
 						// end - copy of block-link391999
 
+						var codes_os = code_os_to_codes_os[code];
+
 						// grab this hotkey on all grabwins
 						// var any_win_registered = false;
 						// var any_codeos_registered = false;
 						// var any_registered = false;
 						for (var grabwin of grabwins) {
-							for (var code_os of code_os_to_codes_os[code]) {
+							for (var code_os of codes_os) {
 								var rez_grab = ostypes.API('xcb_grab_key_checked')(ostypes.HELPER.cachedXCBConn(), 1, grabwin, mods_os, code_os, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
 								var rez_check = ostypes.API('xcb_request_check')(ostypes.HELPER.cachedXCBConn(), rez_grab);
 								console.log('rez_check:', rez_check.toString());
@@ -3484,7 +3486,7 @@ function hotkeysRegister() {
 									// any_registered = true;
 									hotkey.__REGISTERED = {
 										grabwins,
-										codes_os: code_os_to_codes_os[code],
+										codes_os,
 										last_triggered: 0
 									};
 								}
@@ -3675,6 +3677,9 @@ function hotkeysUnregister() {
 						delete hotkey.__REGISTERED;
 					}
 				}
+
+				var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+				console.log('rez_flush:', rez_flush);
 
 			break;
 		case 'darwin':
