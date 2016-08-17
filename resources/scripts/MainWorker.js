@@ -2758,10 +2758,8 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 		};
 		if (shot.action_options && 'imon' in shot.action_options) {
 			browsefile_arg.aOptions.win = shot.action_options.imon;
-			if (core.os.mname == 'darwin') {
-				macSetTry = 0;
-				setTimeout(macSetBrowseFileDialogLevel, 0);
-			}
+			findDialogTry = 0;
+			setTimeout(findDialogAndSetTop, 0);
 		} else {
 			browsefile_arg.aOptions.win = 'navigator:browser';
 		}
@@ -2782,6 +2780,12 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 				aActionFinalizer({
 					reason: 'CANCELLED'
 				});
+			}
+			if (core.os.mname == 'gtk') {
+				if (shot.action_options && 'imon' in shot.action_options) {
+					// then xcb set focus to nativeshot window, as it is unmanaged/override_redirect
+					callInBootstrap('getACanvasWindowNativeHandle', null, gtkSetFocus);
+				}
 			}
 		});
 	};
@@ -3873,22 +3877,62 @@ function hotkeyMacCallback(aArg) {
 }
 // end - system hotkey
 
-var macSetTry = 0;
-function macSetBrowseFileDialogLevel() {
-	if (macSetTry++ === 20) {
+var findDialogTry = 0;
+function findDialogAndSetTop() {
+	// for use because on gtk and mac, the window is top most, so things won't show on top of it (will for gtk not necessarily, but on opensuse yes)
+	const TRY_INTERVAL = 100; // ms
+	const TRY_FOR = 2000; // ms
+	const MAX_TRIES = Math.ceil(TRY_FOR / TRY_INTERVAL);
+	if (findDialogTry++ === MAX_TRIES) {
 		console.error('reached max tries');
 		return;
 	}
 
-	callInBootstrap('macFindDialogAndSetTop', undefined, function(aDone) {
-		if (!aDone) {
-			setTimeout(macSetBrowseFileDialogLevel, 50);
-		}
-	});
+	switch (core.os.mname) {
+		case 'darwin':
+				callInBootstrap('macFindDialogAndSetTop', undefined, function(aDone) {
+					if (!aDone) {
+						setTimeout(findDialogAndSetTop, TRY_INTERVAL);
+					}
+				});
+			break;
+		case 'gtk':
+				var win = xcbGetFocusedWindow();
+				var title = xcbGetWindowTitle(win);
+				if (title == formatStringFromName('filepicker_title_savescreenshot', 'main')) {
+					var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), win, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
+					console.log('rez_raise:', rez_raise);
+
+					var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), win);
+					console.log('rez_map', rez_map);
+
+					var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+					console.log('rez_flush:', rez_flush);
+				} else {
+					setTimeout(findDialogAndSetTop, 50);
+				}
+			break;
+		default:
+			console.error('not supported, windows doesnt need this');
+	}
+}
+
+function xcbSetAlwaysOnTop(aXcbWindowT) {
+	var win = aXcbWindowT;
+
+	var change_list = ostypes.TYPE.xcb_atom_t.array()([ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE_ABOVE')]);
+	var req_change = ostypes.API('xcb_change_property')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_PROP_MODE_REPLACE, win, ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE'), ostypes.CONST.XCB_ATOM_ATOM, 32, change_list.length, change_list);
+
+	ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), win);
+
+	ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+}
+function xcbUnsetAlwaysOnTop(aXcbWindowT) {
+	var win = aXcbWindowT;
+
 }
 
 function gtkSetFocus(aGDKWindowPtrStr) {
-	console.log('at top of gtk loop');
 	var gdkwinptr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(aGDKWindowPtrStr));
 
 	var xwin = ostypes.HELPER.gdkWinPtrToXID(gdkwinptr);
@@ -3899,6 +3943,114 @@ function gtkSetFocus(aGDKWindowPtrStr) {
 
 	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
 	console.log('rez_flush', rez_flush);
+}
+
+function xcbGetFocusedWindow() {
+	// returns the xcb_window_t (same as XID) that is currently has focus
+	var req_focus = ostypes.API('xcb_get_input_focus')(ostypes.HELPER.cachedXCBConn());
+
+	var rez_focus = ostypes.API('xcb_get_input_focus_reply')(ostypes.HELPER.cachedXCBConn(), req_focus, null);
+
+	// console.log('rez_focus:', rez_focus);
+	return rez_focus.contents.focus;
+}
+
+function xcbGetTopWindow(aXcbWindowT) {
+	// https://gist.github.com/kui/2622504#file-gistfile1-c-L53
+	// a top window have the following specifications.
+	//  * the start window is contained the descendent windows.
+	//  * the parent window is the root window.
+	var root = -1;
+	var parent = aXcbWindowT;
+	var win;
+	while (!cutils.jscEqual(parent, root)) {
+		win = parent;
+		var req_query = ostypes.API('xcb_query_tree')(ostypes.HELPER.cachedXCBConn(), win);
+		var rez_query = ostypes.API('xcb_query_tree_reply')(ostypes.HELPER.cachedXCBConn(), req_query, null);
+		console.log('rez_query.contents:', rez_query.contents);
+		root = rez_query.contents.root;
+		parent = rez_query.contents.parent;
+	}
+
+	return win;
+
+}
+
+function xcbQueryParentsUntil(aXcbWindowT, aCallback, aOptions={}) {
+	// query windows
+	// quits if it gets to root, returns null
+	// on success returns {win,result:callback_result}
+
+	// example:
+		// xcbQueryParentsUntil(xcbGetFocusedWindow(), xcbGetWindowTitle, {break:el=>el!==''});
+
+	var default_options = {
+		inclusive: true, // meaning test on aXcbWindowT
+		break: el=>el // if result of aCallback is truthy
+	};
+	var options = Object.assign(default_options, aOptions);
+	var result;
+
+
+	var win = aXcbWindowT;
+	if (options.inclusive) {
+		result = aCallback(win);
+		if (options.break(result)) {
+			return {
+				win,
+				result
+			}
+		}
+	}
+	var root = -1;
+	var parent = aXcbWindowT;
+	while (!cutils.jscEqual(win, root)) {
+		var req_query = ostypes.API('xcb_query_tree')(ostypes.HELPER.cachedXCBConn(), win);
+		var rez_query = ostypes.API('xcb_query_tree_reply')(ostypes.HELPER.cachedXCBConn(), req_query, null);
+		console.log('rez_query.contents:', rez_query.contents);
+		if (root === -1) {
+			root = rez_query.contents.root;
+		}
+		win = rez_query.contents.parent;
+		result = aCallback(win);
+		if (options.break(result)) {
+			return {
+				win,
+				result
+			}
+		}
+	}
+
+	return null;
+}
+
+function xcbQueryChildrenUntil(aXcbWindowT, aCallback) {
+	// query windows
+	// returns null, if aCallback never returned true, and no more children
+
+	var default_options = {
+		inclusive: true // meaning test on aXcbWindowT
+	};
+	var options = Object.assign(default_options, aOptions);
+}
+function xcbGetWindowTitle(aXcbWindowT) {
+	var win = aXcbWindowT;
+	// console.log('win:', win);
+
+	var req_title = ostypes.API('xcb_get_property')(ostypes.HELPER.cachedXCBConn(), 0, win, ostypes.CONST.XCB_ATOM_WM_NAME, ostypes.CONST.XCB_ATOM_STRING, 0, 100); // `100` means it will get 100*4 so 400 bytes, so that 400 char, so `rez_title.bytes_after` should be `0` but i can loop till it comes out to be 0
+	var rez_title = ostypes.API('xcb_get_property_reply')(ostypes.HELPER.cachedXCBConn(), req_title, null);
+	// console.log('rez_title:', rez_title);
+
+	var title_len = ostypes.API('xcb_get_property_value_length')(rez_title); // length is not null terminated so "Console - chrome://nativeshot/content/resources/scripts/MainWorker.js?0.01966718940939427" will be length of `88`, this matches `rez_title.length` but the docs recommend to use this call to get the value, i dont know why
+	console.log('title_len:', title_len, 'rez_title.contents.length:', rez_title.contents.length); // i think `rez_title.contents.length` is the actual length DIVIDED by 4, and rez_title_len is not dividied by 4
+
+	var title_buf = ostypes.API('xcb_get_property_value')(rez_title); // "title_len: 89 rez_title.contents.length: 23" for test case of "Console - chrome://nativeshot/content/resources/scripts/MainWorker.js?0.01966718940939427"
+	// console.log('title_buf:', title_buf);
+
+	var title = ctypes.cast(title_buf, ctypes.char.array(title_len).ptr).contents.readString();
+	console.log('title:', title);
+
+	return title;
 }
 
 // End - Addon Functionality

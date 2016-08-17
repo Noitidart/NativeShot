@@ -1396,7 +1396,7 @@ function hotkeyRegistrationFailed(aArg) {
 function processAction(aArg, aReportProgress) {
 	// called by content
 	// aReportProgress is undefined if editor is not waiting for progress updates
-	shot = aArg;
+	var shot = aArg;
 
 	// create attn bar entry
 	if (core.os.name != 'android') {
@@ -2365,6 +2365,13 @@ function macFindDialogAndSetTop() {
 		}
 	}
 }
+
+function getACanvasWindowNativeHandle() {
+	if (gSession.id) {
+		return gSession.shots[0].hwndPtrStr;
+	}
+}
+
 // start - common helper functions
 function Deferred() {
 	this.resolve = null;
