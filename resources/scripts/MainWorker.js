@@ -2378,7 +2378,58 @@ function genericOnUploadProgress(shot, aReportProgress, e) {
 };
 
 ////// start - non-oauth actions
+function tesseractReprocess(aArg, aReportProgress) {
+	var { width, height, arrbuf, lang } = aArg;
 
+	var deferredmain = new Deferred();
+
+	callInOcrworker('readByteArr', {
+		method: 'tesseract',
+		arrbuf,
+		width,
+		height,
+		lang,
+		show_progress: true,
+		__XFER: ['arrbuf']
+	}, function(aArg2) {
+		if (typeof(aArg2) == 'string') {
+			var txt = aArg2;
+			if (txt === null) {
+				deferredmain.resolve({
+					reason: 'ABORT_ERROR',
+					data: {
+						error_details: 'Failed OCR' // TODO:
+					}
+				});
+			} else {
+				deferredmain.resolve({
+					reason: 'SUCCESS',
+					data: {
+						// these comented out ones are what is normally returned, for attnbar
+						// // dataurl: dataurl,
+						// arrbuf: shot.arrbuf,
+						// width: shot.width,
+						// height: shot.height,
+						txt: {
+							tesseract: txt
+						}
+					}
+				});
+			}
+		} else {
+			// its a progress
+			var { __PROGRESS, data } = aArg2;
+			aReportProgress({
+				reason: 'PROGRESS',
+				data: {
+					percent: data.percent
+				}
+			});
+		}
+	});
+
+	return deferredmain.promise;
+}
 ////// start - non-oauth actions
 
 var gFilestore;

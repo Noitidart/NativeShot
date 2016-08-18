@@ -414,8 +414,9 @@ header.type3 {
 .dropdown-style-6 .dropdown-display  {background: #ebebeb; display: inline-block; border: 1px solid #ebebeb; color: #222;}
 .dropdown-style-6 .dropdown-display:hover, .dropdown-style-6.dropdown-open .dropdown-display {background: #fff; color: #222; border: 1px solid #222;}
 
-.dropdown-style-2 .dropdown-list-item { background-color: #fff; border: 1px solid #222; margin-top: -1px; }
-.dropdown-style-2 .dropdown-list-item:hover { background-color: #ebebeb; }
+/* TODO: complete these .dropdown-style otherwise the list-item's are not styled */
+.dropdown-style-2 .dropdown-list-item, .dropdown-style-6 .dropdown-list-item { background-color: #fff; border: 1px solid #222; margin-top: -1px; }
+.dropdown-style-2 .dropdown-list-item:hover, .dropdown-style-6 .dropdown-list-item:hover { background-color: #ebebeb; }
 
 .dropdown-list { transition: transform 200ms; transform: scale(1, 0); transform-origin: 50% 0; z-index: 1; }
 .dropdown-open .dropdown-list { transform: scale(1, 1); }
@@ -506,6 +507,23 @@ span[data-service-name] {
     -moz-user-select: none;
 }
 /***/
+
+/** page:ocr **/
+.tesseract-reprocess-progress {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    left: 0;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+    font-size: 1.4em;
+    color: #888;
+    margin-left: 1px;
+}
+/** end - page:ocr **/
 
 /** page:history **/
 

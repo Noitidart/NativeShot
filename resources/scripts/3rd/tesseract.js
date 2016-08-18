@@ -9394,6 +9394,7 @@ var tesseractinit = (function createTesseractInstance(memory){
 	var Module = Tesseract304({
 		TOTAL_MEMORY: memory, //must be a multiple of 10 megabytes
 		TesseractProgress: function(percent){
+      if (onTesseractProgress) { onTesseractProgress(percent); }
 			// postMessage({
 			// 	index: curindex,
 			// 	'progress': {

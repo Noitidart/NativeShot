@@ -7,8 +7,11 @@ var gTessBig = false;
 var gTessIdx = 0;
 var WORKER = this;
 
-function readByteArr(aArg) {
-	var { method, arrbuf, width, height, lang='eng' } = aArg
+var onTesseractProgress = undefined;
+
+function readByteArr(aArg, aReportProgress) {
+	var { method, arrbuf, width, height, lang='eng', show_progress } = aArg
+	// `show_progress` only works for tesseract
 	// method - string;enum['tesseract','ocrad','gocr']
 	// lang only used by tessearact
 
@@ -53,11 +56,23 @@ function readByteArr(aArg) {
 			}
 
 			var options = {};
+			if (show_progress && method == 'tesseract') {
+				onTesseractProgress = percent => {
+					aReportProgress({
+						reason:'PROGRESS',
+						data: {
+							percent
+						}
+					});
+				};
+			} else {
+				onTesseractProgress = null;
+			}
 
 			var deferred_recognize = new Deferred();
 
 			gTess.recognize(gTessIdx++, image_data, lang, options, function(err, rez){
-				console.log('err:', rez, 'rez:', rez);
+				console.log('err:', err, 'rez:', rez);
 				if (rez) {
 					deferred_recognize.resolve(rez.text);
 				} else {
