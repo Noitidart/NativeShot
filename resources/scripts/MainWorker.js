@@ -1981,6 +1981,7 @@ function setWinAlwaysOnTop(aArg) {
 					var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
 					var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
 					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+					ostypes.API('free')(rez_attr);
 					// end check attr
 
 					var chgValueList = ostypes.TYPE.uint32_t.array()([
@@ -1994,6 +1995,7 @@ function setWinAlwaysOnTop(aArg) {
 					var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
 					var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
 					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+					ostypes.API('free')(rez_attr);
 					// end check attr
 
 					while (true) {
@@ -2004,10 +2006,11 @@ function setWinAlwaysOnTop(aArg) {
 						var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
 						var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
 						console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
-						// end check attr
 						if (cutils.jscEqual(rez_attr.contents.map_state, ostypes.CONST.XCB_MAP_STATE_VIEWABLE)) {
 							break;
 						}
+						ostypes.API('free')(rez_attr);
+						// end check attr
 						console.error('not yet mapped!');
 					}
 					// raise the window
@@ -2041,6 +2044,7 @@ function setWinAlwaysOnTop(aArg) {
 					var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
 					var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
 					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+					ostypes.API('free')(rez_attr);
 					// end check attr
 
 				}
@@ -3928,9 +3932,10 @@ function xcbGetFocusedWindow() {
 	var req_focus = ostypes.API('xcb_get_input_focus')(ostypes.HELPER.cachedXCBConn());
 
 	var rez_focus = ostypes.API('xcb_get_input_focus_reply')(ostypes.HELPER.cachedXCBConn(), req_focus, null);
-
+	var win = rez_focus.contents.focus;
+	ostypes.API('free')(rez_focus);
 	// console.log('rez_focus:', rez_focus);
-	return rez_focus.contents.focus;
+	return win;
 }
 
 function xcbGetTopWindow(aXcbWindowT) {
@@ -3948,6 +3953,7 @@ function xcbGetTopWindow(aXcbWindowT) {
 		console.log('rez_query.contents:', rez_query.contents);
 		root = rez_query.contents.root;
 		parent = rez_query.contents.parent;
+		ostypes.API('free')(rez_query);
 	}
 
 	return win;
@@ -3990,6 +3996,7 @@ function xcbQueryParentsUntil(aXcbWindowT, aCallback, aOptions={}) {
 			root = rez_query.contents.root;
 		}
 		win = rez_query.contents.parent;
+		ostypes.API('free')(rez_query);
 		result = aCallback(win);
 		if (options.break(result)) {
 			return {
@@ -4028,6 +4035,8 @@ function xcbGetWindowTitle(aXcbWindowT) {
 	var title = ctypes.cast(title_buf, ctypes.char.array(title_len).ptr).contents.readString();
 	console.log('title:', title);
 
+	ostypes.API('free')(rez_title);
+
 	return title;
 }
 function xcbFlush() {
@@ -4046,6 +4055,7 @@ function gtkGetWinAttr(aGDKWindowPtrStr) {
 	var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), xwin);
 	var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
 	console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+	ostypes.API('free')(rez_attr);
 }
 // End - Addon Functionality
 

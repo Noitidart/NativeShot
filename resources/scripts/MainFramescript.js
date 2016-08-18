@@ -7,9 +7,7 @@ Cu.importGlobalProperties(['Blob', 'URL']);
 var gCommScope = {};
 Services.scriptloader.loadSubScript('chrome://nativeshot/content/resources/scripts/comm/Comm.js', gCommScope);
 var { callInBootstrap, callInMainworker, callInContent } = gCommScope.CommHelper.framescript;
-gCommScope.callInBootstrap = callInBootstrap;
-gCommScope.callInMainworker = callInMainworker;
-gCommScope.callInContent = callInContent;
+Object.assign(gCommScope, { callInBootstrap, callInMainworker, callInContent }); // Comm.js requires these be inside it as well
 
 // Globals
 var core;
