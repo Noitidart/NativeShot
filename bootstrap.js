@@ -1745,6 +1745,9 @@ function attnUpdate(aSessionId, aUpdateInfo) {
 					bClick: function() {
 						entry.autoclose_cancelled = true;
 						attnUpdate(aSessionId);
+					},
+					meta: { // i need to give it a meta object because i do a test for meta on so many things, otherwise this causes error to be thrown in the loop such as in link199198
+						ignore: true
 					}
 				});
 			}
@@ -2299,7 +2302,7 @@ function extractData(aActionId) {
 		var btns = gAttn[a_sessionid].state.aBtns;
 		if (btns) {
 			for (var btn of btns) {
-				if (btn.meta.actionid === aActionId) {
+				if (btn.meta.actionid === aActionId) { // link199198
 					break entries_loop;
 				}
 			}
