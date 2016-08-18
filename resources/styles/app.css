@@ -522,6 +522,7 @@ span[data-service-name] {
     font-size: 1.4em;
     color: #888;
     margin-left: 1px;
+    -moz-user-select: none; /* otherwise its copyable and increments history log count for tesseract */
 }
 /** end - page:ocr **/
 

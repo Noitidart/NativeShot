@@ -3,12 +3,12 @@ var {callInBootstrap, callInMainworker} = CommHelper.childworker;
 var gWkComm = new Comm.client.worker();
 
 var gTess;
-var gTessBig = false;
+// var gTessBig = false;
 var gTessIdx = 0;
 var WORKER = this;
 
 var onTesseractProgress = undefined;
-
+var gLastLang;
 function readByteArr(aArg, aReportProgress) {
 	var { method, arrbuf, width, height, lang='eng', show_progress } = aArg
 	// `show_progress` only works for tesseract
@@ -44,15 +44,23 @@ function readByteArr(aArg, aReportProgress) {
 				importScripts('chrome://nativeshot/content/resources/scripts/3rd/tesseract.js');
 			}
 
-			if (['chi_sim', 'chi_tra', 'jpn'].indexOf(lang)) {
-				if (!gTessBig) {
-					gTess = tesseractinit(16777216*10); // worker.postMessage({init: {mem: 16777216*10}})
-					gTessBig = true;
+			if (gLastLang != lang || !gTess) {
+				// otherwise as user changes languages, it will load and cache more, building up, until it will keep hitting that memory error, so on every lang change, just reinit
+				var memsize;
+				switch (lang) {
+					case 'grc':
+							memsize = 12;
+						break;
+					case 'chi_sim':
+					case 'chi_tra':
+					case 'jpn':
+							memsize = 10;
+						break;
+					default:
+						memsize = 6;
 				}
-			} else {
-				if (!gTess) {
-					gTess = tesseractinit(16777216*6); // equivalent of worker.postMessage({init: {mem: 16777216*6}})
-				}
+				gTess = tesseractinit(16777216*memsize);
+				gLastLang = lang;
 			}
 
 			var options = {};
