@@ -1,0 +1,5 @@
+{
+	"jscsystemhotkey": "chrome://nativeshot/content/resources/scripts/jscSystemHotkey/",
+	"comm": "chrome://nativeshot/content/resources/scripts/comm/",
+	"ostypes": "chrome://nativeshot/content/resources/scripts/ostypes/"
+}

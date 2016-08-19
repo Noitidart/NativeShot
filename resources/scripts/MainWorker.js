@@ -3,7 +3,6 @@ importScripts('resource://gre/modules/osfile.jsm');
 importScripts('chrome://nativeshot/content/resources/scripts/comm/Comm.js');
 var {callInBootstrap, callInChildworker1} = CommHelper.mainworker;
 
-
 // Globals
 var core;
 
@@ -158,6 +157,8 @@ function init(objCore) {
 	importScripts(core.addon.path.scripts + '3rd/hmac-sha1.js'); // for twitter
 	importScripts(core.addon.path.scripts + '3rd/enc-base64-min.js'); // for twitter
 
+	importScripts(core.addon.path.scripts + 'jscSystemHotkey/shtkMainworkerSubscript.js');
+
 	addOsInfoToCore();
 
 	core.addon.path.storage = OS.Path.join(OS.Constants.Path.profileDir, 'jetpack', core.addon.id, 'simple-storage');
@@ -234,6 +235,8 @@ function init(objCore) {
 	// 		hotkeysRegister().then(failed => !failed ? null : callInBootstrap('hotkeyRegistrationFailed', failed));
 	// 	}
 	// }, 0);
+	initHotkeys();
+
 	setTimeout(reflectSystemHotkeyPref, 0); // this does `readFilestore` because it does `fetchFilestoreEntry`
 
 	return {
@@ -3273,377 +3276,6 @@ function reflectSystemHotkeyPref() {
 	}
 }
 
-// start - system hotkey
-var gHKI = { // stands for globalHotkeyInfo
-	any_registered: false, // false or true depending on if any registered
-	all_registered: false, // false or true if all hotkeys succesfully registered
-	loop_interval_ms: 200, // only for windows and xcb
-	min_time_between_repeat: 1000,
-	hotkeys: undefined, // as i need access to core.os.mname first, this will happen after init, i run hotkeysRegister after init, so i do it there
-		// on succesful registration, the entry is marked with __REGISTERED: {} and holds data needed for unregistration
-	next_hotkey_id: 1
-};
-var gHKILoopInterval = null;
-
-function hotkeysRegister() {
-	// on error, it returns an object:
-	 	// hotkey - `hotkey` entry in gHKI.hotkeys that caused the failure
-		// reason - string explaining why
-	var deferredmain = new Deferred();
-
-	if (!gHKI.hotkeys) {
-		switch (core.os.mname) {
-			case 'winnt':
-					gHKI.hotkeys = [
-						{
-							desc: 'Print Screen', // it describes the `code` combo in english for use on hotkeysRegister() failing
-							code: ostypes.CONST.VK_SNAPSHOT,
-							callback: 'screenshot',
-						}
-					];
-				break;
-			case 'gtk':
-					gHKI.hotkeys = [
-						{
-							desc: 'Print Screen (Capslock:Off, Numlock:Off)',
-							code: ostypes.CONST.XK_Print,
-							// mods: // if undefined, or object is empty it will use ostypes.CONST.XCB_NONE
-							callback: 'screenshot'
-						},
-						{
-							desc: 'Print Screen (Capslock:On, Numlock:Off)',
-							code: ostypes.CONST.XK_Print,
-							mods: {
-								capslock: true // capslock is only available as mod on linux
-							},
-							callback: 'screenshot'
-						},
-						{
-							desc: 'Print Screen (Capslock:Off, Numlock:On)',
-							code: ostypes.CONST.XK_Print,
-							mods: {
-								numlock: true // numlock is only available as mod on linux
-							},
-							callback: 'screenshot'
-						},
-						{
-							desc: 'Print Screen (Capslock:On, Numlock:On)',
-							code: ostypes.CONST.XK_Print,
-							mods: {
-								numlock:true,
-								capslock: true
-							},
-							callback: 'screenshot'
-						}
-					];
-				break;
-			case 'darwin':
-					gHKI.hotkeys = [
-						{
-							desc: '\u2318 + 3', // \u2318 is the apple/meta key symbol
-							code: ostypes.CONST.KEY_3,
-							mods: {
-								meta: true
-							},
-							callback: 'screenshot'
-						}
-					];
-				break;
-			default:
-				console.error('your os is not supported for global platform hotkey');
-				// throw new Error('your os is not supported for global platform hotkey');
-				deferredmain.resolve({reason:'Your OS is not supported for global platform hotkey, OS is "' + core.os.mname + '" and "' + core.os.name + '"'});
-				return deferredmain.promise;
-		}
-	}
-
-	switch (core.os.mname) {
-		case 'winnt':
-
-				var hotkeys = gHKI.hotkeys;
-				for (var hotkey of hotkeys) {
-					var { __REGISTERED, mods, code:code_os } = hotkey;
-
-					if (__REGISTERED) {
-						console.warn('hotkey already registered for entry:', hotkey);
-						continue;
-					} else {
-						var mods_os = ostypes.CONST.MOD_NONE; // this is 0
-						if (mods) {
-							// possible mods: alt, control, shift, meta (meta means win key)
-								// windows only mods: norepeat
-							if (mods.alt) {
-								mods_os |= ostypes.CONST.MOD_ALT;
-							}
-							if (mods.control) {
-								mods_os |= ostypes.CONST.MOD_CONTROL;
-							}
-							if (mods.norepeat) {
-								// not supported on win vista - per docs
-								mods_os |= ostypes.CONST.MOD_NOREPEAT;
-							}
-							if (mods.shift) {
-								mods_os |= ostypes.CONST.MOD_SHIFT;
-							}
-							if (mods.meta) {
-								mods_os |= ostypes.CONST.MOD_WIN;
-							}
-						}
-						var hotkeyid = gHKI.next_hotkey_id++;
-						var rez_reg = ostypes.API('RegisterHotKey')(null, hotkeyid, mods_os, code_os);
-						if (rez_reg) {
-							hotkey.__REGISTERED = {
-								hotkeyid,
-								last_triggered: 0 // Date.now() of when it was last triggered, for use to check with min_time_between_repeat
-							};
-						} else {
-							console.error('failed to register hotkey:', hotkey);
-							console.error('due to fail will not register any of the other hotkeys if there were any, and will unregister whatever was registered');
-							hotkeysUnregister();
-							deferredmain.resolve({
-								hotkey,
-								reason: 'Failed for winLastError of "' + ctypes.winLastError + '"'
-							});
-							return deferredmain.promise;
-						}
-					}
-				}
-
-				hotkeysStartLoop();
-
-				deferredmain.resolve(null); // resolve with `null` for no error
-
-			break;
-		case 'gtk':
-
-				var hotkeys = gHKI.hotkeys;
-
-				// // get `code_os` for each `code`
-
-				// collect unique codes
-				var codes = new Set();
-				for (var hotkey of hotkeys) {
-					codes.add(hotkey.code);
-				}
-
-				codes = [...codes];
-
-				var code_os_to_codes_os = {};
-
-				var keysyms = ostypes.API('xcb_key_symbols_alloc')(ostypes.HELPER.cachedXCBConn());
-				console.log('keysyms:', keysyms.toString());
-
-				for (var code of codes) {
-					code_os_to_codes_os[code] = []; // array becuase multiple codeos can exist for a single code
-
-
-					var keycodesPtr = ostypes.API('xcb_key_symbols_get_keycode')(keysyms, code);
-					console.log('keycodesPtr:', keycodesPtr.toString());
-
-					for (var i=0; i<10; i++) { // im just thinking 10 is a lot, usually you only have 1 keycode. mayyybe 2. 10 should cover it
-						var keycodesArrC = ctypes.cast(keycodesPtr, ostypes.TYPE.xcb_keycode_t.array(i+1).ptr).contents;
-						console.log('keycodesArrC:', keycodesArrC);
-						if (cutils.jscEqual(keycodesArrC[i], ostypes.CONST.XCB_NO_SYMBOL)) {
-							break;
-						} else {
-							code_os_to_codes_os[code].push(keycodesArrC[i]);
-						}
-					}
-
-					ostypes.API('free')(keycodesPtr);
-
-					if (!code_os_to_codes_os[code].length) {
-						console.error('linux no keycodes found for hotkey code:', code);
-						// throw new Error('linux no keycodes found for hotkey code: ' + code);
-						// nothing yet registered, so no need to run `hotkeysUnregister()`
-						deferredmain.resolve({
-							hotkey: hotkeys.find(el => el.code === code),
-							reason: 'No keycodes on this system for code of "' + code+ '"'
-						}); // the first hoeky that uses this `code`
-						return deferredmain.promise;
-					}
-				}
-
-				ostypes.API('xcb_key_symbols_free')(keysyms);
-
-				// // grab the keys
-				// collect the grab windows
-				var setup = ostypes.API('xcb_get_setup')(ostypes.HELPER.cachedXCBConn());
-				console.log('setup:', setup.contents);
-
-				var screens = ostypes.API('xcb_setup_roots_iterator')(setup);
-				var grabwins = []; // so iterate through these and ungrab on remove of hotkey
-				var screens_cnt = screens.rem;
-
-				for (var i=0; i<screens_cnt; i++) {
-					// console.log('screen[' + i + ']:', screens);
-					console.log('screen[' + i + '].data:', screens.data.contents);
-					var grabwin = screens.data.contents.root;
-					grabwins.push(grabwin);
-					ostypes.API('xcb_screen_next')(screens.address());
-				}
-
-				// start registering hotkeys if they are not registered
-				for (var hotkey of hotkeys) {
-					var { code, mods, __REGISTERED } = hotkey;
-					if (__REGISTERED) {
-						console.warn('hotkey already registered for entry:', hotkey);
-						continue;
-					} else {
-
-						// start - copy of block-link391999
-						var mods_os = ostypes.CONST.XCB_NONE; // is 0
-						if (mods) {
-							// possible mods: alt, control, shift, meta // TODO: <<< these are not yet supported
-								// nix only mods: capslock, numlock - these are supported
-							if (mods.capslock) {
-								mods_os |= ostypes.CONST.XCB_MOD_MASK_LOCK;
-							}
-							if (mods.numlock) {
-								mods_os |= ostypes.CONST.XCB_MOD_MASK_2;
-							}
-						}
-						// end - copy of block-link391999
-
-						var codes_os = code_os_to_codes_os[code];
-
-						// grab this hotkey on all grabwins
-						// var any_win_registered = false;
-						// var any_codeos_registered = false;
-						// var any_registered = false;
-						for (var grabwin of grabwins) {
-							for (var code_os of codes_os) {
-								var rez_grab = ostypes.API('xcb_grab_key_checked')(ostypes.HELPER.cachedXCBConn(), 1, grabwin, mods_os, code_os, ostypes.CONST.XCB_GRAB_MODE_ASYNC, ostypes.CONST.XCB_GRAB_MODE_ASYNC);
-								var rez_check = ostypes.API('xcb_request_check')(ostypes.HELPER.cachedXCBConn(), rez_grab);
-								console.log('rez_check:', rez_check.toString());
-								if (!rez_check.isNull()) {
-									console.error('The hotkey is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system.'); // http://i.imgur.com/cLz1fDs.png
-								} else {
-									// even if just one registered, lets mark it registerd, so the `hotkeysUnregister` function will just get errors on what isnt yet registered from the set of `code_os_to_codes_os`
-									// any_registered = true;
-									hotkey.__REGISTERED = {
-										grabwins,
-										codes_os,
-										last_triggered: 0
-									};
-								}
-							}
-						}
-
-						if (!hotkey.__REGISTERED) { // same as checking `if (!any_registered)`
-							// nothing for any of the codeos's for this code registered on any of the grabwins
-							console.error('failed to register hotkey:', hotkey);
-							console.error('due to fail will not register any of the other hotkeys if there were any, and will unregister whatever was registered');
-							hotkeysUnregister();
-							deferredmain.resolve({
-								hotkey,
-								reason: 'It is most likely that this key combination is already in use by another application. Find that app, and make it release this hotkey. Possibly could be in use by the "Global Keyboard Shortcuts" of the system - http://i.imgur.com/cLz1fDs.png\n\n\nDetails: Was not able to register any of the `code_os` on any of the `grabwins`. `grabwins`: ' + grabwins.toString() + ' code_os: ' + code_os.toString()
-							});
-							return deferredmain.promise;
-						}
-
-					}
-				}
-
-				var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-				console.log('rez_flush:', rez_flush);
-
-				hotkeysStartLoop();
-
-				deferredmain.resolve(null); // resolve with `null` for no error
-
-			break;
-		case 'darwin':
-
-				var hotkeys_basic = [];
-				var { hotkeys } = gHKI;
-
-				for (var hotkey of hotkeys) {
-					var { code:code_os, mods } = hotkey;
-
-					var mods_os = 0;
-					if (mods) {
-						// possible mods: alt (on mac alt and option key is same), control, shift, meta
-							// mac only mods: capslock
-
-						if (mods.capslock) {
-							mods_os |= ostypes.CONST.alphaLock; // UNTESTED
-						}
-						if (mods.meta) {
-							mods_os |= ostypes.CONST.cmdKey;
-						}
-						if (mods.alt) {
-							mods_os |= ostypes.CONST.optionKey;
-							// mods_os |= ostypes.CONST.rightOptionKey;
-						}
-						if (mods.shift) {
-							mods_os |= ostypes.CONST.shiftKey;
-							// mods_os |= ostypes.CONST.rightShiftKey;
-						}
-						if (mods.control) {
-							mods_os |= ostypes.CONST.controlKey;
-							// mods_os |= ostypes.CONST.rightControlKey;
-						}
-					}
-
-					var hotkeyid = gHKI.next_hotkey_id++;
-					var signature = ostypes.HELPER.OS_TYPE(nonce(4 - hotkeyid.toString().length) + hotkeyid.toString());
-
-					hotkey.temp_hotkeyid = hotkeyid; // this is premetive, so on return of `hotkeysRegisterMt`, i can go in and find the corresponding `hotkey` entry to attach the returned `ref`/`__REGISTERED`
-
-					hotkeys_basic.push({
-						mods_os,
-						code_os,
-						signature,
-						hotkeyid
-					});
-				}
-
-				callInBootstrap('hotkeysRegisterMt', { hotkeys_basic }, function(aObjOfErrAndRegs) {
-					var { __ERROR, __REGISTREDs } = aObjOfErrAndRegs;
-
-					var errored_hotkey;
-					if (__ERROR && __ERROR.hotkeyid) {
-						// find the `hotkey` entry associated with it, as in next block i will delete all hotkey.temp_hotkeyid
-						errored_hotkey = hotkeys.find( el => el.temp_hotkeyid === __ERROR.hotkeyid );
-					}
-
-					if (Object.keys(__REGISTREDs).length) {
-						// if any were succesfully registered, then go through add the `__REGISTERED` object to the associated `hotkey` entry. find association by `hotkey.temp_hotkeyid`
-						for (var hotkey of hotkeys) {
-							var { temp_hotkeyid:hotkeyid } = hotkey;
-
-							delete hotkey.temp_hotkeyid;
-
-							if (__REGISTREDs[hotkeyid]) {
-								hotkey.__REGISTERED = __REGISTREDs[hotkeyid];
-							}
-						}
-
-						if (__ERROR) {
-							hotkeysUnregister();
-						}
-					}
-
-					if (__ERROR) {
-						deferredmain.resolve({
-							hotkey: errored_hotkey,
-							reason: __ERROR.reason
-						});
-					}
-				});
-
-			break;
-		default:
-			console.error('your os is not supported for global platform hotkey');
-			// throw new Error('your os is not supported for global platform hotkey');
-			deferredmain.resolve({reason:'Your OS is not supported for global platform hotkey, OS is "' + core.os.mname + '" and "' + core.os.name + '"'});
-			return deferredmain.promise;
-	}
-
-	return deferredmain.promise;
-}
-
 function hotkeysShouldUnregister() {
 	if (gHKI.hotkeys && gHKI.hotkeys.find(el => el.__REGISTERED)) {
 		// it means something is registered, so lets unregister it
@@ -3652,263 +3284,90 @@ function hotkeysShouldUnregister() {
 	else { console.log('no need to hotkeysUnregister'); }
 }
 
-function hotkeysUnregister() {
+var gHKI;
 
-	hotkeysStopLoop();
+function initHotkeys() {
+	// as need access to `core` and its properties
 
-	var hotkeys = gHKI.hotkeys;
-	if (!hotkeys) { return } // never ever registered
-
-	switch (core.os.mname) {
-		case 'winnt':
-
-				for (var hotkey of hotkeys) {
-					var { __REGISTERED, mods, code:code_os } = hotkey;
-
-					if (!__REGISTERED) {
-						console.warn('this one is not registered:', hotkey);
-					} else {
-						var { hotkeyid } = __REGISTERED;
-						var rez_unreg = ostypes.API('UnregisterHotKey')(null, hotkeyid);
-						if (!rez_unreg) {
-							console.error('failed to unregister hotkey:', hotkey);
-						} else {
-							delete hotkey.__REGISTERED;
-						}
-					}
-				}
-
-			break;
-		case 'gtk':
-
-				for (var hotkey of hotkeys) {
-					var { __REGISTERED, mods, code:code_os } = hotkey;
-
-					if (!__REGISTERED) {
-						console.warn('this one is not registered:', hotkey);
-					} else {
-						var { codes_os, grabwins } = __REGISTERED;
-
-						// start - copy of block-link391999
-						var mods_os = ostypes.CONST.XCB_NONE; // is 0
-						if (mods) {
-							// possible mods: alt, control, shift, meta // TODO: <<< these are not yet supported
-								// nix only mods: capslock, numlock - these are supported
-							if (mods.capslock) {
-								mods_os |= ostypes.CONST.XCB_MOD_MASK_LOCK;
-							}
-							if (mods.numlock) {
-								mods_os |= ostypes.CONST.XCB_MOD_MASK_2;
-							}
-						}
-						// end - copy of block-link391999
-
-						for (var grabwin of grabwins) {
-							for (var code_os of codes_os) {
-								var rez_ungrab = ostypes.API('xcb_ungrab_key')(ostypes.HELPER.cachedXCBConn(), code_os, grabwin, mods_os);
-								console.log('rez_ungrab:', rez_ungrab);
-							}
-						}
-
-						// TODO: maybe add error checking if ungrab fails, not sure
-						delete hotkey.__REGISTERED;
-					}
-				}
-
-				var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-				console.log('rez_flush:', rez_flush);
-
-			break;
-		case 'darwin':
-
-				var deferredmain = new Deferred();
-				callInBootstrap('hotkeysUnregisterMt', { hotkeys }, function() {
-					for (var hotkey of hotkeys) {
-						delete hotkey.__REGISTERED;
-					}
-					deferredmain.resolve()
-				});
-
-				return deferredmain.promise;
-
-			break;
-		default:
-			console.error('your os is not supported for global platform hotkey');
-			throw new Error('your os is not supported for global platform hotkey');
-	}
-
-	console.log('succesfully unregistered hotkeys');
-}
-
-function hotkeysStartLoop() {
-	if (gHKILoopInterval !== null) {
-		// never stopped loop
-		return;
-	}
-
-	switch (core.os.mname) {
-		case 'winnt':
-
-				gHKI.win_msg = ostypes.TYPE.MSG();
-
-			break;
-		case 'gtk':
-
-				//
-
-			break;
-		case 'darwin':
-
-				//
-
-			break;
-		// no need for this `default` block as `hotkeysStopLoop`, `hotkeysStartLoop`, and `hotkeysLoop` are only triggered after `hotkeysRegister` was succesful
-		// default:
-		// 	console.error('your os is not supported for global platform hotkey');
-		// 	throw new Error('your os is not supported for global platform hotkey');
-	}
-
-	gHKILoopInterval = setInterval(hotkeysLoop, gHKI.loop_interval_ms);
-}
-
-function hotkeysStopLoop() {
-	if (gHKILoopInterval === null) {
-		// never started loop
-		return;
-	}
-
-	clearInterval(gHKILoopInterval);
-	gHKILoopInterval = null;
-
-	switch (core.os.mname) {
-		case 'winnt':
-
-				delete gHKI.win_msg;
-
-			break;
-		case 'gtk':
-
-				//
-
-			break;
-		case 'darwin':
-
-				//
-
-			break;
-		// no need for this `default` block as `hotkeysStopLoop`, `hotkeysStartLoop`, and `hotkeysLoop` are only triggered after `hotkeysRegister` was succesful
-		// default:
-		// 	console.error('your os is not supported for global platform hotkey');
-		// 	throw new Error('your os is not supported for global platform hotkey');
-	}
-
-}
-
-function hotkeysLoop() {
-	// event loop for hotkey
-	switch (core.os.mname) {
-		case 'winnt':
-
-				var msg = gHKI.win_msg;
-				var hotkeys = gHKI.hotkeys;
-				while (ostypes.API('PeekMessage')(msg.address(), null, ostypes.CONST.WM_HOTKEY, ostypes.CONST.WM_HOTKEY, ostypes.CONST.PM_REMOVE)) {
-					// console.log('in peek, msg:', msg);
-					for (var hotkey of hotkeys) {
-						var { callback, __REGISTERED } = hotkey;
-						if (__REGISTERED) {
-							var { last_triggered, hotkeyid } = __REGISTERED;
-							if (cutils.jscEqual(hotkeyid, msg.wParam)) {
-								var now_triggered = Date.now();
-								if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
-									__REGISTERED.last_triggered = now_triggered;
-									hotkeyCallbacks[callback]();
-								}
-								else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms'); }
-								__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
-							}
-						}
-					}
-				}
-
-			break;
-		case 'gtk':
-
-				while (true) {
-					// true until evt is found to be null
-					var evt = ostypes.API('xcb_poll_for_event')(ostypes.HELPER.cachedXCBConn());
-					if (!evt.isNull()) {
-						if (evt.contents.response_type == ostypes.CONST.XCB_KEY_PRESS) {
-							var hotkeys = gHKI.hotkeys;
-							hotkeyOf:
-							for (var hotkey of hotkeys) {
-								var { callback, __REGISTERED } = hotkey;
-								if (__REGISTERED) {
-									var { codes_os, last_triggered } = __REGISTERED;
-									for (var code_os of codes_os) {
-										if (cutils.jscEqual(code_os, evt.contents.pad0)) {
-											var now_triggered = Date.now();
-											if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
-												console.warn('TRIGGERING!!!!!! time past IS > min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms, gHKI.min_time_between_repeat:', gHKI.min_time_between_repeat, 'last_triggered:', last_triggered);
-												__REGISTERED.last_triggered = now_triggered;
-												hotkeyCallbacks[callback]();
-												break hotkeyOf;
-											}
-											else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms, gHKI.min_time_between_repeat:', gHKI.min_time_between_repeat, 'last_triggered:', last_triggered); }
-											__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
-											break hotkeyOf;
-										}
-									}
-								}
-							}
-						}
-
-						ostypes.API('free')(evt);
-					} else {
-						break;
-					}
-				}
-
-			break;
-		case 'darwin':
-
-				throw new Error('darwin not supported for fake loop - use real loop');
-
-			break;
-		default:
-			console.error('your os is not supported for global platform hotkey');
-			throw new Error('your os is not supported for global platform hotkey');
-	}
-}
-
-var hotkeyCallbacks = {
-	screenshot: function() {
-		console.error('in trigger callback! "screenshot"');
-		callInBootstrap('shouldTakeShot');
-	}
-};
-
-function hotkeyMacCallback(aArg) {
-	var { id, now_triggered } = aArg;
-	id = parseInt(id);
-
-	var { hotkeys } = gHKI;
-
-	for (var hotkey of hotkeys) {
-		var { callback, __REGISTERED } = hotkey;
-		if (__REGISTERED) {
-			var { last_triggered, hotkeyid } = __REGISTERED;
-			if (id === hotkeyid) {
-				if ((now_triggered - last_triggered) > gHKI.min_time_between_repeat) {
-					__REGISTERED.last_triggered = now_triggered;
-					hotkeyCallbacks[callback]();
-				}
-				else { console.warn('time past is not yet greater than min_time_between_repeat, time past:', (now_triggered - last_triggered), 'ms, last_triggered:', last_triggered); }
-				__REGISTERED.last_triggered = now_triggered; // dont allow till user keys up for at least min_time_between_repeat
+	gHKI = {
+		jscsystemhotkey_module_path: core.addon.path.scripts + 'jscSystemHotkey/',
+	    loop_interval_ms: 200,
+	    min_time_between_repeat: 1000,
+	    hotkeys: undefined,
+	    callbacks: {
+			screenshot: function() {
+				console.error('in trigger callback! "screenshot"');
+				callInBootstrap('shouldTakeShot');
 			}
-		}
+	    }
+	};
+
+	switch (core.os.mname) {
+		case 'winnt':
+				console.log('in init hotkeys');
+				gHKI.hotkeys = [
+					{
+						desc: 'Print Screen', // it describes the `code` combo in english for use on hotkeysRegister() failing
+						code: ostypes.CONST.VK_SNAPSHOT,
+						callback: 'screenshot',
+					}
+				];
+				console.log('ok set');
+			break;
+		case 'gtk':
+				gHKI.hotkeys = [
+					{
+						desc: 'Print Screen (Capslock:Off, Numlock:Off)',
+						code: ostypes.CONST.XK_Print,
+						// mods: // if undefined, or object is empty it will use ostypes.CONST.XCB_NONE
+						callback: 'screenshot'
+					},
+					{
+						desc: 'Print Screen (Capslock:On, Numlock:Off)',
+						code: ostypes.CONST.XK_Print,
+						mods: {
+							capslock: true // capslock is only available as mod on linux
+						},
+						callback: 'screenshot'
+					},
+					{
+						desc: 'Print Screen (Capslock:Off, Numlock:On)',
+						code: ostypes.CONST.XK_Print,
+						mods: {
+							numlock: true // numlock is only available as mod on linux
+						},
+						callback: 'screenshot'
+					},
+					{
+						desc: 'Print Screen (Capslock:On, Numlock:On)',
+						code: ostypes.CONST.XK_Print,
+						mods: {
+							numlock:true,
+							capslock: true
+						},
+						callback: 'screenshot'
+					}
+				];
+			break;
+		case 'darwin':
+				gHKI.hotkeys = [
+					{
+						desc: '\u2318 + 3', // \u2318 is the apple/meta key symbol
+						code: ostypes.CONST.KEY_3,
+						mods: {
+							meta: true
+						},
+						mac_method: 'carbon',
+						callback: 'screenshot'
+					}
+				];
+			break;
+		default:
+			console.error('your os is not supported for global platform hotkey');
+			// throw new Error('your os is not supported for global platform hotkey');
 	}
+	console.log('done init hotkeys');
 }
-// end - system hotkey
 
 var findDialogTry = 0;
 function findDialogAndSetTop() {
