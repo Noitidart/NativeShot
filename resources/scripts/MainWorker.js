@@ -1977,15 +1977,7 @@ function setWinAlwaysOnTop(aArg) {
 					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
 					console.log('XWindow1b:', XWindow);
 
-					var rez_unmap = ostypes.API('xcb_unmap_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-					console.log('rez_unmap', rez_unmap);
-
-					// check attr
-					var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
-					var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
-					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
-					ostypes.API('free')(rez_attr);
-					// end check attr
+					xcbUnmapOrMapTill(XWindow, false, 2);
 
 					var chgValueList = ostypes.TYPE.uint32_t.array()([
 						1
@@ -1994,28 +1986,17 @@ function setWinAlwaysOnTop(aArg) {
 					var rez_chg = ostypes.API('xcb_change_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CW_OVERRIDE_REDIRECT, chgValueList);
 					console.log('rez_chg:', rez_chg);
 
-					// check attr
-					var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
-					var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
-					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
-					ostypes.API('free')(rez_attr);
-					// end check attr
+					xcbUnmapOrMapTill(XWindow, false, 2, true);
 
-					while (true) {
-						var rez_map = ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), XWindow);
-						console.log('rez_map', rez_map);
+					// // check attr
+					// var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
+					// var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
+					// console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+					// ostypes.API('free')(rez_attr);
+					// // end check attr
 
-						// check attr
-						var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
-						var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
-						console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
-						if (cutils.jscEqual(rez_attr.contents.map_state, ostypes.CONST.XCB_MAP_STATE_VIEWABLE)) {
-							break;
-						}
-						ostypes.API('free')(rez_attr);
-						// end check attr
-						console.error('not yet mapped!');
-					}
+					xcbUnmapOrMapTill(XWindow, true, 2);
+
 					// raise the window
 					var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
 					console.log('rez_raise:', rez_raise);
@@ -2049,6 +2030,8 @@ function setWinAlwaysOnTop(aArg) {
 					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
 					ostypes.API('free')(rez_attr);
 					// end check attr
+
+					xcbSetAlwaysOnTop(XWindow);
 
 				}
 			break;
@@ -3409,19 +3392,118 @@ function findDialogAndSetTop() {
 	}
 }
 
+function xcbUnmapOrMapTill(aWin, aMap, aTimesVerify, aDontDoFirst) {
+	// wil do the map action first, then verify till aTimesVerify is reached
+
+	// aWin - xcb_window_t
+	// aMap - true for map, false for unmap
+	// aTimesVerify can be 0 if you want
+	console.error('starting xcbUnmapOrMapTill with params:', aMap, aTimesVerify);
+
+	var times_verified = 0;
+
+	var doMap = function() {
+		if (aMap) {
+			var rez_map = ostypes.API('xcb_map_window_checked')(ostypes.HELPER.cachedXCBConn(), aWin);
+			var rez_check = ostypes.API('xcb_request_check')(ostypes.HELPER.cachedXCBConn(), rez_map);
+			console.log('rez_map', rez_map, 'rez_check:', rez_check);
+		} else {
+			var rez_unmap = ostypes.API('xcb_unmap_window_checked')(ostypes.HELPER.cachedXCBConn(), aWin);
+			var rez_check = ostypes.API('xcb_request_check')(ostypes.HELPER.cachedXCBConn(), rez_unmap);
+			console.log('rez_unmap', rez_unmap, 'rez_check:', rez_check);
+		}
+		if (!rez_check.isNull()) {
+			console.error('ERROR ERROR ERROR returned on cookie check');
+		}
+	};
+
+	if (!aDontDoFirst) {
+		doMap();
+	}
+
+	while (times_verified < aTimesVerify) {
+		// check attr
+		var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), aWin);
+		var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
+		console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+		if (cutils.jscEqual(rez_attr.contents.map_state, aMap ? ostypes.CONST.XCB_MAP_STATE_VIEWABLE : ostypes.CONST.XCB_MAP_STATE_UNMAPPED)) {
+			times_verified++;
+			if (times_verified > 0) {
+				console.error('verified', times_verified);
+			}
+		} else {
+			doMap();
+			if (times_verified > 0) {
+				console.error('did doMap AGAIN after once verified', times_verified, 'reseting times_verified to 0 so it verifies after set an amount of aTimesVerify times');
+				times_verified = 0;
+			}
+		}
+
+		ostypes.API('free')(rez_attr);
+		// end check attr
+	}
+}
+
 function xcbSetAlwaysOnTop(aXcbWindowT) {
 	var win = aXcbWindowT;
 
-	var change_list = ostypes.TYPE.xcb_atom_t.array()([ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE_ABOVE')]);
-	var req_change = ostypes.API('xcb_change_property')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_PROP_MODE_REPLACE, win, ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE'), ostypes.CONST.XCB_ATOM_ATOM, 32, change_list.length, change_list);
+	// var change_list = ostypes.TYPE.xcb_atom_t.array()([ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE_ABOVE')]);
+	// var req_change = ostypes.API('xcb_change_property')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_PROP_MODE_REPLACE, win, ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE'), ostypes.CONST.XCB_ATOM_ATOM, 32, change_list.length, change_list);
+	//
+	// ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), win);
+	//
+	// ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
 
-	ostypes.API('xcb_map_window')(ostypes.HELPER.cachedXCBConn(), win);
+	//// was 1-to-1 porting - http://libxcb.sourcearchive.com/documentation/1.1/group__XCB____API_g8f8291858b47fd9c88f07d96720fbd7c.html#g8f8291858b47fd9c88f07d96720fbd7c
+	// var xcb_req = ostypes.TYPE.xcb_protocol_request_(4, 0, ostypes.CONST.XCB_SEND_EVENT);
+	// var xcb_parts = ostypes.TYPE.iovec.array(6)();
+	// var xcb_ret = ostypes.TYPE.xcb_void_cookie_t;
+	// var xcb_out = ostypes.TYPE.xcb_send_event_request_t;
+	//
+	// xcb_out.propagate = propagate;
+    // xcb_out.destination = destination;
+    // xcb_out.event_mask = event_mask;
+	//
+	// xcb_parts[2].iov_base = ctypes.cast(xcb_out.address(), this.char.ptr);
+	// xcb_parts[2].iov_len = xcb_out.constructor.size;
+	// xcb_parts[3].iov_base = 0;
+	// xcb_parts[3].iov_len = (-1 * xcb_parts[2].iov_len) & 3;
+	// xcb_parts[4].iov_base = ctypes.cast(event.address(), this.char.ptr);
+	// xcb_parts[4].iov_len = 32 * this.char.size;
+	// xcb_parts[5].iov_base = 0;
+	// xcb_parts[5].iov_len = (-1 * xcb_parts[4].iov_len) & 3;
+	// xcb_ret.sequence = ostypes.API('xcb_send_request')(ostypes.HELPER.cachedXCBConn(), 0, xcb_parts + 2, xcb_req.address());
 
-	ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+	var ev = ostypes.TYPE.xcb_client_message_event_t();
+	ev.response_type = ostypes.CONST.XCB_CLIENT_MESSAGE;
+	ev.window = aXcbWindowT;
+	ev.format = 32;
+	ev.data.data32[1] = ostypes.CONST.XCB_CURRENT_TIME;
+	ev.type = ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE');
+	ev.data.data32[0] = ostypes.CONST._NET_WM_STATE_ADD;
+	ev.data.data32[1] = ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE_ABOVE');
+
+	var rez_send = ostypes.API('xcb_send_event')(ostypes.HELPER.cachedXCBConn(), 0, ostypes.HELPER.cachedXCBRootWindow(), ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, ctypes.cast(ev.address(), ctypes.char.ptr));
+	console.log('rez_send:', rez_send);
+
+	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+	console.log('rez_flush:', rez_flush);
 }
 function xcbUnsetAlwaysOnTop(aXcbWindowT) {
-	var win = aXcbWindowT;
+	var ev = ostypes.TYPE.xcb_client_message_event_t();
+	ev.response_type = ostypes.CONST.XCB_CLIENT_MESSAGE;
+	ev.window = aXcbWindowT;
+	ev.format = 32;
+	ev.data.data32[1] = ostypes.CONST.XCB_CURRENT_TIME;
+	ev.type = ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE');
+	ev.data.data32[0] = ostypes.CONST._NET_WM_STATE_REMOVE;
+	ev.data.data32[1] = ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE_ABOVE');
 
+	var rez_send = ostypes.API('xcb_send_event')(ostypes.HELPER.cachedXCBConn(), 0, ostypes.HELPER.cachedXCBRootWindow(), ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, ctypes.cast(ev.address(), ctypes.char.ptr));
+	console.log('rez_send:', rez_send);
+
+	var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+	console.log('rez_flush:', rez_flush);
 }
 
 function gtkSetFocus(aGDKWindowPtrStr) {
