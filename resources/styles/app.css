@@ -477,7 +477,7 @@ header.type3 {
 .pref-block-value sup { font-size: 20px; position: absolute; top: 25%; left: 10%; color: #666; white-space: nowrap; }
 .pref-block-value sub {font-size: 24px; bottom: 0px;}
 .pref-block ul {position: relative; width: 100%; padding: 25px 0px;}
-.pref-block ul li {text-transform: capitalize; padding: 3px 0px; font-size: 14px; line-height: 32px; font-weight: 300;}
+.pref-block ul li {padding: 3px 0px; font-size: 14px; line-height: 32px; font-weight: 300;}
 .pref-block-btns { width: 100%; position: relative; border-top: 1px solid #ebebeb; padding-top:25px; }
 /*.pref-block .button-style-2 {position: relative; width: 100%; text-align: center; padding-top: 25px; border-top: 1px solid #ebebeb; float: left;}
 .pref-block .button-style-2  button {position: relative; float: none; display: inline-block; margin-bottom: 0px;}*/
