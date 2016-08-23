@@ -40,6 +40,17 @@
 		<!-- start localizing - For each entry in default data MUST have equivalent in each localized block -->
 		<em:localized>
 			<Description>
+				<em:locale>de</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Erstellen und Bearbeiten von Screenshots von allem auf jedem Monitor</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>Endor8</em:translator>
+				<em:translator>Aryx</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>en-US</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>Freeze frame screenshot tool to capture and edit anything on any monitor</em:description>

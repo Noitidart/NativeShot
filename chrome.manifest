@@ -1,3 +1,4 @@
 content nativeshot ./ contentaccessible=true
+locale nativeshot de locale/de/
 locale nativeshot en-US locale/en-US/
 locale nativeshot nl locale/nl/
