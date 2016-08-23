@@ -68,5 +68,15 @@
 				<em:translator>Tonnes</em:translator>
 			</Description>
 		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>ro</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Captură de ecran stop-cadru pentru a captura și edita orice pe orice monitor</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>Jobava</em:translator>
+			</Description>
+		</em:localized>
 	  </Description>
 	</RDF>
