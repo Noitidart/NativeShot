@@ -6025,7 +6025,7 @@ function init(aArrBufAndCore) {
 			pPalZoomViewLevel: 8,
 
 			pPalArrowLength: 24,
-			pPalArrowEnd: false,
+			pPalArrowEnd: true,
 			pPalArrowStart: false,
 
 			pPalLineWidth: 12,
