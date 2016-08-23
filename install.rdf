@@ -78,5 +78,15 @@
 				<em:translator>Jobava</em:translator>
 			</Description>
 		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>zh-CN</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>留下当前的屏幕画面以截取或在任何显示器上随意编辑</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>yfdyh000</em:translator>
+			</Description>
+		</em:localized>
 	  </Description>
 	</RDF>
