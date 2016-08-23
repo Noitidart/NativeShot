@@ -388,6 +388,11 @@ function fullfillCompositeRequest(aData) {
 
 		// set up action_options
 		if (serviceid == 'savebrowse') {
+			// if (core.os.mname == 'gtk') {
+			// 	if (!boolclose) {
+			// 		boolclose = true; // as on opensuse i cant figure out how to make the dialog show in front
+			// 	}
+			// }
 			if (!boolclose) {
 				shot.action_options = {
 					imon: tQS.iMon
