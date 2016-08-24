@@ -60,6 +60,15 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>es-ES</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Herramienta para capturar y editar cualquier cosa en cualquier pantalla</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>nl</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>Hulpmiddel voor het maken en bewerken van stilstaande schermafbeeldingen op willekeurige monitoren</em:description>
