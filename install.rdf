@@ -80,6 +80,17 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>ru</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Захватить скриншот и редактировать на другом мониторе</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>insolor</em:translator>
+				<em:translator>veadarkin</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>zh-CN</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>留下当前的屏幕画面以截取或在任何显示器上随意编辑</em:description>
