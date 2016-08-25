@@ -1,0 +1,11 @@
+<!ENTITY boostrap_lang "fr">
+
+<!ENTITY addon_name "NativeShot">
+
+<!ENTITY title_history "Historique | NativeShot">
+<!ENTITY title_options "Options | NativeShot">
+<!ENTITY title_auth "Autorisation | NativeShot">
+<!ENTITY title_authcp "Gérer les autorisations | NativeShot">
+<!ENTITY title_ocr "Reconnaissance de texte | NativeShot">
+<!ENTITY title_tweet "Tweet | NativeShot">
+<!ENTITY title_fbpost "Poster sur Facebook | NativeShot">

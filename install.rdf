@@ -65,6 +65,17 @@
 				<em:description>Herramienta para capturar y editar cualquier cosa en cualquier pantalla</em:description>
 				<em:creator>Noitidart</em:creator>
 				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>AlePerez92</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>fr</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Prenez et éditez des captures d'écran de quoi que ce soit et sur tous vos moniteurs</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>tojazmin</em:translator>
 			</Description>
 		</em:localized>
 		<em:localized>
