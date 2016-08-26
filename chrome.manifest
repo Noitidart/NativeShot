@@ -4,6 +4,7 @@ locale nativeshot en-US locale/en-US/
 locale nativeshot es-ES locale/es-ES/
 locale nativeshot fr locale/fr/
 locale nativeshot nl locale/nl/
+locale nativeshot pl locale/pl/
 locale nativeshot ro locale/ro/
 locale nativeshot ru locale/ru/
 locale nativeshot zh-CN locale/zh-CN/

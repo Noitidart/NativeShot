@@ -191,7 +191,7 @@ function uninstall(aData, aReason) {
 		// we have to access the locale pacage with jar path, as at this point chrome:// doesnt work
 
 		var LOCALE = require('sdk/l10n/locale');
-		var addon_locales = ['de', 'en-US', 'es-ES', 'fr', 'nl', 'ro', 'ru', 'zh-CN']; // available locales from my addon. must match exactly the casing of the directory in my "locale/" directory
+		var addon_locales = ['de', 'en-US', 'es-ES', 'fr', 'nl', 'pl', 'ro', 'ru', 'zh-CN']; // available locales from my addon. must match exactly the casing of the directory in my "locale/" directory
 		var lang = LOCALE.findClosestLocale(addon_locales, LOCALE.getPreferedLocales()) || 'en-US';
 		var jarpath_main_properties = __SCRIPT_URI_SPEC__.replace('/bootstrap.js', '/locale/' + lang + '/main.properties'); // TODO: figure out the `lang` that is used when picking `chrome` package, like if it doesnt find `en` it falls back to closest which is like `en-US`, figure that calculation out
 		var jarpath_enus_main_properties = __SCRIPT_URI_SPEC__.replace('/bootstrap.js', '/locale/en-US/main.properties');
