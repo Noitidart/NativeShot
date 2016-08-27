@@ -1911,7 +1911,7 @@ function setWinAlwaysOnTop(aArg) {
 		}
 	*/
 	console.error('in setWinAlwaysOnTop. aArrHwndPtrStr:', aArrHwndPtrStr)
-	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
+	switch (core.os.mname) {
 		case 'winnt':
 
 
@@ -1977,61 +1977,65 @@ function setWinAlwaysOnTop(aArg) {
 					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
 					console.log('XWindow1b:', XWindow);
 
-					xcbUnmapOrMapTill(XWindow, false, 2);
+					xcbSetAlwaysOnTop(XWindow);
 
-					var chgValueList = ostypes.TYPE.uint32_t.array()([
-						1
-					]);
-
-					var rez_chg = ostypes.API('xcb_change_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CW_OVERRIDE_REDIRECT, chgValueList);
-					console.log('rez_chg:', rez_chg);
-
-					xcbUnmapOrMapTill(XWindow, false, 2, true);
-
+					// continue;
+					//
+					// xcbUnmapOrMapTill(XWindow, false, 2);
+					//
+					// var chgValueList = ostypes.TYPE.uint32_t.array()([
+					// 	1
+					// ]);
+					//
+					// var rez_chg = ostypes.API('xcb_change_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CW_OVERRIDE_REDIRECT, chgValueList);
+					// console.log('rez_chg:', rez_chg);
+					//
+					// xcbUnmapOrMapTill(XWindow, false, 2, true);
+					//
+					// // // check attr
+					// // var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
+					// // var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
+					// // console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
+					// // ostypes.API('free')(rez_attr);
+					// // // end check attr
+					//
+					// xcbUnmapOrMapTill(XWindow, true, 2);
+					//
+					// // raise the window
+					// var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
+					// console.log('rez_raise:', rez_raise);
+					//
+					// // resize the window - per example here - https://www.x.org/archive/current/doc/man/man3/xcb_configure_window.3.xhtml
+					// var mask = 0; //ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE
+					// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_X;
+					// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_Y;
+					// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_WIDTH;
+					// mask |= ostypes.CONST.XCB_CONFIG_WINDOW_HEIGHT;
+					// var valswin = [
+					// 	aOptions[hwndptrstr].left, // x
+					// 	aOptions[hwndptrstr].top, // y
+					// 	aOptions[hwndptrstr].width, // width
+					// 	aOptions[hwndptrstr].height // height
+					// ];
+					// var rez_resize = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, mask, ostypes.TYPE.uint32_t.array()(valswin));
+					// console.log('rez_resize:', rez_resize);
+					//
+					// // Set input focus (we have override_redirect=1, so the wm will not do this for us)
+					// // i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
+					// var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
+					// console.log('rez_focus:', rez_focus);
+					//
+					// var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+					// console.log('rez_flush', rez_flush);
+					//
 					// // check attr
 					// var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
 					// var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
 					// console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
 					// ostypes.API('free')(rez_attr);
 					// // end check attr
-
-					xcbUnmapOrMapTill(XWindow, true, 2);
-
-					// raise the window
-					var rez_raise = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE, ostypes.TYPE.uint32_t.array()([ostypes.CONST.XCB_STACK_MODE_ABOVE]));
-					console.log('rez_raise:', rez_raise);
-
-					// resize the window - per example here - https://www.x.org/archive/current/doc/man/man3/xcb_configure_window.3.xhtml
-					var mask = 0; //ostypes.CONST.XCB_CONFIG_WINDOW_STACK_MODE
-					mask |= ostypes.CONST.XCB_CONFIG_WINDOW_X;
-					mask |= ostypes.CONST.XCB_CONFIG_WINDOW_Y;
-					mask |= ostypes.CONST.XCB_CONFIG_WINDOW_WIDTH;
-					mask |= ostypes.CONST.XCB_CONFIG_WINDOW_HEIGHT;
-					var valswin = [
-						aOptions[hwndptrstr].left, // x
-						aOptions[hwndptrstr].top, // y
-						aOptions[hwndptrstr].width, // width
-						aOptions[hwndptrstr].height // height
-					];
-					var rez_resize = ostypes.API('xcb_configure_window')(ostypes.HELPER.cachedXCBConn(), XWindow, mask, ostypes.TYPE.uint32_t.array()(valswin));
-					console.log('rez_resize:', rez_resize);
-
-					// Set input focus (we have override_redirect=1, so the wm will not do this for us)
-					// i cannot use XCB_NONE i have to use XCB_INPUT_FOCUS_POINTER_ROOT as otherwise keys are not working
-					var rez_focus = ostypes.API('xcb_set_input_focus')(ostypes.HELPER.cachedXCBConn(), ostypes.CONST.XCB_INPUT_FOCUS_POINTER_ROOT, XWindow, ostypes.CONST.XCB_CURRENT_TIME);
-					console.log('rez_focus:', rez_focus);
-
-					var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
-					console.log('rez_flush', rez_flush);
-
-					// check attr
-					var req_attr = ostypes.API('xcb_get_window_attributes')(ostypes.HELPER.cachedXCBConn(), XWindow);
-					var rez_attr = ostypes.API('xcb_get_window_attributes_reply')(ostypes.HELPER.cachedXCBConn(), req_attr, null);
-					console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
-					ostypes.API('free')(rez_attr);
-					// end check attr
-
-					xcbSetAlwaysOnTop(XWindow);
+					//
+					// xcbSetAlwaysOnTop(XWindow);
 
 				}
 			break;

@@ -522,10 +522,10 @@ function editorInitShot(aIMon, e) {
 	// 	throw new Error('wtf how is window not existing, the on load observer notifier of panel.xul just sent notification that it was loaded');
 	// }
 
-	var domwin = getStrongReference(shot.domwin_wk);
-	if (!domwin) {
-		Services.prompt(null, 'domwin of shot is dead', 'dead');
-	}
+	// var domwin = getStrongReference(shot.domwin_wk);
+	// if (!domwin) {
+	// 	Services.prompt(null, 'domwin of shot is dead', 'dead');
+	// }
 	var domwin = shot.domwin;
 	var aHwndPtrStr = getNativeHandlePtrStr(domwin);
 	console.error('aHwndPtrStr.pre method1:', getNativeHandlePtrStr(domwin), 'method2:', getNativeHandlePtrStr(e.target));
@@ -538,9 +538,9 @@ function editorInitShot(aIMon, e) {
 
 	domwin.focus();
 
-	// if (core.os.name != 'darwin') {
-		// aEditorDOMWindow.fullScreen = true;
-	// }
+	if (core.os.mname == 'gtk') {
+		domwin.fullScreen = true;
+	}
 
 	// set window on top:
 	var aArrHwndPtrStr = [aHwndPtrStr];
