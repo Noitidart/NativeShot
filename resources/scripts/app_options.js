@@ -110,21 +110,7 @@ function uninitAppPage() {
 function focusAppPage() {
 	console.error('focused!!!!!!');
 	callInMainworker('fetchCore', { nocore:true, hydrant_ex_instructions }, function(aArg) {
-		var differents; // key is mainkey
-		for (var p in aArg.hydrant_ex) {
-			var is_different = React.addons.shallowCompare({props:hydrant_ex[p]}, aArg.hydrant_ex[p]);
-			console.error('hydrant_ex.' + p + ' is_different:', is_different);
-			if (is_different) {
-				if (!differents) {
-					differents = {};
-				}
-				differents[p] = aArg.hydrant_ex[p];
-			}
-		}
-
-		if (differents) {
-			store.dispatch(setMainKeys(differents));
-		}
+		store.dispatch(setMainKeys(aArg.hydrant_ex));
 	});
 }
 

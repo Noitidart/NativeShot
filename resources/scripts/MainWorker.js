@@ -3717,7 +3717,7 @@ function xhr(aUrlOrFileUri, aOptions={}) {
 	// console.error('done xhr!!!');
 	return cRequest;
 }
-// rev4 - https://gist.github.com/Noitidart/6d8a20739b9a4a97bc47
+// rev2 - https://gist.github.com/Noitidart/ea840a3a0fab9af6687edbad3ae63f48
 var _cache_formatStringFromName_packages = {}; // holds imported packages
 function formatStringFromName(aKey, aLocalizedPackageName, aReplacements) {
 	// depends on ```core.addon.path.locale``` it must be set to the path to your locale folder
@@ -3745,7 +3745,7 @@ function formatStringFromName(aKey, aLocalizedPackageName, aReplacements) {
 		var propPatt = /(.*?)=(.*?)$/gm;
 		var propMatch;
 		while (propMatch = propPatt.exec(packageStr)) {
-			packageJson[propMatch[1]] = propMatch[2];
+			packageJson[propMatch[1].trim()] = propMatch[2];
 		}
 
 		_cache_formatStringFromName_packages[packageName] = packageJson;
