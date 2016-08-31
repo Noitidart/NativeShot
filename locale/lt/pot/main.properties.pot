@@ -1,0 +1,1233 @@
+#. extracted from ./main.properties
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-08-31 17:29+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Translate Toolkit 1.13.0\n"
+"X-Accelerator-Marker: &\n"
+"X-Merge-On: location\n"
+
+#: addon_name
+msgid "NativeShot"
+msgstr ""
+
+#: addon_description
+msgid ""
+"Freeze frame screenshot tool to capture and edit anything on any monitor"
+msgstr ""
+
+#: about_desc
+msgctxt "about_desc"
+msgid "NativeShot Dashboard"
+msgstr ""
+
+#: gui_label
+msgctxt "gui_label"
+msgid "Screenshot"
+msgstr ""
+
+#: gui_tooltip
+msgid ""
+"Click for immediate screen capture or hold the \"Shift\" key while clicking "
+"to increment a delay by 5 seconds before capture."
+msgstr ""
+
+#: menuitem_opendashboard
+msgid "Open Dashboard"
+msgstr ""
+
+#: osfileerror_writeatomic
+msgid "Failed to write to disk. %S. System error code: %S."
+msgstr ""
+
+#: osfileerror_writeatomic_nosuchfile
+msgid "One of the parent directories does not exist in the path \"%S\""
+msgstr ""
+
+#: osfileerror_unnamedreason
+msgid "Unnamed reason"
+msgstr ""
+
+#: hold_error
+msgid "Error Occurred - Retry"
+msgstr ""
+
+#: show_error_details
+msgid "Show Error Details"
+msgstr ""
+
+#: show_error
+msgid "Show Error"
+msgstr ""
+
+#: abort_error
+msgid "Failed For Error"
+msgstr ""
+
+#: abort_nosuch_log_entry
+msgid "No such entry in log"
+msgstr ""
+
+#: unhandled_status_code
+msgid "Got unknown response status code of `%S`"
+msgstr ""
+
+#: hold_unhandled_status_code
+msgid "Error - Unknown Response - Retry"
+msgstr ""
+
+#: show_response_details
+msgid "Show Response Details"
+msgstr ""
+
+#: hold_user_auth_needed
+msgid "Paused - Your Permission Needed - Open Authorization Page"
+msgstr ""
+
+#: hold_getting_user
+msgid "Paused - User Detail Request in Progress - Cancel"
+msgstr ""
+
+#: initializing
+msgid "Initializing..."
+msgstr ""
+
+#: retry
+msgid "Retry"
+msgstr ""
+
+#: screenshot
+msgctxt "screenshot"
+msgid "Screenshot"
+msgstr ""
+
+#: upload_init
+msgid "Initiating Upload - Cancel"
+msgstr ""
+
+#: upload_getting_link
+msgid "Requesting Shared Link - Cancel"
+msgstr ""
+
+#: upload_getting_meta
+msgid "Requesting Upload Details - Cancel"
+msgstr ""
+
+#: upload_getting_user
+msgid "Requesting User Details - Cancel"
+msgstr ""
+
+#: success_upload
+msgid "Uploaded - Copy Link"
+msgstr ""
+
+#: success_share
+msgid "Shared - Copy Link"
+msgstr ""
+
+#: success_copy
+msgid "Copied - Copy Again"
+msgstr ""
+
+#: success_print
+msgid "Sent to Printer - Print Again"
+msgstr ""
+
+#: success_system
+msgid "Saved - Copy Link"
+msgstr ""
+
+#: success_search
+msgid "Focus Tab"
+msgstr ""
+
+#: success_ocr
+msgid "View Recognition Results"
+msgstr ""
+
+#: success_twitter
+msgid "Tweeted - Copy Link to Tweet"
+msgstr ""
+
+#: copy_imagelink_num
+msgid "Copy Link to Image %S"
+msgstr ""
+
+#: copy_imagelink
+msgid "Copy Link to Image"
+msgstr ""
+
+#: success_facebook
+msgid "Copy Link to Post"
+msgstr ""
+
+#: upload
+msgid "Upload to Cloud"
+msgstr ""
+
+#: share
+msgid "Share to Social Media"
+msgstr ""
+
+#: system
+msgid "My Computer Actions"
+msgstr ""
+
+#: search
+msgid "Reverse Image Search"
+msgstr ""
+
+#: ocr
+msgctxt "ocr"
+msgid "Text Recognition"
+msgstr ""
+
+#: imgur
+msgid "Imgur"
+msgstr ""
+
+#: imguranon
+msgid "Imgur - Anonymous"
+msgstr ""
+
+#: dropbox
+msgid "Dropbox"
+msgstr ""
+
+#: gdrive
+msgid "Google Drive"
+msgstr ""
+
+#: facebook
+msgid "Facebook"
+msgstr ""
+
+#: twitter
+msgid "Twitter"
+msgstr ""
+
+#: copy
+msgid "Copy to Clipboard"
+msgstr ""
+
+#: just_copy
+msgctxt "just_copy"
+msgid "Copy"
+msgstr ""
+
+#: print
+msgid "Send to Printer"
+msgstr ""
+
+#: savequick
+msgid "Save - Quick"
+msgstr ""
+
+#: savebrowse
+msgid "Save - Browse"
+msgstr ""
+
+#: tineye
+msgid "Tineye"
+msgstr ""
+
+#: googleimages
+msgid "Google Images"
+msgstr ""
+
+#: bing
+msgid "Bing"
+msgstr ""
+
+#: gocr
+msgid "GOCR"
+msgstr ""
+
+#: ocrad
+msgid "OCRAD"
+msgstr ""
+
+#: tesseract
+msgid "Tesseract"
+msgstr ""
+
+#: ocrall
+msgctxt "ocrall"
+msgid "All"
+msgstr ""
+
+#: printagain
+msgid "Print Again"
+msgstr ""
+
+#: cancelled
+msgid "Cancelled"
+msgstr ""
+
+#: show_in_explorer
+msgid "Reveal in Containing Folder"
+msgstr ""
+
+#: processing
+msgid "Processing..."
+msgstr ""
+
+#: tweeting
+msgid "Tweeting... - Cancel"
+msgstr ""
+
+#: hold_user_tweet_needed
+msgid "Paused - Please provide a message for the Tweet"
+msgstr ""
+
+#: hold_user_post_needed
+msgid "Paused - Please provide a message for the Post"
+msgstr ""
+
+#: prompt_title_tweet
+msgid "NativeShot - Tweet Message"
+msgstr ""
+
+#: prompt_body_tweet
+msgid "Type a message you want to Tweet these images with:"
+msgstr ""
+
+#: prompt_title_post
+msgid "NativeShot - Post Message"
+msgstr ""
+
+#: prompt_body_post
+msgid "Type a message you want to Post this image with:"
+msgstr ""
+
+#: filepicker_title_changequicksavedir
+msgid "Select folder screenshots should be saved in"
+msgstr ""
+
+#: filepicker_title_savescreenshot
+msgid "Save screenshot to file as"
+msgstr ""
+
+#: filepicker_filter_png
+msgid "PNG Image"
+msgstr ""
+
+#: header_text_dashboard
+msgctxt "header_text_dashboard"
+msgid "NativeShot Dashboard"
+msgstr ""
+
+#: header_text_auth
+msgid "%S Authorization"
+msgstr ""
+
+#: header_text_ocr
+msgid "Text Recognition Results"
+msgstr ""
+
+#: history
+msgid "History"
+msgstr ""
+
+#: options
+msgid "Options"
+msgstr ""
+
+#: authorization
+msgid "Authorization"
+msgstr ""
+
+#: approved
+msgid "Approved"
+msgstr ""
+
+#: denied
+msgid "Denied"
+msgstr ""
+
+#: close_tab
+msgid "Close Tab"
+msgstr ""
+
+#: reauth_button
+msgid "Reauthorize"
+msgstr ""
+
+#: approved_msg
+msgid "Paused actions have been automatically resumed"
+msgstr ""
+
+#: denied_msg
+msgid ""
+"You have disallowed access. To fully enjoy the experience, please authorize "
+"again but with approval."
+msgstr ""
+
+#: manual_auth_needed
+msgid "Authorization token expired. Please reauthorize."
+msgstr ""
+
+#: autoupdate
+msgid "Automatic Updates"
+msgstr ""
+
+#: autoupdate_desc1
+msgid "Version %S"
+msgstr ""
+
+#: autoupdate_desc2
+msgid "Last updated %S"
+msgstr ""
+
+#: quick_save_dir
+msgid "Quick Save Folder"
+msgstr ""
+
+#: quick_save_dir_desc1
+msgid "Path to save at"
+msgstr ""
+
+#: quick_save_dir_desc2
+msgid "When \"Browse\" not shown"
+msgstr ""
+
+#: print_preview
+msgid "Print Preview"
+msgstr ""
+
+#: print_preview_desc1
+msgid "Show page setup first"
+msgstr ""
+
+#: print_preview_desc2
+msgid "Or send directly to print"
+msgstr ""
+
+#: system_hotkey
+msgid "System Hotkey"
+msgstr ""
+
+#: system_hotkey_desc1_windows_linux
+msgid "Key: \"PrntScrn\""
+msgstr ""
+
+#: system_hotkey_desc1_mac
+msgid "Key: \"Command(⌘)-3\""
+msgstr ""
+
+#: system_hotkey_desc2
+msgid "Firefox does not need focus"
+msgstr ""
+
+#: default_tesseract_lang
+msgid "Default OCR Language"
+msgstr ""
+
+#: default_tesseract_lang_desc1
+msgid "For initial results"
+msgstr ""
+
+#: default_tesseract_lang_desc2
+msgid "Try others on results page"
+msgstr ""
+
+#: off
+msgid "Off"
+msgstr ""
+
+#: on
+msgid "On"
+msgstr ""
+
+#: change
+msgid "Change"
+msgstr ""
+
+#: orig_whitespace
+msgid "Original Whitespace"
+msgstr ""
+
+#: min_whitespace
+msgid "Minimize Whitespace"
+msgstr ""
+
+#: hide_image
+msgid "Hide Image"
+msgstr ""
+
+#: image_compare
+msgid "Image Compare"
+msgstr ""
+
+#: error_actionid
+msgid "ERROR: Could not identify action"
+msgstr ""
+
+#: error_datagone
+msgid ""
+"ERROR: Data for this action no longer exists. The data bar was probably "
+"closed."
+msgstr ""
+
+#: page_underconstruction
+msgid ""
+"This page is under construction. It will be released soon. Planned release "
+"is in version 1.10."
+msgstr ""
+
+#: back
+msgid "Back"
+msgstr ""
+
+#: filter_all
+msgctxt "filter_all"
+msgid "All"
+msgstr ""
+
+#: filter_system
+msgid "System"
+msgstr ""
+
+#: filter_search
+msgctxt "filter_search"
+msgid "Search"
+msgstr ""
+
+#: filter_share
+msgid "Social"
+msgstr ""
+
+#: filter_ocr
+msgctxt "filter_ocr"
+msgid "Text Recognition"
+msgstr ""
+
+#: filter_upload
+msgctxt "filter_upload"
+msgid "Upload"
+msgstr ""
+
+#: filter_copy
+msgctxt "filter_copy"
+msgid "Copy"
+msgstr ""
+
+#: filter_print
+msgctxt "filter_print"
+msgid "Print"
+msgstr ""
+
+#: filter_all_system
+msgid "All System"
+msgstr ""
+
+#: filter_all_search
+msgid "All Engines"
+msgstr ""
+
+#: filter_all_share
+msgid "All Platforms"
+msgstr ""
+
+#: filter_all_ocr
+msgid "All Methods"
+msgstr ""
+
+#: filter_all_upload
+msgid "All Uploads"
+msgstr ""
+
+#: no_images_in_filter
+msgid "no images in this category"
+msgstr ""
+
+#: view
+msgid "View"
+msgstr ""
+
+#: open
+msgid "Open"
+msgstr ""
+
+#: open_tweet
+msgid "Open Tweet"
+msgstr ""
+
+#: open_post
+msgid "Open Post"
+msgstr ""
+
+#: trash
+msgid "Trash"
+msgstr ""
+
+#: remove
+msgid "Remove"
+msgstr ""
+
+#: forget
+msgid "Forget"
+msgstr ""
+
+#: delete
+msgid "Delete"
+msgstr ""
+
+#: cancel
+msgid "Cancel"
+msgstr ""
+
+#: okay
+msgid "Okay"
+msgstr ""
+
+#: title_forget
+msgid "Forget Entry"
+msgstr ""
+
+#: confirm_forget
+msgid ""
+"This will remove this entry from the history log. Do you want to continue?"
+msgstr ""
+
+#: processing_forget
+msgid "Forgetting..."
+msgstr ""
+
+#: error_forget
+msgid "Failed to forget entry, error: \"%S\"."
+msgstr ""
+
+#: reason1_forget
+msgid "Failed to remove from log due to file system error"
+msgstr ""
+
+#: title_trash
+msgid "Trash Screenshot"
+msgstr ""
+
+#: confirm_trash
+msgid ""
+"This will send the file to the trash folder AND remove this entry from "
+"history. Continue?"
+msgstr ""
+
+#: processing_trash
+msgid "Sending to trash..."
+msgstr ""
+
+#: reason1_trash
+msgid "Something went wrong in platform trash procedure"
+msgstr ""
+
+#: reason2_trash
+msgid ""
+"File was trashed, however something errored while removing entry from history"
+msgstr ""
+
+#: error_trash
+msgid "Failed to trash file, error: \"%S\"."
+msgstr ""
+
+#: requesting_meta_for_trash
+msgid "Requesting trash meta data..."
+msgstr ""
+
+#: title_delete
+msgid "Permanently Delete"
+msgstr ""
+
+#: confirm_delete
+msgid "This will delete the file on the server. It is unrecoverable. Continue?"
+msgstr ""
+
+#: processing_delete
+msgid "Initiating delete process..."
+msgstr ""
+
+#: error_delete
+msgid "Failed to delete on server, error: \"%S\"."
+msgstr ""
+
+#: requesting_deletion
+msgid "Sending delete message to server..."
+msgstr ""
+
+#: reason1_delete
+msgid "Response from server indicates deletion failed"
+msgstr ""
+
+#: upload_retry_wait
+msgid "Upload Failed - Will Retry in %S sec - Cancel"
+msgstr ""
+
+#: server_retry_wait
+msgid "Will retry in %S sec"
+msgstr ""
+
+#: open_in_tab
+msgid "Open in New Tab"
+msgstr ""
+
+#: eng
+msgid "English"
+msgstr ""
+
+#: chi_sim
+msgid "Chinese"
+msgstr ""
+
+#: rus
+msgid "Russian"
+msgstr ""
+
+#: meme
+msgid "Meme"
+msgstr ""
+
+#: tha
+msgid "Thai"
+msgstr ""
+
+#: deu
+msgid "German"
+msgstr ""
+
+#: jpn
+msgid "Japanese"
+msgstr ""
+
+#: spa
+msgid "Spanish"
+msgstr ""
+
+#: fra
+msgid "French"
+msgstr ""
+
+#: chi_tra
+msgid "Traditional Chinese"
+msgstr ""
+
+#: por
+msgid "Portuguese"
+msgstr ""
+
+#: ita
+msgid "Italian"
+msgstr ""
+
+#: pol
+msgid "Polish"
+msgstr ""
+
+#: tur
+msgid "Turkish"
+msgstr ""
+
+#: nld
+msgid "Dutch"
+msgstr ""
+
+#: ara
+msgid "Arabic"
+msgstr ""
+
+#: ces
+msgid "Czech"
+msgstr ""
+
+#: kor
+msgid "Korean"
+msgstr ""
+
+#: swe
+msgid "Swedish"
+msgstr ""
+
+#: vie
+msgid "Vietnamese"
+msgstr ""
+
+#: ron
+msgid "Romanian"
+msgstr ""
+
+#: ell
+msgid "Greek"
+msgstr ""
+
+#: ind
+msgid "Indonesian"
+msgstr ""
+
+#: hun
+msgid "Hungarian"
+msgstr ""
+
+#: dan
+msgid "Danish"
+msgstr ""
+
+#: bul
+msgid "Bulgarian"
+msgstr ""
+
+#: fin
+msgid "Finnish"
+msgstr ""
+
+#: nor
+msgid "Norwegian"
+msgstr ""
+
+#: ukr
+msgid "Ukrainian"
+msgstr ""
+
+#: cat
+msgid "Catalan"
+msgstr ""
+
+#: hrv
+msgid "Croatian"
+msgstr ""
+
+#: heb
+msgid "Hebrew"
+msgstr ""
+
+#: lit
+msgid "Lithuanian"
+msgstr ""
+
+#: slv
+msgid "Slovenian"
+msgstr ""
+
+#: hin
+msgid "Hindi"
+msgstr ""
+
+#: ben
+msgid "Bengali"
+msgstr ""
+
+#: tel
+msgid "Telugu"
+msgstr ""
+
+#: tam
+msgid "Tamil"
+msgstr ""
+
+#: kan
+msgid "Kannada"
+msgstr ""
+
+#: mal
+msgid "Malayalam"
+msgstr ""
+
+#: tgl
+msgid "Tagalog"
+msgstr ""
+
+#: swa
+msgid "Swahili"
+msgstr ""
+
+#: aze
+msgid "Azerbaijani"
+msgstr ""
+
+#: bel
+msgid "Belarusian"
+msgstr ""
+
+#: afr
+msgid "Afrikaans"
+msgstr ""
+
+#: sqi
+msgid "Albanian"
+msgstr ""
+
+#: eus
+msgid "Basque"
+msgstr ""
+
+#: epo
+msgid "Esperanto"
+msgstr ""
+
+#: est
+msgid "Estonian"
+msgstr ""
+
+#: glg
+msgid "Galician"
+msgstr ""
+
+#: isl
+msgid "Icelandic"
+msgstr ""
+
+#: lav
+msgid "Latvian"
+msgstr ""
+
+#: mkd
+msgid "Macedonian"
+msgstr ""
+
+#: msa
+msgid "Malay"
+msgstr ""
+
+#: mlt
+msgid "Maltese"
+msgstr ""
+
+#: grc
+msgid "Ancient Greek"
+msgstr ""
+
+#: chr
+msgid "Cherokee"
+msgstr ""
+
+#: enm
+msgid "English (Old)"
+msgstr ""
+
+#: epo_alt
+msgid "Esperanto (Alternative)"
+msgstr ""
+
+#: frk
+msgid "Frankish"
+msgstr ""
+
+#: frm
+msgid "French (Old)"
+msgstr ""
+
+#: ita_old
+msgid "Italian (Old)"
+msgstr ""
+
+#: equ
+msgid "Math"
+msgstr ""
+
+#: srp
+msgid "Serbian (Latin)"
+msgstr ""
+
+#: slk
+msgid "Slovak"
+msgstr ""
+
+#: spa_old
+msgid "Old Spanish"
+msgstr ""
+
+#: uninstall_title
+msgid "Addon Uninstallation - NativeShot"
+msgstr ""
+
+#: uninstall_body
+msgid ""
+"NativeShot is being uninstalled. Would you like to delete associated "
+"preferences and history?\n"
+"\n"
+"If you click \"Keep\" then if you install NativeShot in the future, all your "
+"preferences and logs will still be there."
+msgstr ""
+
+#: no
+msgid "No"
+msgstr ""
+
+#: yes
+msgid "Yes"
+msgstr ""
+
+#: keep
+msgid "Keep"
+msgstr ""
+
+#: copied_notification_title_savequick
+msgctxt "copied_notification_title_savequick"
+msgid "File Saved"
+msgstr ""
+
+#: copied_notification_body_savequick
+msgctxt "copied_notification_body_savequick"
+msgid "Path to file was copied to your clipboard"
+msgstr ""
+
+#: copied_notification_title_savebrowse
+msgctxt "copied_notification_title_savebrowse"
+msgid "File Saved"
+msgstr ""
+
+#: copied_notification_body_savebrowse
+msgctxt "copied_notification_body_savebrowse"
+msgid "Path to file was copied to your clipboard"
+msgstr ""
+
+#: copied_notification_title_copy
+msgid "Image Copied"
+msgstr ""
+
+#: copied_notification_body_copy
+msgid "Image was copied to clipboard"
+msgstr ""
+
+#: autoclose_suffix
+msgid "- Only one action was made so will auto-close this bar in %Ss"
+msgstr ""
+
+#: autoclose_cancel
+msgid "Keep Bar Open"
+msgstr ""
+
+#: prompt_title_show_error_details
+msgid "NativeShot - Error Details"
+msgstr ""
+
+#: just_print
+msgctxt "just_print"
+msgid "Print"
+msgstr ""
+
+#: just_save
+msgid "Save"
+msgstr ""
+
+#: quick
+msgid "Quick"
+msgstr ""
+
+#: browse
+msgid "Browse"
+msgstr ""
+
+#: just_upload
+msgctxt "just_upload"
+msgid "Upload"
+msgstr ""
+
+#: just_search
+msgctxt "just_search"
+msgid "Search"
+msgstr ""
+
+#: just_google
+msgid "Google"
+msgstr ""
+
+#: just_share
+msgid "Share"
+msgstr ""
+
+#: text_recognition
+msgctxt "text_recognition"
+msgid "Text Recognition"
+msgstr ""
+
+#: select
+msgid "Select"
+msgstr ""
+
+#: last_selection
+msgid "Last Selection"
+msgstr ""
+
+#: fullscreen
+msgid "Fullscreen"
+msgstr ""
+
+#: window_wand
+msgid "Window Wand"
+msgstr ""
+
+#: clear_selection
+msgid "Clear Selection"
+msgstr ""
+
+#: zoom_view
+msgid "Zoom View"
+msgstr ""
+
+#: freedraw
+msgid "Freedraw"
+msgstr ""
+
+#: pencil
+msgid "Pencil"
+msgstr ""
+
+#: marker
+msgid "Marker"
+msgstr ""
+
+#: shapes
+msgid "Shapes"
+msgstr ""
+
+#: rectangle
+msgid "Rectangle"
+msgstr ""
+
+#: oval
+msgid "Oval"
+msgstr ""
+
+#: line
+msgid "Line"
+msgstr ""
+
+#: text
+msgid "Text"
+msgstr ""
+
+#: blur
+msgid "Blur"
+msgstr ""
+
+#: gaussian
+msgid "Gaussian"
+msgstr ""
+
+#: mosaic
+msgid "Mosaic"
+msgstr ""
+
+#: color
+msgid "Color"
+msgstr ""
+
+#: marker_color
+msgid "Marker Color"
+msgstr ""
+
+#: fill_color
+msgid "Fill Color"
+msgstr ""
+
+#: close
+msgid "Close"
+msgstr ""
+
+#: line_radius_px
+msgid "Line Radius (px)"
+msgstr ""
+
+#: block_size_px
+msgid "Block Size (px)"
+msgstr ""
+
+#: radius_px
+msgid "Radius (px)"
+msgstr ""
+
+#: width
+msgid "Width"
+msgstr ""
+
+#: height
+msgid "Height"
+msgstr ""
+
+#: font_size_px
+msgid "Font Size (px)"
+msgstr ""
+
+#: line_width_px
+msgid "Line Width (px)"
+msgstr ""
+
+#: bold_short
+msgctxt "bold_short"
+msgid "B"
+msgstr ""
+
+#: italics_short
+msgid "I"
+msgstr ""
+
+#: red_short
+msgid "R"
+msgstr ""
+
+#: green_short
+msgid "G"
+msgstr ""
+
+#: blue_short
+msgctxt "blue_short"
+msgid "B"
+msgstr ""
+
+#: alpha_short
+msgid "A"
+msgstr ""
+
+#: hex
+msgid "Hex"
+msgstr ""
+
+#: start
+msgid "Start"
+msgstr ""
+
+#: end
+msgid "End"
+msgstr ""
+
+#: size
+msgid "Size"
+msgstr ""
+
+#: and_close
+msgid "& Close"
+msgstr ""
+
+#: all_monitors
+msgid "All Monitors"
+msgstr ""
+
+#: shrink_palette
+msgid "Shrink Palette"
+msgstr ""
+
+#: shrink_handles
+msgid "Shrink Handles"
+msgstr ""
+
+#: enlarge_palette
+msgid "Enlarge Palette"
+msgstr ""
+
+#: enlarge_handles
+msgid "Enlarge Handles"
+msgstr ""
+
+#: monitor_x
+msgid "Monitor %S"
+msgstr ""
+
+#: all
+msgctxt "all"
+msgid "All"
+msgstr ""
