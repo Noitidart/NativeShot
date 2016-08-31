@@ -3177,7 +3177,7 @@ function addShotToLog(shot, aExtraKeys={}) {
 	var { serviceid, actionid } = shot;
 	var required_extras = { // console.log(remove on prod)
 		imguranon: ['x', 'i'], // console.log(remove on prod)
-		imgur: ['x', 'i', 'u', 's'], // console.log(remove on prod)
+		imgur: ['i', 'u', 's'], // console.log(remove on prod)
 		dropbox: ['l', 'i', 'u', 's'], // console.log(remove on prod)
 		gdrive: ['l', 'i', 'u', 's'], // console.log(remove on prod)
 		twitter: ['l', 'p', 'u', 's'], // console.log(remove on prod)
