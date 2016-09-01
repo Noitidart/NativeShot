@@ -1,11 +1,11 @@
-<!ENTITY boostrap_lang 'en'>
+<!ENTITY boostrap_lang 'lt'>
 
 <!ENTITY addon_name 'NativeShot'>
 
-<!ENTITY title_history 'History | NativeShot'>
-<!ENTITY title_options 'Options | NativeShot'>
-<!ENTITY title_auth 'Authorization | NativeShot'>
-<!ENTITY title_authcp 'Manage Authorizations | NativeShot'>
-<!ENTITY title_ocr 'Text Recognition | NativeShot'>
+<!ENTITY title_history 'Istorija | NativeShot'>
+<!ENTITY title_options 'Parinktys | NativeShot'>
+<!ENTITY title_auth 'Prisijungimai | NativeShot'>
+<!ENTITY title_authcp 'Tvarkyti prisijungimus | NativeShot'>
+<!ENTITY title_ocr 'Teksto atpazinimas | NativeShot'>
 <!ENTITY title_tweet 'Tweet | NativeShot'>
-<!ENTITY title_fbpost 'Post to Facebook | NativeShot'>
+<!ENTITY title_fbpost 'Dalintis Facebook | NativeShot'>
