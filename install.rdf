@@ -70,12 +70,42 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>et</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Herramienta para capturar y editar cualquier cosa en cualquier pantalla</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>mdr.ksk</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>fr</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>Prenez et éditez des captures d'écran de quoi que ce soit et sur tous vos moniteurs</em:description>
 				<em:creator>Noitidart</em:creator>
 				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
 				<em:translator>tojazmin</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>ja</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>画面上のものをキャプチャして編集するためのスクリーンショットツール</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>mar</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>lt</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Sustabdyti kadro ekranvaizdį įrankis leidžia išsaugoti ir keisti vaizdą ekrane</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Michael@MetroUinvertDock for Icon</em:contributor>
+				<em:translator>gymka</em:translator>
 			</Description>
 		</em:localized>
 		<em:localized>
