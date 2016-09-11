@@ -40,6 +40,16 @@
 		<!-- start localizing - For each entry in default data MUST have equivalent in each localized block -->
 		<em:localized>
 			<Description>
+				<em:locale>ca</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Eina per capturar i editar una imatge estàtica de qualsevol cosa en qualsevol monitor</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>Rabbitter</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>de</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>Erstellen und Bearbeiten von Screenshots von allem auf jedem Monitor</em:description>
