@@ -292,11 +292,31 @@ var Bars = React.createClass({
 	}
 });
 
+function filterGalleryItemsBySelected(gallery_items, selected_filter) {
+	var services = core.nativeshot.services;
+
+	var items;
+	if (selected_filter == 'all') {
+		items = gallery_items;
+	} else {
+		if (services[selected_filter]) {
+			// `serviceid` is filtered
+			var selected_code = services[selected_filter].code;
+			items = gallery_items.filter(entry => entry.t === selected_code );
+		} else {
+			// no `serviceid` filtered, just `type` of `selected_filter`
+			items = gallery_items.filter(entry => getServiceFromCode(entry.t).entry.type === selected_filter );
+		}
+	}
+
+	return items.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
+}
+
 var gGalleryAnimated = false;
 var Gallery = React.createClass({
 	render: function() {
 		var { layouts } = this.props; // attr
-		var { selected_filter, width, all_items } = this.props; // mapped state
+		var { selected_filter, width, all_items, page, perpage } = this.props; // mapped state
 		var { setFilter } = this.props; // dispatchers
 
 		var display_filters = getDisplayFilters(selected_filter);
@@ -311,22 +331,9 @@ var Gallery = React.createClass({
 			var colwidth = Math.round(width / layout.cols);
 			var colwidthpx = colwidth + 'px';
 
-			var items;
-			if (selected_filter == 'all') {
-				items = all_items;
-			} else {
-				if (services[selected_filter]) {
-					// `serviceid` is filtered
-					items = all_items.filter(entry => entry.t === services[selected_filter].code );
-				} else {
-					// no `serviceid` filtered, just `type` of `selected_filter`
-					items = all_items.filter(entry => getServiceFromCode(entry.t).entry.type == selected_filter );
-				}
-			}
+			var items = filterGalleryItemsBySelected(all_items, selected_filter);
 
-			items = items.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
-
-			items = items.slice(0, 20);
+			items = items.slice((page-1)*perpage, ((page-1)*perpage)+perpage);
 
 			// console.log('items:', items);
 
@@ -1062,16 +1069,63 @@ var Sliphover = React.createClass({
 });
 
 var Pagination = React.createClass({
+	shouldComponentUpdate: function(nextProps, nextState) {
+		var page = this.props.page;
+		var newpage = nextProps.page;
+		if (page !== newpage) {
+			return true;
+		}
+
+		var filter = this.props.selected_filter;
+		var newfilter = nextProps.selected_filter;
+		if (filter != newfilter) {
+			return true;
+		}
+
+		var items = this.props.gallery_items;
+		var newitems = nextProps.gallery_items;
+		if (items.length != newitems.length) {
+			return true;
+		}
+	},
 	render: function() {
+		var { page, perpage, gallery_items, selected_filter } = this.props; // mapped state
+		var { setPage } = this.props; // dispatchers
 
-		var page = 3;
+		var items = filterGalleryItemsBySelected(gallery_items, selected_filter);
 
-		return React.createElement('div', { id:'pagination' },
-			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(el =>
-				React.createElement('div', { className:(el === page ? 'onpage' : undefined) },
-					el
-				)
-			)
+		if (!items.length) {
+			return React.createElement('div', { id:'pagination' },
+				React.createElement('div', { className:'onpage' }, ' ')
+			);
+		} else {
+			var pages = Math.ceil(items.length / perpage);
+			var rel = [];
+			for (var i=1; i<=pages; i++) {
+				rel.push( React.createElement(PageNumber, { num:i, page, setPage }) );
+			}
+			return React.createElement('div', { id:'pagination' },
+				rel
+			);
+		}
+	}
+});
+
+var PageNumber = React.createClass({
+	setPage: function() {
+		var { num, setPage } = this.props;
+		setPage(num);
+	},
+	render: function() {
+		var { num, page } = this.props;
+		var attr = {};
+		if (num === page) {
+			attr.className = 'onpage';
+		} else {
+			attr.onClick = this.setPage;
+		}
+		return React.createElement('div', attr,
+			num
 		);
 	}
 });
@@ -1092,12 +1146,15 @@ var FiltersContainer = ReactRedux.connect(
 var PaginationContainer = ReactRedux.connect(
 	function mapStateToProps(state, ownProps) {
 		return {
-
+			page: state.page,
+			perpage: 20,
+			selected_filter: state.selected_filter,
+			gallery_items: state.gallery_items
 		}
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
 		return {
-
+			setPage: page => dispatch(setPage(page))
 		}
 	}
 )(Pagination);
@@ -1121,7 +1178,9 @@ var GalleryContainer = ReactRedux.connect(
 		return {
 			selected_filter: state.selected_filter,
 			width: state.gallery_width,
-			all_items: state.gallery_items
+			all_items: state.gallery_items,
+			page: state.page,
+			perpage: 20
 		}
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
@@ -1202,6 +1261,8 @@ const CLOSE_MAGNIFIC = 'CLOSE_MAGNIFIC';
 
 const SHOW_COVER = 'SHOW_COVER';
 const UNCOVER = 'UNCOVER';
+
+const SET_PAGE = 'SET_PAGE';
 
 // ACTION CREATORS
 function overwriteGalleryItems(items) {
@@ -1286,6 +1347,13 @@ function uncover(d) {
 	}
 }
 
+function setPage(page) {
+	return {
+		type: SET_PAGE,
+		page
+	}
+}
+
 // REDUCERS
 function selected_filter(state='all', action) {
 	switch (action.type) {
@@ -1367,9 +1435,21 @@ function slipcover(state={}, action) {
 	}
 }
 
+function page(state=1, action) {
+	switch (action.type) {
+		case SET_FILTER:
+			return 1;
+		case SET_PAGE:
+			return action.page;
+		default:
+			return state;
+	}
+}
+
 // `var` so app.js can access it
 var app = Redux.combineReducers({
 	selected_filter,
+	page,
 	gallery_width,
 	gallery_items,
 	magnific,
