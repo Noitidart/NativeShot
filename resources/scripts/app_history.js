@@ -6,6 +6,7 @@ function initAppPage(aArg) {
 		React.createElement(MagnificContainer),
 		React.createElement(BarsContainer),
 		React.createElement(FiltersContainer),
+		React.createElement(PaginationContainer),
 		React.createElement(GalleryContainer, { layouts:gGalleryLayouts })
 	];
 }
@@ -178,7 +179,7 @@ var Filters = React.createClass({
 			el.label
 		));
 
-		return React.createElement('div', { className:'padd-40' },
+		return React.createElement('div', { className:'padd-20' },
 			React.createElement('div', { className:'row' },
 				React.createElement('div', { id:'filters' },
 					buttons_rel
@@ -324,6 +325,8 @@ var Gallery = React.createClass({
 			}
 
 			items = items.filter(entry => !getServiceFromCode(entry.t).entry.noimg);
+
+			items = items.slice(0, 20);
 
 			// console.log('items:', items);
 
@@ -1060,8 +1063,15 @@ var Sliphover = React.createClass({
 
 var Pagination = React.createClass({
 	render: function() {
+
+		var page = 3;
+
 		return React.createElement('div', { id:'pagination' },
-			'pagination'
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(el =>
+				React.createElement('div', { className:(el === page ? 'onpage' : undefined) },
+					el
+				)
+			)
 		);
 	}
 });
@@ -1078,6 +1088,19 @@ var FiltersContainer = ReactRedux.connect(
 		}
 	}
 )(Filters);
+
+var PaginationContainer = ReactRedux.connect(
+	function mapStateToProps(state, ownProps) {
+		return {
+
+		}
+	},
+	function mapDispatchToProps(dispatch, ownProps) {
+		return {
+
+		}
+	}
+)(Pagination);
 
 var BarsContainer = ReactRedux.connect(
 	function mapStateToProps(state, ownProps) {

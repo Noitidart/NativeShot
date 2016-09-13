@@ -484,6 +484,7 @@ header.type3 {
 /***/
 
 /* domgroup:padd */
+.padd-20 {padding-bottom: 20px; position: relative; width: 100%;}
 .padd-40 {padding-bottom: 40px; position: relative; width: 100%;}
 .padd-80 {padding-bottom: 80px; position: relative; width: 100%;}
 .padd-120 {padding-bottom: 120px;}
@@ -538,7 +539,7 @@ span[data-service-name] {
     font-size: 12px;
     color: #1a1a1a;
     font-weight: 300;
-    margin: 0px 20px;
+    margin: 10px 20px;
     background: none;
     letter-spacing: 3px;
 
@@ -1035,3 +1036,23 @@ span[data-service-name] {
     content: '\f112';
 }
 /***/
+
+#pagination {
+	text-align: center;
+}
+
+#pagination div {
+	border: 1px solid #ebebeb;
+	padding: 8px;
+	background-color: #ffffff;
+	margin: 8px;
+	display: inline-block;
+	cursor: pointer;
+}
+
+#pagination div.onpage {
+	cursor: default;
+	border: 0;
+	padding: 8px;
+	font-weight: 900;
+}
