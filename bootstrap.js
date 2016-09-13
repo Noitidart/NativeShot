@@ -1032,7 +1032,7 @@ var windowListener = {
 				var detail = e.detail;
 				var iMon = detail;
 				var shot = gSession.shots[iMon];
-				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
+				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), undefined, undefined, false);
 			}, false, true);
 		}
 	},

@@ -75,7 +75,7 @@ var pageLoader = {
 					// 	}
 					// }
 
-					gCommScope.gWinComm = gWinComm = new gCommScope.Comm.server.content(contentWindow);
+					gCommScope.gWinComm = gWinComm = new gCommScope.Comm.server.content(contentWindow, undefined, undefined, undefined, Services.vc.compare(core.firefox.version, '46.*') > 0 ? true : false);
 				break;
 			case MATCH_EDITOR:
 					console.error('ok loaded editor');
