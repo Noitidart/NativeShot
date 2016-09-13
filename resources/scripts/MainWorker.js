@@ -3653,6 +3653,53 @@ function gtkGetWinAttr(aGDKWindowPtrStr) {
 	console.log('override_redirect:', rez_attr.contents.override_redirect, 'map_state:', rez_attr.contents.map_state, 'rez_attr.contents:', cutilsStringify(rez_attr.contents));
 	ostypes.API('free')(rez_attr);
 }
+
+function importOldHistory() {
+	var path = OS.Path.join(core.addon.path.storage, 'history-log.unbracketed.json');
+	if (OS.File.exists(path)) {
+		var contents = OS.File.read(path, { encoding:'utf-8' });
+		if (contents.substr(0, 1) == ',') {
+			contents = contents.substr(1);
+		}
+		try {
+			var oldlog = JSON.parse('[' + contents + ']');
+		} catch(ex) {
+			throw new Error('failed to parse, probably a json error in the log');
+		}
+
+		// format old log
+		for (var entry of oldlog) {
+			switch (entry.t) {
+				case 0:
+					// imguranon
+					if (entry.n) {
+						entry.i = entry.n;
+						delete entry.n;
+					}
+					delete entry.w;
+					break;
+				case 10:
+					// imgur
+					delete entry.x;
+					delete entry.w;
+					break;
+			}
+
+		}
+
+
+		var log = JSON.parse(JSON.stringify(fetchFilestoreEntry({ mainkey:'log' })));
+
+		var merged = [...oldlog, ...log];
+
+		merged.sort((a,b) => a.d - b.d);
+
+		updateFilestoreEntry({
+			value: merged,
+			mainkey: 'log'
+		});
+	}
+}
 // End - Addon Functionality
 
 // start - common helper functions
@@ -3872,8 +3919,39 @@ function xhrAsync(aUrlOrFileUri, aOptions={}, aCallback) { // 052716 - added tim
 }
 
 function setTimeoutSync(aMilliseconds) {
-	var breakDate = Date.now() + aMilliseconds;
-	while (Date.now() < breakDate) {}
+	var sleptstart = Date.now();
+	var sleptfor = 0;
+	switch (gDWOSName) {
+		case 'winnt':
+		case 'winmo':
+		case 'wince':
+				ostypes.API('SleepEx')(aMilliseconds, false);
+				sleptfor = Date.now() - sleptstart;
+			break;
+		case 'darwin':
+				ostypes.API('objc_msgSend')(ostypes.HELPER.class('NSThread'), ostypes.HELPER.sel('sleepForTimeInterval:'), ostypes.TYPE.NSTimeInterval(aMilliseconds / 1000));
+				sleptfor = Date.now() - sleptstart;
+			break;
+		default:
+			// assume unix/mac - works on mac as well - but the `NSThread` method above doesnt get interrupted by `EINTR`
+			while (true) {
+				var sleepfor = aMilliseconds - sleptfor;
+				var rez_sleep = ostypes.API('usleep')(sleepfor * 1000);
+				sleptfor = Date.now() - sleptstart;
+				if (cutils.jscEqual(rez_sleep, -1)) {
+					if (ctypes.errno === ostypes.CONST.EINTR) {
+						// its EINTR so try again
+						console.error('WARN: got EINTR during usleep, so pick up where left off');
+						continue;
+					} else {
+						console.error('FATAL ERROR: got error during usleep, errno:', ctypes.errno);
+					}
+				}
+				break;
+			}
+	}
+
+	console.error('slept for:', sleptfor);
 }
 
 // rev1 - _ff-addon-snippet-safedForPlatFS.js - https://gist.github.com/Noitidart/e6dbbe47fbacc06eb4ca

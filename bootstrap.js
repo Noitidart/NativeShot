@@ -279,6 +279,9 @@ function startup(aData, aReason) {
 			AB.init();
 		}
 
+		if (aReason === ADDON_UPGRADE) {
+			callInMainworker('importOldHistory');
+		}
     }, function() {
 		var deferredmain = new Deferred();
 
