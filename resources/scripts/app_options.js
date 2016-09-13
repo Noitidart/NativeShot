@@ -114,6 +114,23 @@ function focusAppPage() {
 	});
 }
 
+function createSortedLocalized(aArr) {
+	// aArr is like: [{value:0,label:'on'}]
+	// label is changed into formatStringFromNameCore. if label is array, then first entry is formated and rest put into last arg
+	var rez = [];
+	for (var entry of aArr) {
+		var label = aArr.label;
+		var pcs;
+		if (Array.isArray(label)) {
+			label = aArr.shift();
+			pcs = label;
+		}
+		aArr.label = formatStringFromNameCore(label, 'main', pcs);
+	}
+
+	arr.sort((a,b) => a.label.localeCompare(b.label));
+
+}
 function createSortedOnOffOptionsArr(aOnVal, aOffVal) {
 	var arr = [
 		{
