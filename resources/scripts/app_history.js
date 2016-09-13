@@ -384,8 +384,11 @@ var Gallery = React.createClass({
 						}
 
 						var display_img_top = translate_y + GALITEM_IMAGE_MARGIN;
-						var display_img_left = translate_x + GALITEM_IMAGE_MARGIN;
-
+						if (!isLocaleRTL()) {
+							var display_img_left = translate_x + GALITEM_IMAGE_MARGIN;
+						} else {
+							var display_img_left = (-1 * translate_x) + GALITEM_IMAGE_MARGIN;
+						}
 						var display_item_width = colwidth;
 						var display_item_height = display_img_height + (GALITEM_IMAGE_MARGIN * 2);
 
@@ -550,12 +553,17 @@ var Magnific = React.createClass({
 			// `from` should have w, h, x, y
 			// `to` should have w, h
 
+			if (!isLocaleRTL()) {
+				var fromattr = 'left';
+			} else {
+				var fromattr = 'right';
+			}
 			return React.createElement('div', { id:'magnific' },
 				React.createElement('div', {id:'magnific_cover', onClick:this.close }),
 				React.createElement('button', { id:'magnific_close', onClick:this.close },
 					'\u00D7'
 				),
-				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:(from.y - document.documentElement.scrollTop)+'px', left:(from.x - document.documentElement.scrollLeft)+'px'} } ),
+				React.createElement('img', { ref:this.imgDidOunt, src, style:{width:from.w+'px', height:from.h+'px', top:(from.y - document.documentElement.scrollTop)+'px', [fromattr]:(from.x - document.documentElement.scrollLeft)+'px'} } ),
 				React.createElement('div', { ref:'tools', id:'magnific_tools', style:{opacity:'0'} },
 					React.createElement('a', { className:'fa_popup-iconic', onClick:this.opentab, href:entry.src },
 						formatStringFromNameCore('open_in_tab', 'main')
@@ -605,7 +613,7 @@ var Magnific = React.createClass({
 	},
 	keydown: function(e) {
 		if (e.key == 'Escape') {
-			this.close();
+			this.close({button:0});
 		}
 	},
 	img_mounted: false,
@@ -661,10 +669,11 @@ var Magnific = React.createClass({
 				var to_img_top = Math.round((viewport_height / 2) - (to_img_height / 2));
 				var to_img_left = Math.round((viewport_width / 2) - (to_img_width / 2));
 
-				window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3
+				var toattr = !isLocaleRTL() ? 'left' : 'right';
+				window.getComputedStyle(domel, '').width; // if i dont do this first, then the width wont transition/animate per bug1041292 - https://bugzilla.mozilla.org/show_bug.cgi?id=1041292#c3 // ACTUALLY while working on RTL support in 1.10b.rev11 i think i saw i dont need this
 				domel.style.width = to_img_width + 'px';
 				domel.style.height = to_img_height + 'px';
-				domel.style.left = to_img_left + 'px';
+				domel.style[toattr] = to_img_left + 'px';
 				domel.style.top = to_img_top + 'px';
 
 				setTimeout(function() {
@@ -676,7 +685,7 @@ var Magnific = React.createClass({
 
 					domel.style.width = from.w + 'px';
 					domel.style.height = from.h + 'px';
-					domel.style.left = (from.x - document.documentElement.scrollLeft) + 'px';
+					domel.style[toattr] = (from.x - document.documentElement.scrollLeft) + 'px';
 					domel.style.top = (from.y - document.documentElement.scrollTop) + 'px';
 				};
 			}

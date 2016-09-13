@@ -671,7 +671,7 @@ span[data-service-name] {
     position: fixed;
     /* max-width: 85%; /* crossfile-link8383831 */
     /* max-height: 90%;  /* crossfile-link83838312 */
-    transition: width 313ms, height 313ms, left 313ms, top 313ms; /* link291 */
+    transition: width 313ms, height 313ms, left 313ms, right 313ms, top 313ms; /* link291 */
 }
 #magnific_tools {
     position: fixed;
