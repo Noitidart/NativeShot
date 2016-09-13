@@ -361,6 +361,9 @@ var Gallery = React.createClass({
 				}
 
 				var translate_x = col * colwidth;
+				if (isLocaleRTL()) {
+					translate_x *= -1;
+				}
 				var translate_y = running_colheight[col];
 				var transform = 'translate(' + translate_x + 'px, ' + translate_y + 'px)';
 
@@ -1474,4 +1477,22 @@ function getServiceFromCode(servicecode) {
 function commDispatch(aArg) {
 	var { m, a } = aArg;
 	store.dispatch(gCommScope[m](...a));
+}
+
+function isLocaleRTL() {
+	switch (core.firefox.locale) {
+		case 'ar': // Arabic
+		case 'dv': // Divehi
+		case 'fa': // Persian (Farsi)
+		case 'ha': // Hausa
+		case 'he': // Hebrew
+		case 'iw': // Hebrew (old code)
+		case 'ji': // Yiddish (old code)
+		case 'ps': // Pashto, Pushto
+		case 'ur': // Urdu
+		case 'yi': // Yiddish
+			return true;
+		default:
+			return false;
+	}
 }

@@ -1,3 +1,24 @@
+/* bootstrap lang direction */
+html[lang=ar], /* Arabic */
+html[lang=dv], /* Divehi */
+html[lang=fa], /* Persian (Farsi) */
+html[lang=ha], /* Hausa */
+html[lang=he], /* Hebrew */
+html[lang=iw], /* Hebrew (old code) */
+html[lang=ji], /* Yiddish (old code) */
+html[lang=ps], /* Pashto, Pushto */
+html[lang=ur], /* Urdu */
+html[lang=yi] /* Yiddish */ {
+	direction: rtl;
+}
+
+/* connected letters */
+html[lang=ar] *,
+html[lang=fa] *,
+html[lang=ur] * {
+	letter-spacing: 0 !important;
+}
+
 /* fonts */
 /* fonts */
 @font-face {
@@ -173,7 +194,7 @@ header.type3 {
     flex-direction: column;
 }
 .logo32 {
-    margin: 5px 12px 0 0;
+    margin: 5px 12px;
 }
 .header-text {
     align-items: center;
