@@ -112,6 +112,16 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>it</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Strumento di blocco delle schermate per catturare e modificare qualunque cosa su qualsiasi schermo</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>elgaton</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>ja</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>画面上のものをキャプチャして編集するためのスクリーンショットツール</em:description>
