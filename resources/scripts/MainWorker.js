@@ -506,6 +506,7 @@ function trashFile(aFilePlatPath) {
 }
 
 function shootAllMons() {
+	shot_started = Date.now();
 
 	var collMonInfos = [];
 
@@ -1336,6 +1337,10 @@ function shootAllMons() {
 
 	}
 
+	shot_done = Date.now();
+	console['error']('Time from key detect to shot start:', (shot_started - key_detected));
+	console['error']('Time to take shot:', (shot_done - shot_started));
+	console['error']('Time from key detect to shot done:', (shot_done - key_detected));
 	return rez;
 }
 
@@ -3272,6 +3277,9 @@ function hotkeysShouldUnregister() {
 }
 
 var gHKI;
+var key_detected = 0;
+var shot_started = 0;
+var shot_done = 0;
 
 function initHotkeys() {
 	// as need access to `core` and its properties
@@ -3283,8 +3291,9 @@ function initHotkeys() {
 	    hotkeys: undefined,
 	    callbacks: {
 			screenshot: function() {
+				key_detected = Date.now();
 				console.error('in trigger callback! "screenshot"');
-				callInBootstrap('shouldTakeShot');
+				callInBootstrap('shouldTakeShot', key_detected);
 			}
 	    }
 	};

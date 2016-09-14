@@ -405,6 +405,15 @@ function guiSetBadge(aTxt) {
 	}
 }
 
+var keydetected_mt;
+var shotgot_mt;
+var shotstart_mt;
+var shotcol_mt;
+var shotopen_0;
+var shotopen_1;
+var shotopen_done_0;
+var shotopen_done_1;
+
 function takeShot() {
 	gSession.id = Date.now();
 	// start - async-proc939333
@@ -412,6 +421,7 @@ function takeShot() {
 	var allMonDimStr;
 	var shootAllMons = function() {
 		callInMainworker('shootAllMons', undefined, function(aArg) {
+			shotgot_mt = Date.now();
 			var { collMonInfos } = aArg;
 
 			for (var i=0; i<collMonInfos.length; i++) {
@@ -450,6 +460,7 @@ function takeShot() {
 	};
 
 	var ensureGlobalEditorstate = function() {
+		shotcol_mt = Date.now();
 		if (!gEditorStateStr) {
 			callInMainworker('fetchFilestoreEntry', {mainkey:'editorstate'}, function(aArg) {
 				gEditorStateStr = JSON.stringify(aArg);
@@ -496,6 +507,7 @@ function takeShot() {
 			var query_str = jQLike.serialize(query_json);
 			// console.log('query_str:', query_str);
 
+			gCommScope['shotopen_' + i] = Date.now();
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 			// editor_domwin.addEventListener('load', function() {
 			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
@@ -507,6 +519,7 @@ function takeShot() {
 	};
 
 	shootAllMons();
+	shotstart_mt = Date.now();
 	// end - async-proc939333
 }
 
@@ -719,6 +732,8 @@ function exitEditors(aArg) {
 	// 	}
 	// }
 	// // colMon[0].E.DOMWindow.close();
+
+	Comm.server.unregAll('content');
 
 	var sessionid = gSession.id;
 	gSession = {}; // gEditor.cleanUp();
@@ -1031,6 +1046,16 @@ var windowListener = {
 				// console.log('got nscomm', e.detail);
 				var detail = e.detail;
 				var iMon = detail;
+				gCommScope['shotopen_done_' + detail] = Date.now();
+				if (shotopen_done_0 > keydetected_mt && shotopen_done_1 > keydetected_mt) {
+					console['error']('Time from keydetected_mt to start shot:', (shotstart_mt - keydetected_mt));
+					console['error']('Time from keydetected_mt to get from worker:', (shotgot_mt - keydetected_mt));
+					console['error']('Time from keydetected_mt to collect:', (shotcol_mt - keydetected_mt));
+					console['error']('Time from keydetected_mt to start open 0:', (shotopen_0 - keydetected_mt));
+					console['error']('Time from keydetected_mt to start open 1:', (shotopen_1 - keydetected_mt));
+					console['error']('Time from keydetected_mt to done open 0:', (shotopen_done_0 - keydetected_mt));
+					console['error']('Time from keydetected_mt to done open 1:', (shotopen_done_1 - keydetected_mt));
+				}
 				var shot = gSession.shots[iMon];
 				if (Services.vc.compare(core.firefox.version, '46.*') > 0) {
 					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
@@ -1788,6 +1813,13 @@ function attnMenuClick(doClose, aBrowser) {
 			case formatStringFromNameCore('show_in_explorer', 'main'):
 					showFileInOSExplorer(new nsIFile(this.btn.meta.data.copytxt));
 				break;
+			case formatStringFromNameCore('show_response_details', 'main'):
+					var error_details = this.btn.meta.data.response_details;
+					if (typeof(error_details) == 'object') {
+						error_details = BEAUTIFY.js(JSON.stringify(error_details));
+					}
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), formatStringFromNameCore('prompt_title_show_error_details', 'main'), error_details);
+				break;
 			case formatStringFromNameCore('show_error_details', 'main'):
 					var error_details = this.btn.meta.data.error_details;
 					if (typeof(error_details) == 'object') {
@@ -2178,9 +2210,10 @@ function extractData(aActionId) {
 	}
 }
 
-function shouldTakeShot() {
+function shouldTakeShot(key_detected) {
 	// does takeShot if no session in progress
 	if (!gSession.id) {
+		keydetected_mt = key_detected;
 		takeShot();
 	}
 	else { console.warn('screenshot session currently in progress so will not takeShot'); }
