@@ -191,9 +191,15 @@ var Filters = React.createClass({
 
 var Bars = React.createClass({
 	shouldComponentUpdate: function(nextProps, nextState) {
+		var filter = this.props.selected_filter;
+		var newfilter = nextProps.selected_filter;
+		if (filter !== newfilter) {
+			return true;
+		}
+
 		var items = this.props.all_items;
 		var newitems = nextProps.all_items;
-		if (items.length != newitems.length) {
+		if (items.length !== newitems.length) {
 			return true;
 		} else {
 			var l = items.length;

@@ -3694,10 +3694,14 @@ function importOldHistory() {
 
 		merged.sort((a,b) => a.d - b.d);
 
+		var filtered = merged.filter((item, pos) => merged.findIndex(el => el.d === item.d) === pos)
+
 		updateFilestoreEntry({
-			value: merged,
+			value: filtered,
 			mainkey: 'log'
 		});
+
+		OS.File.remove(path);
 	}
 }
 // End - Addon Functionality
