@@ -1,11 +1,11 @@
-<!ENTITY boostrap_lang 'lt'>
+<!ENTITY boostrap_lang "lt">
 
-<!ENTITY addon_name 'NativeShot'>
+<!ENTITY addon_name "NativeShot">
 
-<!ENTITY title_history 'Istorija | NativeShot'>
-<!ENTITY title_options 'Parinktys | NativeShot'>
-<!ENTITY title_auth 'Prisijungimai | NativeShot'>
-<!ENTITY title_authcp 'Tvarkyti prisijungimus | NativeShot'>
-<!ENTITY title_ocr 'Teksto atpazinimas | NativeShot'>
-<!ENTITY title_tweet 'Tweet | NativeShot'>
-<!ENTITY title_fbpost 'Dalintis Facebook | NativeShot'>
+<!ENTITY title_history "Istorija | NativeShot">
+<!ENTITY title_options "Parinktys | NativeShot">
+<!ENTITY title_auth "Prisijungimai | NativeShot">
+<!ENTITY title_authcp "Tvarkyti prisijungimus | NativeShot">
+<!ENTITY title_ocr "Teksto atpazinimas | NativeShot">
+<!ENTITY title_tweet "Tweet | NativeShot">
+<!ENTITY title_fbpost "Dalintis Facebook | NativeShot">
