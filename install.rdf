@@ -162,6 +162,16 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>pt-BR</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Ferramenta de captura de tela de quadro congelado, para capturar e editar qualquer coisa no monitor</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>ghelman</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>ro</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>Captură de ecran stop-cadru pentru a captura și edita orice pe orice monitor</em:description>
