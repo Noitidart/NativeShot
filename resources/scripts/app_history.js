@@ -190,6 +190,20 @@ var Filters = React.createClass({
 });
 
 var Bars = React.createClass({
+	shouldComponentUpdate: function(nextProps, nextState) {
+		var items = this.props.all_items;
+		var newitems = nextProps.all_items;
+		if (items.length != newitems.length) {
+			return true;
+		} else {
+			var l = items.length;
+			for (var i=0; i<l; i++) {
+				if (items[i].t !== newitems[i].t) {
+					return true;
+				}
+			}
+		}
+	},
 	render: function() {
 		var { selected_filter, all_items } = this.props; // mapped state
 		var { setFilter } = this.props; // dispatchers

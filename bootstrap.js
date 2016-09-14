@@ -55,7 +55,7 @@ var core = {
 	},
 	firefox: {
 		pid: Services.appinfo.processID,
-		version: Services.appinfo.version,
+		version: parseFloat(Services.appinfo.version),
 		channel: Services.prefs.getCharPref('app.update.channel'),
 		locale: LOCALE.getPreferedLocales()[0]
 	},
@@ -1032,7 +1032,11 @@ var windowListener = {
 				var detail = e.detail;
 				var iMon = detail;
 				var shot = gSession.shots[iMon];
-				shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), undefined, undefined, false);
+				if (Services.vc.compare(core.firefox.version, '46.*') > 0) {
+					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
+				} else {
+					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e));
+				}
 			}, false, true);
 		}
 	},

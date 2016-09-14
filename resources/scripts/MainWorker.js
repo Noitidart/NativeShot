@@ -2344,7 +2344,7 @@ function genericCountdown(countdown, reason, resumer) {
 			},
 			serviceid: resumer.shot.serviceid
 		});
-		setTimeout(genericCountdown.bind(null, ...arguments), 1000);
+		setTimeout(genericCountdown.bind(null, ...itrarg(arguments)), 1000);
 	}
 }
 function genericOnUploadProgress(shot, aReportProgress, e) {
@@ -2692,7 +2692,7 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 	var getSetQuickSaveDir = function() {
 		// if `f` is null then it gets the defualt dir and sets it
 		if (!f) {
-			var resumer = buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) );
+			var resumer = buildResumer( ...itrarg(action_arguments), action_savequick.bind(null, ...itrarg(action_arguments)) );
 			var promise_getdir = getSystemDirectory('Pictures');
 			promise_getdir.then(
 				function(aVal) {
@@ -2705,8 +2705,8 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 					});
 					writeToDisk();
 				},
-				actionReject.bind(null, ...action_arguments, resumer, 'promise_getdir')
-			).catch(actionCatch.bind(null, ...action_arguments, resumer, 'promise_getdir'));
+				actionReject.bind(null, ...itrarg(action_arguments), resumer, 'promise_getdir')
+			).catch(actionCatch.bind(null, ...itrarg(action_arguments), resumer, 'promise_getdir'));
 		} else {
 			writeToDisk();
 		}
@@ -2749,7 +2749,7 @@ function action_savequick(shot, aActionFinalizer, aReportProgress) {
 				writeToDisk();
 			} else {
 				console.error('action_savequick -> OSFileError:', OSFileError);
-				withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) ));
+				withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...itrarg(action_arguments), action_savequick.bind(null, ...itrarg(action_arguments)) ));
 				aReportProgress({
 					reason: reasons.HOLD_ERROR,
 					data: {
@@ -2834,7 +2834,7 @@ function action_savebrowse(shot, aActionFinalizer, aReportProgress) {
 			});
 		} catch(OSFileError) {
 			console.error('action_savebrowse -> OSFileError:', OSFileError);
-			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...action_arguments) ));
+			withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...itrarg(action_arguments), action_savequick.bind(null, ...itrarg(action_arguments)) ));
 			aReportProgress({
 				reason: reasons.HOLD_ERROR,
 				data: {
@@ -2917,14 +2917,14 @@ function action_ocrall(shot, aActionFinalizer, aReportProgress) {
 		}
 	}
 
-	var resumer = buildResumer( ...action_arguments, action_ocrall.bind(null, ...action_arguments) );
+	var resumer = buildResumer( ...itrarg(action_arguments), action_ocrall.bind(null, ...itrarg(action_arguments)) );
 	var promiseAll_ocr = Promise.all(promiseAllArr_ocr);
 	promiseAll_ocr.then(
 		function() {
 			aActionFinalizer(finalize_data);
 		},
-		actionReject.bind(null, ...action_arguments, resumer, 'promise_getdir')
-	).catch(actionCatch.bind(null, ...action_arguments, resumer, 'promise_getdir'));
+		actionReject.bind(null, ...itrarg(action_arguments), resumer, 'promise_getdir')
+	).catch(actionCatch.bind(null, ...itrarg(action_arguments), resumer, 'promise_getdir'));
 
 }
 var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinalizer, aReportProgress) {
@@ -3022,7 +3022,7 @@ var action_tineye = action_googleimages = function(shot, aActionFinalizer, aRepo
 		OS.File.writeAtomic(path, new Uint8Array(shot.arrbuf));
 	} catch(OSFileError) {
 		console.error('action_' + shot.serviceid + ' -> OSFileError:', OSFileError);
-		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...action_arguments, action_savequick.bind(null, ...arguments) ));
+		withHold(PLACE, shot.actionid, reasons.HOLD_ERROR, buildResumer( ...itrarg(action_arguments), action_savequick.bind(null, ...itrarg(arguments)) ));
 		aReportProgress({
 			reason: reasons.HOLD_ERROR,
 			data: {
@@ -4383,5 +4383,13 @@ function getServiceFromCode(servicecode) {
 				entry: core.nativeshot.services[a_serviceid]
 			};
 		}
+	}
+}
+
+function itrarg(aArguments) {
+	if (core.firefox.version < 46) {
+		return Array.prototype.slice.call(aArguments);
+	} else {
+		return aArguments;
 	}
 }
