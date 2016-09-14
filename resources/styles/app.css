@@ -495,7 +495,7 @@ header.type3 {
 .pref-block-value {position: relative; width: 100%; padding: 20px 15px; border-bottom: 1px solid #ebebeb; white-space: nowrap; }
 .pref-block-value span {font-size: 40px; color: #222; line-height: 80px; white-space: nowrap;}
 /*.pref-block-value sup {font-size: 40px; top: -0.6em; padding-right: 3px;}*/
-.pref-block-value sup { font-size: 20px; position: absolute; top: 25%; left: 10%; color: #666; white-space: nowrap; }
+.pref-block-value sup { font-size: 20px; position: absolute; top: 25%; left: 10%; color: #666; white-space: nowrap; direction: ltr; }
 .pref-block-value sub {font-size: 24px; bottom: 0px;}
 .pref-block ul {position: relative; width: 100%; padding: 25px 0px;}
 .pref-block ul li {padding: 3px 0px; font-size: 14px; line-height: 32px; font-weight: 300;}
