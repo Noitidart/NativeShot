@@ -503,6 +503,10 @@ function takeShot() {
 				},
 				shot
 			);
+			delete query_json.arrbuf;
+			delete query_json.port1;
+			delete query_json.port2;
+			delete query_json.screenshot;
 			// console.log('query_json:', query_json);
 			var query_str = jQLike.serialize(query_json);
 			// console.log('query_str:', query_str);
@@ -1047,15 +1051,15 @@ var windowListener = {
 				var detail = e.detail;
 				var iMon = detail;
 				gCommScope['shotopen_done_' + detail] = Date.now();
-				if (shotopen_done_0 > keydetected_mt && shotopen_done_1 > keydetected_mt) {
-					console['error']('Time from keydetected_mt to start shot:', (shotstart_mt - keydetected_mt));
-					console['error']('Time from keydetected_mt to get from worker:', (shotgot_mt - keydetected_mt));
-					console['error']('Time from keydetected_mt to collect:', (shotcol_mt - keydetected_mt));
-					console['error']('Time from keydetected_mt to start open 0:', (shotopen_0 - keydetected_mt));
-					console['error']('Time from keydetected_mt to start open 1:', (shotopen_1 - keydetected_mt));
-					console['error']('Time from keydetected_mt to done open 0:', (shotopen_done_0 - keydetected_mt));
-					console['error']('Time from keydetected_mt to done open 1:', (shotopen_done_1 - keydetected_mt));
-				}
+				// if (shotopen_done_0 > keydetected_mt && shotopen_done_1 > keydetected_mt) {
+				// 	console['error']('Time from keydetected_mt to start shot:', (shotstart_mt - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to get from worker:', (shotgot_mt - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to collect:', (shotcol_mt - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to start open 0:', (shotopen_0 - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to start open 1:', (shotopen_1 - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to done open 0:', (shotopen_done_0 - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to done open 1:', (shotopen_done_1 - keydetected_mt));
+				// }
 				var shot = gSession.shots[iMon];
 				if (Services.vc.compare(core.firefox.version, '46.*') > 0) {
 					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
