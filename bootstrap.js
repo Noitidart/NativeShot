@@ -555,9 +555,9 @@ function editorInitShot(aIMon, e) {
 
 	domwin.focus();
 
-	if (core.os.mname == 'gtk') {
-		domwin.fullScreen = true;
-	}
+	// if (core.os.mname == 'gtk') {
+	// 	domwin.fullScreen = true;
+	// }
 
 	// set window on top:
 	var aArrHwndPtrStr = [aHwndPtrStr];
