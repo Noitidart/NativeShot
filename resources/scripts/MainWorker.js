@@ -1338,9 +1338,9 @@ function shootAllMons() {
 	}
 
 	shot_done = Date.now();
-	console['error']('Time from key detect to shot start:', (shot_started - key_detected));
-	console['error']('Time to take shot:', (shot_done - shot_started));
-	console['error']('Time from key detect to shot done:', (shot_done - key_detected));
+	// console['error']('Time from key detect to shot start:', (shot_started - key_detected));
+	// console['error']('Time to take shot:', (shot_done - shot_started));
+	// console['error']('Time from key detect to shot done:', (shot_done - key_detected));
 	return rez;
 }
 
