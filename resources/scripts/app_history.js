@@ -1126,12 +1126,13 @@ var Pagination = React.createClass({
 
 		var items = filterGalleryItemsBySelected(gallery_items, selected_filter);
 
-		if (!items.length) {
+		var pages = Math.ceil(items.length / perpage);
+
+		if (!items.length || pages === 1) {
 			return React.createElement('div', { id:'pagination' },
 				React.createElement('div', { className:'onpage' }, ' ')
 			);
 		} else {
-			var pages = Math.ceil(items.length / perpage);
 			var rel = [];
 			for (var i=1; i<=pages; i++) {
 				rel.push( React.createElement(PageNumber, { num:i, page, setPage }) );
