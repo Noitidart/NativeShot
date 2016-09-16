@@ -52,6 +52,16 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>bg</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Инструмент за снимане и редактиране на каквото и да е по екрана</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>АдмиралАнимЕ</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>ca</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>Eina per capturar i editar una imatge estàtica de qualsevol cosa en qualsevol monitor</em:description>
