@@ -10,7 +10,8 @@ var WORKER = this;
 var onTesseractProgress = undefined;
 var gLastLang;
 function readByteArr(aArg, aReportProgress) {
-	var { method, arrbuf, width, height, lang='eng', show_progress } = aArg
+	var { method, arrbuf, width, height, lang, show_progress } = aArg
+	if (!lang) lang='eng';
 	// `show_progress` only works for tesseract
 	// method - string;enum['tesseract','ocrad','gocr']
 	// lang only used by tessearact
