@@ -610,7 +610,7 @@ function editorInitShot(aIMon, e) {
 		core: core,
 		fonts: gFonts,
 		editorstateStr: gEditorStateStr,
-		_XFER: ['screenshotArrBuf']
+		__XFER: ['screenshotArrBuf']
 	});
 
 	// set windowtype attribute
