@@ -31,7 +31,6 @@ var Tives = React.createClass({
 var Actives = React.createClass({
 	render: function() {
 		var { actives } = this.props; // mapped state
-		var { setInctive } = this.props; // dispatchers
 
 		var rows = []; // `actives` formated into an array so i can feed it React.createElement via `.map`
 		for (var serviceid in actives) {
@@ -40,8 +39,8 @@ var Actives = React.createClass({
 			rows.push({
 				serviceid,
 				servicename: formatStringFromNameCore(serviceid, 'main'),
-				acctname: oauthentry ? null : deepAccessUsingString(oauthentry, serviceentry.oauth.dotname),
-				acctid: oauthentry ? null : deepAccessUsingString(oauthentry, serviceentry.oauth.dotid)
+				acctname: !oauthentry ? null : deepAccessUsingString(oauthentry, serviceentry.oauth.dotname),
+				acctid: !oauthentry ? null : deepAccessUsingString(oauthentry, serviceentry.oauth.dotid)
 			});
 		}
 		rows.sort((a,b) => a.servicename.localeCompare(b.servicename));
@@ -51,15 +50,30 @@ var Actives = React.createClass({
 		return React.createElement('div', { className:'col-md-12' },
 			React.createElement('div', { className:'shop-detail-info' },
 				React.createElement('h4', undefined, 'Active Accounts'),
-				rows.map( rowentry => React.createElement(ActiveRow, { rowentry, setInactive, key:rowentry.serviceid }) )
+				rows.map( rowentry => React.createElement(ActiveRow, { rowentry, key:rowentry.serviceid }) )
 			)
 		);
 	}
 });
 var ActiveRow = React.createClass({
-	setInactive: function() {
-		var { setInactive } = this.props; // attr
+	doInactivate: function() {
+		var { rowentry } = this.props; // attr
+		var { serviceid } = rowentry;
 
+		console.log(this.props);
+		store.dispatch(setInactive(serviceid));
+	},
+	doAuthWithLogin: function() {
+		var { rowentry } = this.props; // attr
+		var { serviceid } = rowentry;
+
+		alert('do auth with login flow');
+	},
+	doAuth: function() {
+		var { rowentry } = this.props; // attr
+		var { serviceid } = rowentry;
+
+		alert('do auth');
 	},
 	render: function() {
 		var { rowentry } = this.props; // attr
@@ -68,10 +82,51 @@ var ActiveRow = React.createClass({
 
 		var buttons = [];
 		if (acctname) {
-			buttons.push( React.createElement(Button, { key:'deactivate', style:2, size:'sm', text:'Deactivate' }) ); // TODO: l10n
+			buttons.push( React.createElement(Button, { key:'deactivate', style:2, size:'xs', text:'Set Inactive', onClick:this.doInactivate }) ); // TODO: l10n
+			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Add Account', onClick:this.doAuthWithLogin }) ); // TODO: l10n
 		} else {
-			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'sm', text:'Authorize Now' }) ); // TODO: l10n
+			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Authorize Now', onClick:this.doAuth }) ); // TODO: l10n
 		}
+
+		return React.createElement('div', { className:'shop-price' },
+			React.createElement('div', { className:'fl' },
+				React.createElement('div', undefined,
+					React.createElement('h6', { className:'style-link-1 fl' },
+						React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
+					),
+					React.createElement('h5', { className:'fl ' + (acctname ? 'bold' : 'italic') },
+						(acctname || 'No Active Account') // TODO: l10n
+					)
+				)
+			),
+			React.createElement('div', { className:'rate-info fr' },
+				buttons
+			)
+		);
+	}
+});
+var InactiveRow = React.createClass({
+	doActivate: function() {
+		var { rowentry } = this.props; // attr
+		var { serviceid, acctid } = rowentry;
+
+		store.dispatch(setActive(serviceid, acctid));
+	},
+	doNullify: function() {
+		var { rowentry } = this.props; // attr
+		var { serviceid, acctid } = rowentry;
+
+		var where = serviceid + '_inactive';
+		store.dispatch(setNull(where, acctid));
+	},
+	render: function() {
+		var { rowentry } = this.props; // attr
+
+		var { serviceid, servicename, acctname, acctid } = rowentry;
+
+		var buttons = [];
+		buttons.push( React.createElement(Button, { key:'activate', style:2, size:'xs', text:'Set Active', onClick:this.doActivate }) ); // TODO: l10n
+		buttons.push( React.createElement(Button, { key:'forget', style:2, size:'xs', text:'Forget', onClick:this.doNullify	 }) ); // TODO: l10n
 
 		return React.createElement('div', { className:'shop-price' },
 			React.createElement('div', { className:'fl' },
@@ -93,9 +148,41 @@ var ActiveRow = React.createClass({
 var Inactives = React.createClass({
 	render: function() {
 		var { inactives } = this.props; // mapped state
-		var { setActive } = this.props; // dispatchers
+		console.log('inactives:', inactives);
+		var rows = []; // `actives` formated into an array so i can feed it React.createElement via `.map`
+		for (var serviceid in inactives) {
+			var serviceentry = core.nativeshot.services[serviceid];
+			var oauthentry = inactives[serviceid];
+			if (oauthentry) {
+				rows.push(
+					...oauthentry.map(
+						el => ({
+							serviceid,
+							servicename: formatStringFromNameCore(serviceid, 'main'),
+							acctname: deepAccessUsingString(el, serviceentry.oauth.dotname),
+							acctid: deepAccessUsingString(el, serviceentry.oauth.dotid)
+						})
+					)
+				);
+			}
+		}
+		rows.sort((a,b) => a.servicename != b.servicename ? a.servicename.localeCompare(b.servicename) : a.acctname.localeCompare(b.acctname));
+		console.log('rows:', rows);
 
-		return React.createElement('div', undefined, inactives.toString());
+		var rows_rel;
+		if (rows.length) {
+			rows_rel = rows.map( rowentry => React.createElement(InactiveRow, { rowentry, key:rowentry.acctid }) );
+		} else {
+			rows_rel = 'No Inactive Accounts'
+		}
+
+		// actives will have all services in it, if it has no active entry it will be null per link47388
+		return React.createElement('div', { className:'col-md-12' },
+			React.createElement('div', { className:'shop-detail-info' },
+				React.createElement('h4', undefined, 'Inactive Accounts'),
+				rows_rel
+			)
+		);
 	}
 });
 // REACT COMPONENTS - CONTAINER
@@ -123,7 +210,7 @@ var ActivesContainer = ReactRedux.connect(
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
 		return {
-			setInactive: ()=>dispatch(setInactive())
+			// doInactivate: (serviceid)=>dispatch(setInactive(serviceid))
 		};
 	}
 )(Actives);
@@ -136,9 +223,9 @@ var InactivesContainer = ReactRedux.connect(
 		for (var serviceid in services) {
 			var serviceentry = services[serviceid];
 			if (serviceentry.oauth) {
-				var key = serviceid + '_inactive';
-				if (oauth[key]) {
-					inactives[key] = oauth[key];
+				var inactivekey = serviceid + '_inactive';
+				if (oauth[inactivekey]) {
+					inactives[serviceid] = oauth[inactivekey];
 				}
 			}
 		}
@@ -149,10 +236,12 @@ var InactivesContainer = ReactRedux.connect(
 	},
 	function mapDispatchToProps(dispatch, ownProps) {
 		return {
-			setInctive: ()=>dispatch(setInactive())
+			// doActivate: (serviceid)=>dispatch(setActive(serviceid)),
+			// doNullify: (where, acctid)=>dispatch(setNull(where, acctid))
 		};
 	}
 )(Inactives);
+
 // material for app.js
 var gAppPageNarrow = false;
 
@@ -178,7 +267,7 @@ var gAppPageComponents; // done on init, as needs l10n
 
 var hydrant;
 var hydrant_ex = {
-	oauth: {}
+	oauth: []
 }
 var hydrant_ex_instructions = {
 	filestore_entries: ['oauth'],
@@ -238,36 +327,91 @@ const SET_NULL = 'SET_NULL'; // deletes it
 
 
 // ACTION CREATORS
-function setActive(serviceid, entry) {
+function setActive(serviceid, acctid) {
 	return {
 		type: SET_ACTIVE,
 		serviceid,
-		entry
+		acctid
 	}
 }
-function setInactive(serviceid, entry) {
+function setInactive(serviceid) {
+	// because only one account is ever active for a serviceid, i dont need acctid or anything
 	return {
 		type: SET_INACTIVE,
-		serviceid,
-		entry
+		serviceid
 	}
 }
-function setNull(entry) {
+function setNull(where, acctid) {
+	// `where` is key in oauth to find this `acctid`. so its either `serviceid` or `serviceid + '_inactive'`
 	return {
 		type: SET_NULL,
-		entry
+		where,
+		acctid
 	}
 }
 
 // REDUCERS
-function oauth(state=[], action) {
+function oauth(state=hydrant_ex.oauth, action) {
 	switch (action.type) {
 		case SET_ACTIVE:
-			return state;
+			var { serviceid, acctid } = action;
+			var serviceentry = core.nativeshot.services[serviceid];
+
+			var active = state[serviceid];
+			var inactivekey = serviceid + '_inactive';
+			var inactive = state[inactivekey];
+			// console.log('inactive:', inactive);
+			if (!inactive) return state; // this is a deverror, how is `setActive` called when nothing was inactive?
+
+			var newinactive = inactive.filter(el => deepAccessUsingString(el, serviceentry.oauth.dotid) !== acctid);
+			if (active) newinactive.push(active);
+			var newactive = inactive.find(el => deepAccessUsingString(el, serviceentry.oauth.dotid) === acctid);
+			// console.log('newactive:', newactive);
+			if (!newactive) return state; // this is a deverror, how can it not find the thing to activate?
+			// console.log('newinactive:', newinactive);
+
+			var newstate = Object.assign({}, state, {
+				[serviceid]: newactive,
+				[inactivekey]: newinactive
+			});
+
+			return newstate;
 		case SET_INACTIVE:
-			return state;
+			var { serviceid } = action;
+
+			var active = state[serviceid];
+			if (!active) return state; // this is a deverror, how is `setInactive` called when nothing was active?
+			var inactivekey = serviceid + '_inactive';
+			var inactive = state[inactivekey] || [];
+
+			var newinactive = [...inactive, active];
+
+			var newstate = Object.assign({}, state, {
+				[serviceid]: null,
+				[inactivekey]: newinactive
+			});
+
+			return newstate;
 		case SET_NULL:
-			return state;
+			var { where, acctid } = action;
+
+			var newstate;
+			var oauthentry = state[where];
+			if (Array.isArray(oauthentry)) { // can also do `where.endsWith('_inactive')`
+				// it is in inactive
+				var serviceid = where.substr(0, where.indexOf('_'));
+				var serviceentry = core.nativeshot.services[serviceid];
+				var newinactive = oauthentry.filter(el => deepAccessUsingString(el, serviceentry.oauth.dotid) !== acctid);
+				var inactivekey = where;
+				newstate = Object.assign({}, state, {
+					[inactivekey]: newinactive
+				});
+			} else {
+				// it is in active
+				// i currently dont allow this so i didnt bother setting it up
+			}
+
+			return newstate;
 		default:
 			return state;
 	}

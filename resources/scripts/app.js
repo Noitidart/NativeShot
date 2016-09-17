@@ -52,7 +52,7 @@ function init() {
 				hydrant = aArg.hydrant;
 			}
 			if (hydrant_ex_instructions) {
-				hydrant_ex = aArg.hydrant_ex;
+				Object.assign(hydrant_ex, aArg.hydrant_ex);
 			}
 
 			store = Redux.createStore(app);
