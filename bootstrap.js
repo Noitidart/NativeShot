@@ -69,7 +69,8 @@ var core = {
 			twitter: {
 				code: 1,
 				type: 'share',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'user_id',dotname:'screen_name'} // `dotid` and `dotname` are dot paths in the `oauth` filestore entry. `dotid` is meant to point to something that uniquely identifies that account across all accounts on that oauth service's web server
 			},
 			copy: {
 				code: 2,
@@ -108,17 +109,20 @@ var core = {
 			dropbox: {
 				code: 9,
 				type: 'upload',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'uid',dotname:'name.display_name'}
 			},
 			imgur: {
 				code: 10,
 				type: 'upload',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'account_id',dotname:'account_username'}
 			},
 			gdrive: {
 				code: 11,
 				type: 'upload',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'emailAddress',dotname:'displayName'}
 			},
 			gocr: {
 				code: 12,
@@ -154,7 +158,8 @@ var core = {
 			facebook: {
 				code: 17,
 				type: 'share',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'id',dotname:'name'}
 			}
 		}
 	}
