@@ -76,13 +76,14 @@ var ActiveRow = React.createClass({
 		var { rowentry } = this.props; // attr
 		var { serviceid } = rowentry;
 
-		alert('do auth with login flow');
+		// alert('do auth with login flow');
 	},
 	doAuth: function() {
 		var { rowentry } = this.props; // attr
 		var { serviceid } = rowentry;
 
-		alert('do auth');
+		// alert('do auth');
+		callInMainworker('openAuthTab', serviceid);
 	},
 	render: function() {
 		var { rowentry } = this.props; // attr
@@ -90,7 +91,7 @@ var ActiveRow = React.createClass({
 		var { serviceid, servicename, acctname, acctid } = rowentry;
 
 		var buttons = [];
-		if (acctname) {
+		if (acctname !== null) {
 			buttons.push( React.createElement(Button, { key:'deactivate', style:2, size:'xs', text:'Set Inactive', onClick:this.doInactivate }) ); // TODO: l10n
 		} else {
 			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Add Account', onClick:this.doAuth }) ); // TODO: l10n - also if inactives has these accounts then make it "Add Acccount" else make it "Authorize Now"
@@ -105,8 +106,8 @@ var ActiveRow = React.createClass({
 				React.createElement('h6', { className:'style-link-1' },
 					React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
 				),
-				React.createElement('h5', { className:(acctname ? 'bold' : 'italic no-active-acct') },
-					(acctname || '(no active account)') // TODO: l10n
+				React.createElement('h5', { className:(acctname ? 'bold' : (acctname === null ? 'italic no-active-acct' : '')) },
+					(acctname || (acctname === null ? '(no active account)' : '(account name not yet obtained)')) // TODO: l10n
 				)
 			)
 		);
@@ -142,8 +143,8 @@ var InactiveRow = React.createClass({
 					React.createElement('h6', { className:'style-link-1 fl' },
 						React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
 					),
-					React.createElement('h5', { className:'fl ' + (acctname ? 'bold' : 'italic') },
-						(acctname || 'No Active Account') // TODO: l10n
+					React.createElement('h5', { className:(acctname ? 'bold' : (acctname === null ? 'italic no-active-acct' : '')) },
+						(acctname || (acctname === null ? '(no active account)' : '(account name not yet obtained)')) // TODO: l10n
 					)
 				)
 			),
