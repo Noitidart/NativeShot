@@ -243,6 +243,28 @@ var InactivesContainer = ReactRedux.connect(
 			}
 		}
 
+		// this block is very non-redux - its so evil i even do a store.dispatch in here
+		// check if any of the actives are in inactives, and if it is then dont show it
+		// var actives = {};
+		for (var serviceid in services) {
+			var serviceentry = services[serviceid];
+			if (serviceentry.oauth) {
+				var key = serviceid; // + '_inactive';
+				var oauthentry = oauth[key];
+				if (oauth[key]) {
+					var inactive = inactives[serviceid]; // is an array
+					if (inactive) {
+						var acctid = deepAccessUsingString(oauthentry, serviceentry.oauth.dotid);
+						var idx = inactive.findIndex(el => deepAccessUsingString(el, serviceentry.oauth.dotid) === acctid);
+						if (idx > -1) {
+							inactive.splice(idx, 1);
+							setTimeout(()=>store.dispatch(setNull(serviceid+'_inactive', acctid)), 0);
+						}
+					}
+				}
+			}
+		}
+
 		return {
 			inactives
 		};
