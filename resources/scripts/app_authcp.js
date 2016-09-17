@@ -57,7 +57,7 @@ var Actives = React.createClass({
 		// actives will have all services in it, if it has no active entry it will be null per link47388
 		return React.createElement('div', { className:'shoprow col-md-12' },
 			React.createElement('div', { className:'shop-detail-info' },
-				React.createElement('h4', undefined, 'Active Accounts'),
+				React.createElement('h4', undefined, formatStringFromNameCore('accounts_active', 'main')),
 				rows.map( rowentry => React.createElement(ActiveRow, { rowentry, key:rowentry.serviceid }) )
 			),
 			React.createElement('p', { style:{color:'transparent'} }, 'spacer')
