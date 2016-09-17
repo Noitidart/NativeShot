@@ -1,11 +1,11 @@
-<!ENTITY boostrap_lang 'es'>
+<!ENTITY boostrap_lang "es">
 
-<!ENTITY addon_name 'NativeShot'>
+<!ENTITY addon_name "NativeShot">
 
-<!ENTITY title_history 'Historial | NativeShot'>
-<!ENTITY title_options 'Opciones | NativeShot'>
-<!ENTITY title_auth 'Autorización | NativeShot'>
-<!ENTITY title_authcp 'Administrar Autorizaciones | NativeShot'>
-<!ENTITY title_ocr 'Reconocimiento de Texto | NativeShot'>
-<!ENTITY title_tweet 'Tuitear | NativeShot'>
-<!ENTITY title_fbpost 'Publicar en Facebook | NativeShot'>
+<!ENTITY title_history "Historial | NativeShot">
+<!ENTITY title_options "Opciones | NativeShot">
+<!ENTITY title_auth "Autorización | NativeShot">
+<!ENTITY title_authcp "Administrar Autorizaciones | NativeShot">
+<!ENTITY title_ocr "Reconocimiento de Texto | NativeShot">
+<!ENTITY title_tweet "Tuitear | NativeShot">
+<!ENTITY title_fbpost "Publicar en Facebook | NativeShot">

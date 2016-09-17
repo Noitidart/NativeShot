@@ -92,9 +92,9 @@ var ActiveRow = React.createClass({
 
 		var buttons = [];
 		if (acctname !== null) {
-			buttons.push( React.createElement(Button, { key:'deactivate', style:2, size:'xs', text:'Set Inactive', onClick:this.doInactivate }) ); // TODO: l10n
+			buttons.push( React.createElement(Button, { key:'deactivate', style:2, size:'xs', text:formatStringFromNameCore('setinactive', 'main'), onClick:this.doInactivate }) );
 		} else {
-			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Add Account', onClick:this.doAuth }) ); // TODO: l10n - also if inactives has these accounts then make it "Add Acccount" else make it "Authorize Now"
+			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:formatStringFromNameCore('addaccount', 'main'), onClick:this.doAuth }) ); // TODO: if inactives has these accounts then make it "Add Acccount" else make it "Authorize Now"
 		}
 		pushAlternatingRepeating(buttons, ' ');
 
@@ -107,7 +107,7 @@ var ActiveRow = React.createClass({
 					React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
 				),
 				React.createElement('h5', { className:(acctname ? 'bold' : (acctname === null ? 'italic no-active-acct' : '')) },
-					(acctname || (acctname === null ? '(no active account)' : '(account name not yet obtained)')) // TODO: l10n
+					(acctname || (acctname === null ? formatStringFromNameCore('account_noactive', 'main') : formatStringFromNameCore('account_noname', 'main')))
 				)
 			)
 		);
@@ -133,8 +133,8 @@ var InactiveRow = React.createClass({
 		var { serviceid, servicename, acctname, acctid } = rowentry;
 
 		var buttons = [];
-		buttons.push( React.createElement(Button, { key:'forget', style:2, size:'xs', text:'Forget', onClick:this.doNullify	 }) ); // TODO: l10n
-		buttons.push( React.createElement(Button, { key:'activate', style:2, size:'xs', text:'Set Active', onClick:this.doActivate }) ); // TODO: l10n
+		buttons.push( React.createElement(Button, { key:'forget', style:2, size:'xs', text:formatStringFromNameCore('forget', 'main'), onClick:this.doNullify	 }) );
+		buttons.push( React.createElement(Button, { key:'activate', style:2, size:'xs', text:formatStringFromNameCore('setactive', 'main'), onClick:this.doActivate }) );
 		pushAlternatingRepeating(buttons, ' ');
 
 		return React.createElement('div', { className:'shop-price' },
@@ -144,7 +144,7 @@ var InactiveRow = React.createClass({
 						React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
 					),
 					React.createElement('h5', { className:(acctname ? 'bold' : (acctname === null ? 'italic no-active-acct' : '')) },
-						(acctname || (acctname === null ? '(no active account)' : '(account name not yet obtained)')) // TODO: l10n
+						(acctname || (acctname === null ? formatStringFromNameCore('account_noactive', 'main') : formatStringFromNameCore('account_noname', 'main')))
 					)
 				)
 			),
@@ -183,17 +183,17 @@ var Inactives = React.createClass({
 			rows_rel = rows.map( rowentry => React.createElement(InactiveRow, { rowentry, key:rowentry.acctid }) );
 		} else {
 			rows_rel = React.createElement('div', { className:'shop-price no-accounts' },
-				'No Other Accounts'
+				formatStringFromNameCore('accounts_noother', 'main')
 			);
 		}
 
 		// actives will have all services in it, if it has no active entry it will be null per link47388
 		return React.createElement('div', { className:'shoprow col-md-12' },
 			React.createElement('div', { className:'shop-detail-info' },
-				React.createElement('h4', undefined, 'Other Accounts'),
+				React.createElement('h4', undefined, formatStringFromNameCore('accounts_other', 'main')),
 				rows_rel,
 				React.createElement('p', undefined,
-					'NativeShot will not upload to these accounts. These are multiple accounts that you have used and are saved so you do not have to reauthenticate them. If you want to upload to one of these accounts, simply set it to "active".'
+					formatStringFromNameCore('accounts_otherexplain', 'main')
 				)
 			)
 		);
