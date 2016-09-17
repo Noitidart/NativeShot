@@ -47,11 +47,12 @@ var Actives = React.createClass({
 		console.log('rows:', rows);
 
 		// actives will have all services in it, if it has no active entry it will be null per link47388
-		return React.createElement('div', { className:'col-md-12' },
+		return React.createElement('div', { className:'shoprow col-md-12' },
 			React.createElement('div', { className:'shop-detail-info' },
 				React.createElement('h4', undefined, 'Active Accounts'),
 				rows.map( rowentry => React.createElement(ActiveRow, { rowentry, key:rowentry.serviceid }) )
-			)
+			),
+			React.createElement('p', { style:{color:'transparent'} }, 'spacer')
 		);
 	}
 });
@@ -83,24 +84,22 @@ var ActiveRow = React.createClass({
 		var buttons = [];
 		if (acctname) {
 			buttons.push( React.createElement(Button, { key:'deactivate', style:2, size:'xs', text:'Set Inactive', onClick:this.doInactivate }) ); // TODO: l10n
-			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Add Account', onClick:this.doAuthWithLogin }) ); // TODO: l10n
 		} else {
-			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Authorize Now', onClick:this.doAuth }) ); // TODO: l10n
+			buttons.push( React.createElement(Button, { key:'authnow', style:2, size:'xs', text:'Add Account', onClick:this.doAuth }) ); // TODO: l10n - also if inactives has these accounts then make it "Add Acccount" else make it "Authorize Now"
 		}
+		pushAlternatingRepeating(buttons, ' ');
 
 		return React.createElement('div', { className:'shop-price' },
-			React.createElement('div', { className:'fl' },
-				React.createElement('div', undefined,
-					React.createElement('h6', { className:'style-link-1 fl' },
-						React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
-					),
-					React.createElement('h5', { className:'fl ' + (acctname ? 'bold' : 'italic') },
-						(acctname || 'No Active Account') // TODO: l10n
-					)
-				)
-			),
 			React.createElement('div', { className:'rate-info fr' },
 				buttons
+			),
+			React.createElement('div', undefined,
+				React.createElement('h6', { className:'style-link-1' },
+					React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
+				),
+				React.createElement('h5', { className:(acctname ? 'bold' : 'italic no-active-acct') },
+					(acctname || 'No Active Account') // TODO: l10n
+				)
 			)
 		);
 	}
@@ -125,8 +124,9 @@ var InactiveRow = React.createClass({
 		var { serviceid, servicename, acctname, acctid } = rowentry;
 
 		var buttons = [];
-		buttons.push( React.createElement(Button, { key:'activate', style:2, size:'xs', text:'Set Active', onClick:this.doActivate }) ); // TODO: l10n
 		buttons.push( React.createElement(Button, { key:'forget', style:2, size:'xs', text:'Forget', onClick:this.doNullify	 }) ); // TODO: l10n
+		buttons.push( React.createElement(Button, { key:'activate', style:2, size:'xs', text:'Set Active', onClick:this.doActivate }) ); // TODO: l10n
+		pushAlternatingRepeating(buttons, ' ');
 
 		return React.createElement('div', { className:'shop-price' },
 			React.createElement('div', { className:'fl' },
@@ -173,14 +173,19 @@ var Inactives = React.createClass({
 		if (rows.length) {
 			rows_rel = rows.map( rowentry => React.createElement(InactiveRow, { rowentry, key:rowentry.acctid }) );
 		} else {
-			rows_rel = 'No Inactive Accounts'
+			rows_rel = React.createElement('div', { className:'shop-price no-accounts' },
+				'No Other Accounts'
+			);
 		}
 
 		// actives will have all services in it, if it has no active entry it will be null per link47388
-		return React.createElement('div', { className:'col-md-12' },
+		return React.createElement('div', { className:'shoprow col-md-12' },
 			React.createElement('div', { className:'shop-detail-info' },
-				React.createElement('h4', undefined, 'Inactive Accounts'),
-				rows_rel
+				React.createElement('h4', undefined, 'Other Accounts'),
+				rows_rel,
+				React.createElement('p', undefined,
+					'NativeShot will not upload to these accounts. These are multiple accounts that you have used and are saved so you do not have to reauthenticate them. If you want to upload to one of these accounts, simply set it to "active".'
+				)
 			)
 		);
 	}

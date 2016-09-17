@@ -1077,3 +1077,84 @@ span[data-service-name] {
 	padding: 8px;
 	font-weight: 900;
 }
+/** end - page:history **/
+
+/** page:authcp **/
+.shop-detail-info {
+    position: relative;
+    width: 100%;
+}
+.shop-detail-info h4 {
+    padding-bottom: 10px;
+}
+.shop-detail-info h4 {
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.shop-price {
+    position: relative;
+    width: 100%;
+    padding: 5px 0px 5px;
+    float: left;
+}
+.shop-price.no-accounts {
+	text-align: center;
+	font-style: italic;
+	padding: 25px 0px 25px;
+}
+.shop-detail-info .shop-price:first-of-type { /* for some reason doing just `.shop-price:first-child` wouldnt work */
+    border-top: 1px solid #ebebeb;
+}
+.shop-detail-info .shop-price:last-of-type {
+    border-bottom: 1px solid #ebebeb;
+}
+.shop-detail-info p {
+    padding: 25px 0px 30px;
+    position: relative;
+    width: 100%;
+    float: left;
+}
+.fl {
+    position: relative;
+    float: left;
+}
+.fr {
+    position: relative;
+    float: right;
+}
+.rate-info {
+    padding-top: 3px;
+}
+.shop-price h6 {
+    line-height: 20px;
+	display: inline-block;
+}
+.shop-price h6 {
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 300;
+    text-transform: uppercase;
+}
+.shop-price h5 {
+    padding-left: 15px;
+	display: inline-block;
+}
+.shop-price h5 {
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 400;
+    text-transform: uppercase;
+}
+.bold {
+    font-weight: 700;
+}
+.style-link-1 {
+    text-decoration: line-through;
+}
+.shop-price h5.no-active-acct {
+	text-transform: none;
+	font-weight: 300;
+}
+/** end - page:authcp **/

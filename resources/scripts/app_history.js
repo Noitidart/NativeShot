@@ -1272,7 +1272,10 @@ var gAppPageHeaderProps = {
 
 var gAppPageComponents; // done in init as needs l10n
 
-var hydrant, hydrant_ex;
+var hydrant;
+var hydrant_ex = {
+	logsrc: []
+};
 var hydrant_ex_instructions = {
 	logsrc: true
 }
