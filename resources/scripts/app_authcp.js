@@ -9,6 +9,14 @@ function uninitAppPage() {
 
 }
 
+function focusAppPage() {
+	console.error('focused!!!!!!');
+	callInMainworker('fetchCore', { nocore:true, hydrant_ex_instructions }, function(aArg) {
+		store.dispatch(setMainKeys(aArg.hydrant_ex));
+	});
+}
+
+
 // start - react-redux
 
 // REACT COMPONENTS - PRESENTATIONAL
@@ -98,7 +106,7 @@ var ActiveRow = React.createClass({
 					React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
 				),
 				React.createElement('h5', { className:(acctname ? 'bold' : 'italic no-active-acct') },
-					(acctname || 'No Active Account') // TODO: l10n
+					(acctname || '(no active account)') // TODO: l10n
 				)
 			)
 		);
@@ -287,7 +295,6 @@ var hydrant_ex_instructions = {
 
 function shouldUpdateHydrantEx() {
 	var state = store.getState();
-	return; // debug
 	// check if hydrant_ex updated
 	var hydrant_ex_updated = false;
 	for (var p in hydrant_ex) {
@@ -330,6 +337,7 @@ const SET_ACTIVE = 'SET_ACTIVE';
 const SET_INACTIVE = 'SET_INACTIVE';
 const SET_NULL = 'SET_NULL'; // deletes it
 
+const SET_MAIN_KEYS = 'SET_MAIN_KEYS';
 
 // ACTION CREATORS
 function setActive(serviceid, acctid) {
@@ -354,10 +362,21 @@ function setNull(where, acctid) {
 		acctid
 	}
 }
+function setMainKeys(obj_of_mainkeys) {
+	gSupressUpdateHydrantExOnce = true;
+	return {
+		type: SET_MAIN_KEYS,
+		obj_of_mainkeys
+	}
+}
 
 // REDUCERS
 function oauth(state=hydrant_ex.oauth, action) {
 	switch (action.type) {
+		case SET_MAIN_KEYS:
+			var { obj_of_mainkeys } = action;
+			var mainkey = 'oauth';
+			return (mainkey in obj_of_mainkeys ? obj_of_mainkeys[mainkey] : state);
 		case SET_ACTIVE:
 			var { serviceid, acctid } = action;
 			var serviceentry = core.nativeshot.services[serviceid];

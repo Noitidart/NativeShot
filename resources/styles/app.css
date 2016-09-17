@@ -1155,6 +1155,7 @@ span[data-service-name] {
 }
 .shop-price h5.no-active-acct {
 	text-transform: none;
-	font-weight: 300;
+	font-weight: 100;
+	font-style: italic;
 }
 /** end - page:authcp **/
