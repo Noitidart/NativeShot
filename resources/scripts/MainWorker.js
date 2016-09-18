@@ -3956,7 +3956,7 @@ function xhrAsync(aUrlOrFileUri, aOptions={}, aCallback) { // 052716 - added tim
 function setTimeoutSync(aMilliseconds) {
 	var sleptstart = Date.now();
 	var sleptfor = 0;
-	switch (gDWOSName) {
+	switch (core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':

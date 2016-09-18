@@ -1965,7 +1965,7 @@ function launchOrFocusOrReuseTab(aArg, aReportProgress, aComm) {
 
 function mtAutoOauthProc(aArg) {
 	// need on mainthread so i can catch the redir and cancel it
-	var { url } = aArg;
+	var { url, serviceid } = aArg;
 	var deferredmain = new Deferred();
 
 	// start async-proc32219
@@ -1980,10 +1980,15 @@ function mtAutoOauthProc(aArg) {
 				console.log('redirecting from', oldurl, 'to', newurl);
 				if (newurl.startsWith('http://127.0.0.1/nativeshot_')) {
 					redirURLs.push(newurl);
+
+					// not working it really aborts the whole process with logging: "NS_BINDING_ABORTED: Component returned failure code: 0x804b0002 (NS_BINDING_ABORTED) [nsIAsyncVerifyRedirectCallback.onRedirectVerifyCallback"
+					// // trying canceling with callback method
+					// cb.onRedirectVerifyCallback(Cr.NS_BINDING_ABORTED);
+
 					// note: cancelling the request does not make `request.responseURL` be the one of newchannel, it will be that of oldchannel
 						// even though `request.status` will be `30x` and `statusText` also like `Found`, weirdness
-					throw new Error('throw to cancel redir'); // throw to cancel redir per the docs on dxr
 					throw Cr.NS_BINDING_ABORTED;
+					// throw new Error('throw to cancel redir'); // throw to cancel redir per the docs on dxr
 				}
 			}
 		}).then(checkRequest)
@@ -1996,11 +2001,21 @@ function mtAutoOauthProc(aArg) {
 		var { responseURL } = request;
 		console.log('request.responseURL:', request.responseURL);
 		// console.error('request:', request); // if i do this i get `catch` triggered with "error during xhrPromise: DOMException [InvalidStateError: "An attempt was made to use an object that is not, or is no longer, usable" code: 11 nsresult: 0x8053000b location: resource://gre/modules/Console.jsm:255]"
+		if (serviceid == 'twitter' && status == 200) {
+			// twitter does a redirect like this: "<meta http-equiv="refresh" content="0;url=http://127.0.0.1/nativeshot_twitter?oauth_token=TpZnugAAAAAAwPFjAAABVz9wFy8&oauth_verifier=ZRcY9G4KUOCbJ35G8iZz3RY0mRBs6l1K">" which xhr apparently doesnt respect
+			var redirurl_exec = /0;url=http:\/\/127.0.0.1\/nativeshot_twitter[^ '">]+/.exec(response);
+			if (redirurl_exec) {
+				var redirurl = redirurl_exec[0].substr('0;url='.length);
+				if (!redirurl.includes('nativeshot_twitter?denied=')) { // got this from crossfile-link789774
+					redirURLs.push(redirurl);
+				}
+			}
+		}
 		deferredmain.resolve({
 			request: { // modified request, its basically non-objects that get transferred
 				status,
 				statusText,
-				response,
+				response: '', // as i dont want to send huge strings which will be the sourcecode
 				responseURL,
 				redirURLs
 			},
