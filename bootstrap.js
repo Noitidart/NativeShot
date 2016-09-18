@@ -1963,6 +1963,167 @@ function launchOrFocusOrReuseTab(aArg, aReportProgress, aComm) {
 
 }
 
+function mtAutoOauthProc(aArg) {
+	// need on mainthread so i can catch the redir and cancel it
+	var { url } = aArg;
+	var deferredmain = new Deferred();
+
+	// start async-proc32219
+	var redirURLs = []; // this is not how i normally case vars, but i do this so it matches xhr request style, which is like `responseURL`
+	var doRequest = function() {
+		xhrPromise(url, {
+			bgRequest: false, // as default is true
+			loadFlags: 0, // otherwise default is Ci.nsIRequest.LOAD_BYPASS_CACHE | Ci.nsIRequest.INHIBIT_PERSISTENT_CACHING
+			onredirect: function(oldchannel, newchannel, flags, cb) {
+				var oldurl = oldchannel.URI.spec;
+				var newurl = newchannel.URI.spec;
+				console.log('redirecting from', oldurl, 'to', newurl);
+				if (newurl.startsWith('http://127.0.0.1/nativeshot_')) {
+					redirURLs.push(newurl);
+					// note: cancelling the request does not make `request.responseURL` be the one of newchannel, it will be that of oldchannel
+						// even though `request.status` will be `30x` and `statusText` also like `Found`, weirdness
+					throw new Error('throw to cancel redir'); // throw to cancel redir per the docs on dxr
+					throw Cr.NS_BINDING_ABORTED;
+				}
+			}
+		}).then(checkRequest)
+		.catch(rawr=>console.error('error during xhrPromise:', rawr)); // remove on prod
+	};
+
+	var checkRequest = function(xhrArg) {
+		var { request, ok, reason } = xhrArg;
+		var { status, statusText, response } = request;
+		var { responseURL } = request;
+		console.log('request.responseURL:', request.responseURL);
+		// console.error('request:', request); // if i do this i get `catch` triggered with "error during xhrPromise: DOMException [InvalidStateError: "An attempt was made to use an object that is not, or is no longer, usable" code: 11 nsresult: 0x8053000b location: resource://gre/modules/Console.jsm:255]"
+		deferredmain.resolve({
+			request: { // modified request, its basically non-objects that get transferred
+				status,
+				statusText,
+				response,
+				responseURL,
+				redirURLs
+			},
+			ok,
+			reason
+		});
+	};
+
+	doRequest();
+	// end async-proc32219
+
+	return deferredmain.promise;
+}
+
+// rev10 - https://gist.github.com/Noitidart/30e44f6d88423bf5096e
+function xhrPromise(aUrlOrFileUri, aOptions={}) {
+	// does an async request
+	// aUrlOrFileUri is either a string of a FileURI such as `OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'test.png'));` or a URL such as `http://github.com/wet-boew/wet-boew/archive/master.zip`
+		// :note: When using XMLHttpRequest to access a file:// URL the request.status is not properly set to 200 to indicate success. In such cases, request.readyState == 4, request.status == 0 and request.response will evaluate to true.
+	// Returns a promise
+		// resolves with xhr object
+		// rejects with object holding property "xhr" which holds the xhr object
+
+	var aOptionsDefaults = {
+		loadFlags: Ci.nsIRequest.LOAD_ANONYMOUS | Ci.nsIRequest.LOAD_BYPASS_CACHE | Ci.nsIRequest.INHIBIT_PERSISTENT_CACHING, // https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/NsIRequest#Constants
+		// aPostData: null, // discontinued, if you want to post, then set options {method:'POST', data:jQLike.serialize({a:'true',b:'false'})}
+		responseType: 'text',
+		bgRequest: true, // boolean. If true, no load group is associated with the request, and security dialogs are prevented from being shown to the user
+		timeout: 0, // integer, milliseconds, 0 means never timeout, value is in milliseconds
+		headers: null, // make it an object of key value pairs
+		method: 'GET', // string
+		data: null, // make it whatever you want (formdata, null, etc), but follow the rules, like if aMethod is 'GET' then this must be null
+		onredirect: false // http://stackoverflow.com/a/11240627/1828637
+	};
+
+	aOptions = Object.assign(aOptionsDefaults, aOptions);
+
+	var deferredMain_xhr = new Deferred();
+
+	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+
+	var handler = ev => {
+		evf(m => xhr.removeEventListener(m, handler, !1));
+
+		switch (ev.type) {
+			case 'load':
+
+					// note: if url was a file uri, xhr.readyState is 0, but you get to here
+						// otherwise xhr.readyState is 4
+					deferredMain_xhr.resolve({request:xhr, ok:true});
+
+				break;
+			case 'abort':
+			case 'error':
+			case 'timeout':
+
+					deferredMain_xhr.resolve({request:xhr, ok:false, reason:ev.type});
+
+				break;
+			default:
+				var result_details = {
+					reason: 'unknown',
+					request: xhr,
+					message: xhr.statusText + ' [' + ev.type + ':' + xhr.status + ']'
+				};
+				deferredMain_xhr.resolve({request:xhr, ok:false, reason:ev.type, result_details});
+		}
+	};
+
+	var evf = f => ['load', 'error', 'abort', 'timeout'].forEach(f);
+	evf(m => xhr.addEventListener(m, handler, false));
+
+	if (aOptions.bgRequest) xhr.mozBackgroundRequest = true;
+
+    if (aOptions.timeout) xhr.timeout = aOptions.timeout; // set time to timeout after, in ms
+
+	var do_setHeaders = function() {
+		if (aOptions.headers) {
+			for (var h in aOptions.headers) {
+				xhr.setRequestHeader(h, aOptions.headers[h]);
+			}
+		}
+	};
+
+	xhr.open(aOptions.method, aUrlOrFileUri, true);
+	do_setHeaders();
+	xhr.channel.loadFlags = aOptions.loadFlags;
+	xhr.responseType = aOptions.responseType;
+
+	if (aOptions.onredirect) {
+		var oldNotifications = xhr.channel.notificationCallbacks;
+		var oldEventSink = null;
+		xhr.channel.notificationCallbacks = {
+			QueryInterface: XPCOMUtils.generateQI([Ci.nsIInterfaceRequestor, Ci.nsIChannelEventSink]),
+			getInterface: function(iid) {
+				// We are only interested in nsIChannelEventSink, return the old callbacks for any other interface requests.
+				if (iid.equals(Ci.nsIChannelEventSink)) {
+					try {
+						oldEventSink = oldNotifications.QueryInterface(iid);
+					} catch (ignore) {}
+					return this;
+				}
+
+				if (!oldNotifications) throw Cr.NS_ERROR_NO_INTERFACE;
+				return oldNotifications.QueryInterface(iid);
+			},
+			asyncOnChannelRedirect: function(oldChannel, newChannel, flags, callback) {
+				aOptions.onredirect(oldChannel, newChannel, flags, callback); // if i want to cancel the redirect do throw anything per https://dxr.mozilla.org/mozilla-central/source/netwerk/base/nsIChannelEventSink.idl#94
+
+				if (oldEventSink)
+					oldEventSink.asyncOnChannelRedirect(oldChannel, newChannel, flags, callback);
+				else
+					callback.onRedirectVerifyCallback(Cr.NS_OK);
+			}
+		};
+	}
+
+
+	xhr.send(aOptions.data);
+
+	return deferredMain_xhr.promise;
+}
+
 // rev3 - https://gist.github.com/Noitidart/feeec1776c6ee4254a34
 function showFileInOSExplorer(aNsiFile, aDirPlatPath, aFileName) {
 	// can pass in aNsiFile
