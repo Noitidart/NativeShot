@@ -1,6 +1,8 @@
 var CountTo = React.createClass({
 	getInitialState: function() {
-		var { mountval=0 } = this.props;
+		var { mountval } = this.props;
+		if (mountval===undefined) mountval=0;
+		
 		return {
 			val: mountval
 		}

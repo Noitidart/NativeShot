@@ -6344,7 +6344,8 @@ function MyContext(ctx) {
 
 
 // start - pre-init
-var query_str = window.location.href.substr('about:nativeshot?'.length);
+var thehref = window.location.href;
+var query_str = thehref.substr(thehref.indexOf('?')+1);
 // console.log('editor.js query_str:', query_str);
 var tQS = queryStringAsJson(query_str);
 tQS.allMonDim = JSON.parse(decodeURIComponent(tQS.allMonDimStr));

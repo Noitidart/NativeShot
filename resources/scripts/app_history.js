@@ -191,9 +191,15 @@ var Filters = React.createClass({
 
 var Bars = React.createClass({
 	shouldComponentUpdate: function(nextProps, nextState) {
+		var filter = this.props.selected_filter;
+		var newfilter = nextProps.selected_filter;
+		if (filter !== newfilter) {
+			return true;
+		}
+
 		var items = this.props.all_items;
 		var newitems = nextProps.all_items;
-		if (items.length != newitems.length) {
+		if (items.length !== newitems.length) {
 			return true;
 		} else {
 			var l = items.length;
@@ -1120,12 +1126,13 @@ var Pagination = React.createClass({
 
 		var items = filterGalleryItemsBySelected(gallery_items, selected_filter);
 
-		if (!items.length) {
+		var pages = Math.ceil(items.length / perpage);
+
+		if (!items.length || pages === 1) {
 			return React.createElement('div', { id:'pagination' },
 				React.createElement('div', { className:'onpage' }, ' ')
 			);
 		} else {
-			var pages = Math.ceil(items.length / perpage);
 			var rel = [];
 			for (var i=1; i<=pages; i++) {
 				rel.push( React.createElement(PageNumber, { num:i, page, setPage }) );
@@ -1265,7 +1272,10 @@ var gAppPageHeaderProps = {
 
 var gAppPageComponents; // done in init as needs l10n
 
-var hydrant, hydrant_ex;
+var hydrant;
+var hydrant_ex = {
+	logsrc: []
+};
 var hydrant_ex_instructions = {
 	logsrc: true
 }

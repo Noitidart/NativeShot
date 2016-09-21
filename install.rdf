@@ -5,7 +5,7 @@
 	<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:em="http://www.mozilla.org/2004/em-rdf#">
 	  <Description about="urn:mozilla:install-manifest">
 		<em:id>NativeShot@jetpack</em:id>
-		<em:version>1.10b</em:version>
+		<em:version>1.12b</em:version>
 		<em:type>2</em:type>
 		<em:bootstrap>true</em:bootstrap>
 		<em:multiprocessCompatible>true</em:multiprocessCompatible>
@@ -48,6 +48,16 @@
 				<em:creator>Noitidart</em:creator>
 				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
 				<em:translator>noureddin</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>bg</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Инструмент за снимане и редактиране на каквото и да е по екрана</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>АдмиралАнимЕ</em:translator>
 			</Description>
 		</em:localized>
 		<em:localized>

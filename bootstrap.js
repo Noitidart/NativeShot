@@ -69,7 +69,8 @@ var core = {
 			twitter: {
 				code: 1,
 				type: 'share',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'user_id',dotname:'screen_name'} // `dotid` and `dotname` are dot paths in the `oauth` filestore entry. `dotid` is meant to point to something that uniquely identifies that account across all accounts on that oauth service's web server
 			},
 			copy: {
 				code: 2,
@@ -108,17 +109,20 @@ var core = {
 			dropbox: {
 				code: 9,
 				type: 'upload',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'uid',dotname:'name.display_name'}
 			},
 			imgur: {
 				code: 10,
 				type: 'upload',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'account_id',dotname:'account_username'}
 			},
 			gdrive: {
 				code: 11,
 				type: 'upload',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'emailAddress',dotname:'displayName'}
 			},
 			gocr: {
 				code: 12,
@@ -154,7 +158,8 @@ var core = {
 			facebook: {
 				code: 17,
 				type: 'share',
-				datatype: 'png_arrbuf'
+				datatype: 'png_arrbuf',
+				oauth: {dotid:'id',dotname:'name'}
 			}
 		}
 	}
@@ -192,7 +197,7 @@ function uninstall(aData, aReason) {
     if (aReason == ADDON_UNINSTALL) {
 		// we have to access the locale pacage with jar path, as at this point chrome:// doesnt work
 
-		var addon_locales = ['ar', 'ca', 'de', 'es-ES', 'et', 'fr', 'it', 'ja', 'lt', 'nl', 'po', 'pt-BR', 'ro', 'ru','zh-CN']; // available locales from my addon. must match exactly the casing of the directory in my "locale/" directory
+		var addon_locales = ['ar', 'bg', 'ca', 'de', 'es-ES', 'et', 'fr', 'it', 'ja', 'lt', 'nl', 'po', 'pt-BR', 'ro', 'ru','zh-CN']; // available locales from my addon. must match exactly the casing of the directory in my "locale/" directory
 		var lang = LOCALE.findClosestLocale(addon_locales, LOCALE.getPreferedLocales()) || 'en-US';
 		var jarpath_main_properties = __SCRIPT_URI_SPEC__.replace('/bootstrap.js', '/locale/' + lang + '/main.properties'); // TODO: figure out the `lang` that is used when picking `chrome` package, like if it doesnt find `en` it falls back to closest which is like `en-US`, figure that calculation out
 		var jarpath_enus_main_properties = __SCRIPT_URI_SPEC__.replace('/bootstrap.js', '/locale/en-US/main.properties');
@@ -405,6 +410,15 @@ function guiSetBadge(aTxt) {
 	}
 }
 
+var keydetected_mt;
+var shotgot_mt;
+var shotstart_mt;
+var shotcol_mt;
+var shotopen_0;
+var shotopen_1;
+var shotopen_done_0;
+var shotopen_done_1;
+
 function takeShot() {
 	gSession.id = Date.now();
 	// start - async-proc939333
@@ -412,6 +426,7 @@ function takeShot() {
 	var allMonDimStr;
 	var shootAllMons = function() {
 		callInMainworker('shootAllMons', undefined, function(aArg) {
+			shotgot_mt = Date.now();
 			var { collMonInfos } = aArg;
 
 			for (var i=0; i<collMonInfos.length; i++) {
@@ -450,6 +465,7 @@ function takeShot() {
 	};
 
 	var ensureGlobalEditorstate = function() {
+		shotcol_mt = Date.now();
 		if (!gEditorStateStr) {
 			callInMainworker('fetchFilestoreEntry', {mainkey:'editorstate'}, function(aArg) {
 				gEditorStateStr = JSON.stringify(aArg);
@@ -492,10 +508,15 @@ function takeShot() {
 				},
 				shot
 			);
+			delete query_json.arrbuf;
+			delete query_json.port1;
+			delete query_json.port2;
+			delete query_json.screenshot;
 			// console.log('query_json:', query_json);
 			var query_str = jQLike.serialize(query_json);
 			// console.log('query_str:', query_str);
 
+			gCommScope['shotopen_' + i] = Date.now();
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 			// editor_domwin.addEventListener('load', function() {
 			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
@@ -507,6 +528,7 @@ function takeShot() {
 	};
 
 	shootAllMons();
+	shotstart_mt = Date.now();
 	// end - async-proc939333
 }
 
@@ -542,9 +564,9 @@ function editorInitShot(aIMon, e) {
 
 	domwin.focus();
 
-	if (core.os.mname == 'gtk') {
-		domwin.fullScreen = true;
-	}
+	// if (core.os.mname == 'gtk') {
+	// 	domwin.fullScreen = true;
+	// }
 
 	// set window on top:
 	var aArrHwndPtrStr = [aHwndPtrStr];
@@ -593,7 +615,7 @@ function editorInitShot(aIMon, e) {
 		core: core,
 		fonts: gFonts,
 		editorstateStr: gEditorStateStr,
-		_XFER: ['screenshotArrBuf']
+		__XFER: ['screenshotArrBuf']
 	});
 
 	// set windowtype attribute
@@ -719,6 +741,8 @@ function exitEditors(aArg) {
 	// 	}
 	// }
 	// // colMon[0].E.DOMWindow.close();
+
+	Comm.server.unregAll('content');
 
 	var sessionid = gSession.id;
 	gSession = {}; // gEditor.cleanUp();
@@ -1031,6 +1055,16 @@ var windowListener = {
 				// console.log('got nscomm', e.detail);
 				var detail = e.detail;
 				var iMon = detail;
+				gCommScope['shotopen_done_' + detail] = Date.now();
+				// if (shotopen_done_0 > keydetected_mt && shotopen_done_1 > keydetected_mt) {
+				// 	console['error']('Time from keydetected_mt to start shot:', (shotstart_mt - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to get from worker:', (shotgot_mt - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to collect:', (shotcol_mt - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to start open 0:', (shotopen_0 - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to start open 1:', (shotopen_1 - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to done open 0:', (shotopen_done_0 - keydetected_mt));
+				// 	console['error']('Time from keydetected_mt to done open 1:', (shotopen_done_1 - keydetected_mt));
+				// }
 				var shot = gSession.shots[iMon];
 				if (Services.vc.compare(core.firefox.version, '46.*') > 0) {
 					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
@@ -1788,6 +1822,13 @@ function attnMenuClick(doClose, aBrowser) {
 			case formatStringFromNameCore('show_in_explorer', 'main'):
 					showFileInOSExplorer(new nsIFile(this.btn.meta.data.copytxt));
 				break;
+			case formatStringFromNameCore('show_response_details', 'main'):
+					var error_details = this.btn.meta.data.response_details;
+					if (typeof(error_details) == 'object') {
+						error_details = BEAUTIFY.js(JSON.stringify(error_details));
+					}
+					Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), formatStringFromNameCore('prompt_title_show_error_details', 'main'), error_details);
+				break;
 			case formatStringFromNameCore('show_error_details', 'main'):
 					var error_details = this.btn.meta.data.error_details;
 					if (typeof(error_details) == 'object') {
@@ -1920,6 +1961,182 @@ function launchOrFocusOrReuseTab(aArg, aReportProgress, aComm) {
 		window.gBrowser.loadOneTab(url, { inBackground:false, relatedToCurrent:true });
 	}
 
+}
+
+function mtAutoOauthProc(aArg) {
+	// need on mainthread so i can catch the redir and cancel it
+	var { url, serviceid } = aArg;
+	var deferredmain = new Deferred();
+
+	// start async-proc32219
+	var redirURLs = []; // this is not how i normally case vars, but i do this so it matches xhr request style, which is like `responseURL`
+	var doRequest = function() {
+		xhrPromise(url, {
+			bgRequest: false, // as default is true
+			loadFlags: 0, // otherwise default is Ci.nsIRequest.LOAD_BYPASS_CACHE | Ci.nsIRequest.INHIBIT_PERSISTENT_CACHING
+			onredirect: function(oldchannel, newchannel, flags, cb) {
+				var oldurl = oldchannel.URI.spec;
+				var newurl = newchannel.URI.spec;
+				console.log('redirecting from', oldurl, 'to', newurl);
+				if (newurl.startsWith('http://127.0.0.1/nativeshot_')) {
+					redirURLs.push(newurl);
+
+					// not working it really aborts the whole process with logging: "NS_BINDING_ABORTED: Component returned failure code: 0x804b0002 (NS_BINDING_ABORTED) [nsIAsyncVerifyRedirectCallback.onRedirectVerifyCallback"
+					// // trying canceling with callback method
+					// cb.onRedirectVerifyCallback(Cr.NS_BINDING_ABORTED);
+
+					// note: cancelling the request does not make `request.responseURL` be the one of newchannel, it will be that of oldchannel
+						// even though `request.status` will be `30x` and `statusText` also like `Found`, weirdness
+					throw Cr.NS_BINDING_ABORTED;
+					// throw new Error('throw to cancel redir'); // throw to cancel redir per the docs on dxr
+				}
+			}
+		}).then(checkRequest)
+		.catch(rawr=>console.error('error during xhrPromise:', rawr)); // remove on prod
+	};
+
+	var checkRequest = function(xhrArg) {
+		var { request, ok, reason } = xhrArg;
+		var { status, statusText, response } = request;
+		var { responseURL } = request;
+		console.log('request.responseURL:', request.responseURL);
+		// console.error('request:', request); // if i do this i get `catch` triggered with "error during xhrPromise: DOMException [InvalidStateError: "An attempt was made to use an object that is not, or is no longer, usable" code: 11 nsresult: 0x8053000b location: resource://gre/modules/Console.jsm:255]"
+		if (serviceid == 'twitter' && status == 200) {
+			// twitter does a redirect like this: "<meta http-equiv="refresh" content="0;url=http://127.0.0.1/nativeshot_twitter?oauth_token=TpZnugAAAAAAwPFjAAABVz9wFy8&oauth_verifier=ZRcY9G4KUOCbJ35G8iZz3RY0mRBs6l1K">" which xhr apparently doesnt respect
+			var redirurl_exec = /0;url=http:\/\/127.0.0.1\/nativeshot_twitter[^ '">]+/.exec(response);
+			if (redirurl_exec) {
+				var redirurl = redirurl_exec[0].substr('0;url='.length);
+				if (!redirurl.includes('nativeshot_twitter?denied=')) { // got this from crossfile-link789774
+					redirURLs.push(redirurl);
+				}
+			}
+		}
+		deferredmain.resolve({
+			request: { // modified request, its basically non-objects that get transferred
+				status,
+				statusText,
+				response: '', // as i dont want to send huge strings which will be the sourcecode
+				responseURL,
+				redirURLs
+			},
+			ok,
+			reason
+		});
+	};
+
+	doRequest();
+	// end async-proc32219
+
+	return deferredmain.promise;
+}
+
+// rev10 - https://gist.github.com/Noitidart/30e44f6d88423bf5096e
+function xhrPromise(aUrlOrFileUri, aOptions={}) {
+	// does an async request
+	// aUrlOrFileUri is either a string of a FileURI such as `OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'test.png'));` or a URL such as `http://github.com/wet-boew/wet-boew/archive/master.zip`
+		// :note: When using XMLHttpRequest to access a file:// URL the request.status is not properly set to 200 to indicate success. In such cases, request.readyState == 4, request.status == 0 and request.response will evaluate to true.
+	// Returns a promise
+		// resolves with xhr object
+		// rejects with object holding property "xhr" which holds the xhr object
+
+	var aOptionsDefaults = {
+		loadFlags: Ci.nsIRequest.LOAD_ANONYMOUS | Ci.nsIRequest.LOAD_BYPASS_CACHE | Ci.nsIRequest.INHIBIT_PERSISTENT_CACHING, // https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/NsIRequest#Constants
+		// aPostData: null, // discontinued, if you want to post, then set options {method:'POST', data:jQLike.serialize({a:'true',b:'false'})}
+		responseType: 'text',
+		bgRequest: true, // boolean. If true, no load group is associated with the request, and security dialogs are prevented from being shown to the user
+		timeout: 0, // integer, milliseconds, 0 means never timeout, value is in milliseconds
+		headers: null, // make it an object of key value pairs
+		method: 'GET', // string
+		data: null, // make it whatever you want (formdata, null, etc), but follow the rules, like if aMethod is 'GET' then this must be null
+		onredirect: false // http://stackoverflow.com/a/11240627/1828637
+	};
+
+	aOptions = Object.assign(aOptionsDefaults, aOptions);
+
+	var deferredMain_xhr = new Deferred();
+
+	var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+
+	var handler = ev => {
+		evf(m => xhr.removeEventListener(m, handler, !1));
+
+		switch (ev.type) {
+			case 'load':
+
+					// note: if url was a file uri, xhr.readyState is 0, but you get to here
+						// otherwise xhr.readyState is 4
+					deferredMain_xhr.resolve({request:xhr, ok:true});
+
+				break;
+			case 'abort':
+			case 'error':
+			case 'timeout':
+
+					deferredMain_xhr.resolve({request:xhr, ok:false, reason:ev.type});
+
+				break;
+			default:
+				var result_details = {
+					reason: 'unknown',
+					request: xhr,
+					message: xhr.statusText + ' [' + ev.type + ':' + xhr.status + ']'
+				};
+				deferredMain_xhr.resolve({request:xhr, ok:false, reason:ev.type, result_details});
+		}
+	};
+
+	var evf = f => ['load', 'error', 'abort', 'timeout'].forEach(f);
+	evf(m => xhr.addEventListener(m, handler, false));
+
+	if (aOptions.bgRequest) xhr.mozBackgroundRequest = true;
+
+    if (aOptions.timeout) xhr.timeout = aOptions.timeout; // set time to timeout after, in ms
+
+	var do_setHeaders = function() {
+		if (aOptions.headers) {
+			for (var h in aOptions.headers) {
+				xhr.setRequestHeader(h, aOptions.headers[h]);
+			}
+		}
+	};
+
+	xhr.open(aOptions.method, aUrlOrFileUri, true);
+	do_setHeaders();
+	xhr.channel.loadFlags = aOptions.loadFlags;
+	xhr.responseType = aOptions.responseType;
+
+	if (aOptions.onredirect) {
+		var oldNotifications = xhr.channel.notificationCallbacks;
+		var oldEventSink = null;
+		xhr.channel.notificationCallbacks = {
+			QueryInterface: XPCOMUtils.generateQI([Ci.nsIInterfaceRequestor, Ci.nsIChannelEventSink]),
+			getInterface: function(iid) {
+				// We are only interested in nsIChannelEventSink, return the old callbacks for any other interface requests.
+				if (iid.equals(Ci.nsIChannelEventSink)) {
+					try {
+						oldEventSink = oldNotifications.QueryInterface(iid);
+					} catch (ignore) {}
+					return this;
+				}
+
+				if (!oldNotifications) throw Cr.NS_ERROR_NO_INTERFACE;
+				return oldNotifications.QueryInterface(iid);
+			},
+			asyncOnChannelRedirect: function(oldChannel, newChannel, flags, callback) {
+				aOptions.onredirect(oldChannel, newChannel, flags, callback); // if i want to cancel the redirect do throw anything per https://dxr.mozilla.org/mozilla-central/source/netwerk/base/nsIChannelEventSink.idl#94
+
+				if (oldEventSink)
+					oldEventSink.asyncOnChannelRedirect(oldChannel, newChannel, flags, callback);
+				else
+					callback.onRedirectVerifyCallback(Cr.NS_OK);
+			}
+		};
+	}
+
+
+	xhr.send(aOptions.data);
+
+	return deferredMain_xhr.promise;
 }
 
 // rev3 - https://gist.github.com/Noitidart/feeec1776c6ee4254a34
@@ -2178,9 +2395,10 @@ function extractData(aActionId) {
 	}
 }
 
-function shouldTakeShot() {
+function shouldTakeShot(key_detected) {
 	// does takeShot if no session in progress
 	if (!gSession.id) {
+		keydetected_mt = key_detected;
 		takeShot();
 	}
 	else { console.warn('screenshot session currently in progress so will not takeShot'); }

@@ -495,7 +495,7 @@ header.type3 {
 .pref-block-value {position: relative; width: 100%; padding: 20px 15px; border-bottom: 1px solid #ebebeb; white-space: nowrap; }
 .pref-block-value span {font-size: 40px; color: #222; line-height: 80px; white-space: nowrap;}
 /*.pref-block-value sup {font-size: 40px; top: -0.6em; padding-right: 3px;}*/
-.pref-block-value sup { font-size: 20px; position: absolute; top: 25%; left: 10%; color: #666; white-space: nowrap; }
+.pref-block-value sup { font-size: 20px; position: absolute; top: 25%; left: 10%; color: #666; white-space: nowrap; direction: ltr; }
 .pref-block-value sub {font-size: 24px; bottom: 0px;}
 .pref-block ul {position: relative; width: 100%; padding: 25px 0px;}
 .pref-block ul li {padding: 3px 0px; font-size: 14px; line-height: 32px; font-weight: 300;}
@@ -1077,3 +1077,85 @@ span[data-service-name] {
 	padding: 8px;
 	font-weight: 900;
 }
+/** end - page:history **/
+
+/** page:authcp **/
+.shop-detail-info {
+    position: relative;
+    width: 100%;
+}
+.shop-detail-info h4 {
+    padding-bottom: 10px;
+}
+.shop-detail-info h4 {
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.shop-price {
+    position: relative;
+    width: 100%;
+    padding: 5px 0px 5px;
+    float: left;
+}
+.shop-price.no-accounts {
+	text-align: center;
+	font-style: italic;
+	padding: 25px 0px 25px;
+}
+.shop-detail-info .shop-price:first-of-type { /* for some reason doing just `.shop-price:first-child` wouldnt work */
+    border-top: 1px solid #ebebeb;
+}
+.shop-detail-info .shop-price:last-of-type {
+    border-bottom: 1px solid #ebebeb;
+}
+.shop-detail-info p {
+    padding: 25px 0px 30px;
+    position: relative;
+    width: 100%;
+    float: left;
+}
+.fl {
+    position: relative;
+    float: left;
+}
+.fr {
+    position: relative;
+    float: right;
+}
+.rate-info {
+    padding-top: 3px;
+}
+.shop-price h6 {
+    line-height: 20px;
+	display: inline-block;
+}
+.shop-price h6 {
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 300;
+    text-transform: uppercase;
+}
+.shop-price h5 {
+    padding-left: 15px;
+	display: inline-block;
+}
+.shop-price h5 {
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 400;
+    text-transform: uppercase;
+}
+.bold {
+    font-weight: 700;
+}
+.style-link-1 {
+    text-decoration: line-through;
+}
+.shop-price h5.no-active-acct {
+	text-transform: none;
+	font-weight: 100;
+	font-style: italic;
+}
+/** end - page:authcp **/

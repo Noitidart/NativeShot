@@ -1,0 +1,11 @@
+<!ENTITY boostrap_lang "bg">
+
+<!ENTITY addon_name "НейтивШот">
+
+<!ENTITY title_history "Хронология">
+<!ENTITY title_options "Настройки">
+<!ENTITY title_auth "Упълномощаване">
+<!ENTITY title_authcp "Управление на упълномощаванията">
+<!ENTITY title_ocr "Разпознаване на текст">
+<!ENTITY title_tweet "Публикуване в Туитър">
+<!ENTITY title_fbpost "Публикуване във Фейсбук">

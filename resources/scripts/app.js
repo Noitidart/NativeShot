@@ -52,7 +52,7 @@ function init() {
 				hydrant = aArg.hydrant;
 			}
 			if (hydrant_ex_instructions) {
-				hydrant_ex = aArg.hydrant_ex;
+				Object.assign(hydrant_ex, aArg.hydrant_ex);
 			}
 
 			store = Redux.createStore(app);
@@ -259,7 +259,8 @@ var Header = React.createClass({
 				logo - should be 32x32 img path defaults:"chrome://nativeshot/content/resources/images/icon32.png"
 				logo_margin - defaults:undefined
 				*/
-				var { text, logo_margin, logowidth, logoheight, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
+				var { text, logo_margin, logowidth, logoheight, logo } = this.props;
+				if (!logo) logo = 'chrome://nativeshot/content/resources/images/icon32.png';
 
 				return React.createElement('header', { className:'type1' },
 					React.createElement('div', { className:'header-text' },
@@ -278,7 +279,9 @@ var Header = React.createClass({
 				minorlogo
 				minorlogo_margin
 				*/
-				var { text, logo_margin, logowidth, logoheight, logo='chrome://nativeshot/content/resources/images/icon32.png', minortext, minorlogo='chrome://nativeshot/content/resources/images/icon16.png', minorlogo_margin } = this.props;
+				var { text, logo_margin, logowidth, logoheight, logo, minortext, minorlogo, minorlogo_margin } = this.props;
+				if (!logo) logo='chrome://nativeshot/content/resources/images/icon32.png';
+				if (!minorlogo) minorlogo='chrome://nativeshot/content/resources/images/icon16.png';
 
 				return React.createElement('header', { className:'type2' },
 					React.createElement('div', { className:'header-text' },
@@ -292,7 +295,8 @@ var Header = React.createClass({
 				);
 			case 3:
 				// with menu, as scroll menu moves to top right and main text to top left
-				var { text, menu, logo_margin, logo='chrome://nativeshot/content/resources/images/icon32.png' } = this.props;
+				var { text, menu, logo_margin, logo} = this.props;
+				if (!logo) logo='chrome://nativeshot/content/resources/images/icon32.png';
 
 				return React.createElement('div', { className:'header-fix-wrap' + (this.shouldThinform(window.scrollY, true) ? ' thinform' : '') }, // window.scrollY is 0, until i put in overflowing text so this doesnt work right now
 					React.createElement('div', { className:'header type3' },
@@ -378,7 +382,9 @@ var BurgerMenu = React.createClass({
 
 var Button = React.createClass({
 	render: function() {
-		var { style=1, text, size='md', onClick } = this.props;
+		var { style, text, size, onClick } = this.props;
+		if (!size) size='md';
+		if (style === undefined) style=1;
 		// size - string;enum:xs,sm,md,lg
 		// style - int;enum:1,2,3,4,5,6
 
@@ -434,7 +440,8 @@ var Dropdown = React.createClass({
 		}
 	},
 	render: function() {
-		var { style=1, size, onChange, label, alwaysShowLabel, options } = this.props;
+		var { style, size, onChange, label, alwaysShowLabel, options } = this.props;
+		if (style === undefined) style=1;
 		var { selected } = this.state;
 		// style right now is unused
 		// selected is reference to object in options

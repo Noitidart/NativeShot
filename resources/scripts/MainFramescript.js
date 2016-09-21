@@ -319,7 +319,7 @@ var progressListener = {
 							console.log('progressListener :: onStateChange, ok replaced');
 						}
 					}
-				} else if (url_lower == 'https://api.twitter.com/oauth/authorize' && (flags & Ci.nsIWebProgressListener.STATE_STOP) && window && window.document.documentElement.innerHTML.includes('nativeshot_twitter?denied=')) {
+				} else if (url_lower == 'https://api.twitter.com/oauth/authorize' && (flags & Ci.nsIWebProgressListener.STATE_STOP) && window && window.document.documentElement.innerHTML.includes('nativeshot_twitter?denied=')) { // crossfile-link789774
 					// console.log('twitter auth innerHTML:', window.document.body.innerHTML);
 					window.location.href = 'about:nativeshot?twitter/denied';
 				}

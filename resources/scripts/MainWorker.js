@@ -506,6 +506,7 @@ function trashFile(aFilePlatPath) {
 }
 
 function shootAllMons() {
+	shot_started = Date.now();
 
 	var collMonInfos = [];
 
@@ -1336,6 +1337,10 @@ function shootAllMons() {
 
 	}
 
+	shot_done = Date.now();
+	// console['error']('Time from key detect to shot start:', (shot_started - key_detected));
+	// console['error']('Time to take shot:', (shot_done - shot_started));
+	// console['error']('Time from key detect to shot done:', (shot_done - key_detected));
 	return rez;
 }
 
@@ -1977,6 +1982,7 @@ function setWinAlwaysOnTop(aArg) {
 					XWindow = parseInt(cutils.jscGetDeepest(XWindow));
 					console.log('XWindow1b:', XWindow);
 
+					xcbMakeFullscreen(XWindow, true);
 					xcbSetAlwaysOnTop(XWindow);
 
 					// continue;
@@ -3272,6 +3278,9 @@ function hotkeysShouldUnregister() {
 }
 
 var gHKI;
+var key_detected = 0;
+var shot_started = 0;
+var shot_done = 0;
 
 function initHotkeys() {
 	// as need access to `core` and its properties
@@ -3283,8 +3292,9 @@ function initHotkeys() {
 	    hotkeys: undefined,
 	    callbacks: {
 			screenshot: function() {
+				key_detected = Date.now();
 				console.error('in trigger callback! "screenshot"');
-				callInBootstrap('shouldTakeShot');
+				callInBootstrap('shouldTakeShot', key_detected);
 			}
 	    }
 	};
@@ -3445,6 +3455,27 @@ function xcbUnmapOrMapTill(aWin, aMap, aTimesVerify, aDontDoFirst) {
 
 		ostypes.API('free')(rez_attr);
 		// end check attr
+	}
+}
+
+function xcbMakeFullscreen(aXcbWindowT, aDontFlush) {
+	var win = aXcbWindowT;
+
+	var ev = ostypes.TYPE.xcb_client_message_event_t();
+	ev.response_type = ostypes.CONST.XCB_CLIENT_MESSAGE;
+	ev.window = aXcbWindowT;
+	ev.format = 32;
+	ev.data.data32[1] = ostypes.CONST.XCB_CURRENT_TIME;
+	ev.type = ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE');
+	ev.data.data32[0] = ostypes.CONST._NET_WM_STATE_ADD;
+	ev.data.data32[1] = ostypes.HELPER.cachedXCBAtom('_NET_WM_STATE_FULLSCREEN');
+
+	var rez_send = ostypes.API('xcb_send_event')(ostypes.HELPER.cachedXCBConn(), 0, ostypes.HELPER.cachedXCBRootWindow(), ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | ostypes.CONST.XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, ctypes.cast(ev.address(), ctypes.char.ptr));
+	console.log('rez_send:', rez_send);
+
+	if (!aDontFlush) {
+		var rez_flush = ostypes.API('xcb_flush')(ostypes.HELPER.cachedXCBConn());
+		console.log('rez_flush:', rez_flush);
 	}
 }
 
@@ -3694,10 +3725,14 @@ function importOldHistory() {
 
 		merged.sort((a,b) => a.d - b.d);
 
+		var filtered = merged.filter((item, pos) => merged.findIndex(el => el.d === item.d) === pos)
+
 		updateFilestoreEntry({
-			value: merged,
+			value: filtered,
 			mainkey: 'log'
 		});
+
+		OS.File.remove(path);
 	}
 }
 // End - Addon Functionality
@@ -3921,7 +3956,7 @@ function xhrAsync(aUrlOrFileUri, aOptions={}, aCallback) { // 052716 - added tim
 function setTimeoutSync(aMilliseconds) {
 	var sleptstart = Date.now();
 	var sleptfor = 0;
-	switch (gDWOSName) {
+	switch (core.os.name) {
 		case 'winnt':
 		case 'winmo':
 		case 'wince':
