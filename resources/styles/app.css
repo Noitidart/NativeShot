@@ -19,6 +19,11 @@ html[lang=ur] * {
 	letter-spacing: 0 !important;
 }
 
+/* no text-transform */
+html[lang=de] * {
+	text-transform: none !important;
+}
+
 /* fonts */
 /* fonts */
 @font-face {
@@ -204,7 +209,7 @@ header.type3 {
     font-weight: 700;
     justify-content: center;
     letter-spacing: 5px;
-    /* text-transform: uppercase; */
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
@@ -269,7 +274,7 @@ header.type3 {
         font-weight: 700;
         color: #000;
         letter-spacing: 5px;
-        /* text-transform: uppercase; */
+        text-transform: uppercase;
         white-space: nowrap;
         margin-top: 10px;
         transition: margin-top 201ms;
@@ -283,7 +288,7 @@ header.type3 {
     nav li {
         color: #1a1a1a;
         font-weight: 700;
-        /* text-transform: uppercase; */
+        text-transform: uppercase;
         font-size: 1em;
         list-style: none;
         letter-spacing: 3px;
@@ -380,7 +385,7 @@ header.type3 {
 /* domgroup:burger */
 .nav-menu-icon {width: 24px; height: 24px; z-index: 600; margin-right: 0px; transition:all .2s ease-out;}
 .nav-menu-icon a {display: inline-block;width:24px;height:24px;cursor: pointer;text-decoration: none;}
-.nav-menu-icon a i {position: relative;display: inline-block;width: 24px;height: 3px;color:#000;text-indent:-55px;background: #000;transition:all .2s ease-out;}
+.nav-menu-icon a i {position: relative;display: inline-block;width: 24px;height: 3px;color:#000;text-transform: uppercase;text-indent:-55px;background: #000;transition:all .2s ease-out;}
 .nav-menu-icon a i:before, .nav-menu-icon a i:after {content:''; width: 24px;height: 3px;background: #262626;position: absolute;left:0;transition:all .2s ease-out;}
 .nav-menu-icon a i:before {top: -7px;}
 .nav-menu-icon a i:after {bottom: -7px;}
@@ -393,7 +398,7 @@ header.type3 {
 
 /* domgroup:buttons */
 .butt-style { display: inline-block; }
-.butt-style a { cursor:pointer; display: block; letter-spacing: 1px; font-weight: 300; transition: all 0.27s ease-out;}
+.butt-style a { cursor:pointer; text-transform: uppercase;  display: block; letter-spacing: 1px; font-weight: 300; transition: all 0.27s ease-out;}
 .button-style-1 a { background: none; border: 1px solid #222; color: #222; display: inline-block;}
 .button-style-1 a:hover {background: #222; color: #fff;}
 .button-style-2 a { background: #222; border: 1px solid #222; color: #fff; display: inline-block;}
@@ -416,9 +421,10 @@ header.type3 {
 .dropdown-open .fa-down-thin { transform: rotate(180deg); }
 
 .dropdown-container { display: inline-block; position:relative; cursor: pointer; }
-.dropdown-display, .dropdown-list-item {display: block; letter-spacing: 1px; font-weight: 300; transition: all 0.27s cubic-bezier(0.000, 0.000, 0.580, 1.000);}
-.dropdown-display{min-width: 133%;}
-.dropdown-list { position: absolute;  }
+.dropdown-display, .dropdown-list-item {text-transform: uppercase;  display: block; letter-spacing: 1px; font-weight: 300; transition: all 0.27s cubic-bezier(0.000, 0.000, 0.580, 1.000);}
+
+.dropdown-list { position: absolute; width: 100%; }
+.dropdown-list-item { width: 100%; }
 
 
 .dropdown-style-1 .dropdown-display  { background: #fff; border: 1px solid #222; color: #222; display: inline-block;}
@@ -490,9 +496,9 @@ header.type3 {
 /* domgroup:block */
 .pref-block {position: relative; width: 100%; border: 1px solid #ebebeb; float: left; text-align: center; padding-bottom: 25px;}
 .pref-block-title {position: relative; width: 100%; border-bottom: 1px solid #ebebeb; padding: 15px 0px;}
-.pref-block-title h4 {font-weight: 700; }
+.pref-block-title h4 {font-weight: 700; text-transform: uppercase;}
 .pref-block-value {position: relative; width: 100%; padding: 20px 15px; border-bottom: 1px solid #ebebeb; white-space: nowrap; }
-.pref-block-value span {font-size: 20px; color: #222; line-height: 80px; white-space: nowrap;}
+.pref-block-value span {font-size: 40px; color: #222; line-height: 80px; white-space: nowrap;}
 /*.pref-block-value sup {font-size: 40px; top: -0.6em; padding-right: 3px;}*/
 .pref-block-value sup { font-size: 20px; position: absolute; top: 25%; left: 10%; color: #666; white-space: nowrap; direction: ltr; }
 .pref-block-value sub {font-size: 24px; bottom: 0px;}
@@ -555,6 +561,7 @@ span[data-service-name] {
 
 /* domgroup:filter button */
 #filters button {
+    text-transform: uppercase;
     font-size: 12px;
     color: #1a1a1a;
     font-weight: 300;
@@ -686,6 +693,7 @@ span[data-service-name] {
     white-space: nowrap;
 
     padding: 10px 15px;
+    text-transform: uppercase;
     font-size: 14px;
     text-align: center;
     font-weight: 700;
@@ -741,6 +749,7 @@ span[data-service-name] {
     white-space: nowrap;
 
     padding: 10px 15px;
+    text-transform: uppercase;
     font-size: 14px;
     text-align: center;
     font-weight: 700;
@@ -754,9 +763,11 @@ span[data-service-name] {
 .slip-overlay h4 {
     font-size: 18px;
     font-weight: 700;
+    text-transform: uppercase;
 }
 .slip-overlay h5 {
     font-size: 14px;
+    text-transform: uppercase;
     font-weight: 300;
     letter-spacing: 1px;
 }
