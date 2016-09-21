@@ -620,7 +620,7 @@ span[data-service-name] {
 }
 .galentry img {
     flex-grow: 1;
-    margin: 5px; /* match the js to this crossfile-link173771 */
+    margin: 5px; /* match the js to this crossfile-link173771 and internal link5365549*/
 }
 .galentry .no-images {
     display: flex;
@@ -708,6 +708,8 @@ span[data-service-name] {
     display: flex;
     justify-content: center;
     align-items: center;
+	margin: 5px; /* link5365549 - must match to it above */
+	text-align: center;
 }
 /***/
 

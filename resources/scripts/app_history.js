@@ -127,7 +127,7 @@ function loadImageForEntry(aEntry) {
 	};
 
 	image.onerror = function() {
-		info.reason = 'ERROR: something happend'; // TODO
+		info.reason = formatStringFromNameCore('imgerror_load', 'main', [aEntry.path || aEntry.src]); // TODO
 		info.ok = false;
 		injectInfoIntoState();
 	};
@@ -872,7 +872,7 @@ var Sliphover = React.createClass({
 
 		var { entry } = this.props; // attr
 
-		callInBootstrap('copy', entry.src);
+		callInBootstrap('copy', entry.path || entry.src);
 	},
 	open: function(e) {
 		if (!stopClickAndCheck0(e)) { return }

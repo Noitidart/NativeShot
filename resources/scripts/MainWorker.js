@@ -363,6 +363,7 @@ function mutateEntryForLogsrc(entry) {
 				// var path = OS.Path.join(entry.f, entry.n);
 				// var fileuri = OS.Path.toFileURI(path);
 				entry.src = OS.Path.toFileURI(OS.Path.join(entry.f, entry.n));
+				entry.path = OS.Path.join(entry.f, entry.n);
 				// promiseallarr.push(setEntryResourceURI(fileuri, entry));
 				delete entry.f;
 				delete entry.n;
