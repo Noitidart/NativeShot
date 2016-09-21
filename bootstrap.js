@@ -1282,7 +1282,29 @@ function broadcastToOpenHistory(aMandA) {
 
 function hotkeyRegistrationFailed(aArg) {
 	var { hotkey, reason } = aArg;
-	Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Hotkey Registration Error', reason + ( !hotkey ? '' : '\n\n\nOffending Hotkey Combination: ' + (hotkey.desc || formatStringFromNameCore('all', 'main')) ));
+	// Services.prompt.alert(Services.wm.getMostRecentWindow('navigator:browser'), 'NativeShot - Hotkey Registration Error', reason + ( !hotkey ? '' : '\n\n\nOffending Hotkey Combination: ' + (hotkey.desc || formatStringFromNameCore('all', 'main')) ));
+
+	var click = {
+		observe: function(aSubject, aTopic, aData) {
+			// aSubject - is always null
+			switch (aTopic) {
+				case 'alertclickcallback':
+					loadOneTab({
+						URL: 'about:nativeshot?options',
+						params: {
+							inBackground: false
+						}
+					});
+			}
+		}
+	};
+	var hotkeydesc = core.os.mname == 'darwin' ? 'Command(⌘) + 3' : 'PrintScreen';
+	// reason + ( !hotkey ? '' : '\n\n\nOffending Hotkey Combination: ' + (hotkey.desc || formatStringFromNameCore('all', 'main'));
+	var title = formatStringFromNameCore('addon_name', 'main') + ' - ' + formatStringFromNameCore('hotkey_error_title', 'main');
+	var body = formatStringFromNameCore('hotkey_error_body', 'main', [hotkeydesc]).replace(/\\n/g, '\n');
+	myServices.as.showAlertNotification(core.addon.path.images + 'icon48.png', title, body, true, 0, click, 'NativeShot-hotkey-error')
+
+	throw new Error(reason + ( !hotkey ? '' : '\n\n\nOffending Hotkey Combination: ' + (hotkey.desc || formatStringFromNameCore('all', 'main'))) );
 }
 
 // start - Comm functions
