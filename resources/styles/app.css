@@ -1097,7 +1097,6 @@ span[data-service-name] {
     position: relative;
     width: 100%;
     padding: 5px 0px 5px;
-    float: left;
 }
 .shop-price.no-accounts {
 	text-align: center;
@@ -1117,12 +1116,22 @@ span[data-service-name] {
     float: left;
 }
 .fl {
-    position: relative;
-    float: left;
+    /*position: relative;
+    float: left;*/
+
+	/* so it respects direction:rtl */
+	position: absolute;
+	text-align: start;
+	width: 100%;
 }
 .fr {
-    position: relative;
-    float: right;
+    /*position: relative;
+    float: right;*/
+
+	/* so it respects direction:rtl */
+	position: absolute;
+	text-align: end;
+	width: 100%;
 }
 .rate-info {
     padding-top: 3px;
@@ -1139,6 +1148,7 @@ span[data-service-name] {
 }
 .shop-price h5 {
     padding-left: 15px;
+	padding-right: 15px; /* if `direction` is `rtl` */
 	display: inline-block;
 }
 .shop-price h5 {

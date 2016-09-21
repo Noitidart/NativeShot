@@ -138,18 +138,16 @@ var InactiveRow = React.createClass({
 		pushAlternatingRepeating(buttons, ' ');
 
 		return React.createElement('div', { className:'shop-price' },
-			React.createElement('div', { className:'fl' },
-				React.createElement('div', undefined,
-					React.createElement('h6', { className:'style-link-1 fl' },
-						React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
-					),
-					React.createElement('h5', { className:(acctname ? 'bold' : (acctname === null ? 'italic no-active-acct' : '')) },
-						(acctname || (acctname === null ? formatStringFromNameCore('account_noactive', 'main') : formatStringFromNameCore('account_noname', 'main')))
-					)
-				)
-			),
 			React.createElement('div', { className:'rate-info fr' },
 				buttons
+			),
+			React.createElement('div', undefined,
+				React.createElement('h6', { className:'style-link-1' },
+					React.createElement('img', { src:core.addon.path.images + serviceid + '.svg', height:'24', width:'24' })
+				),
+				React.createElement('h5', { className:(acctname ? 'bold' : (acctname === null ? 'italic no-active-acct' : '')) },
+					(acctname || (acctname === null ? formatStringFromNameCore('account_noactive', 'main') : formatStringFromNameCore('account_noname', 'main')))
+				)
 			)
 		);
 	}
