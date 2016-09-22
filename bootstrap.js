@@ -518,6 +518,7 @@ function takeShot() {
 
 			gCommScope['shotopen_' + i] = Date.now();
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			showLoading(w, h, x, y);
 			// editor_domwin.addEventListener('load', function() {
 			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
 			// }, false);
@@ -634,6 +635,7 @@ function editorInitShot(aIMon, e) {
 			// reRaiseCanvasWins(); // ensures its risen
 		}
 		sendWinArrToEditors();
+		hideLoading();
 	}
 }
 
@@ -2472,6 +2474,19 @@ function getACanvasWindowNativeHandle() {
 	if (gSession.id) {
 		return gSession.shots[0].hwndPtrStr;
 	}
+}
+
+function showLoading(w, h, x, y) {
+	Services.ww.openWindow(null, core.addon.path.pages + 'loading.xul', '_blank', 'width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+}
+
+function hideLoading() {
+	var windows = Services.wm.getEnumerator('nativeshot:loading');
+	while (windows.hasMoreElements()) {
+		var window = windows.getNext();
+		window.close();
+	}
+
 }
 
 // start - common helper functions

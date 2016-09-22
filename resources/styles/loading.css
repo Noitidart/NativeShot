@@ -1,0 +1,25 @@
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	75% {
+		transform: rotate(360deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+#spinner {
+	opacity: 0;
+	transition: opacity 200ms;
+	list-style-image: url("chrome://nativeshot/content/resources/images/icon128.png");
+}
+
+#spinner.play {
+	opacity: 1;
+	animation-duration: 1000ms;
+	animation-delay: 400ms; /* match opacity change */
+    animation-name: spin;
+	animation-iteration-count: infinite;
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://nativeshot/content/resources/styles/loading.css" type="text/css"?>
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        hidechrome="true"
+		windowtype="nativeshot:loading"
+		style="background-color:none;"
+		title="nativeshot_loading"
+		onload="document.getElementById('spinner').classList.add('play');">
+		<box id="box" style="height:100vh;display:flex;justify-content:center;align-items:center;">
+			<image id="spinner" />
+		</box>
+</window>
