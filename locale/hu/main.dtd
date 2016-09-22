@@ -1,0 +1,11 @@
+<!ENTITY boostrap_lang "hu">
+
+<!ENTITY addon_name "NativeShot">
+
+<!ENTITY title_history "Történet | NativeShot">
+<!ENTITY title_options "Beállítások | NativeShot">
+<!ENTITY title_auth "Engedélyek | NativeShot">
+<!ENTITY title_authcp "Engedélyek kezelése | NativeShot">
+<!ENTITY title_ocr "Szöveg Felismerés | NativeShot">
+<!ENTITY title_tweet "Tweetelés | NativeShot">
+<!ENTITY title_fbpost "Facebook bejegyzés | NativeShot">
