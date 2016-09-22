@@ -211,5 +211,15 @@
 				<em:translator>yfdyh000</em:translator>
 			</Description>
 		</em:localized>
+		<em:localized>
+			<Description>
+				<em:locale>zh-TW</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>凍結影格以進行截取並編輯任何螢幕上的東西之螢幕截圖工具。</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>Goldie</em:translator>
+			</Description>
+		</em:localized>
 	  </Description>
 	</RDF>
