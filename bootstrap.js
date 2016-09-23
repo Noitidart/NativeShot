@@ -518,7 +518,7 @@ function takeShot() {
 
 			gCommScope['shotopen_' + i] = Date.now();
 			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
-			showLoading(w, h, x, y);
+			// showLoading(w, h, x, y);
 			// editor_domwin.addEventListener('load', function() {
 			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
 			// }, false);
@@ -635,7 +635,7 @@ function editorInitShot(aIMon, e) {
 			// reRaiseCanvasWins(); // ensures its risen
 		}
 		sendWinArrToEditors();
-		hideLoading();
+		// hideLoading();
 	}
 }
 
