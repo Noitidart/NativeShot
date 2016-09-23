@@ -16,5 +16,6 @@ locale nativeshot pl locale/pl/
 locale nativeshot pt-BR locale/pt-BR/
 locale nativeshot ro locale/ro/
 locale nativeshot ru locale/ru/
+locale nativeshot tr locale/tr/
 locale nativeshot zh-CN locale/zh-CN/
 locale nativeshot zh-TW locale/zh-TW/

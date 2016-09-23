@@ -213,6 +213,16 @@
 		</em:localized>
 		<em:localized>
 			<Description>
+				<em:locale>tr</em:locale>
+				<em:name>NativeShot</em:name>
+				<em:description>Herhangi bir monitördeki</em:description>
+				<em:creator>Noitidart</em:creator>
+				<em:contributor>Alexandre Moore for Snowish Iconset</em:contributor>
+				<em:translator>alfapegasi</em:translator>
+			</Description>
+		</em:localized>
+		<em:localized>
+			<Description>
 				<em:locale>zh-CN</em:locale>
 				<em:name>NativeShot</em:name>
 				<em:description>留下当前的屏幕画面以截取或在任何显示器上随意编辑</em:description>

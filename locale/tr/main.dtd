@@ -1,0 +1,11 @@
+<!ENTITY boostrap_lang "tr">
+
+<!ENTITY addon_name "NativeShot">
+
+<!ENTITY title_history "Geçmiş | NativeShot">
+<!ENTITY title_options "Seçenekler | NativeShot">
+<!ENTITY title_auth "Doğrulama | NativeShot">
+<!ENTITY title_authcp "Doğrulamaları Yönet | NativeShot">
+<!ENTITY title_ocr "Metin Algılama | NativeShot">
+<!ENTITY title_tweet "Tweet | NativeShot">
+<!ENTITY title_fbpost "Facebook'a At | NativeShot">
