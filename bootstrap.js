@@ -2477,7 +2477,9 @@ function getACanvasWindowNativeHandle() {
 }
 
 function showLoading(w, h, x, y) {
-	Services.ww.openWindow(null, core.addon.path.pages + 'loading.xul', '_blank', 'width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+	var win = Services.ww.openWindow(null, core.addon.path.pages + 'loading.xul', '_blank', 'width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+	var hwndptrstr = getNativeHandlePtrStr(win);
+	callInMainworker('cmnSetAlwaysOnTop', [hwndptrstr]);
 }
 
 function hideLoading() {
@@ -2487,6 +2489,14 @@ function hideLoading() {
 		window.close();
 	}
 
+}
+
+function macSetAlwaysOnTop(aHwndPtrStrs) {
+	for (var hwndptrstr of aHwndPtrStrs) {
+		var nswindow = ostypes.TYPE.NSWindow(ctypes.UInt64(hwndptrstr));
+		var rez_set = ostypes.API('objc_msgSend')(nswindow, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(21));
+		console.log('rez_set:', rez_set, cutils.jscGetDeepest(rez_set));
+	}
 }
 
 // start - common helper functions

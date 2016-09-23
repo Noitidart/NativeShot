@@ -2219,65 +2219,78 @@ function winForceForegroundWindow(aHwndToFocus) { // rev2 - https://gist.github.
 		throw new Error('winForceForegroundWindow is only for Windows platform');
 	}
 
+	// approach 2 - http://stackoverflow.com/q/6312627/1828637
+
 	var hTo = aHwndToFocus;
 
-	var hFrom = ostypes.API('GetForegroundWindow')();
-	if (hFrom.isNull()) {
-		console.log('nothing in foreground, so calling process is free to focus anything')
-		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
-		return rez_SetSetForegroundWindow ? true : false;
-	}
+	var rez_sys = ostypes.API('SystemParametersInfo')(ostypes.CONST.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, null, ostypes.CONST.SPIF_SENDWININICHANGE | ostypes.CONST.SPIF_UPDATEINIFILE)
+	console.error('NOIT', 'rez_sys:', rez_sys);
 
-	if (cutils.comparePointers(hTo, hFrom) === 0) {
-		// window is already focused
-		console.log('window is already focused');
-		return true;
-	}
+	var rez_set = ostypes.API('SetForegroundWindow')(hTo);
+	console.error('NOIT', 'rez_set:', rez_set);
 
-	var pidFrom = ostypes.TYPE.DWORD();
-	var threadidFrom = ostypes.API('GetWindowThreadProcessId')(hFrom, pidFrom.address());
-	console.info('threadidFrom:', threadidFrom);
-	console.info('pidFrom:', pidFrom);
+	return rez_set ? true : false;
 
-	var pidTo = ostypes.TYPE.DWORD();
-	var threadidTo = ostypes.API('GetWindowThreadProcessId')(hTo, pidTo.address()); // threadidTo is thread of my firefox id, and hTo is that of my firefox id so this is possible to do
-	console.info('threadidTo:', threadidTo);
-	console.info('pidTo:', pidTo);
-
-	// impossible to get here if `cutils.jscEqual(threadidFrom, threadidTo)` because if thats the case, then the window is already focused!!
-	// if (cutils.jscEqual(threadidFrom, threadidTo) {
-
-	// from testing, it shows that ```cutils.jscEqual(pidFrom, pidTo)``` works only if i allow at least 100ms of wait time between, which is very weird
-	if (/*cutils.jscEqual(pidFrom, pidTo) || */cutils.jscEqual(pidFrom, core.firefox.pid)) {
-		// the pid that needs to be focused, is already focused, so just focus it
-		// or
-		// the pid that needs to be focused is not currently focused, but the calling pid is currently focused. the current pid is allowed to shift focus to anything else it wants
-		// if (cutils.jscEqual(pidFrom, pidTo)) {
-		// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
-		// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
-			console.log('the process, of the window that is currently focused, is of process of this ChromeWorker, so i can go ahead and just focus it - no need for attach');
-		// }
-		var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-		console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
-		return rez_SetSetForegroundWindow ? true : false;
-	}
-
-	var threadidOfChromeWorker = ostypes.API('GetCurrentThreadId')(); // thread id of this ChromeWorker
-	console.log('threadidOfChromeWorker:', threadidOfChromeWorker);
-
-	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, true);
-	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
-	if (!rez_AttachThreadInput) {
-		throw new Error('failed to attach thread input');
-	}
-	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
-	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
-
-	var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, false);
-	console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
-
-	return rez_SetSetForegroundWindow ? true : false;
+	//
+	// var hTo = aHwndToFocus;
+	//
+	// var hFrom = ostypes.API('GetForegroundWindow')();
+	// if (hFrom.isNull()) {
+	// 	console.log('nothing in foreground, so calling process is free to focus anything')
+	// 	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+	// 	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+	// 	return rez_SetSetForegroundWindow ? true : false;
+	// }
+	//
+	// if (cutils.comparePointers(hTo, hFrom) === 0) {
+	// 	// window is already focused
+	// 	console.log('window is already focused');
+	// 	return true;
+	// }
+	//
+	// var pidFrom = ostypes.TYPE.DWORD();
+	// var threadidFrom = ostypes.API('GetWindowThreadProcessId')(hFrom, pidFrom.address());
+	// console.info('threadidFrom:', threadidFrom);
+	// console.info('pidFrom:', pidFrom);
+	//
+	// var pidTo = ostypes.TYPE.DWORD();
+	// var threadidTo = ostypes.API('GetWindowThreadProcessId')(hTo, pidTo.address()); // threadidTo is thread of my firefox id, and hTo is that of my firefox id so this is possible to do
+	// console.info('threadidTo:', threadidTo);
+	// console.info('pidTo:', pidTo);
+	//
+	// // impossible to get here if `cutils.jscEqual(threadidFrom, threadidTo)` because if thats the case, then the window is already focused!!
+	// // if (cutils.jscEqual(threadidFrom, threadidTo) {
+	//
+	// // from testing, it shows that ```cutils.jscEqual(pidFrom, pidTo)``` works only if i allow at least 100ms of wait time between, which is very weird
+	// if (/*cutils.jscEqual(pidFrom, pidTo) || */cutils.jscEqual(pidFrom, core.firefox.pid)) {
+	// 	// the pid that needs to be focused, is already focused, so just focus it
+	// 	// or
+	// 	// the pid that needs to be focused is not currently focused, but the calling pid is currently focused. the current pid is allowed to shift focus to anything else it wants
+	// 	// if (cutils.jscEqual(pidFrom, pidTo)) {
+	// 	// 	console.info('the process, of the window that is to be focused, is already focused, so just focus it - no need for attach');
+	// 	// } else if (cutils.jscEqual(pidFrom, core.firefox.pid)) {
+	// 		console.log('the process, of the window that is currently focused, is of process of this ChromeWorker, so i can go ahead and just focus it - no need for attach');
+	// 	// }
+	// 	var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+	// 	console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+	// 	return rez_SetSetForegroundWindow ? true : false;
+	// }
+	//
+	// var threadidOfChromeWorker = ostypes.API('GetCurrentThreadId')(); // thread id of this ChromeWorker
+	// console.log('threadidOfChromeWorker:', threadidOfChromeWorker);
+	//
+	// var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, true);
+	// console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+	// if (!rez_AttachThreadInput) {
+	// 	throw new Error('failed to attach thread input');
+	// }
+	// var rez_SetSetForegroundWindow = ostypes.API('SetForegroundWindow')(hTo);
+	// console.log('rez_SetSetForegroundWindow:', rez_SetSetForegroundWindow);
+	//
+	// var rez_AttachThreadInput = ostypes.API('AttachThreadInput')(threadidOfChromeWorker, threadidFrom, false);
+	// console.info('rez_AttachThreadInput:', rez_AttachThreadInput);
+	//
+	// return rez_SetSetForegroundWindow ? true : false;
 }
 // end - platform functions
 
@@ -3734,6 +3747,30 @@ function importOldHistory() {
 		});
 
 		OS.File.remove(path);
+	}
+}
+
+function cmnSetAlwaysOnTop(aHwndPtrStrs) {
+	switch (core.os.mname) {
+		case 'winnt':
+				//
+				for (var hwndptrsr of aHwndPtrStrs) {
+					var hwndptr = ostypes.TYPE.HWND(ctypes.UInt64(hwndptrsr));
+					// var rez_set = ostypes.API('SetWindowPos')(hwndptr, ostypes.CONST.HWND_TOPMOST, 0, 0, 0, 0, ostypes.CONST.SWP_NOSIZE | ostypes.CONST.SWP_NOMOVE | ostypes.CONST.SWP_NOREDRAW);
+					// console.log('rez_set:', rez_set);
+					winForceForegroundWindow(hwndptr);
+				}
+			break;
+		case 'darwin':
+				callInBootstrap('macSetAlwaysOnTop', aHwndPtrStrs);
+			break;
+		case 'gtk':
+				for (var hwndptrsr of aHwndPtrStrs) {
+					var hwndptr = ostypes.TYPE.GdkWindow.ptr(ctypes.UInt64(hwndptrstr));
+					var xwindow = ostypes.HELPER.gdkWinPtrToXID(hwndptr); // gdkWinPtrToXID returns ostypes.TYPE.XID, but XClientMessageEvent.window field wants ostypes.TYPE.Window..... but XID and Window are same type so its ok no need to cast
+					xcbSetAlwaysOnTop(xwindow);
+				}
+			break;
 	}
 }
 // End - Addon Functionality
