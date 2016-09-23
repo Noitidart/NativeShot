@@ -1,9 +1,9 @@
 @-moz-document url("chrome://browser/content/browser.xul") {
 	#cui_nativeshot {
-		list-style-image: url('chrome://nativeshot/content/resources/images/dark16.png');
+		list-style-image: url('chrome://nativeshot/skin/icon-toolbar.svg');
 	}
 	#cui_nativeshot[cui-areatype="menu-panel"],
 	toolbarpaletteitem[place="palette"] > #cui_nativeshot {
-		list-style-image: url('chrome://nativeshot/content/resources/images/offgray32.png');
+		list-style-image: url('chrome://nativeshot/skin/icon-panel.svg');
 	}
 }

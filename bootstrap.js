@@ -334,6 +334,7 @@ function shutdown(aData, aReason) {
 
 // start - addon functions
 function getCuiCssFilename() {
+	return 'cui.css';
 	var cuiCssFilename;
 	if (Services.prefs.getCharPref('app.update.channel') == 'aurora') {
 		if (core.os.mname != 'darwin') {

@@ -1,4 +1,8 @@
 content nativeshot ./ contentaccessible=true
+skin nativeshot skin ./skin/
+
+override chrome://nativeshot/skin/icon-panel.css chrome://nativeshot/skin/icon-panel-win10.css os=WINNT osversion=10
+
 locale nativeshot ar locale/ar/
 locale nativeshot bg locale/bg/
 locale nativeshot ca locale/ca/
