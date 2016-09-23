@@ -2477,25 +2477,41 @@ function getACanvasWindowNativeHandle() {
 }
 
 function showLoading(w, h, x, y) {
+	if (core.os.mname == 'darwin') return;
+
 	var win = Services.ww.openWindow(null, core.addon.path.pages + 'loading.xul', '_blank', 'width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 	var hwndptrstr = getNativeHandlePtrStr(win);
-	callInMainworker('cmnSetAlwaysOnTop', [hwndptrstr]);
+	if (core.os.mname != 'darwin') {
+		callInMainworker('cmnSetAlwaysOnTop', [hwndptrstr]);
+	} else {
+		// do sync, as it might be closed by the time the worker calls it so it will crash as nswindow no longer exists
+		macSetAlwaysOnTop([hwndptrstr]);
+	}
 }
 
 function hideLoading() {
+	if (core.os.mname == 'darwin') return;
+
 	var windows = Services.wm.getEnumerator('nativeshot:loading');
 	while (windows.hasMoreElements()) {
 		var window = windows.getNext();
-		window.close();
+		if (core.os.name == 'darwin') {
+			var hwndptrstr = getNativeHandlePtrStr(window);
+			var nswindow = ostypes.TYPE.NSWindow(ctypes.UInt64(hwndptrstr));
+			ostypes.API('objc_msgSend')(nswindow, ostypes.HELPER.sel('close'));
+		} else {
+			window.close();
+		}
 	}
 
 }
 
 function macSetAlwaysOnTop(aHwndPtrStrs) {
+	initOstypes();
 	for (var hwndptrstr of aHwndPtrStrs) {
 		var nswindow = ostypes.TYPE.NSWindow(ctypes.UInt64(hwndptrstr));
-		var rez_set = ostypes.API('objc_msgSend')(nswindow, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(21));
-		console.log('rez_set:', rez_set, cutils.jscGetDeepest(rez_set));
+		// var rez_set = ostypes.API('objc_msgSend')(nswindow, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(21));
+		// console.log('rez_set:', rez_set, cutils.jscGetDeepest(rez_set));
 	}
 }
 

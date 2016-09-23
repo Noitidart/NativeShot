@@ -3364,7 +3364,7 @@ function initHotkeys() {
 				gHKI.hotkeys = [
 					{
 						desc: '\u2318 + 3', // \u2318 is the apple/meta key symbol
-						code: ostypes.CONST.KEY_3,
+						code: ostypes.CONST.kVK_ANSI_3,
 						mods: {
 							meta: true
 						},
