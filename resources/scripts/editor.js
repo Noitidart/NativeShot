@@ -9,7 +9,7 @@
 // 		cache_key: Math.random()
 // 	}
 // };
-
+var NS_HTML = 'http://www.w3.org/1999/xhtml';
 var gSetStateObj;
 var gEditorStore = {};
 var gCanStore = {};
@@ -297,7 +297,7 @@ function fullfillCompositeRequest(aData) {
 		}
 
 
-		var can = document.createElement('canvas');
+		var can = document.createElementNS(NS_HTML, 'canvas');
 		var ctx = can.getContext('2d');
 		// can.width = mmtm.w(compositeRect.width);
 		// can.height = mmtm.h(compositeRect.height);
@@ -1119,13 +1119,14 @@ function init(aArrBufAndCore) {
 			gCanStore.setCanState = this.setCanState;
 
 			///////////
+			console.error('this.refs.can:', this.refs.can);
 			this.ctx = new MyContext(this.refs.can.getContext('2d'));
 			this.ctx0 = this.refs.can0.getContext('2d');
 
 			var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
 
 			if (this.props.pQS.win81ScaleX || this.props.pQS.win81ScaleY) {
-				var canDum = document.createElement('canvas');
+				var canDum = document.createElementNS(NS_HTML, 'canvas');
 				canDum.setAttribute('width', tQS.w);
 				canDum.setAttribute('height', tQS.h);
 
@@ -1146,7 +1147,7 @@ function init(aArrBufAndCore) {
 			}
 
 			// for drawing composite
-			var canDimDum = document.createElement('canvas');
+			var canDimDum = document.createElementNS(NS_HTML, 'canvas');
 			var ctxDimDum = canDimDum.getContext('2d');
 			canDimDum.setAttribute('width', tQS.w);
 			canDimDum.setAttribute('height', tQS.h);
@@ -2260,7 +2261,7 @@ function init(aArrBufAndCore) {
 				var dx = gDroppingCoords.pop();
 
 				if (!gDroppingMixCtx) {
-					var mixcan = document.createElement('canvas');
+					var mixcan = document.createElementNS(NS_HTML, 'canvas');
 					mixcan.width = 1;
 					mixcan.height = 1;
 					gDroppingMixCtx = mixcan.getContext('2d');
@@ -6361,7 +6362,7 @@ if (!('win81ScaleX' in tQS)) {
 
 console.log('tQS:', tQS);
 var gQS = tQS;
-
+console.error('time to load editor for iMon', tQS.iMon, ':', (Date.now() - tQS.sttime));
 var gBsComm = new Comm.client.content(
 	()=>console.log('handshake done client side')
 );
@@ -6378,7 +6379,7 @@ function receiveWinArr(aData) {
 
 /*
 // while bootstrap is responding to the request from link9999191911111 ill load in other stuff
-var editorCss = document.createElement('link');
+var editorCss = document.createElementNS(NS_HTML, 'link');
 editorCss.setAttribute('href', core.addon.path.styles + 'editor.css');
 editorCss.setAttribute('ref', 'stylesheet');
 editorCss.setAttribute('type', 'text/css');
@@ -6889,7 +6890,7 @@ function measureHeight(aFont, aSize, aChars, aOptions={}) {
 	var can;
 	var ctx;
 	if (!aOptions.canAndCtx) {
-		can = document.createElement('canvas');;
+		can = document.createElementNS(NS_HTML, 'canvas');
 		can.mozOpaque = 'true'; // improved performanceo on firefox i guess
 		ctx = can.getContext('2d');
 

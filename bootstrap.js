@@ -504,7 +504,8 @@ function takeShot() {
 				{
 					iMon: i,
 					allMonDimStr: allMonDimStr,
-					sessionid: gSession.id
+					sessionid: gSession.id,
+					sttime: Date.now()
 				},
 				shot
 			);
@@ -517,13 +518,17 @@ function takeShot() {
 			// console.log('query_str:', query_str);
 
 			gCommScope['shotopen_' + i] = Date.now();
-			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			var editor_domwin = Services.ww.openWindow(null, core.addon.path.pages + 'editor.xul?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 			// showLoading(w, h, x, y);
 			// editor_domwin.addEventListener('load', function() {
 			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
 			// }, false);
 			shot.domwin_wk = Cu.getWeakReference(editor_domwin);
 			shot.domwin = editor_domwin;
+			shot.domwin.addEventListener('DOMContentLoaded', function(a1, a2, a3, a4) {
+				console.error('in DOMContentLoaded');
+				a1.comm = new Comm.server.content(a1.domwin, a2, a3, a4);
+			}.bind(null, shot, editorInitShot.bind(null, i, {target:null}), shot.port1, shot.port2), false);
 		}
 
 	};
@@ -555,7 +560,7 @@ function editorInitShot(aIMon, e) {
 	// }
 	var domwin = shot.domwin;
 	var aHwndPtrStr = getNativeHandlePtrStr(domwin);
-	console.error('aHwndPtrStr.pre method1:', getNativeHandlePtrStr(domwin), 'method2:', getNativeHandlePtrStr(e.target));
+	// console.error('aHwndPtrStr.pre method1:', getNativeHandlePtrStr(domwin), 'method2:', getNativeHandlePtrStr(e.target));
 	shot.hwndPtrStr = aHwndPtrStr;
 
 	// if (core.os.name != 'darwin') {
