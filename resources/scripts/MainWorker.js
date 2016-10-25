@@ -2990,7 +2990,8 @@ var action_tesseract = action_ocrad = action_gocr = function(shot, aActionFinali
 					height: shot.height,
 					txt: {
 						[shot.serviceid]: txt
-					}
+					},
+					copytxt: txt
 				}
 			});
 		}

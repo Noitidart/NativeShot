@@ -1720,6 +1720,10 @@ function checkOnlySingleAction(aSessionId, aDontCopy) {
 
 		// start countdown if visible
 		if (aEntry.shown) {
+			if (aEntry.state.aBtns[0].meta.serviceid == 'ocrall') {
+				console.log('only 1 action but its a ocrall action, so dont auto close');
+				return;
+			}
 			console.error('ok bar is shown');
 			aEntry.autoclose_secleft = 26;
 			aEntry.autoclose_countdown_callback = function() {
