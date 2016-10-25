@@ -253,7 +253,10 @@ var gAppPageHeaderProps = {
 
 var gAppPageComponents = [];
 
-var hydrant, hydrant_ex;
+var hydrant;
+var hydrant_ex = {
+	prefs: {}
+};
 var hydrant_ex_instructions = { // stuff that shouldnt get written to hydrants entry in filestore. updating this is handled manually by dev
 	filestore_entries: ['prefs']
 };
