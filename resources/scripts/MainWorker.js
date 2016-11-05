@@ -1932,35 +1932,23 @@ function setWinAlwaysOnTop(aArg) {
 					// console.log('nWinTitle:', nWinTitle);
 
 					// start - remove border from window - http://stackoverflow.com/a/2400467/1828637
-					var GWL_STYLE = -16;
-					var WS_CAPTION = 0x00C00000;
-					var WS_THICKFRAME = 0x00040000;
-					var WS_MINIMIZE = 0x20000000;
-					var WS_MAXIMIZE = 0x01000000;
-					var WS_SYSMENU = 0x00080000;
+					var style = ostypes.API('GetWindowLongPtr')(hwndPtr, ostypes.CONST.GWL_STYLE);
+					console.log('style:', style);
+					style = parseInt(cutils.jscGetDeepest(style));
+					style &= ~(ostypes.CONST.WS_CAPTION | ostypes.CONST.WS_THICKFRAME | ostypes.CONST.WS_MINIMIZE | ostypes.CONST.WS_MAXIMIZE | ostypes.CONST.WS_SYSMENU);
 
-					var lStyle = ostypes.API('GetWindowLongPtr')(hwndPtr, GWL_STYLE);
-					console.log('lStyle:', lStyle);
-					lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
+					var rezsetstyle = ostypes.API('SetWindowLongPtr')(hwndPtr, ostypes.CONST.GWL_STYLE, style);
+					console.log('rezsetstyle:', rezsetstyle);
 
-					var rez_setLong = ostypes.API('SetWindowLongPtr')(hwndPtr, GWL_STYLE, lStyle);
-					console.log('rez_setLong:', rez_setLong);
+					// // work on extended style - IF WANT IT PINNED ALL VIRTUAL DESKTOPS
+					// var exstyle = ostypes.API('GetWindowLongPtr')(hwndPtr, ostypes.CONST.GWL_EXSTYLE);
+					// exstyle = parseInt(cutils.jscGetDeepest(exstyle));
+					// exstyle |= ostypes.CONST.WS_EX_TOOLWINDOW
+					// // lExStyle &= ~(ostypes.CONST.WS_EX_DLGMODALFRAME | ostypes.CONST.WS_EX_CLIENTEDGE | ostypes.CONST.WS_EX_STATICEDGE);
+					// var rezsetexstyle = ostypes.API('SetWindowLongPtr')(hwndPtr, ostypes.CONST.GWL_EXSTYLE, exstyle);
+					// console.log('rezsetexstyle:', rezsetexstyle);
 
-					// var GWL_EXSTYLE = -20;
-					// var WS_EX_DLGMODALFRAME = 0x00000001;
-					// var WS_EX_CLIENTEDGE = 0x00000200;
-					// var WS_EX_STATICEDGE = 0x00020000;
-
-					// var lExStyle = ostypes.API('GetWindowLongPtr')(hwndPtr, GWL_EXSTYLE);
-					// console.log('lExStyle:', lExStyle);
-					// lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-
-					// var rez_setLong = ostypes.API('SetWindowLongPtr')(hwndPtr, GWL_EXSTYLE, lExStyle);
-					// console.log('rez_setLong:', rez_setLong);
-
-
-					var SWP_FRAMECHANGED = 0x0020;
-					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, SWP_FRAMECHANGED/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
+					var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, ostypes.CONST.SWP_FRAMECHANGED/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
 					// end try to remove that border
 
 					// var rez_setTop = ostypes.API('SetWindowPos')(hwndPtr, ostypes.CONST.HWND_TOPMOST, aOptions[hwndStr].left, aOptions[hwndStr].top, aOptions[hwndStr].width, aOptions[hwndStr].height, 0/* | ostypes.CONST.SWP_NOREDRAW*/); // window wasnt moved so no need for SWP_NOREDRAW, the NOMOVE and NOSIZE params make it ignore x, y, cx, and cy
@@ -2145,7 +2133,7 @@ function setWinAlwaysOnTop(aArg) {
 
 
 				// METHOD: dont set on top just focus app, this has that ugly scroll side affect if user is focused on another desktop on that monitor due to full screen app or something
-				focusSelfApp();
+				// focusSelfApp();
 
 				return parseInt(cutils.jscGetDeepest(rez_getKey));
 

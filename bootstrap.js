@@ -587,6 +587,7 @@ function editorInitShot(aIMon, e) {
 		if (core.os.name == 'darwin') {
 			console.error('in darwin block of post for logging aHwndPtrStr');
 			initOstypes();
+
 			// link98476884
 			OSStuff.NSMainMenuWindowLevel = aArg;
 
@@ -595,14 +596,35 @@ function editorInitShot(aIMon, e) {
 			// var NSWindowString = getNativeHandlePtrStr(domwin);
 			var NSWindowPtr = ostypes.TYPE.NSWindow(ctypes.UInt64(NSWindowString));
 
+
+			// set all show it shows on all spaces
+			var behavior = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('collectionBehavior'));
+			behavior = parseInt(cutils.jscGetDeepest(ctypes.cast(behavior, ostypes.TYPE.NSWindowCollectionBehavior)));
+			behavior |= ostypes.CONST.NSWindowCollectionBehaviorCanJoinAllSpaces;
+			// behavior |= ostypes.CONST.NSWindowCollectionBehaviorStationary;
+			// behavior |= ostypes.CONST.NSWindowCollectionBehaviorIgnoresCycle;
+			behavior = ostypes.TYPE.NSUInteger(behavior);
+
+			var rezallspaces = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setCollectionBehavior:'), behavior);
+			console.log('rezallspaces:', rezallspaces.toString());
+
+			// set always on top
 			var rez_setLevel = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setLevel:'), ostypes.TYPE.NSInteger(OSStuff.NSMainMenuWindowLevel + 1)); // have to do + 1 otherwise it is ove rmneubar but not over the corner items. if just + 0 then its over menubar, if - 1 then its under menu bar but still over dock. but the interesting thing is, the browse dialog is under all of these  // link847455111
 			console.log('rez_setLevel:', rez_setLevel.toString());
 
+			// make content full screen
 			var newSize = ostypes.TYPE.NSSize(shot.w, shot.h);
 			var rez_setContentSize = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('setContentSize:'), newSize);
 			console.log('rez_setContentSize:', rez_setContentSize.toString());
 
-			domwin.moveTo(shot.x, shot.y); // must do moveTo after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
+			// must reposition with `moveTo` after setContentsSize as that sizes from bottom left and moveTo moves from top left. so the sizing will change the top left.
+			domwin.moveTo(shot.x, shot.y);
+
+
+			// var rezfocus = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('makeKeyAndOrderFront:'), ostypes.CONST.NIL);
+			// var rezfocus = ostypes.API('objc_msgSend')(NSWindowPtr, ostypes.HELPER.sel('orderFrontRegardless'));
+			// console.log('rezfocus key:', rezfocus.toString());
+			// console.log('ostypes.CONST.NIL:', ostypes.CONST.NIL.toString());
 		}
 	});
 
@@ -633,6 +655,8 @@ function editorInitShot(aIMon, e) {
 	if (allWinInited) {
 		if (core.os.mname == 'winnt') {
 			// reRaiseCanvasWins(); // ensures its risen
+		} else if (core.os.mname == 'darwin') {
+			callInMainworker('focusSelfApp');
 		}
 		sendWinArrToEditors();
 		// hideLoading();
