@@ -517,11 +517,10 @@ function takeShot() {
 			// console.log('query_str:', query_str);
 
 			gCommScope['shotopen_' + i] = Date.now();
-			var editor_domwin = Services.ww.openWindow(null, 'about:nativeshot?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
+			var editor_domwin = Services.ww.openWindow(null, core.addon.path.pages + 'editor.xul?' + query_str, '_blank', 'chrome,titlebar=0,width=' + w + ',height=' + h + ',screenX=' + x + ',screenY=' + y, null);
 			// showLoading(w, h, x, y);
-			// editor_domwin.addEventListener('load', function() {
-			// 	editor_domwin.document.documentElement.style.backgroundColor = 'green';
-			// }, false);
+			editor_domwin.addEventListener('load', startupCanvas, false);
+			editor_domwin.addEventListener('nscomm', nscommHandler, false, true);
 			shot.domwin_wk = Cu.getWeakReference(editor_domwin);
 			shot.domwin = editor_domwin;
 		}
@@ -531,6 +530,40 @@ function takeShot() {
 	shootAllMons();
 	shotstart_mt = Date.now();
 	// end - async-proc939333
+}
+
+function startupCanvas(e) {
+	var domwin = e.target.defaultView;
+	console.log(e.target.location.href);
+	var imon = parseInt(e.target.location.href.match(/iMon=(\d+)/)[1]);
+	console.error('finished loading domwin for imon:', imon, 'domwin:', domwin, 'e:', e);
+	// var shot = gSession.shots[imon];
+	// domwin.document.documentElement.style.backgroundColor = 'green';
+}
+
+function nscommHandler(e) {
+	// aDOMWindow.removeEventListener('nscomm', arguments.callee, false);
+	// console.log('got nscomm', e.detail);
+	var detail = e.detail;
+	var imon = detail;
+	var shot = gSession.shots[imon];
+	var domwin = shot.domwin;
+	gCommScope['shotopen_done_' + imon] = Date.now();
+	// if (shotopen_done_0 > keydetected_mt && shotopen_done_1 > keydetected_mt) {
+	// 	console['error']('Time from keydetected_mt to start shot:', (shotstart_mt - keydetected_mt));
+	// 	console['error']('Time from keydetected_mt to get from worker:', (shotgot_mt - keydetected_mt));
+	// 	console['error']('Time from keydetected_mt to collect:', (shotcol_mt - keydetected_mt));
+	// 	console['error']('Time from keydetected_mt to start open 0:', (shotopen_0 - keydetected_mt));
+	// 	console['error']('Time from keydetected_mt to start open 1:', (shotopen_1 - keydetected_mt));
+	// 	console['error']('Time from keydetected_mt to done open 0:', (shotopen_done_0 - keydetected_mt));
+	// 	console['error']('Time from keydetected_mt to done open 1:', (shotopen_done_1 - keydetected_mt));
+	// }
+	var shot = gSession.shots[imon];
+	if (Services.vc.compare(core.firefox.version, '46.*') > 0) {
+		shot.comm = new Comm.server.content(domwin, editorInitShot.bind(null, imon, e), shot.port1, shot.port2);
+	} else {
+		shot.comm = new Comm.server.content(domwin, editorInitShot.bind(null, imon, e));
+	}
 }
 
 // start - functions called by editor
@@ -1071,35 +1104,7 @@ var windowListener = {
 		}, false);
 	},
 	onCloseWindow: function (aXULWindow) {},
-	onWindowTitleChange: function (aXULWindow, aNewTitle) {
-		// console.error('title changed to:', aNewTitle);
-		if (aNewTitle == 'nativeshot_canvas') {
-			var aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow);
-			// aDOMWindow.document.documentElement.style.backgroundColor = 'red';
-			aDOMWindow.addEventListener('nscomm', function(e) {
-				aDOMWindow.removeEventListener('nscomm', arguments.callee, false);
-				// console.log('got nscomm', e.detail);
-				var detail = e.detail;
-				var iMon = detail;
-				gCommScope['shotopen_done_' + detail] = Date.now();
-				// if (shotopen_done_0 > keydetected_mt && shotopen_done_1 > keydetected_mt) {
-				// 	console['error']('Time from keydetected_mt to start shot:', (shotstart_mt - keydetected_mt));
-				// 	console['error']('Time from keydetected_mt to get from worker:', (shotgot_mt - keydetected_mt));
-				// 	console['error']('Time from keydetected_mt to collect:', (shotcol_mt - keydetected_mt));
-				// 	console['error']('Time from keydetected_mt to start open 0:', (shotopen_0 - keydetected_mt));
-				// 	console['error']('Time from keydetected_mt to start open 1:', (shotopen_1 - keydetected_mt));
-				// 	console['error']('Time from keydetected_mt to done open 0:', (shotopen_done_0 - keydetected_mt));
-				// 	console['error']('Time from keydetected_mt to done open 1:', (shotopen_done_1 - keydetected_mt));
-				// }
-				var shot = gSession.shots[iMon];
-				if (Services.vc.compare(core.firefox.version, '46.*') > 0) {
-					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e), shot.port1, shot.port2);
-				} else {
-					shot.comm = new Comm.server.content(aDOMWindow, editorInitShot.bind(null, iMon, e));
-				}
-			}, false, true);
-		}
-	},
+	onWindowTitleChange: function (aXULWindow, aNewTitle) {},
 	register: function () {
 
 		// Load into any existing windows

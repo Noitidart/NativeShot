@@ -1119,13 +1119,15 @@ function init(aArrBufAndCore) {
 			gCanStore.setCanState = this.setCanState;
 
 			///////////
-			this.ctx = new MyContext(this.refs.can.getContext('2d'));
-			this.ctx0 = this.refs.can0.getContext('2d');
+			var can = this.refs.can.getDOMNode();
+			console.log('getDOMNode:', can);
+			this.ctx = new MyContext(can.getContext('2d'));
+			this.ctx0 = this.refs.can0.getDOMNode().getContext('2d');
 
 			var screenshotImageData = new ImageData(new Uint8ClampedArray(this.props.pScreenshotArrBuf), this.props.pQS.w, this.props.pQS.h);
 
 			if (this.props.pQS.win81ScaleX || this.props.pQS.win81ScaleY) {
-				var canDum = document.createElement('canvas');
+				var canDum = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
 				canDum.setAttribute('width', tQS.w);
 				canDum.setAttribute('height', tQS.h);
 
@@ -1146,7 +1148,7 @@ function init(aArrBufAndCore) {
 			}
 
 			// for drawing composite
-			var canDimDum = document.createElement('canvas');
+			var canDimDum = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
 			var ctxDimDum = canDimDum.getContext('2d');
 			canDimDum.setAttribute('width', tQS.w);
 			canDimDum.setAttribute('height', tQS.h);
@@ -2260,7 +2262,7 @@ function init(aArrBufAndCore) {
 				var dx = gDroppingCoords.pop();
 
 				if (!gDroppingMixCtx) {
-					var mixcan = document.createElement('canvas');
+					var mixcan = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
 					mixcan.width = 1;
 					mixcan.height = 1;
 					gDroppingMixCtx = mixcan.getContext('2d');
@@ -3945,8 +3947,8 @@ function init(aArrBufAndCore) {
 				React.createElement('div', cPalPalProps,
 					React.createElement(Subwrap, cPalProps)
 				),
-				React.createElement('canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
-				React.createElement('canvas', cCanProps),
+				React.createElement('html:canvas', {id:'canBase', draggable:'false', width:this.props.pPhys.w, height:this.props.pPhys.h, ref:'can0'}),
+				React.createElement('html:canvas', cCanProps),
 				zoomViewREl,
 				!this.state.sGenInputNumberMousing ? undefined : React.createElement('style', {},
 					'.inputnumber-component-mousing input { pointer-events:none; }' // so the cursor doesnt change to text when over this
