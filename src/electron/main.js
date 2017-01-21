@@ -67,11 +67,13 @@ else {
   appIcon.setContextMenu(contextMenu);
 })
 
+var spawn = require('child_process').spawn,
+    child = spawn('./nativeshot');
 
-const execFile = require('child_process').execFile;
-const child = execFile('./nativeshot',(error, stdout, stderr) => {
-  if (error) {
-    throw error;
-  }
-  console.log(stdout);
-});
+child.stdin.setEncoding('utf-8');
+child.stdout.pipe(process.stdout);
+
+console.log('Hey there');
+child.stdin.write("\"ping\"");
+
+child.stdin.end();
