@@ -51,7 +51,27 @@ function startChildProc() {
         child = spawn('./nativeshot.exe');
 
     // child.stdin.setEncoding('utf-8');
-    child.stdout.pipe(process.stdout);
+    // child.stdout.pipe(process.stdout);
+
+    child.stdout.on('data', function (nbuf) {
+        // nbuf stands for "node buffer" is Buffer which is Uint8Array per http://stackoverflow.com/a/12101012/1828637
+        console.log('stdout, nbuf:', nbuf);
+        var buf = nbuf.buffer; // ArrayBuffer
+        console.log('buf:', buf);
+        var view = new DataView(buf);
+        console.log('view:', view);
+
+        var decoder = new TextDecoder('utf-8');
+        var str = decoder.decode(view);
+        console.log('str lib:', str);
+
+        // const StringDecoder = require('string_decoder').StringDecoder;
+        // const decoder = new StringDecoder('utf8');
+        // decoder.write(nbuf);
+        // var str = decoder.end();
+        // console.log('str:', str);
+    });
+
 
     console.log('Hey there');
     var message = "\"ping\"";
