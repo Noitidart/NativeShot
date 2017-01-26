@@ -1,6 +1,7 @@
 const {app, Menu, Tray, BrowserWindow} = require('electron');
 const path = require('path')
 const url = require('url')
+const platform = require('os').platform();
 
 let win;
 function createWindow() {
@@ -28,7 +29,6 @@ function createWindow() {
 
 function startTray() {
     // run in app.on ready - i dont know why but @wadie did it like this
-    let platform = require('os').platform();
     let appIcon =  new Tray('icon.' + (platform == 'win32' ? 'ico' : 'png'));
     const contextMenu = Menu.buildFromTemplate([
         {
@@ -47,7 +47,7 @@ function startTray() {
 function startChildProc() {
     // run in app.on ready - because i need TextEncoder which comes in from the require statement
     const { spawn } = require('child_process');
-    let child = spawn('./nativeshot.exe');
+    let child = spawn('./nativeshot' + (platform == 'win32' ? '.exe' : ''));
 
     // child.stdin.setEncoding('utf-8');
     // child.stdout.pipe(process.stdout);
