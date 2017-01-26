@@ -1,0 +1,19 @@
+startup
+reading length
+length: 6
+reading string
+read string: ["ping"]
+payload_str: "ping"
+reading length
+startup
+reading length
+length: 6
+reading string
+read string: ["ping"]
+payload_str: "ping"
+reading length
+length: 6
+reading string
+read string: ["ping"]
+payload_str: "ping"
+reading length
