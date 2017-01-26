@@ -2,7 +2,5 @@
   "name": "NativeShot",
   "version": "0.1.0",
   "main": "main.js",
-  "devDependencies": {
-    "text-encoding": "^0.6.4"
-  }
+  "devDependencies": {}
 }

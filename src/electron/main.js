@@ -2,7 +2,7 @@ const {app, Menu, Tray, BrowserWindow} = require('electron');
 const path = require('path')
 const url = require('url')
 
-var win;
+let win;
 function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({width: 800, height: 600})
@@ -28,7 +28,7 @@ function createWindow() {
 
 function startTray() {
     // run in app.on ready - i dont know why but @wadie did it like this
-    var platform = require('os').platform();
+    let platform = require('os').platform();
     let appIcon =  new Tray('icon.' + (platform == 'win32' ? 'ico' : 'png'));
     const contextMenu = Menu.buildFromTemplate([
         {
@@ -44,54 +44,61 @@ function startTray() {
     appIcon.setContextMenu(contextMenu);
 }
 
-const { TextEncoder, TextDecoder} = require('./node_modules/text-encoding/index.js');
 function startChildProc() {
     // run in app.on ready - because i need TextEncoder which comes in from the require statement
-    var spawn = require('child_process').spawn,
-        child = spawn('./nativeshot.exe');
+    const { spawn } = require('child_process');
+    let child = spawn('./nativeshot.exe');
 
     // child.stdin.setEncoding('utf-8');
     // child.stdout.pipe(process.stdout);
 
     child.stdout.on('data', function (nbuf) {
         // nbuf stands for "node buffer" is Buffer which is Uint8Array per http://stackoverflow.com/a/12101012/1828637
-        console.log('stdout, nbuf:', nbuf);
-        var buf = nbuf.buffer; // ArrayBuffer
-        console.log('buf:', buf);
-        var view = new DataView(buf);
-        console.log('view:', view);
+        console.log('stdout, nbuf:', nbuf, 'nbuf.toJSON:', nbuf.toJSON());
 
-        var decoder = new TextDecoder('utf-8');
-        var str = decoder.decode(view);
-        console.log('str lib:', str);
+        // let sizeofuint32 = new Buffer(Uint32Array.of(nbuf.length).buffer).length;
+        // console.log('sizeofuint32:', sizeofuint32); // is 4
+        const SIZEOFUINT32 = 4;
 
-        // const StringDecoder = require('string_decoder').StringDecoder;
-        // const decoder = new StringDecoder('utf8');
-        // decoder.write(nbuf);
-        // var str = decoder.end();
-        // console.log('str:', str);
+        let ix = 0;
+        let l = nbuf.length;
+        while(ix < l) {
+            let lenbuf = Buffer.from(nbuf.buffer, ix, ix + SIZEOFUINT32); // 4 because size of Uint32 is 4. `sizeofuint32` gives 4
+            console.log('lenbuf:', lenbuf.toJSON());
+            // console.log('lenbuf:', lenbuf.toString('utf8'));
+            let len = new Uint32Array(lenbuf)[0];
+            console.log('len:', len);
+
+            let strbuf = Buffer.from(nbuf.buffer, SIZEOFUINT32, len);
+            console.log('strbuf:', strbuf.toJSON());
+            let str = strbuf.toString('utf8');
+            console.log('str:', str);
+
+            ix = SIZEOFUINT32 + len;
+            console.log('post ix:', ix, 'l:', l);
+        }
     });
 
 
     console.log('Hey there');
-    var message = "\"ping\"";
+    let message = JSON.stringify('ping');
 
     // https://dxr.mozilla.org/mozilla-central/source/toolkit/components/extensions/NativeMessaging.jsm#252
-    var buf = new Buffer(new TextEncoder().encode(message).buffer);
-    console.log('buf:', buf);
-
+    let nbuf = Buffer.from(message, 'utf8');
+    console.log('nbuf:', nbuf);
+    console.log('nbuf.length:', nbuf.length);
     // https://dxr.mozilla.org/mozilla-central/source/toolkit/components/extensions/NativeMessaging.jsm#298
-    var sizebuf = new Buffer(Uint32Array.of(buf.byteLength).buffer);
-    console.log('sizebuf:', sizebuf);
+    let lenbuf = new Buffer(Uint32Array.of(nbuf.length).buffer);
+    console.log('lenbuf:', lenbuf, 'length:', lenbuf.length);
 
-    child.stdin.write(sizebuf);
-    child.stdin.write(buf);
-    // child.stdin.end();
+    child.stdin.write(lenbuf);
+    child.stdin.write(nbuf);
+    // child.stdin.end(); // otherwise next message wont write, must do this on close of child
 
     setTimeout(function() {
         console.log('ok will send ping again');
-        child.stdin.write(sizebuf);
-        child.stdin.write(buf);
+        child.stdin.write(lenbuf);
+        child.stdin.write(nbuf);
         // child.stdin.end();
     }, 5000);
 }
